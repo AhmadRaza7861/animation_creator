@@ -394,6 +394,12 @@ class DrawingController extends ChangeNotifier {
   /// Intercept draw content callback, if returns true, the content will not be added to board history
   bool Function(PaintContent content)? interceptDraw;
 
+  /// Active sticker delegation callbacks
+  VoidCallback? onUndo;
+  VoidCallback? onRedo;
+  bool Function()? onCanUndo;
+  bool Function()? onCanRedo;
+
   /// 绘制配置通知器
   /// Drawing configuration notifier
   late SafeValueNotifier<DrawConfig> drawConfig;
@@ -1088,6 +1094,10 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Undo the last operation
   void undo() {
+    if (onUndo != null) {
+      onUndo!();
+      return;
+    }
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return;
     
@@ -1105,6 +1115,9 @@ class DrawingController extends ChangeNotifier {
   /// Check if undo is available
   /// Returns true if possible
   bool canUndo() {
+    if (onCanUndo != null) {
+      return onCanUndo!();
+    }
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return false;
     return layer.currentIndex > 0;
@@ -1114,6 +1127,10 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Redo the last undone operation
   void redo() {
+    if (onRedo != null) {
+      onRedo!();
+      return;
+    }
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return;
     
@@ -1131,6 +1148,9 @@ class DrawingController extends ChangeNotifier {
   /// Check if redo is available
   /// Returns true if possible
   bool canRedo() {
+    if (onCanRedo != null) {
+      return onCanRedo!();
+    }
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return false;
     return layer.currentIndex < layer.history.length;

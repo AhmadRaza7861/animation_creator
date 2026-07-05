@@ -33,12 +33,14 @@ class TextStickerWidget extends StatefulWidget {
     required this.onUpdate,
     required this.onDelete,
     required this.onConfirm,
+    this.onUpdateEnd,
   });
 
   final ActiveTextSticker data;
   final Function(Offset, double, double) onUpdate;
   final VoidCallback onDelete;
   final VoidCallback onConfirm;
+  final VoidCallback? onUpdateEnd;
 
   @override
   State<TextStickerWidget> createState() => _TextStickerWidgetState();
@@ -66,12 +68,25 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
     _rotation = widget.data.rotation;
   }
 
+  @override
+  void didUpdateWidget(covariant TextStickerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.data.offset != oldWidget.data.offset ||
+        widget.data.scale != oldWidget.data.scale ||
+        widget.data.rotation != oldWidget.data.rotation) {
+      _offset = widget.data.offset;
+      _scale = widget.data.scale;
+      _rotation = widget.data.rotation;
+    }
+  }
+
   Widget _buildCornerIcon(
     IconData icon,
     Color bg,
     Color color, {
     GestureDragStartCallback? onPanStart,
     GestureDragUpdateCallback? onPanUpdate,
+    GestureDragEndCallback? onPanEnd,
     VoidCallback? onTap,
   }) {
     return Transform.scale(
@@ -81,6 +96,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
         onTap: onTap,
         onPanStart: onPanStart,
         onPanUpdate: onPanUpdate,
+        onPanEnd: onPanEnd,
         child: Container(
           width: 28,
           height: 28,
@@ -99,6 +115,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
   Widget _buildRotateHandle({
     GestureDragStartCallback? onPanStart,
     GestureDragUpdateCallback? onPanUpdate,
+    GestureDragEndCallback? onPanEnd,
   }) {
     return Transform.scale(
       scale: 1.0 / (_scale == 0 ? 1 : _scale),
@@ -106,6 +123,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
       child: GestureDetector(
         onPanStart: onPanStart,
         onPanUpdate: onPanUpdate,
+        onPanEnd: onPanEnd,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -164,6 +182,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                   });
                   widget.onUpdate(_offset, _scale, _rotation);
                 },
+                onScaleEnd: (details) => widget.onUpdateEnd?.call(),
                 onDoubleTap: widget.onConfirm,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -226,6 +245,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                     });
                     widget.onUpdate(_offset, _scale, _rotation);
                   },
+                  onPanEnd: (_) => widget.onUpdateEnd?.call(),
                   child: Container(),
                 ),
               ),
@@ -261,6 +281,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                     });
                     widget.onUpdate(_offset, _scale, _rotation);
                   },
+                  onPanEnd: (_) => widget.onUpdateEnd?.call(),
                   child: Container(),
                 ),
               ),
@@ -296,6 +317,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                     });
                     widget.onUpdate(_offset, _scale, _rotation);
                   },
+                  onPanEnd: (_) => widget.onUpdateEnd?.call(),
                   child: Container(),
                 ),
               ),
@@ -331,6 +353,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                     });
                     widget.onUpdate(_offset, _scale, _rotation);
                   },
+                  onPanEnd: (_) => widget.onUpdateEnd?.call(),
                   child: Container(),
                 ),
               ),
@@ -410,6 +433,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                     });
                     widget.onUpdate(_offset, _scale, _rotation);
                   },
+                  onPanEnd: (_) => widget.onUpdateEnd?.call(),
                 ),
               ),
 
@@ -453,6 +477,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                     });
                     widget.onUpdate(_offset, _scale, _rotation);
                   },
+                  onPanEnd: (details) => widget.onUpdateEnd?.call(),
                 ),
               ),
             ],

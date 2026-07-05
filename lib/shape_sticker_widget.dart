@@ -28,12 +28,14 @@ class ShapeStickerWidget extends StatefulWidget {
     required this.onUpdate,
     required this.onDelete,
     required this.onConfirm,
+    this.onUpdateEnd,
   });
 
   final ActiveShapeSticker data;
   final Function(Offset, double, double) onUpdate;
   final VoidCallback onDelete;
   final VoidCallback onConfirm;
+  final VoidCallback? onUpdateEnd;
 
   @override
   State<ShapeStickerWidget> createState() => _ShapeStickerWidgetState();
@@ -61,10 +63,23 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     _rotation = widget.data.rotation;
   }
 
+  @override
+  void didUpdateWidget(covariant ShapeStickerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.data.offset != oldWidget.data.offset ||
+        widget.data.scale != oldWidget.data.scale ||
+        widget.data.rotation != oldWidget.data.rotation) {
+      _offset = widget.data.offset;
+      _scale = widget.data.scale;
+      _rotation = widget.data.rotation;
+    }
+  }
+
   // Corner Action Icon
   Widget _buildCornerIcon(IconData icon, Color bg, Color color,
       {GestureDragStartCallback? onPanStart,
       GestureDragUpdateCallback? onPanUpdate,
+      GestureDragEndCallback? onPanEnd,
       VoidCallback? onTap}) {
     return Transform.scale(
       scale: 1.0 / (_scale == 0 ? 1 : _scale),
@@ -73,6 +88,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
         onTap: onTap,
         onPanStart: onPanStart,
         onPanUpdate: onPanUpdate,
+        onPanEnd: onPanEnd,
         child: Container(
           width: 28,
           height: 28,
@@ -92,6 +108,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
   Widget _buildRotateHandle({
     GestureDragStartCallback? onPanStart,
     GestureDragUpdateCallback? onPanUpdate,
+    GestureDragEndCallback? onPanEnd,
   }) {
     return Transform.scale(
       scale: 1.0 / (_scale == 0 ? 1 : _scale),
@@ -99,6 +116,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
       child: GestureDetector(
         onPanStart: onPanStart,
         onPanUpdate: onPanUpdate,
+        onPanEnd: onPanEnd,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -162,6 +180,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                   });
                   widget.onUpdate(_offset, _scale, _rotation);
                 },
+                onScaleEnd: (details) => widget.onUpdateEnd?.call(),
                 onDoubleTap: widget.onConfirm,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
@@ -189,6 +208,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                   behavior: HitTestBehavior.opaque,
                   onPanStart: _onScaleStart,
                   onPanUpdate: _onScaleUpdate,
+                  onPanEnd: _onScaleEnd,
                   child: Container(),
                 ),
               ),
@@ -201,6 +221,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                   behavior: HitTestBehavior.opaque,
                   onPanStart: _onScaleStart,
                   onPanUpdate: _onScaleUpdate,
+                  onPanEnd: _onScaleEnd,
                   child: Container(),
                 ),
               ),
@@ -213,6 +234,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                   behavior: HitTestBehavior.opaque,
                   onPanStart: _onScaleStart,
                   onPanUpdate: _onScaleUpdate,
+                  onPanEnd: _onScaleEnd,
                   child: Container(),
                 ),
               ),
@@ -225,6 +247,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                   behavior: HitTestBehavior.opaque,
                   onPanStart: _onScaleStart,
                   onPanUpdate: _onScaleUpdate,
+                  onPanEnd: _onScaleEnd,
                   child: Container(),
                 ),
               ),
@@ -276,6 +299,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                   const Color(0xFF2196F3),
                   onPanStart: _onScaleStart,
                   onPanUpdate: _onScaleUpdate,
+                  onPanEnd: _onScaleEnd,
                 ),
               ),
 
@@ -307,6 +331,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                     });
                     widget.onUpdate(_offset, _scale, _rotation);
                   },
+                  onPanEnd: (details) => widget.onUpdateEnd?.call(),
                 ),
               ),
 
@@ -339,6 +364,10 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
       _scale = (_startScale * scaleFactor).clamp(0.1, 10.0);
     });
     widget.onUpdate(_offset, _scale, _rotation);
+  }
+
+  void _onScaleEnd(DragEndDetails details) {
+    widget.onUpdateEnd?.call();
   }
 }
 

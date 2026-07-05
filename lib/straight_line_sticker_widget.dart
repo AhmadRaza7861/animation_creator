@@ -26,6 +26,7 @@ class StraightLineStickerWidget extends StatefulWidget {
     required this.onDelete,
     required this.onConfirm,
     this.onSnap,
+    this.onUpdateEnd,
   });
 
   final ActiveStraightLineSticker data;
@@ -33,6 +34,7 @@ class StraightLineStickerWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onConfirm;
   final Offset Function(Offset rawPoint, Offset anchor)? onSnap;
+  final VoidCallback? onUpdateEnd;
 
   @override
   State<StraightLineStickerWidget> createState() => _StraightLineStickerWidgetState();
@@ -50,6 +52,16 @@ class _StraightLineStickerWidgetState extends State<StraightLineStickerWidget> {
     super.initState();
     _startPoint = widget.data.startPoint;
     _endPoint = widget.data.endPoint;
+  }
+
+  @override
+  void didUpdateWidget(covariant StraightLineStickerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.data.startPoint != oldWidget.data.startPoint ||
+        widget.data.endPoint != oldWidget.data.endPoint) {
+      _startPoint = widget.data.startPoint;
+      _endPoint = widget.data.endPoint;
+    }
   }
 
   void _onPanStartEndpoint(DragStartDetails details, bool isStart) {
@@ -91,6 +103,7 @@ class _StraightLineStickerWidgetState extends State<StraightLineStickerWidget> {
           child: GestureDetector(
             behavior: HitTestBehavior.deferToChild,
             onPanUpdate: _onPanUpdateLine,
+            onPanEnd: (_) => widget.onUpdateEnd?.call(),
             onDoubleTap: widget.onConfirm,
             child: CustomPaint(
               painter: _StraightLinePainter(startPoint: _startPoint, endPoint: _endPoint),
@@ -108,6 +121,7 @@ class _StraightLineStickerWidgetState extends State<StraightLineStickerWidget> {
             behavior: HitTestBehavior.opaque,
             onPanStart: (d) => _onPanStartEndpoint(d, true),
             onPanUpdate: (d) => _onPanUpdateEndpoint(d, true),
+            onPanEnd: (_) => widget.onUpdateEnd?.call(),
             child: Container(
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.transparent),
             ),
@@ -124,6 +138,7 @@ class _StraightLineStickerWidgetState extends State<StraightLineStickerWidget> {
             behavior: HitTestBehavior.opaque,
             onPanStart: (d) => _onPanStartEndpoint(d, false),
             onPanUpdate: (d) => _onPanUpdateEndpoint(d, false),
+            onPanEnd: (_) => widget.onUpdateEnd?.call(),
             child: Container(
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.transparent),
             ),

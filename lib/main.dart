@@ -140,7 +140,247 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   final TransformationController _transformationController =
       TransformationController();
-  Object? _activeSticker;
+  Object? _activeStickerBacking;
+  Object? get _activeSticker => _activeStickerBacking;
+  set _activeSticker(Object? value) {
+    if (_activeStickerBacking == value) return;
+    _activeStickerBacking = value;
+    if (value == null) {
+      _clearActiveStickerHistory();
+    } else {
+      _initActiveStickerHistory(value);
+      _undoneSticker = null;
+      _undoneStickerHistory.clear();
+      _undoneStickerHistoryIndex = -1;
+    }
+  }
+
+  List<Object> _activeStickerHistory = [];
+  int _activeStickerHistoryIndex = -1;
+
+  Object? _undoneSticker;
+  List<Object> _undoneStickerHistory = [];
+  int _undoneStickerHistoryIndex = -1;
+
+  bool _isUndoingActiveStickerPlacement = false;
+
+  Object cloneActiveSticker(Object sticker) {
+    if (sticker is ActiveTextSticker) {
+      return ActiveTextSticker(
+        id: sticker.id,
+        text: sticker.text,
+        color: sticker.color,
+        fontSize: sticker.fontSize,
+        offset: sticker.offset,
+        scale: sticker.scale,
+        rotation: sticker.rotation,
+        isBold: sticker.isBold,
+        fontFamily: sticker.fontFamily,
+      );
+    } else if (sticker is ActiveShapeSticker) {
+      return ActiveShapeSticker(
+        id: sticker.id,
+        content: sticker.content.copy(),
+        size: sticker.size,
+        offset: sticker.offset,
+        scale: sticker.scale,
+        rotation: sticker.rotation,
+      );
+    } else if (sticker is ActiveStraightLineSticker) {
+      return ActiveStraightLineSticker(
+        id: sticker.id,
+        startPoint: sticker.startPoint,
+        endPoint: sticker.endPoint,
+        paint: sticker.paint.copyWith(),
+        type: sticker.type,
+      );
+    } else if (sticker is ActiveFreehandLineSticker) {
+      return ActiveFreehandLineSticker(
+        id: sticker.id,
+        content: sticker.content.copy() as FreehandLine,
+      );
+    }
+    throw ArgumentError('Unknown sticker type: ${sticker.runtimeType}');
+  }
+
+  bool _isStickerStateDifferent(Object a, Object b) {
+    if (a.runtimeType != b.runtimeType) return true;
+    if (a is ActiveTextSticker && b is ActiveTextSticker) {
+      return a.text != b.text ||
+          a.color != b.color ||
+          a.fontSize != b.fontSize ||
+          a.offset != b.offset ||
+          a.scale != b.scale ||
+          a.rotation != b.rotation ||
+          a.isBold != b.isBold ||
+          a.fontFamily != b.fontFamily;
+    }
+    if (a is ActiveShapeSticker && b is ActiveShapeSticker) {
+      return a.offset != b.offset ||
+          a.scale != b.scale ||
+          a.rotation != b.rotation ||
+          a.size != b.size;
+    }
+    if (a is ActiveStraightLineSticker && b is ActiveStraightLineSticker) {
+      return a.startPoint != b.startPoint || a.endPoint != b.endPoint;
+    }
+    if (a is ActiveFreehandLineSticker && b is ActiveFreehandLineSticker) {
+      if (a.content.points?.length != b.content.points?.length) return true;
+      if (a.content.points == null || b.content.points == null) return false;
+      for (int i = 0; i < a.content.points!.length; i++) {
+        if (a.content.points![i] != b.content.points![i]) return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  void _initActiveStickerHistory(Object sticker) {
+    _activeStickerHistory = [cloneActiveSticker(sticker)];
+    _activeStickerHistoryIndex = 0;
+
+    _drawingController.onUndo = _undoActiveSticker;
+    _drawingController.onRedo = _redoActiveSticker;
+    _drawingController.onCanUndo = _canUndoActiveSticker;
+    _drawingController.onCanRedo = _canRedoActiveSticker;
+    _drawingController.refresh();
+  }
+
+  void _clearActiveStickerHistory() {
+    _activeStickerHistory.clear();
+    _activeStickerHistoryIndex = -1;
+
+    if (!_isUndoingActiveStickerPlacement) {
+      _undoneSticker = null;
+      _undoneStickerHistory.clear();
+      _undoneStickerHistoryIndex = -1;
+    }
+
+    if (_undoneSticker == null) {
+      _drawingController.onUndo = null;
+      _drawingController.onRedo = null;
+      _drawingController.onCanUndo = null;
+      _drawingController.onCanRedo = null;
+    } else {
+      _drawingController.onUndo = _undoFallback;
+      _drawingController.onRedo = _redoFallback;
+      _drawingController.onCanUndo = _canUndoFallback;
+      _drawingController.onCanRedo = _canRedoFallback;
+    }
+    _drawingController.refresh();
+  }
+
+  void _recordActiveStickerState() {
+    final sticker = _activeSticker;
+    if (sticker == null) return;
+
+    final newState = cloneActiveSticker(sticker);
+
+    if (_activeStickerHistoryIndex >= 0 &&
+        _activeStickerHistoryIndex < _activeStickerHistory.length) {
+      final currentState = _activeStickerHistory[_activeStickerHistoryIndex];
+      if (!_isStickerStateDifferent(newState, currentState)) {
+        return;
+      }
+    }
+
+    if (_activeStickerHistoryIndex < _activeStickerHistory.length - 1) {
+      _activeStickerHistory.removeRange(
+        _activeStickerHistoryIndex + 1,
+        _activeStickerHistory.length,
+      );
+    }
+
+    _activeStickerHistory.add(newState);
+    _activeStickerHistoryIndex = _activeStickerHistory.length - 1;
+
+    _drawingController.refresh();
+  }
+
+  void _undoActiveSticker() {
+    if (_activeStickerHistoryIndex > 0) {
+      setState(() {
+        _activeStickerHistoryIndex--;
+        _activeStickerBacking = cloneActiveSticker(
+          _activeStickerHistory[_activeStickerHistoryIndex],
+        );
+      });
+      _updateSnapshot();
+      _drawingController.refresh();
+    } else if (_activeStickerHistoryIndex == 0) {
+      _isUndoingActiveStickerPlacement = true;
+      setState(() {
+        _undoneSticker = _activeSticker;
+        _undoneStickerHistory = List.from(_activeStickerHistory);
+        _undoneStickerHistoryIndex = _activeStickerHistoryIndex;
+        _activeStickerBacking = null;
+      });
+      _clearActiveStickerHistory();
+      _isUndoingActiveStickerPlacement = false;
+      _updateSnapshot();
+      _drawingController.refresh();
+    }
+  }
+
+  void _redoActiveSticker() {
+    if (_activeStickerHistoryIndex < _activeStickerHistory.length - 1) {
+      setState(() {
+        _activeStickerHistoryIndex++;
+        _activeStickerBacking = cloneActiveSticker(
+          _activeStickerHistory[_activeStickerHistoryIndex],
+        );
+      });
+      _updateSnapshot();
+      _drawingController.refresh();
+    }
+  }
+
+  bool _canUndoActiveSticker() {
+    return true;
+  }
+
+  bool _canRedoActiveSticker() {
+    return _activeStickerHistoryIndex < _activeStickerHistory.length - 1;
+  }
+
+  void _undoFallback() {
+    _drawingController.onUndo = null;
+    _drawingController.undo();
+    setState(() {
+      _undoneSticker = null;
+      _undoneStickerHistory.clear();
+      _undoneStickerHistoryIndex = -1;
+    });
+    _clearActiveStickerHistory();
+  }
+
+  void _redoFallback() {
+    setState(() {
+      _activeStickerBacking = _undoneSticker;
+      _activeStickerHistory = List.from(_undoneStickerHistory);
+      _activeStickerHistoryIndex = _undoneStickerHistoryIndex;
+      _undoneSticker = null;
+      _undoneStickerHistory.clear();
+      _undoneStickerHistoryIndex = -1;
+    });
+    _drawingController.onUndo = _undoActiveSticker;
+    _drawingController.onRedo = _redoActiveSticker;
+    _drawingController.onCanUndo = _canUndoActiveSticker;
+    _drawingController.onCanRedo = _canRedoActiveSticker;
+    _updateSnapshot();
+    _drawingController.refresh();
+  }
+
+  bool _canUndoFallback() {
+    final layer = _drawingController.activeLayer.value;
+    if (layer == null || layer.isLocked) return false;
+    return layer.currentIndex > 0;
+  }
+
+  bool _canRedoFallback() {
+    return true;
+  }
+
   bool _showRulerMenu = false;
   bool _showLayerPanel = false;
 
@@ -2092,6 +2332,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                         .rotation =
                                                     rotation;
                                               },
+                                              onUpdateEnd: _recordActiveStickerState,
                                               onDelete: () {
                                                 setState(() {
                                                   _activeSticker = null;
@@ -2168,6 +2409,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                               newValue;
                                                         });
                                                         _updateSnapshot();
+                                                        _recordActiveStickerState();
                                                       },
                                                     ),
                                                     IconButton(
@@ -2190,6 +2432,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                                   .isBold;
                                                         });
                                                         _updateSnapshot();
+                                                        _recordActiveStickerState();
                                                       },
                                                     ),
                                                     IconButton(
@@ -2204,6 +2447,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                               2;
                                                         });
                                                         _updateSnapshot();
+                                                        _recordActiveStickerState();
                                                       },
                                                     ),
                                                     IconButton(
@@ -2225,6 +2469,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                                   );
                                                         });
                                                         _updateSnapshot();
+                                                        _recordActiveStickerState();
                                                       },
                                                     ),
                                                   ],
@@ -2260,6 +2505,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                 return raw;
                                               },
                                               onUpdate: () {},
+                                              onUpdateEnd: _recordActiveStickerState,
                                               onDelete: () {
                                                 setState(() {
                                                   _activeSticker = null;
@@ -2295,6 +2541,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                         .rotation =
                                                     rotation;
                                               },
+                                              onUpdateEnd: _recordActiveStickerState,
                                               onDelete: () {
                                                 setState(() {
                                                   _activeSticker = null;
@@ -2343,6 +2590,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                         .endPoint =
                                                     end;
                                               },
+                                              onUpdateEnd: _recordActiveStickerState,
                                               onDelete: () {
                                                 setState(() {
                                                   _activeSticker = null;

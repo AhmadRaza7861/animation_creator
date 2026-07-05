@@ -20,6 +20,7 @@ class FreehandLineStickerWidget extends StatefulWidget {
     required this.onDelete,
     required this.onConfirm,
     this.onSnap,
+    this.onUpdateEnd,
   });
 
   final ActiveFreehandLineSticker data;
@@ -27,6 +28,7 @@ class FreehandLineStickerWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onConfirm;
   final Offset Function(Offset rawPoint, Offset anchor)? onSnap;
+  final VoidCallback? onUpdateEnd;
 
   @override
   State<FreehandLineStickerWidget> createState() => _FreehandLineStickerWidgetState();
@@ -49,6 +51,7 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
           child: GestureDetector(
             behavior: HitTestBehavior.deferToChild,
             onPanUpdate: _onPanUpdateLine,
+            onPanEnd: (_) => widget.onUpdateEnd?.call(),
             onDoubleTap: widget.onConfirm,
             child: CustomPaint(
               painter: _FreehandLineStickerPainter(content: widget.data.content),
@@ -65,6 +68,7 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onPanUpdate: (d) => _onPanUpdateEndpoint(d, true),
+            onPanEnd: (_) => widget.onUpdateEnd?.call(),
             child: _buildHandleIcon(),
           ),
         ),
@@ -78,6 +82,7 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onPanUpdate: (d) => _onPanUpdateEndpoint(d, false),
+            onPanEnd: (_) => widget.onUpdateEnd?.call(),
             child: _buildHandleIcon(),
           ),
         ),
