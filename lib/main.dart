@@ -66,12 +66,14 @@ class CanvasBackground {
   final ui.Image? image;
   final String? imagePath;
   final double imageOpacity;
+  final String? pattern;
 
   CanvasBackground({
     this.color = Colors.white,
     this.image,
     this.imagePath,
     this.imageOpacity = 1.0,
+    this.pattern,
   });
 
   CanvasBackground copyWith({
@@ -79,6 +81,7 @@ class CanvasBackground {
     ui.Image? image,
     String? imagePath,
     double? imageOpacity,
+    String? pattern,
     bool clearImage = false,
   }) {
     return CanvasBackground(
@@ -86,6 +89,7 @@ class CanvasBackground {
       image: clearImage ? null : (image ?? this.image),
       imagePath: clearImage ? null : (imagePath ?? this.imagePath),
       imageOpacity: imageOpacity ?? this.imageOpacity,
+      pattern: clearImage ? null : (pattern ?? this.pattern),
     );
   }
 }
@@ -780,6 +784,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           color: Color(bgMap['color'] as int),
           imagePath: bgMap['imagePath'] as String?,
           imageOpacity: bgMap['imageOpacity'] as double,
+          pattern: bgMap['pattern'] as String?,
         );
         if (_globalBackground.imagePath != null) {
           try {
@@ -836,6 +841,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         'color': _globalBackground.color.value,
         'imagePath': _globalBackground.imagePath,
         'imageOpacity': _globalBackground.imageOpacity,
+        'pattern': _globalBackground.pattern,
       },
       'aspectRatio': _aspectRatio,
       'canvases': [],
@@ -2277,19 +2283,27 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                     return Container(
                                       width: config.size?.width ?? c.maxWidth,
                                       height: config.size?.height ?? c.maxHeight,
-                                      decoration: BoxDecoration(
-                                        color: _globalBackground.color,
-                                      ),
-                                      child: _globalBackground.image == null
-                                          ? null
-                                          : Opacity(
-                                              opacity: _globalBackground
-                                                  .imageOpacity,
-                                              child: RawImage(
-                                                image: _globalBackground.image,
-                                                fit: BoxFit.cover,
+                                      color: _globalBackground.color,
+                                      child: Stack(
+                                        children: [
+                                          if (_globalBackground.image != null)
+                                            Positioned.fill(
+                                              child: Opacity(
+                                                opacity: _globalBackground.imageOpacity,
+                                                child: RawImage(
+                                                  image: _globalBackground.image,
+                                                  fit: BoxFit.cover,
+                                                ),
                                               ),
                                             ),
+                                          if (_globalBackground.pattern != null && _globalBackground.pattern != 'none')
+                                            Positioned.fill(
+                                              child: CustomPaint(
+                                                painter: PatternPainter(_globalBackground.pattern!),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     );
                                   },
                                 ),
@@ -2872,4 +2886,47 @@ class RulerToolItem extends StatelessWidget {
       ),
     );
   }
+}
+
+class PatternPainter extends CustomPainter {
+  final String pattern;
+  const PatternPainter(this.pattern);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black.withOpacity(0.08)
+      ..strokeWidth = 1.0;
+
+    if (pattern == 'grid') {
+      const double spacing = 20.0;
+      for (double x = 0; x < size.width; x += spacing) {
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+      }
+      for (double y = 0; y < size.height; y += spacing) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+      }
+    } else if (pattern == 'dots') {
+      const double spacing = 20.0;
+      final dotPaint = Paint()..color = Colors.black.withOpacity(0.15);
+      for (double x = spacing / 2; x < size.width; x += spacing) {
+        for (double y = spacing / 2; y < size.height; y += spacing) {
+          canvas.drawCircle(Offset(x, y), 1.5, dotPaint);
+        }
+      }
+    } else if (pattern == 'lines') {
+      const double spacing = 24.0;
+      for (double y = spacing; y < size.height; y += spacing) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+      }
+      // Draw left vertical margin line in red
+      final marginPaint = Paint()
+        ..color = Colors.redAccent.withOpacity(0.2)
+        ..strokeWidth = 1.5;
+      canvas.drawLine(const Offset(40, 0), Offset(40, size.height), marginPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant PatternPainter oldDelegate) => oldDelegate.pattern != pattern;
 }

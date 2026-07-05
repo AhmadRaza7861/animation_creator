@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../project_repository.dart';
+import 'create_project_screen.dart';
 
 class ProjectsScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -38,7 +39,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MyHomePage(
+        builder: (context) => CreateProjectScreen(
           repository: widget.repository,
         ),
       ),
