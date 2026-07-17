@@ -62,5 +62,20 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(SnackBar), findsOneWidget);
+
+    // Navigate to preview screen
+    await tester.tap(find.byTooltip('Play Preview'));
+    await tester.pumpAndSettle();
+    
+    // Check if the preview screen is active
+    expect(find.text('Preview Animation'), findsOneWidget);
+    expect(find.text('Tap on screen to stop'), findsOneWidget);
+
+    // Tap to stop/exit the animation playback (which pops back to the editor)
+    await tester.tap(find.byType(AspectRatio));
+    await tester.pumpAndSettle();
+
+    // Verify we are back in the editor screen
+    expect(find.byType(InteractiveViewer), findsOneWidget);
   });
 }

@@ -28,6 +28,7 @@ import 'straight_line_sticker_widget.dart';
 import 'freehand_line_sticker_widget.dart'; // Added new import
 import 'layer_panel.dart';
 import 'canvas_selector.dart';
+import 'screens/animation_preview_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/frames_reorder_screen.dart';
 import 'project_repository.dart';
@@ -391,6 +392,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   double _colorOpacity = 1;
 
   double? _aspectRatio;
+  int _fps = 9;
   String? _savedJsonData;
 
   void _onDrawConfigChanged() {
@@ -776,6 +778,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       if (data.state.containsKey('aspectRatio')) {
         _aspectRatio = data.state['aspectRatio'] as double?;
       }
+      if (data.state.containsKey('fps')) {
+        _fps = data.state['fps'] as int;
+      }
 
       // Restore background
       final bgMap = data.state['globalBackground'] as Map<String, dynamic>?;
@@ -844,6 +849,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         'pattern': _globalBackground.pattern,
       },
       'aspectRatio': _aspectRatio,
+      'fps': _fps,
       'canvases': [],
     };
 
@@ -860,12 +866,20 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     state['canvases'] = canvasesData;
 
     List<int>? thumbBytes;
-    if (_thumbnails.isNotEmpty && _thumbnails[_currentIndex] != null) {
-      final byteData = await _thumbnails[_currentIndex]!.toByteData(
-        format: ui.ImageByteFormat.png,
+    if (_canvases.isNotEmpty) {
+      final ui.Image? firstFrameImage = await _canvases.first.captureFullImage(
+        backgroundColor: _globalBackground.color,
+        maxDimension: 256.0,
+        backgroundImage: _globalBackground.image,
+        backgroundImageOpacity: _globalBackground.imageOpacity,
       );
-      if (byteData != null) {
-        thumbBytes = byteData.buffer.asUint8List();
+      if (firstFrameImage != null) {
+        final byteData = await firstFrameImage.toByteData(
+          format: ui.ImageByteFormat.png,
+        );
+        if (byteData != null) {
+          thumbBytes = byteData.buffer.asUint8List();
+        }
       }
     }
 
@@ -889,7 +903,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     newController.backgroundColor = Colors.white;
     if (_canvases.isNotEmpty) {
       newController.drawConfig.value = newController.drawConfig.value.copyWith(
-        size: _canvases.first.drawConfig.value.size
+        size: _canvases.first.drawConfig.value.size,
       );
     }
     newController.drawConfig.addListener(_onDrawConfigChanged);
@@ -1077,7 +1091,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   Future<void> _importVideo() async {
     if (_drawingController.isCurrentLayerLocked) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Current layer is locked.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Current layer is locked.')));
       return;
     }
 
@@ -1085,7 +1101,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     if (video == null) return;
 
     if (!mounted) return;
-    
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -1097,7 +1113,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+        builder: (context) =>
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
       );
 
       try {
@@ -1107,19 +1124,24 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           decodedImages.add(img);
         }
 
-        final Size baseSize = _canvases.isNotEmpty && _canvases.first.drawConfig.value.size != null 
-             ? _canvases.first.drawConfig.value.size! 
-             : Size(MediaQuery.of(context).size.width, MediaQuery.of(context).size.height * 0.6);
+        final Size baseSize =
+            _canvases.isNotEmpty &&
+                _canvases.first.drawConfig.value.size != null
+            ? _canvases.first.drawConfig.value.size!
+            : Size(
+                MediaQuery.of(context).size.width,
+                MediaQuery.of(context).size.height * 0.6,
+              );
 
         if (decodedImages.isEmpty) return;
 
         for (int i = 0; i < decodedImages.length; i++) {
           final img = decodedImages[i];
-          
+
           final double scaleW = baseSize.width / img.width;
           final double scaleH = baseSize.height / img.height;
           final double scale = scaleW < scaleH ? scaleW : scaleH;
-          
+
           double fittedW = img.width * scale;
           double fittedH = img.height * scale;
           double offsetX = (baseSize.width - fittedW) / 2;
@@ -1132,7 +1154,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             size: Offset(fittedW, fittedH),
             paint: Paint(),
           );
-          
+
           final videoLayer = LayerData(
             id: 'video_layer_${DateTime.now().microsecondsSinceEpoch}_$i',
             name: 'Video Frame',
@@ -1145,25 +1167,24 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             // Video goes underneath existing drawings
             final canvasCtrl = _canvases[i];
             canvasCtrl.layers.add(videoLayer);
-            
+
             // Retain original baseSize (fullscreen) to display canvas normally
             canvasCtrl.drawConfig.value = canvasCtrl.drawConfig.value.copyWith(
-              size: baseSize
+              size: baseSize,
             );
-            
+
             WidgetsBinding.instance.addPostFrameCallback((_) {
-               canvasCtrl.forceRefreshLayers();
-               canvasCtrl.updateSnapshot(includeBackground: false);
+              canvasCtrl.forceRefreshLayers();
+              canvasCtrl.updateSnapshot(includeBackground: false);
             });
           } else {
             final newController = DrawingController();
             newController.backgroundColor = Colors.white;
-            
+
             // Constrain new canvas bounds strictly to preventing overlapping into application space
-            newController.drawConfig.value = newController.drawConfig.value.copyWith(
-              size: baseSize 
-            );
-            
+            newController.drawConfig.value = newController.drawConfig.value
+                .copyWith(size: baseSize);
+
             newController.drawConfig.addListener(_onDrawConfigChanged);
             newController.interceptDraw = _createInterceptDraw(newController);
 
@@ -1179,12 +1200,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
             // Insert video at the very bottom (under the default drawing layer)
             newController.layers.add(videoLayer);
-            
+
             WidgetsBinding.instance.addPostFrameCallback((_) {
-               newController.forceRefreshLayers();
-               newController.updateSnapshot(includeBackground: false);
+              newController.forceRefreshLayers();
+              newController.updateSnapshot(includeBackground: false);
             });
-            
+
             setState(() {
               _canvases.add(newController);
               _thumbnails.add(null);
@@ -1193,14 +1214,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         }
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
-           if (mounted) setState(() {});
+          if (mounted) setState(() {});
         });
       } catch (e) {
         debugPrint('Error inserting frames: $e');
       } finally {
         if (mounted) {
-           Navigator.pop(context);
-           _updateSnapshot();
+          Navigator.pop(context);
+          _updateSnapshot();
         }
       }
     }
@@ -1770,6 +1791,27 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     }
   }
 
+  void _openPreviewScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AnimationPreviewScreen(
+          canvases: _canvases,
+          aspectRatio: _aspectRatio,
+          globalBackground: _globalBackground,
+          initialFps: _fps,
+        ),
+      ),
+    ).then((result) {
+      if (result != null && result is int) {
+        setState(() {
+          _fps = result;
+        });
+        _saveProject(); // Auto-save project settings (like FPS) when returning
+      }
+    });
+  }
+
   void _showBackgroundSettings() {
     showModalBottomSheet(
       context: context,
@@ -2180,61 +2222,73 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             ];
           },
         ),
-        title: const Text('Drawing Test'),
+        title: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.play_arrow),
+                tooltip: 'Play Preview',
+                onPressed: _openPreviewScreen,
+              ),
+              IconButton(
+                icon: const Icon(Icons.wallpaper),
+                tooltip: 'Background',
+                onPressed: _showBackgroundSettings,
+              ),
+              IconButton(
+                icon: const Icon(Icons.save),
+                tooltip: 'Save JSON',
+                onPressed: _saveCanvasData,
+              ),
+              IconButton(
+                icon: const Icon(Icons.restore),
+                tooltip: 'Load JSON',
+                onPressed: _loadCanvasData,
+              ),
+              IconButton(
+                icon: const Icon(Icons.clear),
+                tooltip: 'clear',
+                onPressed: () {
+                  if (_drawingController.isCurrentLayerLocked) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Current layer is locked.'),
+                      ),
+                    );
+                    return;
+                  }
+                  _drawingController.clear();
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.text_fields),
+                onPressed: _addTextSticker,
+              ),
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: _getImageData,
+              ),
+              IconButton(
+                tooltip: 'Paste',
+                icon: const Icon(Icons.paste),
+                onPressed: () {
+                  if (_activeSticker != null) {
+                    _stampActiveSticker();
+                  }
+                  _pasteClipboard();
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.restore_page_rounded),
+                onPressed: _restBoard,
+              ),
+            ],
+          ),
+        ),
         systemOverlayStyle: SystemUiOverlayStyle.dark,
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.wallpaper),
-            tooltip: 'Background',
-            onPressed: _showBackgroundSettings,
-          ),
-          IconButton(
-            icon: const Icon(Icons.save),
-            tooltip: 'Save JSON',
-            onPressed: _saveCanvasData,
-          ),
-          IconButton(
-            icon: const Icon(Icons.restore),
-            tooltip: 'Load JSON',
-            onPressed: _loadCanvasData,
-          ),
-          IconButton(
-            icon: const Icon(Icons.clear),
-            tooltip: 'clear',
-            onPressed: () {
-              if (_drawingController.isCurrentLayerLocked) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Current layer is locked.')),
-                );
-                return;
-              }
-              _drawingController.clear();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.text_fields),
-            onPressed: _addTextSticker,
-          ),
-          // IconButton(
-          //   icon: const Icon(Icons.javascript_outlined),
-          //   onPressed: _getJson,
-          // ),
-          IconButton(icon: const Icon(Icons.check), onPressed: _getImageData),
-          IconButton(
-            tooltip: 'Paste',
-            icon: const Icon(Icons.paste),
-            onPressed: () {
-              if (_activeSticker != null) {
-                _stampActiveSticker();
-              }
-              _pasteClipboard();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.restore_page_rounded),
-            onPressed: _restBoard,
-          ),
-        ],
+        actions: const [],
       ),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle(systemNavigationBarColor: Colors.grey),
@@ -2278,28 +2332,37 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                     _activeSticker == null &&
                                     !_drawingController.isCurrentLayerLocked,
                                 background: ValueListenableBuilder<DrawConfig>(
-                                  valueListenable: _drawingController.drawConfig,
+                                  valueListenable:
+                                      _drawingController.drawConfig,
                                   builder: (context, config, child) {
                                     return Container(
                                       width: config.size?.width ?? c.maxWidth,
-                                      height: config.size?.height ?? c.maxHeight,
+                                      height:
+                                          config.size?.height ?? c.maxHeight,
                                       color: _globalBackground.color,
                                       child: Stack(
                                         children: [
                                           if (_globalBackground.image != null)
                                             Positioned.fill(
                                               child: Opacity(
-                                                opacity: _globalBackground.imageOpacity,
+                                                opacity: _globalBackground
+                                                    .imageOpacity,
                                                 child: RawImage(
-                                                  image: _globalBackground.image,
+                                                  image:
+                                                      _globalBackground.image,
                                                   fit: BoxFit.cover,
                                                 ),
                                               ),
                                             ),
-                                          if (_globalBackground.pattern != null && _globalBackground.pattern != 'none')
+                                          if (_globalBackground.pattern !=
+                                                  null &&
+                                              _globalBackground.pattern !=
+                                                  'none')
                                             Positioned.fill(
                                               child: CustomPaint(
-                                                painter: PatternPainter(_globalBackground.pattern!),
+                                                painter: PatternPainter(
+                                                  _globalBackground.pattern!,
+                                                ),
                                               ),
                                             ),
                                         ],
@@ -2346,7 +2409,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                         .rotation =
                                                     rotation;
                                               },
-                                              onUpdateEnd: _recordActiveStickerState,
+                                              onUpdateEnd:
+                                                  _recordActiveStickerState,
                                               onDelete: () {
                                                 setState(() {
                                                   _activeSticker = null;
@@ -2519,7 +2583,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                 return raw;
                                               },
                                               onUpdate: () {},
-                                              onUpdateEnd: _recordActiveStickerState,
+                                              onUpdateEnd:
+                                                  _recordActiveStickerState,
                                               onDelete: () {
                                                 setState(() {
                                                   _activeSticker = null;
@@ -2555,7 +2620,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                         .rotation =
                                                     rotation;
                                               },
-                                              onUpdateEnd: _recordActiveStickerState,
+                                              onUpdateEnd:
+                                                  _recordActiveStickerState,
                                               onDelete: () {
                                                 setState(() {
                                                   _activeSticker = null;
@@ -2604,7 +2670,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                                         .endPoint =
                                                     end;
                                               },
-                                              onUpdateEnd: _recordActiveStickerState,
+                                              onUpdateEnd:
+                                                  _recordActiveStickerState,
                                               onDelete: () {
                                                 setState(() {
                                                   _activeSticker = null;
@@ -2923,10 +2990,15 @@ class PatternPainter extends CustomPainter {
       final marginPaint = Paint()
         ..color = Colors.redAccent.withOpacity(0.2)
         ..strokeWidth = 1.5;
-      canvas.drawLine(const Offset(40, 0), Offset(40, size.height), marginPaint);
+      canvas.drawLine(
+        const Offset(40, 0),
+        Offset(40, size.height),
+        marginPaint,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(covariant PatternPainter oldDelegate) => oldDelegate.pattern != pattern;
+  bool shouldRepaint(covariant PatternPainter oldDelegate) =>
+      oldDelegate.pattern != pattern;
 }
