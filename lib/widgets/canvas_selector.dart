@@ -40,14 +40,27 @@ class CanvasSelector extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Play Button
+          // Layers Button
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.only(left: 16.0),
             child: Material(
               color: Colors.transparent,
               child: IconButton(
-                icon: const Icon(Icons.play_arrow_rounded, size: 36, color: Color(0xFF3C3043)),
+                icon: const Icon(Icons.layers_rounded, size: 28, color: Color(0xFF3C3043)),
+                onPressed: onOpenFrames,
+                tooltip: 'Layers',
+              ),
+            ),
+          ),
+          // Play Button
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0, right: 8.0),
+            child: Material(
+              color: Colors.transparent,
+              child: IconButton(
+                icon: const Icon(Icons.play_arrow_rounded, size: 28, color: Color(0xFF3C3043)),
                 onPressed: onPlay,
+                tooltip: 'Play Animation',
               ),
             ),
           ),

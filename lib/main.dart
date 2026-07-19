@@ -597,6 +597,47 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
+  void _showExportBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.play_arrow_rounded, color: Color(0xFFFF9114)),
+                title: const Text('Preview Animation'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _openPreviewScreen();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.image_rounded, color: Colors.blue),
+                title: const Text('Export Current Frame'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getImageData();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.code_rounded, color: Colors.green),
+                title: const Text('View Canvas JSON'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getJson();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildBottomToolbar() {
     return Container(
       height: 72,
@@ -604,118 +645,139 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            const SizedBox(width: 16),
-            _bottomToolbarCategoryItem(
-              label: 'Brush',
-              icon: Icons.brush_rounded,
-              onTap: () {
-                setState(() {
-                  _currentSubMenu = 'brush';
-                  if (_selectedSubTool == 'brush') {
-                    _drawingController.setPaintContent(SmoothLine());
-                  } else {
-                    _drawingController.setPaintContent(FreehandLine());
-                  }
-                  _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
-                });
-              },
-            ),
-            _bottomToolbarCategoryItem(
-              label: 'Paint',
-              icon: Icons.format_paint_rounded,
-              onTap: () {
-                _drawingController.setPaintContent(FillContent());
-                _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
-              },
-            ),
-            _bottomToolbarCategoryItem(
-              label: 'Shapes',
-              icon: Icons.interests_rounded,
-              onTap: () {
-                setState(() {
-                  _currentSubMenu = 'shapes';
-                  _drawingController.setPaintContent(Pentagon());
-                  _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
-                });
-              },
-            ),
-            _bottomToolbarCategoryItem(
-              label: 'Assets',
-              icon: Icons.photo_library_rounded,
-              onTap: () async {
-                final ImageSource? source = await showModalBottomSheet<ImageSource>(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return SafeArea(
-                      child: Wrap(
-                        children: <Widget>[
-                          ListTile(
-                            leading: const Icon(Icons.photo_library),
-                            title: const Text('Photo Gallery'),
-                            onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-                          ),
-                          ListTile(
-                            leading: const Icon(Icons.photo_camera),
-                            title: const Text('Camera'),
-                            onTap: () => Navigator.of(context).pop(ImageSource.camera),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          // Fixed Export Button (Orange style)
+          _bottomToolbarCategoryItem(
+            label: 'Export',
+            icon: Icons.ios_share_rounded,
+            onTap: _showExportBottomSheet,
+            color: const Color(0xFFFF9114),
+          ),
+          // Vertical divider to separate fixed Export from scrollable items
+          Container(
+            height: 36,
+            width: 1,
+            color: Colors.grey.shade300,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+          // Scrollable other options
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _bottomToolbarCategoryItem(
+                    label: 'Brush',
+                    icon: Icons.brush_rounded,
+                    onTap: () {
+                      setState(() {
+                        _currentSubMenu = 'brush';
+                        if (_selectedSubTool == 'brush') {
+                          _drawingController.setPaintContent(SmoothLine());
+                        } else {
+                          _drawingController.setPaintContent(FreehandLine());
+                        }
+                        _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                      });
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Paint',
+                    icon: Icons.format_paint_rounded,
+                    onTap: () {
+                      _drawingController.setPaintContent(FillContent());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Shapes',
+                    icon: Icons.interests_rounded,
+                    onTap: () {
+                      setState(() {
+                        _currentSubMenu = 'shapes';
+                        _drawingController.setPaintContent(Pentagon());
+                        _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                      });
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Assets',
+                    icon: Icons.photo_library_rounded,
+                    onTap: () async {
+                      final ImageSource? source = await showModalBottomSheet<ImageSource>(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return SafeArea(
+                            child: Wrap(
+                              children: <Widget>[
+                                ListTile(
+                                  leading: const Icon(Icons.photo_library),
+                                  title: const Text('Photo Gallery'),
+                                  onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.photo_camera),
+                                  title: const Text('Camera'),
+                                  onTap: () => Navigator.of(context).pop(ImageSource.camera),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
 
-                if (source == null) return;
-                try {
-                  final XFile? file = await _picker.pickImage(source: source);
-                  if (file != null) {
-                    final ui.Image image = await _getFileImage(file.path);
-                    _drawingController.setPaintContent(
-                      ImageContent(image, imageUrl: file.path),
-                    );
-                  }
-                } catch (e) {
-                  debugPrint('Error picking sticker image: $e');
-                }
-              },
+                      if (source == null) return;
+                      try {
+                        final XFile? file = await _picker.pickImage(source: source);
+                        if (file != null) {
+                          final ui.Image image = await _getFileImage(file.path);
+                          _drawingController.setPaintContent(
+                            ImageContent(image, imageUrl: file.path),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Error picking sticker image: $e');
+                      }
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Erase',
+                    icon: Icons.auto_fix_normal_rounded,
+                    onTap: () {
+                      _drawingController.setPaintContent(Eraser());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Lasso',
+                    icon: Icons.gesture_rounded,
+                    onTap: () {
+                      _drawingController.setPaintContent(Lasso());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Text',
+                    icon: Icons.text_fields_rounded,
+                    onTap: _addTextSticker,
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Ruler',
+                    icon: Icons.straighten_rounded,
+                    onTap: () {
+                      setState(() {
+                        _showRulerMenu = !_showRulerMenu;
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 16),
+                ],
+              ),
             ),
-            _bottomToolbarCategoryItem(
-              label: 'Erase',
-              icon: Icons.auto_fix_normal_rounded,
-              onTap: () {
-                _drawingController.setPaintContent(Eraser());
-                _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
-              },
-            ),
-            _bottomToolbarCategoryItem(
-              label: 'Lasso',
-              icon: Icons.gesture_rounded,
-              onTap: () {
-                _drawingController.setPaintContent(Lasso());
-                _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
-              },
-            ),
-            _bottomToolbarCategoryItem(
-              label: 'Text',
-              icon: Icons.text_fields_rounded,
-              onTap: _addTextSticker,
-            ),
-            _bottomToolbarCategoryItem(
-              label: 'Ruler',
-              icon: Icons.straighten_rounded,
-              onTap: () {
-                setState(() {
-                  _showRulerMenu = !_showRulerMenu;
-                });
-              },
-            ),
-            const SizedBox(width: 16),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -724,7 +786,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     required String label,
     required IconData icon,
     required VoidCallback onTap,
+    Color? color,
   }) {
+    final displayColor = color ?? Colors.grey.shade700;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -733,12 +797,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.grey.shade700, size: 24),
+            Icon(icon, color: displayColor, size: 24),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color: Colors.grey.shade700,
+                color: displayColor,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -3000,7 +3064,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   onSelect: _selectCanvas,
                   onAdd: _addNewCanvas,
                   onOpenGallery: _openGallery,
-                  onOpenFrames: _openFramesScreen,
+                  onOpenFrames: () {
+                    setState(() {
+                      _showLayerPanel = !_showLayerPanel;
+                    });
+                  },
                   onImportVideo: _importVideo,
                   onPlay: _openPreviewScreen,
                   onFrameAction: _onFrameAction,
@@ -3027,94 +3095,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     },
                   ),
                 ),
-              // Top Right Layers Button
-              Positioned(
-                right: 16,
-                top: 16,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _showLayerPanel = !_showLayerPanel;
-                    });
-                  },
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        )
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.layers_rounded,
-                      color: _showLayerPanel ? const Color(0xFFFF9114) : Colors.grey.shade700,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              // Export Button (Figma Style)
-              Positioned(
-                right: 16,
-                top: 68,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF9114),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                      ),
-                      builder: (context) {
-                        return SafeArea(
-                          child: Wrap(
-                            children: [
-                              ListTile(
-                                leading: const Icon(Icons.play_arrow_rounded, color: Color(0xFFFF9114)),
-                                title: const Text('Preview Animation'),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _openPreviewScreen();
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.image_rounded, color: Colors.blue),
-                                title: const Text('Export Current Frame'),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _getImageData();
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.code_rounded, color: Colors.green),
-                                title: const Text('View Canvas JSON'),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _getJson();
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  child: const Text(
-                    'Export',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ),
