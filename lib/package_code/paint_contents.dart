@@ -27,3 +27,4 @@ export 'src/paint_contents/eraser_hole.dart';
 export 'src/paint_contents/eyedropper.dart';
 export 'src/paint_contents/blur.dart';
 export 'src/paint_contents/smudge.dart';
+export 'src/paint_contents/extra_shapes.dart';

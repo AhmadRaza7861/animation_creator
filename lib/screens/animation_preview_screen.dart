@@ -277,24 +277,34 @@ class FramePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.saveLayer(Offset.zero & size, Paint());
+    final Size? originalSize = controller.drawConfig.value.size;
+    if (originalSize == null || originalSize.isEmpty) return;
+
+    final double scaleX = size.width / originalSize.width;
+    final double scaleY = size.height / originalSize.height;
+
+    canvas.save();
+    canvas.scale(scaleX, scaleY);
+
+    canvas.saveLayer(Offset.zero & originalSize, Paint());
     for (int i = controller.layers.length - 1; i >= 0; i--) {
       final layer = controller.layers[i];
       if (!layer.isVisible) continue;
 
       canvas.saveLayer(
-        Offset.zero & size,
+        Offset.zero & originalSize,
         Paint()
           ..blendMode = layer.blendMode
           ..color = Colors.white.withOpacity(layer.opacity),
       );
 
       for (int j = 0; j < layer.currentIndex; j++) {
-        layer.history[j].draw(canvas, size, true);
+        layer.history[j].draw(canvas, originalSize, true);
       }
 
       canvas.restore();
     }
+    canvas.restore();
     canvas.restore();
   }
 

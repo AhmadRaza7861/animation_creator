@@ -9,6 +9,7 @@ class CanvasSelector extends StatelessWidget {
   final VoidCallback onOpenGallery;
   final VoidCallback onOpenFrames;
   final VoidCallback onImportVideo;
+  final VoidCallback onPlay;
   final void Function(String action, int index) onFrameAction;
   final List<Key> canvasKeys;
   final void Function(int oldIndex, int newIndex) onReorder;
@@ -22,6 +23,7 @@ class CanvasSelector extends StatelessWidget {
     required this.onOpenGallery,
     required this.onOpenFrames,
     required this.onImportVideo,
+    required this.onPlay,
     required this.onFrameAction,
     required this.canvasKeys,
     required this.onReorder,
@@ -33,29 +35,23 @@ class CanvasSelector extends StatelessWidget {
       height: 100,
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        color: const Color(0xFFF7F8FA),
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
       ),
       child: Row(
         children: [
+          // Play Button
           Padding(
-            padding: const EdgeInsets.only(left: 16.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // _buildGalleryButton(),
-                _buildImportVideoButton(),
-                _buildFramesButton(),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Material(
+              color: Colors.transparent,
+              child: IconButton(
+                icon: const Icon(Icons.play_arrow_rounded, size: 36, color: Color(0xFF3C3043)),
+                onPressed: onPlay,
+              ),
             ),
           ),
+          // Reorderable Frame Thumbnails list
           Expanded(
             child: ReorderableListView.builder(
               scrollDirection: Axis.horizontal,
@@ -64,7 +60,7 @@ class CanvasSelector extends StatelessWidget {
                   (Widget child, int index, Animation<double> animation) {
                     return Material(color: Colors.transparent, child: child);
                   },
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
               itemCount: thumbnails.length,
               onReorder: onReorder,
               itemBuilder: (context, index) {
@@ -76,87 +72,34 @@ class CanvasSelector extends StatelessWidget {
               },
             ),
           ),
+          // Dashed Add Frame Button
           Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: _buildAddButton(),
+            padding: const EdgeInsets.only(right: 16.0, left: 8.0),
+            child: _buildDashedAddButton(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGalleryButton() {
-    return _buildActionButton(
-      icon: Icons.collections_bookmark_rounded,
-      label: 'GALLERY',
-      color: Colors.blueAccent,
-      onTap: onOpenGallery,
-    );
-  }
-
-  Widget _buildImportVideoButton() {
-    return _buildActionButton(
-      icon: Icons.video_library_rounded,
-      label: 'VIDEO',
-      color: Colors.green,
-      onTap: onImportVideo,
-    );
-  }
-
-  Widget _buildFramesButton() {
-    return _buildActionButton(
-      icon: Icons.view_sidebar_rounded,
-      label: 'FRAMES',
-      color: Colors.purpleAccent,
-      onTap: onOpenFrames,
-    );
-  }
-
-  Widget _buildAddButton() {
-    return _buildActionButton(
-      icon: Icons.add_rounded,
-      label: 'NEW',
-      color: Colors.pinkAccent,
-      onTap: onAdd,
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildDashedAddButton() {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 30,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+      onTap: onAdd,
+      child: CustomPaint(
+        painter: DashedBorderPainter(
+          color: Colors.grey.shade400,
+          strokeWidth: 1.5,
+          gap: 4.0,
+          radius: 12,
         ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 28),
-                const SizedBox(height: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
+        child: Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Center(
+            child: Icon(Icons.add, size: 28, color: Color(0xFF3C3043)),
           ),
         ),
       ),
@@ -173,34 +116,30 @@ class CanvasSelector extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            width: 100,
-            margin: const EdgeInsets.only(right: 12),
+            width: 72,
+            height: 72,
+            margin: const EdgeInsets.only(right: 10, top: 2, bottom: 2),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? Colors.pinkAccent : Colors.transparent,
-                width: 2.5,
+                color: isSelected ? const Color(0xFFFF9114) : Colors.transparent,
+                width: 2.0,
               ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: Colors.pinkAccent.withOpacity(0.2),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                )
+              ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(
-                13.5,
-              ), // Adjust for border width
+              borderRadius: BorderRadius.circular(10),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Checkerboard background for transparency
                   const CheckerboardBackground(),
-
                   if (thumbnails[index] != null)
                     RawImage(image: thumbnails[index], fit: BoxFit.contain)
                   else
@@ -208,41 +147,18 @@ class CanvasSelector extends StatelessWidget {
                       child: Icon(
                         Icons.palette_outlined,
                         color: Colors.black26,
+                        size: 20,
                       ),
                     ),
-
-                  // Canvas Index Label
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Canvas ${index + 1}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
           ),
-
-          // Context Menu Badge
+          
+          // Context Menu Badge / Action Menu
           Positioned(
             top: -4,
-            left: -4,
+            right: 4,
             child: PopupMenuButton<String>(
               tooltip: 'Frame Actions',
               position: PopupMenuPosition.under,
@@ -309,22 +225,15 @@ class CanvasSelector extends StatelessWidget {
                 ),
               ],
               child: Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF5A52FF),
+                  color: Color(0xFFFF9114),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: const Icon(
-                  Icons.edit_rounded,
+                  Icons.more_vert_rounded,
                   color: Colors.white,
-                  size: 14,
+                  size: 12,
                 ),
               ),
             ),
@@ -333,6 +242,56 @@ class CanvasSelector extends StatelessWidget {
       ),
     );
   }
+}
+
+class DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double radius;
+
+  DashedBorderPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.gap,
+    required this.radius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Radius.circular(radius),
+      ));
+
+    final dashedPath = Path();
+    double distance = 0.0;
+    bool draw = true;
+    for (final pathMetric in path.computeMetrics()) {
+      while (distance < pathMetric.length) {
+        final length = gap;
+        final nextDistance = distance + length;
+        if (draw) {
+          dashedPath.addPath(
+            pathMetric.extractPath(distance, nextDistance.clamp(0.0, pathMetric.length)),
+            Offset.zero,
+          );
+        }
+        distance = nextDistance;
+        draw = !draw;
+      }
+    }
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant DashedBorderPainter oldDelegate) => false;
 }
 
 class CheckerboardBackground extends StatelessWidget {

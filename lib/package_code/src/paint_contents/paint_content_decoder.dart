@@ -19,6 +19,7 @@ import 'smudge.dart';
 import 'image.dart';
 import 'empty_content.dart';
 import '../ruler/mirror_content.dart';
+import 'extra_shapes.dart';
 
 PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
   switch (type) {
@@ -68,6 +69,14 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
       return EmptyContent.fromJson(data);
     case 'Mirror':
       return MirrorContent.fromJson(data);
+    case 'Pentagon':
+      return Pentagon.fromJson(data);
+    case 'Heart':
+      return Heart.fromJson(data);
+    case 'CubeShape':
+      return CubeShape.fromJson(data);
+    case 'CylinderShape':
+      return CylinderShape.fromJson(data);
     default:
       return null;
   }

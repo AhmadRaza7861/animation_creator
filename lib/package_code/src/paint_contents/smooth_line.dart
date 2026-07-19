@@ -54,10 +54,10 @@ class SmoothLine extends PaintContent {
   final int smoothLevel;
 
   /// 绘制点列表
-  late List<Offset> points;
+  List<Offset> points = <Offset>[];
 
   /// 点之间的绘制线条权重列表
-  late List<double> strokeWidthList;
+  List<double> strokeWidthList = <double>[];
 
   @override
   String get contentType => 'SmoothLine';

@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dummy/main.dart'; 
 import 'package:dummy/screens/projects_screen.dart';
 import 'package:dummy/repositories/project_repository.dart';
 
@@ -55,19 +54,34 @@ void main() {
     await gesture.up();
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.tap(find.byTooltip('Save JSON'));
-    await tester.pump(const Duration(milliseconds: 500));
+    // Save JSON
+    await tester.tap(find.byIcon(Icons.settings_rounded));
+    await tester.pumpAndSettle();
+    final saveFinder = find.text('Save Frame JSON to Device');
+    await tester.ensureVisible(saveFinder);
+    await tester.tap(saveFinder);
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('clear'));
-    await tester.pump(const Duration(milliseconds: 500));
+    // Clear Canvas
+    await tester.tap(find.byIcon(Icons.settings_rounded));
+    await tester.pumpAndSettle();
+    final clearFinder = find.text('Clear Canvas');
+    await tester.ensureVisible(clearFinder);
+    await tester.tap(clearFinder);
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Load JSON'));
-    await tester.pump(const Duration(milliseconds: 500));
+    // Load JSON
+    await tester.tap(find.byIcon(Icons.settings_rounded));
+    await tester.pumpAndSettle();
+    final loadFinder = find.text('Load Frame JSON from Device');
+    await tester.ensureVisible(loadFinder);
+    await tester.tap(loadFinder);
+    await tester.pumpAndSettle();
 
     expect(find.byType(SnackBar), findsOneWidget);
 
-    // Navigate to preview screen
-    await tester.tap(find.byTooltip('Play Preview'));
+    // Play Preview
+    await tester.tap(find.byIcon(Icons.play_arrow_rounded));
     await tester.pumpAndSettle();
     
     // Check if the preview screen is active

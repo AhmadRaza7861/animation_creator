@@ -282,19 +282,10 @@ class GlobalToolState extends ChangeNotifier {
   }
 
   void setPaintContent(PaintContent content) {
-    Type oldType = toolConfig.value.contentType;
     Type newType = content.runtimeType;
-
-    double newStrokeWidth = toolConfig.value.strokeWidth;
-    if (newType == Eraser && oldType != Eraser) {
-      newStrokeWidth = lastEraserWidth;
-    } else if (newType != Eraser && oldType == Eraser) {
-      newStrokeWidth = lastBrushWidth;
-    }
 
     toolConfig.value = toolConfig.value.copyWith(
       contentType: newType,
-      strokeWidth: newStrokeWidth,
     );
     content.paint = toolConfig.value.paint;
     paintContent = content;

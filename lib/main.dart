@@ -395,86 +395,66 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   bool _showLayerPanel = false;
 
   double _colorOpacity = 1;
+  String _currentSubMenu = 'none';
+  double _globalStrokeWidth = 4.0;
+  String _selectedSubTool = 'pen';
 
   double? _aspectRatio;
   int _fps = 9;
   String? _savedJsonData;
 
   void _onDrawConfigChanged() {
-    final drawConfig = _drawingController.drawConfig.value;
-    final bool isPenTools =
-        drawConfig.contentType == FreehandLine ||
-        drawConfig.contentType == SmoothLine;
-
-    // Auto-disable Ruler overlay and menu if switching out of pen tools
-    if (!isPenTools && _showRulerMenu) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _showRulerMenu = false;
-          _drawingController.rulerConfig.value = _drawingController
-              .rulerConfig
-              .value
-              .copyWith(type: RulerType.none);
-        });
-      });
-    }
+    // Keep Ruler menu and selection active across all tools
   }
 
-  Widget _buildFloatingRulerMenu() {
+  Widget _buildVerticalRulerMenu() {
     return ValueListenableBuilder<RulerConfig>(
       valueListenable: _drawingController.rulerConfig,
       builder: (context, config, child) {
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                spreadRadius: 2,
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 10,
+                spreadRadius: 1,
               ),
             ],
+            border: Border.all(color: Colors.grey.shade200, width: 1),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _floatingRulerButton(
-                'LOCK',
-                Icons.lock_outline,
+              _verticalRulerButton(
+                config.isLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
                 RulerType.none,
                 config,
                 isLock: true,
               ),
-              Container(
-                width: 1,
-                height: 24,
-                color: Colors.grey.shade300,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-              _floatingRulerButton(
-                'LINE',
-                Icons.horizontal_rule,
-                RulerType.line,
-                config,
-              ),
-              _floatingRulerButton(
-                'CIRC',
-                Icons.circle_outlined,
-                RulerType.circle,
-                config,
-              ),
-              _floatingRulerButton(
-                'BOX',
+              const SizedBox(height: 12),
+              _verticalRulerButton(
                 Icons.crop_square,
                 RulerType.box,
                 config,
               ),
-              _floatingRulerButton(
-                'MIRR',
-                Icons.flip,
+              const SizedBox(height: 12),
+              _verticalRulerButton(
+                Icons.circle_outlined,
+                RulerType.circle,
+                config,
+              ),
+              const SizedBox(height: 12),
+              _verticalRulerButton(
+                Icons.horizontal_rule,
+                RulerType.line,
+                config,
+              ),
+              const SizedBox(height: 12),
+              _verticalRulerButton(
+                Icons.flip_camera_android_rounded,
                 RulerType.mirror,
                 config,
               ),
@@ -485,15 +465,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _floatingRulerButton(
-    String label,
+  Widget _verticalRulerButton(
     IconData icon,
     RulerType type,
     RulerConfig config, {
     bool isLock = false,
   }) {
     final isSelected = isLock ? config.isLocked : config.type == type;
-    final color = isSelected ? Colors.pinkAccent : Colors.black87;
+    final color = isSelected ? const Color(0xFFFF9114) : Colors.grey.shade600;
 
     return GestureDetector(
       onTap: () {
@@ -502,23 +481,267 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             isLocked: !config.isLocked,
           );
         } else {
-          _drawingController.rulerConfig.value = config.copyWith(type: type);
+          // Toggle behavior: if tapped again, disable ruler
+          final newType = config.type == type ? RulerType.none : type;
+          _drawingController.rulerConfig.value = config.copyWith(type: newType);
         }
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF2E5) : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+    );
+  }
+
+  void _showSettingsSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Settings',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF3C3043)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.wallpaper_rounded, color: Colors.orangeAccent),
+                  title: const Text('Background Settings', style: TextStyle(fontWeight: FontWeight.w600)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showBackgroundSettings();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.view_sidebar_rounded, color: Colors.purpleAccent),
+                  title: const Text('Reorder / Manage Frames', style: TextStyle(fontWeight: FontWeight.w600)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openFramesScreen();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.video_library_rounded, color: Colors.green),
+                  title: const Text('Import Video', style: TextStyle(fontWeight: FontWeight.w600)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _importVideo();
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.clear_all_rounded, color: Colors.redAccent),
+                  title: const Text('Clear Canvas', style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (_drawingController.isCurrentLayerLocked) return;
+                    _drawingController.clear();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.center_focus_strong_rounded, color: Colors.blueAccent),
+                  title: const Text('Reset Zoom / Position', style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _restBoard();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.save_rounded, color: Colors.teal),
+                  title: const Text('Save Frame JSON to Device', style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _saveCanvasData();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.file_open_rounded, color: Colors.amber),
+                  title: const Text('Load Frame JSON from Device', style: TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _loadCanvasData();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomToolbar() {
+    return Container(
+      height: 72,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
           children: [
-            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 16),
+            _bottomToolbarCategoryItem(
+              label: 'Brush',
+              icon: Icons.brush_rounded,
+              onTap: () {
+                setState(() {
+                  _currentSubMenu = 'brush';
+                  if (_selectedSubTool == 'brush') {
+                    _drawingController.setPaintContent(SmoothLine());
+                  } else {
+                    _drawingController.setPaintContent(FreehandLine());
+                  }
+                  _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                });
+              },
+            ),
+            _bottomToolbarCategoryItem(
+              label: 'Paint',
+              icon: Icons.format_paint_rounded,
+              onTap: () {
+                _drawingController.setPaintContent(FillContent());
+                _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+              },
+            ),
+            _bottomToolbarCategoryItem(
+              label: 'Shapes',
+              icon: Icons.interests_rounded,
+              onTap: () {
+                setState(() {
+                  _currentSubMenu = 'shapes';
+                  _drawingController.setPaintContent(Pentagon());
+                  _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                });
+              },
+            ),
+            _bottomToolbarCategoryItem(
+              label: 'Assets',
+              icon: Icons.photo_library_rounded,
+              onTap: () async {
+                final ImageSource? source = await showModalBottomSheet<ImageSource>(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return SafeArea(
+                      child: Wrap(
+                        children: <Widget>[
+                          ListTile(
+                            leading: const Icon(Icons.photo_library),
+                            title: const Text('Photo Gallery'),
+                            onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.photo_camera),
+                            title: const Text('Camera'),
+                            onTap: () => Navigator.of(context).pop(ImageSource.camera),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+
+                if (source == null) return;
+                try {
+                  final XFile? file = await _picker.pickImage(source: source);
+                  if (file != null) {
+                    final ui.Image image = await _getFileImage(file.path);
+                    _drawingController.setPaintContent(
+                      ImageContent(image, imageUrl: file.path),
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error picking sticker image: $e');
+                }
+              },
+            ),
+            _bottomToolbarCategoryItem(
+              label: 'Erase',
+              icon: Icons.auto_fix_normal_rounded,
+              onTap: () {
+                _drawingController.setPaintContent(Eraser());
+                _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+              },
+            ),
+            _bottomToolbarCategoryItem(
+              label: 'Lasso',
+              icon: Icons.gesture_rounded,
+              onTap: () {
+                _drawingController.setPaintContent(Lasso());
+                _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+              },
+            ),
+            _bottomToolbarCategoryItem(
+              label: 'Text',
+              icon: Icons.text_fields_rounded,
+              onTap: _addTextSticker,
+            ),
+            _bottomToolbarCategoryItem(
+              label: 'Ruler',
+              icon: Icons.straighten_rounded,
+              onTap: () {
+                setState(() {
+                  _showRulerMenu = !_showRulerMenu;
+                });
+              },
+            ),
+            const SizedBox(width: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bottomToolbarCategoryItem({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 64,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.grey.shade700, size: 24),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -526,120 +749,216 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildFloatingRightToolbar() {
+  Widget _buildBrushSubMenu() {
     return Container(
+      height: 72,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            spreadRadius: 2,
-          ),
-        ],
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      child: ValueListenableBuilder<DrawConfig>(
-        valueListenable: _drawingController.drawConfig,
-        builder: (context, drawConfig, child) {
-          final bool isPenTools =
-              drawConfig.contentType == FreehandLine ||
-              drawConfig.contentType == SmoothLine;
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _rightToolbarItem(
-                'GALLERY',
-                Icons.collections_bookmark,
-                false,
-                _openGallery,
-                iconColor: Colors.blueAccent,
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _currentSubMenu = 'none';
+              });
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              margin: const EdgeInsets.only(left: 16, right: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                shape: BoxShape.circle,
               ),
-              // const SizedBox(height: 16),
-              // _rightToolbarItem('BRUSH', Icons.brush, false, () {}),
-              // const SizedBox(height: 16),
-              // _rightToolbarItem(
-              //   'SIZE',
-              //   Icons.circle,
-              //   false,
-              //   () {},
-              //   iconSize: 10,
-              // ),
-              // const SizedBox(height: 16),
-              // _rightToolbarItem(
-              //   'COLOR',
-              //   Icons.square,
-              //   false,
-              //   () {},
-              //   iconColor: Colors.pinkAccent,
-              // ),
-              const SizedBox(height: 16),
-              _rightToolbarItem(
-                'BG',
-                Icons.wallpaper_rounded,
-                false,
-                _showBackgroundSettings,
-                iconColor: Colors.orangeAccent,
-              ),
-              if (isPenTools) ...[
-                Container(
-                  width: 24,
-                  height: 1,
-                  color: Colors.grey.shade300,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                _rightToolbarItem(
-                  'RULER',
-                  Icons.straighten,
-                  _showRulerMenu,
-                  () {
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.black87),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _bottomSubToolItem(
+                  label: 'Brush',
+                  icon: Icons.brush_rounded,
+                  isActive: _selectedSubTool == 'brush',
+                  onTap: () {
                     setState(() {
-                      _showRulerMenu = !_showRulerMenu;
-                      if (!_showRulerMenu) {
-                        _drawingController.rulerConfig.value =
-                            _drawingController.rulerConfig.value.copyWith(
-                              type: RulerType.none,
-                            );
-                      } else {
-                        _drawingController.rulerConfig.value =
-                            _drawingController.rulerConfig.value.copyWith(
-                              type: RulerType.line,
-                            );
-                      }
+                      _selectedSubTool = 'brush';
+                      _drawingController.setPaintContent(SmoothLine());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+                _bottomSubToolItem(
+                  label: 'Pen',
+                  icon: Icons.edit_rounded,
+                  isActive: _selectedSubTool == 'pen',
+                  onTap: () {
+                    setState(() {
+                      _selectedSubTool = 'pen';
+                      _drawingController.setPaintContent(FreehandLine());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+                _bottomSubToolItem(
+                  label: 'Pencil',
+                  icon: Icons.create_rounded,
+                  isActive: _selectedSubTool == 'pencil',
+                  onTap: () {
+                    setState(() {
+                      _selectedSubTool = 'pencil';
+                      _drawingController.setPaintContent(FreehandLine());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+                _bottomSubToolItem(
+                  label: 'Line',
+                  icon: Icons.horizontal_rule_rounded,
+                  isActive: _selectedSubTool == 'line',
+                  onTap: () {
+                    setState(() {
+                      _selectedSubTool = 'line';
+                      _drawingController.setPaintContent(SimpleLine());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
                     });
                   },
                 ),
               ],
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _rightToolbarItem(
-    String label,
-    IconData icon,
-    bool isSelected,
-    VoidCallback onTap, {
-    double iconSize = 24,
-    Color? iconColor,
+  Widget _buildShapesSubMenu() {
+    return Container(
+      height: 72,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _currentSubMenu = 'none';
+              });
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              margin: const EdgeInsets.only(left: 16, right: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.black87),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _bottomSubToolItem(
+                  label: 'Heart',
+                  icon: Icons.favorite_border_rounded,
+                  isActive: _drawingController.drawConfig.value.contentType == Heart,
+                  onTap: () {
+                    setState(() {
+                      _drawingController.setPaintContent(Heart());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+                _bottomSubToolItem(
+                  label: 'Pentagon',
+                  icon: Icons.pentagon_outlined,
+                  isActive: _drawingController.drawConfig.value.contentType == Pentagon,
+                  onTap: () {
+                    setState(() {
+                      _drawingController.setPaintContent(Pentagon());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+                _bottomSubToolItem(
+                  label: 'Circle',
+                  icon: Icons.circle_outlined,
+                  isActive: _drawingController.drawConfig.value.contentType == Circle,
+                  onTap: () {
+                    setState(() {
+                      _drawingController.setPaintContent(Circle());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+                _bottomSubToolItem(
+                  label: 'Cube',
+                  icon: Icons.inventory_2_outlined,
+                  isActive: _drawingController.drawConfig.value.contentType == CubeShape,
+                  onTap: () {
+                    setState(() {
+                      _drawingController.setPaintContent(CubeShape());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+                _bottomSubToolItem(
+                  label: 'Cylinder',
+                  icon: Icons.data_usage_rounded,
+                  isActive: _drawingController.drawConfig.value.contentType == CylinderShape,
+                  onTap: () {
+                    setState(() {
+                      _drawingController.setPaintContent(CylinderShape());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+                _bottomSubToolItem(
+                  label: 'Line',
+                  icon: Icons.horizontal_rule_rounded,
+                  isActive: _drawingController.drawConfig.value.contentType == SimpleLine,
+                  onTap: () {
+                    setState(() {
+                      _drawingController.setPaintContent(SimpleLine());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bottomSubToolItem({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
   }) {
-    final color = isSelected ? Colors.pinkAccent : Colors.black87;
+    final activeColor = const Color(0xFFFF9114);
     return GestureDetector(
       onTap: onTap,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: iconColor ?? color, size: iconSize),
+          Icon(icon, color: isActive ? activeColor : Colors.grey.shade600, size: 24),
           const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+              color: isActive ? activeColor : Colors.grey.shade600,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -827,6 +1146,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       } else {
         _currentIndex = 0;
         _activeSticker = null;
+        _globalStrokeWidth = _canvases.first.drawConfig.value.strokeWidth;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           for (var controller in _canvases) {
             controller.forceRefreshLayers();
@@ -906,6 +1226,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void _insertNewCanvas(int index, {bool initial = false}) {
     final newController = DrawingController();
     newController.backgroundColor = Colors.white;
+    newController.setStyle(strokeWidth: _globalStrokeWidth);
     if (_canvases.isNotEmpty) {
       newController.drawConfig.value = newController.drawConfig.value.copyWith(
         size: _canvases.first.drawConfig.value.size,
@@ -955,7 +1276,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     setState(() {
       _currentIndex = index;
     });
-
+    _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
     _updateSnapshot();
   }
 
@@ -1057,6 +1378,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       });
       oldController.drawConfig.removeListener(_onDrawConfigChanged);
       oldController.dispose();
+      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
       _updateSnapshot();
     }
   }
@@ -1090,6 +1412,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
         _currentIndex = newActive;
       });
+      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
       _updateSnapshot();
     }
   }
@@ -2189,114 +2512,110 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.grey,
-      appBar: AppBar(
-        leading: PopupMenuButton<Color>(
-          icon: const Icon(Icons.color_lens),
-          onSelected: (ui.Color value) => _drawingController.setStyle(
-            color: value.withValues(alpha: _colorOpacity),
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200, width: 1)),
           ),
-          itemBuilder: (_) {
-            return <PopupMenuEntry<ui.Color>>[
-              PopupMenuItem<Color>(
-                child: StatefulBuilder(
-                  builder:
-                      (
-                        BuildContext context,
-                        Function(void Function()) setState,
-                      ) {
-                        return Slider(
-                          value: _colorOpacity,
-                          onChanged: (double v) {
-                            setState(() => _colorOpacity = v);
-                            _drawingController.setStyle(
-                              color: _drawingController.drawConfig.value.color
-                                  .withValues(alpha: _colorOpacity),
-                            );
-                          },
-                        );
-                      },
-                ),
-              ),
-              ...Colors.accents.map((ui.Color color) {
-                return PopupMenuItem<ui.Color>(
-                  value: color,
-                  child: Container(width: 100, height: 50, color: color),
-                );
-              }),
-            ];
-          },
-        ),
-        title: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.play_arrow),
-                tooltip: 'Play Preview',
-                onPressed: _openPreviewScreen,
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Color(0xFF3C3043)),
+                onPressed: () => Navigator.pop(context),
               ),
-              IconButton(
-                icon: const Icon(Icons.wallpaper),
-                tooltip: 'Background',
-                onPressed: _showBackgroundSettings,
-              ),
-              IconButton(
-                icon: const Icon(Icons.save),
-                tooltip: 'Save JSON',
-                onPressed: _saveCanvasData,
-              ),
-              IconButton(
-                icon: const Icon(Icons.restore),
-                tooltip: 'Load JSON',
-                onPressed: _loadCanvasData,
-              ),
-              IconButton(
-                icon: const Icon(Icons.clear),
-                tooltip: 'clear',
-                onPressed: () {
-                  if (_drawingController.isCurrentLayerLocked) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Current layer is locked.'),
+              if (_currentSubMenu != 'none')
+                PopupMenuButton<Color>(
+                  child: ValueListenableBuilder<DrawConfig>(
+                    valueListenable: _drawingController.drawConfig,
+                    builder: (context, config, child) {
+                      final activeColor = config.color;
+                      return Container(
+                        width: 24,
+                        height: 24,
+                        margin: const EdgeInsets.only(left: 8),
+                        decoration: BoxDecoration(
+                          color: activeColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+                        ),
+                      );
+                    }
+                  ),
+                  onSelected: (ui.Color value) => _drawingController.setStyle(
+                    color: value.withValues(alpha: _colorOpacity),
+                  ),
+                  itemBuilder: (_) {
+                    return <PopupMenuEntry<ui.Color>>[
+                      PopupMenuItem<Color>(
+                        child: StatefulBuilder(
+                          builder: (BuildContext context, Function(void Function()) setState) {
+                            return Slider(
+                              value: _colorOpacity,
+                              onChanged: (double v) {
+                                setState(() => _colorOpacity = v);
+                                _drawingController.setStyle(
+                                  color: _drawingController.drawConfig.value.color
+                                      .withValues(alpha: _colorOpacity),
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ),
+                      ...Colors.primaries.map((ui.Color color) {
+                        return PopupMenuItem<ui.Color>(
+                          value: color,
+                          child: Container(width: 100, height: 30, color: color),
+                        );
+                      }),
+                    ];
+                  },
+                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ValueListenableBuilder<DrawConfig>(
+                  valueListenable: _drawingController.drawConfig,
+                  builder: (context, config, child) {
+                    return Slider(
+                      value: _globalStrokeWidth.clamp(1.0, 50.0),
+                      min: 1.0,
+                      max: 50.0,
+                      activeColor: const Color(0xFFFF9114),
+                      inactiveColor: const Color(0xFFFFF2E5),
+                      onChanged: (double val) {
+                        setState(() {
+                          _globalStrokeWidth = val;
+                        });
+                        _drawingController.setStyle(strokeWidth: val);
+                      },
                     );
-                    return;
                   }
-                  _drawingController.clear();
-                },
+                ),
               ),
               IconButton(
-                icon: const Icon(Icons.text_fields),
-                onPressed: _addTextSticker,
+                icon: const Icon(Icons.undo_rounded, color: Color(0xFF3C3043)),
+                onPressed: () => _drawingController.undo(),
               ),
               IconButton(
-                icon: const Icon(Icons.check),
-                onPressed: _getImageData,
+                icon: const Icon(Icons.redo_rounded, color: Color(0xFF3C3043)),
+                onPressed: () => _drawingController.redo(),
               ),
               IconButton(
-                tooltip: 'Paste',
-                icon: const Icon(Icons.paste),
-                onPressed: () {
-                  if (_activeSticker != null) {
-                    _stampActiveSticker();
-                  }
-                  _pasteClipboard();
-                },
+                icon: const Icon(Icons.settings_rounded, color: Color(0xFF3C3043)),
+                onPressed: _showSettingsSheet,
               ),
-              IconButton(
-                icon: const Icon(Icons.restore_page_rounded),
-                onPressed: _restBoard,
-              ),
+              const SizedBox(width: 8),
             ],
           ),
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
-        actions: const [],
       ),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle(systemNavigationBarColor: Colors.grey),
+        value: SystemUiOverlayStyle(systemNavigationBarColor: Colors.white),
         child: SafeArea(
           child: Stack(
             children: [
@@ -2425,139 +2744,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                               onConfirm: () {
                                                 _stampActiveSticker();
                                               },
-                                            ),
-                                          if (_activeSticker
-                                              is ActiveTextSticker)
-                                            Positioned(
-                                              top:
-                                                  MediaQuery.of(
-                                                    context,
-                                                  ).padding.top +
-                                                  20,
-                                              left: 20,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 8,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
-                                                  boxShadow: const [
-                                                    BoxShadow(
-                                                      color: Colors.black26,
-                                                      blurRadius: 4,
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    DropdownButton<String>(
-                                                      value:
-                                                          (_activeSticker
-                                                                  as ActiveTextSticker)
-                                                              .fontFamily,
-                                                      hint: const Text('Font'),
-                                                      items:
-                                                          <String>[
-                                                            'Roboto',
-                                                            'Arial',
-                                                            'Courier New',
-                                                            'Times New Roman',
-                                                            'Verdana',
-                                                            'Georgia',
-                                                          ].map((String value) {
-                                                            return DropdownMenuItem<
-                                                              String
-                                                            >(
-                                                              value: value,
-                                                              child: Text(
-                                                                value,
-                                                                style: TextStyle(
-                                                                  fontFamily:
-                                                                      value,
-                                                                ),
-                                                              ),
-                                                            );
-                                                          }).toList(),
-                                                      onChanged: (String? newValue) {
-                                                        setState(() {
-                                                          (_activeSticker
-                                                                      as ActiveTextSticker)
-                                                                  .fontFamily =
-                                                              newValue;
-                                                        });
-                                                        _updateSnapshot();
-                                                        _recordActiveStickerState();
-                                                      },
-                                                    ),
-                                                    IconButton(
-                                                      icon: Icon(
-                                                        Icons.format_bold,
-                                                        color:
-                                                            (_activeSticker
-                                                                    as ActiveTextSticker)
-                                                                .isBold
-                                                            ? Colors.blue
-                                                            : Colors.black,
-                                                      ),
-                                                      onPressed: () {
-                                                        setState(() {
-                                                          (_activeSticker
-                                                                      as ActiveTextSticker)
-                                                                  .isBold =
-                                                              !(_activeSticker
-                                                                      as ActiveTextSticker)
-                                                                  .isBold;
-                                                        });
-                                                        _updateSnapshot();
-                                                        _recordActiveStickerState();
-                                                      },
-                                                    ),
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                        Icons.text_increase,
-                                                      ),
-                                                      onPressed: () {
-                                                        setState(() {
-                                                          (_activeSticker
-                                                                      as ActiveTextSticker)
-                                                                  .fontSize +=
-                                                              2;
-                                                        });
-                                                        _updateSnapshot();
-                                                        _recordActiveStickerState();
-                                                      },
-                                                    ),
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                        Icons.text_decrease,
-                                                      ),
-                                                      onPressed: () {
-                                                        setState(() {
-                                                          (_activeSticker
-                                                                      as ActiveTextSticker)
-                                                                  .fontSize =
-                                                              ((_activeSticker
-                                                                              as ActiveTextSticker)
-                                                                          .fontSize -
-                                                                      2)
-                                                                  .clamp(
-                                                                    8.0,
-                                                                    120.0,
-                                                                  );
-                                                        });
-                                                        _updateSnapshot();
-                                                        _recordActiveStickerState();
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
                                             ),
                                           if (_activeSticker
                                               is ActiveFreehandLineSticker)
@@ -2690,74 +2876,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                         ],
                                       ),
                               ),
-                              // Positioned(
-                              //   left: 10,
-                              //   bottom: 10,
-                              //   child: DrawingPreview(
-                              //     controller: _drawingController,
-                              //     activeSticker: _activeSticker,
-                              //     width: 100,
-                              //     height: 100,
-                              //   ),
-                              // ),
-                              if (_showRulerMenu &&
-                                  (_drawingController
-                                              .drawConfig
-                                              .value
-                                              .contentType ==
-                                          FreehandLine ||
-                                      _drawingController
-                                              .drawConfig
-                                              .value
-                                              .contentType ==
-                                          SmoothLine))
-                                Positioned(
-                                  bottom: 20,
-                                  left: 0,
-                                  right: 0,
-                                  child: Center(
-                                    child: _buildFloatingRulerMenu(),
-                                  ),
-                                ),
-                              Positioned(
-                                right: 16,
-                                top:
-                                    40, // Place it right floating as shown in screenshot
-                                child: _buildFloatingRightToolbar(),
-                              ),
-                              if (_showLayerPanel)
-                                Positioned(
-                                  right: 16,
-                                  bottom: 80,
-                                  child: LayerPanel(
-                                    controller: _drawingController,
-                                    onClose: () {
-                                      setState(() {
-                                        _showLayerPanel = false;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              Positioned(
-                                right: 16,
-                                bottom: 16,
-                                child: FloatingActionButton(
-                                  mini: true,
-                                  onPressed: () {
-                                    setState(() {
-                                      _showLayerPanel = !_showLayerPanel;
-                                      _showRulerMenu = false;
-                                    });
-                                  },
-                                  backgroundColor: _showLayerPanel
-                                      ? Colors.pink
-                                      : Colors.white,
-                                  foregroundColor: _showLayerPanel
-                                      ? Colors.white
-                                      : Colors.black87,
-                                  child: const Icon(Icons.layers),
-                                ),
-                              ),
+                              // Floating overlays moved to Scaffold body Stack to prevent canvas aspect-ratio clipping
                             ],
                           );
                         }
@@ -2783,119 +2902,15 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       },
                     ),
                   ),
-                  // if (_showRulerMenu) _buildRulerMenu(),
-                  DrawingBar(
-                    controller: _drawingController,
-                    style: const WrapToolsBarStyle(),
-                    tools: [
-                      DefaultActionItem.slider(),
-                      DefaultActionItem.undo(),
-                      DefaultActionItem.redo(),
-                      DefaultActionItem.turn(),
-                      DefaultActionItem.clear(),
-                    ],
-                  ),
-                  DrawingBar(
-                    controller: _drawingController,
-                    style: const WrapToolsBarStyle(),
-                    tools: [
-                      DefaultToolItem.straightLine(), // This is the new 2-point SimpleLine
-                      DefaultToolItem.pen(), // This is the freehand Pen
-                      DefaultToolItem.rectangle(),
-                      DefaultToolItem.circle(),
-                      DefaultToolItem.text(context: context),
-                      DefaultToolItem(
-                        onTap: (c) async {
-                          if (_drawingController.isCurrentLayerLocked) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Current layer is locked.'),
-                              ),
-                            );
-                            return;
-                          }
-
-                          // Show bottom sheet to choose Camera or Gallery
-                          final ImageSource?
-                          source = await showModalBottomSheet<ImageSource>(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return SafeArea(
-                                child: Wrap(
-                                  children: <Widget>[
-                                    ListTile(
-                                      leading: const Icon(Icons.photo_library),
-                                      title: const Text('Photo Gallery'),
-                                      onTap: () => Navigator.of(
-                                        context,
-                                      ).pop(ImageSource.gallery),
-                                    ),
-                                    ListTile(
-                                      leading: const Icon(Icons.photo_camera),
-                                      title: const Text('Camera'),
-                                      onTap: () => Navigator.of(
-                                        context,
-                                      ).pop(ImageSource.camera),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          );
-
-                          if (source == null) return;
-
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (BuildContext c) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            },
-                          );
-
-                          try {
-                            final XFile? file = await _picker.pickImage(
-                              source: source,
-                            );
-                            if (file != null) {
-                              final ui.Image image = await _getFileImage(
-                                file.path,
-                              );
-                              c.setPaintContent(
-                                ImageContent(image, imageUrl: file.path),
-                              );
-                            }
-                          } catch (e) {
-                            debugPrint('Error picking sticker image: $e');
-                          } finally {
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                            }
-                          }
-                        },
-                        icon: Icons.image,
-                        content: ImageContent,
-                        label: 'Photo',
-                      ),
-                      DefaultToolItem(
-                        onTap: (c) => c.setPaintContent(Triangle()),
-                        icon: Icons.change_history_rounded,
-                        content: Triangle,
-                      ),
-                      DefaultToolItem.lasso(),
-                      DefaultToolItem.fill(),
-                      DefaultToolItem.eyedropper(),
-                      DefaultToolItem.blur(),
-                      DefaultToolItem.smudge(),
-                      DefaultToolItem.eraser(),
-                      // Ruler button has been moved to floating menu
-                    ],
-                  ),
+                  if (_currentSubMenu == 'brush')
+                    _buildBrushSubMenu()
+                  else if (_currentSubMenu == 'shapes')
+                    _buildShapesSubMenu()
+                  else
+                    _buildBottomToolbar(),
                   const SizedBox(
                     height: 120,
-                  ), // Reserve space for CanvasSelector
+                  ),
                 ],
               ),
 
@@ -2912,9 +2927,117 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   onOpenGallery: _openGallery,
                   onOpenFrames: _openFramesScreen,
                   onImportVideo: _importVideo,
+                  onPlay: _openPreviewScreen,
                   onFrameAction: _onFrameAction,
                   canvasKeys: _canvases.map((c) => ObjectKey(c)).toList(),
                   onReorder: _reorderCanvas,
+                ),
+              ),
+              if (_showRulerMenu)
+                Positioned(
+                  right: 16,
+                  top: 120,
+                  child: _buildVerticalRulerMenu(),
+                ),
+              if (_showLayerPanel)
+                Positioned(
+                  right: 16,
+                  bottom: 200,
+                  child: LayerPanel(
+                    controller: _drawingController,
+                    onClose: () {
+                      setState(() {
+                        _showLayerPanel = false;
+                      });
+                    },
+                  ),
+                ),
+              // Top Right Layers Button
+              Positioned(
+                right: 16,
+                top: 16,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showLayerPanel = !_showLayerPanel;
+                    });
+                  },
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        )
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.layers_rounded,
+                      color: _showLayerPanel ? const Color(0xFFFF9114) : Colors.grey.shade700,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              // Export Button (Figma Style)
+              Positioned(
+                right: 16,
+                top: 68,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF9114),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (context) {
+                        return SafeArea(
+                          child: Wrap(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.play_arrow_rounded, color: Color(0xFFFF9114)),
+                                title: const Text('Preview Animation'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _openPreviewScreen();
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.image_rounded, color: Colors.blue),
+                                title: const Text('Export Current Frame'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _getImageData();
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.code_rounded, color: Colors.green),
+                                title: const Text('View Canvas JSON'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _getJson();
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: const Text(
+                    'Export',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
                 ),
               ),
             ],
