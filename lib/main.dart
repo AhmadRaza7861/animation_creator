@@ -2763,6 +2763,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                 onPressed: () => _drawingController.redo(),
               ),
               IconButton(
+                icon: const Icon(Icons.center_focus_strong_rounded, color: Color(0xFF3C3043)),
+                onPressed: _restBoard,
+                tooltip: 'Reset Zoom / Position',
+              ),
+              IconButton(
                 icon: const Icon(Icons.settings_rounded, color: Color(0xFF3C3043)),
                 onPressed: _showSettingsSheet,
               ),
