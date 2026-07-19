@@ -400,6 +400,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   String _currentSubMenu = 'none';
   double _globalStrokeWidth = 4.0;
   String _selectedSubTool = 'pen';
+  String _activeCategory = 'Brush';
 
   double? _aspectRatio;
   int _fps = 9;
@@ -671,9 +672,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   _bottomToolbarCategoryItem(
                     label: 'Brush',
                     icon: Icons.brush_rounded,
+                    color: _activeCategory == 'Brush' ? const Color(0xFFFF9114) : null,
                     onTap: () {
                       setState(() {
                         _currentSubMenu = 'brush';
+                        _activeCategory = 'Brush';
                         if (_selectedSubTool == 'brush') {
                           _drawingController.setPaintContent(SmoothLine());
                         } else {
@@ -686,17 +689,23 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   _bottomToolbarCategoryItem(
                     label: 'Paint',
                     icon: Icons.format_paint_rounded,
+                    color: _activeCategory == 'Paint' ? const Color(0xFFFF9114) : null,
                     onTap: () {
                       _drawingController.setPaintContent(FillContent());
                       _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                      setState(() {
+                        _activeCategory = 'Paint';
+                      });
                     },
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Shapes',
                     icon: Icons.interests_rounded,
+                    color: _activeCategory == 'Shapes' ? const Color(0xFFFF9114) : null,
                     onTap: () {
                       setState(() {
                         _currentSubMenu = 'shapes';
+                        _activeCategory = 'Shapes';
                         _drawingController.setPaintContent(Pentagon());
                         _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
                       });
@@ -745,17 +754,25 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   _bottomToolbarCategoryItem(
                     label: 'Erase',
                     icon: Icons.auto_fix_normal_rounded,
+                    color: _activeCategory == 'Erase' ? const Color(0xFFFF9114) : null,
                     onTap: () {
                       _drawingController.setPaintContent(Eraser());
                       _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                      setState(() {
+                        _activeCategory = 'Erase';
+                      });
                     },
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Lasso',
                     icon: Icons.gesture_rounded,
+                    color: _activeCategory == 'Lasso' ? const Color(0xFFFF9114) : null,
                     onTap: () {
                       _drawingController.setPaintContent(Lasso());
                       _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                      setState(() {
+                        _activeCategory = 'Lasso';
+                      });
                     },
                   ),
                   _bottomToolbarCategoryItem(
@@ -766,6 +783,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   _bottomToolbarCategoryItem(
                     label: 'Ruler',
                     icon: Icons.straighten_rounded,
+                    color: _showRulerMenu ? const Color(0xFFFF9114) : null,
                     onTap: () {
                       setState(() {
                         _showRulerMenu = !_showRulerMenu;
