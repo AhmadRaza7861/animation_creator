@@ -18,6 +18,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 import 'package_code/paint_contents.dart';
 import 'package_code/src/paint_contents/layer_data.dart';
@@ -28,6 +29,7 @@ import 'widgets/straight_line_sticker_widget.dart';
 import 'widgets/freehand_line_sticker_widget.dart'; // Added new import
 import 'widgets/layer_panel.dart';
 import 'widgets/canvas_selector.dart';
+import 'widgets/color_picker_dialog.dart';
 import 'screens/animation_preview_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/frames_reorder_screen.dart';
@@ -2166,50 +2168,109 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children:
-                      [
-                        Colors.white,
-                        Colors.lime[100]!,
-                        Colors.blue[50]!,
-                        Colors.pink[50]!,
-                        Colors.grey[200]!,
-                        Colors.amber[50]!,
-                      ].map((color) {
-                        final isSelected = _globalBackground.color == color;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _globalBackground = _globalBackground.copyWith(
-                                color: color,
-                              );
-                            });
-                            _updateSnapshot();
-                            Navigator.pop(context);
-                          },
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
+                  children: [
+                    ...[
+                      Colors.white,
+                      Colors.lime[100]!,
+                      Colors.blue[50]!,
+                      Colors.pink[50]!,
+                      Colors.grey[200]!,
+                    ].map((color) {
+                      final isSelected = _globalBackground.color == color;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _globalBackground = _globalBackground.copyWith(
                               color: color,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.pinkAccent
-                                    : Colors.black12,
-                                width: 2,
-                              ),
+                            );
+                          });
+                          _updateSnapshot();
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.pinkAccent
+                                  : Colors.black12,
+                              width: 2,
                             ),
-                            child: isSelected
-                                ? const Icon(
-                                    Icons.check,
-                                    size: 20,
-                                    color: Colors.pinkAccent,
-                                  )
-                                : null,
                           ),
-                        );
-                      }).toList(),
+                          child: isSelected
+                              ? const Icon(
+                                  Icons.check,
+                                  size: 20,
+                                  color: Colors.pinkAccent,
+                                )
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+
+                    // If a custom color (not in presets) is currently selected, show it here!
+                    if (_globalBackground.color != null && ![
+                      Colors.white,
+                      Colors.lime[100]!,
+                      Colors.blue[50]!,
+                      Colors.pink[50]!,
+                      Colors.grey[200]!,
+                    ].contains(_globalBackground.color))
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          _openBackgroundColorPicker(_globalBackground.color ?? Colors.white);
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            color: _globalBackground.color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.pinkAccent,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            size: 20,
+                            color: Colors.pinkAccent,
+                          ),
+                        ),
+                      ),
+
+                    // Add Custom Color Button
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _openBackgroundColorPicker(_globalBackground.color ?? Colors.white);
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.black12,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.add,
+                          size: 20,
+                          color: Color(0xFFBEB9C5),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -2504,6 +2565,46 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     }
   }
 
+  void _openBackgroundColorPicker(Color currentColor) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ColorPickerDialog(
+          initialColor: currentColor,
+          initialOpacity: currentColor.opacity,
+          onColorChanged: (Color newColor, double newOpacity) {
+            setState(() {
+              _globalBackground = _globalBackground.copyWith(
+                color: newColor.withValues(alpha: newOpacity),
+              );
+            });
+            _updateSnapshot();
+          },
+        );
+      },
+    );
+  }
+
+  void _openColorPicker(Color currentColor) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ColorPickerDialog(
+          initialColor: currentColor,
+          initialOpacity: _colorOpacity,
+          onColorChanged: (Color newColor, double newOpacity) {
+            setState(() {
+              _colorOpacity = newOpacity;
+            });
+            _drawingController.setStyle(
+              color: newColor.withValues(alpha: newOpacity),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoadingProject) {
@@ -2527,55 +2628,29 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Color(0xFF3C3043)),
                 onPressed: () => Navigator.pop(context),
               ),
-              if (_currentSubMenu != 'none')
-                PopupMenuButton<Color>(
-                  child: ValueListenableBuilder<DrawConfig>(
-                    valueListenable: _drawingController.drawConfig,
-                    builder: (context, config, child) {
-                      final activeColor = config.color;
-                      return Container(
-                        width: 24,
-                        height: 24,
-                        margin: const EdgeInsets.only(left: 8),
-                        decoration: BoxDecoration(
-                          color: activeColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
-                        ),
-                      );
-                    }
-                  ),
-                  onSelected: (ui.Color value) => _drawingController.setStyle(
-                    color: value.withValues(alpha: _colorOpacity),
-                  ),
-                  itemBuilder: (_) {
-                    return <PopupMenuEntry<ui.Color>>[
-                      PopupMenuItem<Color>(
-                        child: StatefulBuilder(
-                          builder: (BuildContext context, Function(void Function()) setState) {
-                            return Slider(
-                              value: _colorOpacity,
-                              onChanged: (double v) {
-                                setState(() => _colorOpacity = v);
-                                _drawingController.setStyle(
-                                  color: _drawingController.drawConfig.value.color
-                                      .withValues(alpha: _colorOpacity),
-                                );
-                              },
-                            );
-                          },
-                        ),
+              ValueListenableBuilder<DrawConfig>(
+                valueListenable: _drawingController.drawConfig,
+                builder: (context, config, child) {
+                  final showColor = config.contentType != Eraser && config.contentType != Lasso;
+                  if (!showColor) return const SizedBox.shrink();
+
+                  final activeColor = config.color;
+                  return GestureDetector(
+                    onTap: () => _openColorPicker(activeColor),
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      margin: const EdgeInsets.only(left: 8),
+                      decoration: BoxDecoration(
+                        color: activeColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
                       ),
-                      ...Colors.primaries.map((ui.Color color) {
-                        return PopupMenuItem<ui.Color>(
-                          value: color,
-                          child: Container(width: 100, height: 30, color: color),
-                        );
-                      }),
-                    ];
-                  },
-                ),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: ValueListenableBuilder<DrawConfig>(

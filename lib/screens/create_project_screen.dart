@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../repositories/project_repository.dart';
 import '../main.dart';
+import '../widgets/color_picker_dialog.dart';
 import 'canvas_size_screen.dart';
 import 'fps_screen.dart';
 
@@ -35,6 +36,24 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _openCustomBackgroundColorPicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ColorPickerDialog(
+          initialColor: _backgroundColor,
+          initialOpacity: _backgroundColor.opacity,
+          onColorChanged: (Color newColor, double newOpacity) {
+            setState(() {
+              _backgroundColor = newColor.withValues(alpha: newOpacity);
+              _backgroundImagePath = null;
+            });
+          },
+        );
+      },
+    );
   }
 
   void _showColorPicker() {
@@ -72,32 +91,97 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                height: 64,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: colors.length,
-                  itemBuilder: (context, index) {
-                    final color = colors[index];
-                    final isSelected = _backgroundColor == color && _backgroundImagePath == null;
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ...colors.map((color) {
+                      final isSelected = _backgroundColor == color && _backgroundImagePath == null;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _backgroundColor = color;
+                            _backgroundImagePath = null;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          margin: const EdgeInsets.only(right: 14),
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFFFF9114) : Colors.black12,
+                              width: isSelected ? 3 : 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              )
+                            ],
+                          ),
+                          child: isSelected
+                              ? Icon(
+                                  Icons.check,
+                                  color: color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
+                                )
+                              : null,
+                        ),
+                      );
+                    }).toList(),
 
-                    return GestureDetector(
+                    // If custom color is currently selected, show it here!
+                    if (_backgroundImagePath == null && !colors.contains(_backgroundColor))
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          _openCustomBackgroundColorPicker();
+                        },
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          margin: const EdgeInsets.only(right: 14),
+                          decoration: BoxDecoration(
+                            color: _backgroundColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFFF9114),
+                              width: 3,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              )
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.check,
+                            color: _backgroundColor.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
+                          ),
+                        ),
+                      ),
+
+                    // Add Custom Color Button
+                    GestureDetector(
                       onTap: () {
-                        setState(() {
-                          _backgroundColor = color;
-                          _backgroundImagePath = null;
-                        });
                         Navigator.pop(context);
+                        _openCustomBackgroundColorPicker();
                       },
                       child: Container(
                         width: 56,
-                        margin: const EdgeInsets.only(right: 14),
+                        height: 56,
                         decoration: BoxDecoration(
-                          color: color,
+                          color: Colors.white,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isSelected ? const Color(0xFFFF9114) : Colors.black12,
-                            width: isSelected ? 3 : 1.5,
+                            color: Colors.black12,
+                            width: 1.5,
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -107,15 +191,14 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                             )
                           ],
                         ),
-                        child: isSelected
-                            ? Icon(
-                                Icons.check,
-                                color: color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
-                              )
-                            : null,
+                        child: const Icon(
+                          Icons.add,
+                          size: 24,
+                          color: Color(0xFFBEB9C5),
+                        ),
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
             ],
