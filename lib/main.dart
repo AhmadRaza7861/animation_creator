@@ -3066,7 +3066,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   else
                     _buildBottomToolbar(),
                   const SizedBox(
-                    height: 120,
+                    height: 80,
                   ),
                 ],
               ),

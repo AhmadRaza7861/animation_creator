@@ -79,6 +79,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SnackBar), findsOneWidget);
+    ScaffoldMessenger.of(tester.element(find.byType(SnackBar))).removeCurrentSnackBar();
+    await tester.pump();
 
     // Play Preview
     await tester.tap(find.byIcon(Icons.play_arrow_rounded));
