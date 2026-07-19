@@ -22,18 +22,19 @@ import 'package:image_picker/image_picker.dart';
 import 'package_code/paint_contents.dart';
 import 'package_code/src/paint_contents/layer_data.dart';
 import 'package_code/src/paint_contents/paint_content_decoder.dart';
-import 'text_sticker_widget.dart';
-import 'shape_sticker_widget.dart';
-import 'straight_line_sticker_widget.dart';
-import 'freehand_line_sticker_widget.dart'; // Added new import
-import 'layer_panel.dart';
-import 'canvas_selector.dart';
+import 'widgets/text_sticker_widget.dart';
+import 'widgets/shape_sticker_widget.dart';
+import 'widgets/straight_line_sticker_widget.dart';
+import 'widgets/freehand_line_sticker_widget.dart'; // Added new import
+import 'widgets/layer_panel.dart';
+import 'widgets/canvas_selector.dart';
 import 'screens/animation_preview_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/frames_reorder_screen.dart';
-import 'project_repository.dart';
+import 'repositories/project_repository.dart';
 import 'screens/projects_screen.dart';
 import 'screens/video_trimming_screen.dart';
+import 'screens/splash_screen.dart';
 
 Future<ui.Image> _getImage(String path) async {
   final Completer<ImageInfo> completer = Completer<ImageInfo>();
@@ -102,9 +103,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Drawing Test',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: ProjectsScreen(repository: repository),
+      title: 'Clipax',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.orange,
+        fontFamily: 'Outfit',
+      ),
+      home: SplashScreen(repository: repository),
     );
   }
 }

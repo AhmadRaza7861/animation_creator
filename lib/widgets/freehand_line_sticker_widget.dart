@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
-import 'package_code/src/paint_contents/simple_line.dart';
+import '../package_code/src/paint_contents/simple_line.dart';
 
 class ActiveFreehandLineSticker {
   ActiveFreehandLineSticker({

@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/main.dart'; 
-import 'package:dummy/project_repository.dart';
+import 'package:dummy/screens/projects_screen.dart';
+import 'package:dummy/repositories/project_repository.dart';
 
 void main() {
   testWidgets('Drawing app restores lines correctly', (WidgetTester tester) async {
@@ -25,16 +26,18 @@ void main() {
     });
 
     final repository = ProjectRepository();
-    await tester.pumpWidget(MyApp(repository: repository));
+    await tester.pumpWidget(MaterialApp(
+      home: ProjectsScreen(repository: repository),
+    ));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Navigate from ProjectsScreen to CreateProjectScreen
-    await tester.tap(find.text('New Project'));
-    await tester.pumpAndSettle();
+    // Navigate from ProjectsScreen to CreateProjectScreen using FloatingActionButton type
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle(); // Settle navigation transition
 
-    // Click CREATE PROJECT button in CreateProjectScreen
+    // Click Apply button in CreateProjectScreen
     await tester.runAsync(() async {
-      await tester.tap(find.text('CREATE PROJECT'));
+      await tester.tap(find.text('Apply'));
       await tester.pump();
       await Future.delayed(const Duration(milliseconds: 600));
       await tester.pump();

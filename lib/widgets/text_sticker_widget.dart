@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'animated_dashed_border.dart';
+import '../animated_dashed_border.dart';
 
 class ActiveTextSticker {
   ActiveTextSticker({

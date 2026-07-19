@@ -11,6 +11,8 @@ class ProjectMeta {
   final DateTime createdAt;
   final DateTime lastModified;
   final String? thumbnailPath;
+  final int? fps;
+  final int? frameCount;
 
   ProjectMeta({
     required this.id,
@@ -18,6 +20,8 @@ class ProjectMeta {
     required this.createdAt,
     required this.lastModified,
     this.thumbnailPath,
+    this.fps,
+    this.frameCount,
   });
 
   factory ProjectMeta.fromJson(Map<String, dynamic> json) {
@@ -27,6 +31,8 @@ class ProjectMeta {
       createdAt: DateTime.parse(json['createdAt'] as String),
       lastModified: DateTime.parse(json['lastModified'] as String),
       thumbnailPath: json['thumbnailPath'] as String?,
+      fps: json['fps'] as int?,
+      frameCount: json['frameCount'] as int?,
     );
   }
 
@@ -37,6 +43,8 @@ class ProjectMeta {
       'createdAt': createdAt.toIso8601String(),
       'lastModified': lastModified.toIso8601String(),
       'thumbnailPath': thumbnailPath,
+      'fps': fps,
+      'frameCount': frameCount,
     };
   }
 }
@@ -148,6 +156,8 @@ class ProjectRepository {
           createdAt: oldMeta.createdAt,
           lastModified: DateTime.now(),
           thumbnailPath: thumbnailPath ?? oldMeta.thumbnailPath,
+          fps: state['fps'] as int? ?? oldMeta.fps,
+          frameCount: (state['canvases'] as List?)?.length ?? oldMeta.frameCount,
         );
       } else {
         meta = ProjectMeta(
@@ -156,6 +166,8 @@ class ProjectRepository {
           createdAt: DateTime.now(),
           lastModified: DateTime.now(),
           thumbnailPath: thumbnailPath,
+          fps: state['fps'] as int? ?? 12,
+          frameCount: (state['canvases'] as List?)?.length ?? 0,
         );
       }
 

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package_code/paint_contents.dart';
-import 'animated_dashed_border.dart';
+import '../package_code/paint_contents.dart';
+import '../animated_dashed_border.dart';
 
 class ActiveShapeSticker {
   ActiveShapeSticker({
