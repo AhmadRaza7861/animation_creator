@@ -692,6 +692,41 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     },
                   ),
                   _bottomToolbarCategoryItem(
+                    label: 'Eyedropper',
+                    icon: Icons.colorize_rounded,
+                    color: _activeCategory == 'Eyedropper' ? const Color(0xFFFF9114) : null,
+                    onTap: () {
+                      _drawingController.setPaintContent(Eyedropper());
+                      setState(() {
+                        _activeCategory = 'Eyedropper';
+                      });
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Blur',
+                    icon: Icons.water_drop_rounded,
+                    color: _activeCategory == 'Blur' ? const Color(0xFFFF9114) : null,
+                    onTap: () {
+                      _drawingController.setPaintContent(BlurContent());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                      setState(() {
+                        _activeCategory = 'Blur';
+                      });
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Smudge',
+                    icon: Icons.fingerprint_rounded,
+                    color: _activeCategory == 'Smudge' ? const Color(0xFFFF9114) : null,
+                    onTap: () {
+                      _drawingController.setPaintContent(SmudgeContent());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                      setState(() {
+                        _activeCategory = 'Smudge';
+                      });
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
                     label: 'Shapes',
                     icon: Icons.interests_rounded,
                     color: _activeCategory == 'Shapes' ? const Color(0xFFFF9114) : null,
@@ -2706,7 +2741,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               ValueListenableBuilder<DrawConfig>(
                 valueListenable: _drawingController.drawConfig,
                 builder: (context, config, child) {
-                  final showColor = config.contentType != Eraser && config.contentType != Lasso;
+                  final showColor = config.contentType != Eraser &&
+                      config.contentType != Lasso &&
+                      config.contentType != BlurContent &&
+                      config.contentType != SmudgeContent;
                   if (!showColor) return const SizedBox.shrink();
 
                   final activeColor = config.color;
