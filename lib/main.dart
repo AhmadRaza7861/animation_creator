@@ -566,14 +566,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     _drawingController.clear();
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Icons.center_focus_strong_rounded, color: Colors.blueAccent),
-                  title: const Text('Reset Zoom / Position', style: TextStyle(fontWeight: FontWeight.w600)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _restBoard();
-                  },
-                ),
+
                 ListTile(
                   leading: const Icon(Icons.save_rounded, color: Colors.teal),
                   title: const Text('Save Frame JSON to Device', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -2733,23 +2726,55 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   );
                 },
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 4),
               Expanded(
                 child: ValueListenableBuilder<DrawConfig>(
                   valueListenable: _drawingController.drawConfig,
                   builder: (context, config, child) {
-                    return Slider(
-                      value: _globalStrokeWidth.clamp(1.0, 50.0),
-                      min: 1.0,
-                      max: 50.0,
-                      activeColor: const Color(0xFFFF9114),
-                      inactiveColor: const Color(0xFFFFF2E5),
-                      onChanged: (double val) {
-                        setState(() {
-                          _globalStrokeWidth = val;
-                        });
-                        _drawingController.setStyle(strokeWidth: val);
-                      },
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 4,
+                              trackShape: CustomSliderTrackShape(),
+                              activeTrackColor: const Color(0xFFFF9114),
+                              inactiveTrackColor: const Color(0xFFFFF2E5),
+                              thumbColor: const Color(0xFFFF9114),
+                              overlayColor: const Color(0xFFFF9114).withOpacity(0.2),
+                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                            ),
+                            child: Slider(
+                              value: _globalStrokeWidth.clamp(1.0, 50.0),
+                              min: 1.0,
+                              max: 50.0,
+                              divisions: 49,
+                              label: _globalStrokeWidth.round().toString(),
+                              onChanged: (double val) {
+                                setState(() {
+                                  _globalStrokeWidth = val;
+                                });
+                                _drawingController.setStyle(strokeWidth: val);
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        SizedBox(
+                          width: 22,
+                          child: Text(
+                            '${_globalStrokeWidth.round()}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF3C3043),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                     );
                   }
                 ),
@@ -3209,3 +3234,22 @@ class PatternPainter extends CustomPainter {
   bool shouldRepaint(covariant PatternPainter oldDelegate) =>
       oldDelegate.pattern != pattern;
 }
+
+class CustomSliderTrackShape extends RoundedRectSliderTrackShape {
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) {
+    final double trackHeight = sliderTheme.trackHeight ?? 4.0;
+    const double padding = 8.0;
+    final double trackLeft = offset.dx + padding;
+    final double trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
+    final double trackWidth = parentBox.size.width - (padding * 2);
+    return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
+  }
+}
+
