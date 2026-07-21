@@ -243,7 +243,7 @@ class _UpPainter extends CustomPainter {
             Offset.zero & size,
             Paint()
               ..blendMode = layer.blendMode
-              ..color = Colors.white.withOpacity(layer.opacity),
+              ..color = Colors.white.withValues(alpha: layer.opacity),
           );
 
           for (int j = 0; j < layer.currentIndex; j++) {
@@ -264,7 +264,7 @@ class _UpPainter extends CustomPainter {
             Offset.zero & size,
             Paint()
               ..blendMode = layer.blendMode
-              ..color = Colors.white.withOpacity(layer.opacity),
+              ..color = Colors.white.withValues(alpha: layer.opacity),
           );
 
           for (int j = 0; j < layer.currentIndex; j++) {
@@ -320,16 +320,33 @@ class _DeepPainter extends CustomPainter {
 
     if (cacheValid) {
       debugPrint('_DeepPainter.paint: Cache is valid, using cachedImage');
-      // 直接使用缓存图片，避免重复渲染
-      canvas.drawImage(controller.cachedImage!, Offset.zero, Paint());
+      // 直接使用缓存图片，配合 High FilterQuality 和 exact drawImageRect
+      canvas.drawImageRect(
+        controller.cachedImage!,
+        Rect.fromLTWH(
+          0,
+          0,
+          controller.cachedImage!.width.toDouble(),
+          controller.cachedImage!.height.toDouble(),
+        ),
+        Offset.zero & size,
+        Paint()..filterQuality = ui.FilterQuality.high,
+      );
       return;
     }
     
     debugPrint('_DeepPainter.paint: Cache invalid or empty. Building new picture from $totalContents items.');
 
+    final double pixelRatio = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+    final int targetWidth = (size.width * pixelRatio).round();
+    final int targetHeight = (size.height * pixelRatio).round();
+
     final ui.PictureRecorder recorder = ui.PictureRecorder();
-    final Canvas tempCanvas =
-        Canvas(recorder, Rect.fromPoints(Offset.zero, size.bottomRight(Offset.zero)));
+    final Canvas tempCanvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, targetWidth.toDouble(), targetHeight.toDouble()),
+    );
+    tempCanvas.scale(pixelRatio);
 
     // To properly support BlendMode.clear (Erasers) in the history, we need an isolated layer
     // otherwise it clears the canvas to black on certain Flutter backends.
@@ -344,13 +361,13 @@ class _DeepPainter extends CustomPainter {
         Offset.zero & size, 
         Paint()
           ..blendMode = layer.blendMode
-          ..color = Colors.white.withOpacity(layer.opacity)
+          ..color = Colors.white.withValues(alpha: layer.opacity)
       );
       tempCanvas.saveLayer(
         Offset.zero & size, 
         Paint()
           ..blendMode = layer.blendMode
-          ..color = Colors.white.withOpacity(layer.opacity)
+          ..color = Colors.white.withValues(alpha: layer.opacity)
       );
       
       for (int j = 0; j < layer.currentIndex; j++) {
@@ -371,10 +388,9 @@ class _DeepPainter extends CustomPainter {
 
     final ui.Picture picture = recorder.endRecording();
 
-    // 只在尺寸有效时生成缓存图片，避免 Invalid image dimensions 异常
-    // Only generate cached image when size is valid to avoid Invalid image dimensions exception
-    if (size.width > 0 && size.height > 0) {
-      picture.toImage(size.width.toInt(), size.height.toInt()).then((ui.Image value) {
+    // 只在尺寸有效时生成高 DPI 缓存图片，避免 Invalid image dimensions 异常
+    if (targetWidth > 0 && targetHeight > 0) {
+      picture.toImage(targetWidth, targetHeight).then((ui.Image value) {
         controller.cachedImage = value;
       });
     }

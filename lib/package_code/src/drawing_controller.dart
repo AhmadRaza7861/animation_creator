@@ -695,6 +695,7 @@ class DrawingController extends ChangeNotifier {
       drawingContent = newContent;
     } else if (_paintContent is BlurContent) {
       newContent = _paintContent.copy();
+      (newContent as BlurContent).strength = drawConfig.value.strength;
       newContent.paint = drawConfig.value.paint;
       newContent.startDraw(startPoint);
       _takeSnapshot(startPoint, forEyedropper: false);
@@ -779,11 +780,17 @@ class DrawingController extends ChangeNotifier {
         }
       } else {
         // Blur and Smudge use the whole snapshot image
-        if (drawingContent is BlurContent) {
-          (drawingContent as BlurContent).setImageData(image);
+        // Unwrap MirrorContent if present
+        PaintContent? targetContent = drawingContent;
+        if (targetContent is MirrorContent) {
+          targetContent = targetContent.child;
+        }
+
+        if (targetContent is BlurContent) {
+          targetContent.setImageData(image);
           _refresh();
-        } else if (drawingContent is SmudgeContent) {
-          (drawingContent as SmudgeContent).setImageData(image);
+        } else if (targetContent is SmudgeContent) {
+          targetContent.setImageData(image);
           _refresh();
         }
       }
@@ -826,7 +833,7 @@ class DrawingController extends ChangeNotifier {
     if (backgroundImage != null) {
       canvas.saveLayer(
         Offset.zero & size,
-        Paint()..color = Colors.white.withOpacity(backgroundImageOpacity),
+        Paint()..color = Colors.white.withValues(alpha: backgroundImageOpacity),
       );
       paintImage(
         canvas: canvas,
@@ -846,7 +853,7 @@ class DrawingController extends ChangeNotifier {
         Offset.zero & size,
         Paint()
           ..blendMode = layer.blendMode
-          ..color = Colors.white.withOpacity(layer.opacity),
+          ..color = Colors.white.withValues(alpha: layer.opacity),
       );
 
       for (int j = 0; j < layer.currentIndex; j++) {
@@ -926,7 +933,7 @@ class DrawingController extends ChangeNotifier {
         Offset.zero & size, 
         Paint()
           ..blendMode = layer.blendMode
-          ..color = Colors.white.withOpacity(layer.opacity)
+          ..color = Colors.white.withValues(alpha: layer.opacity)
       );
       
       for (int j = 0; j < layer.currentIndex; j++) {

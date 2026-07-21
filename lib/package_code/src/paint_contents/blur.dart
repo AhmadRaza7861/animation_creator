@@ -11,11 +11,12 @@ import 'paint_content.dart';
 /// 
 /// Blur brush, used to soften underlying image pixels
 class BlurContent extends PaintContent {
-  BlurContent();
+  BlurContent({this.strength = 0.5});
 
   BlurContent.data({
     required this.path,
     required Paint paint,
+    this.strength = 0.5,
     this.image,
   }) : super.paint(paint);
 
@@ -23,14 +24,13 @@ class BlurContent extends PaintContent {
     return BlurContent.data(
       path: DrawPath.fromJson(data['path'] as Map<String, dynamic>),
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      strength: (data['strength'] ?? 0.5) as double,
       image: null, // Asynchronously populated by _loadCanvasData
     );
   }
 
   DrawPath path = DrawPath();
-
-  /// Paint for the stroke path itself (used to mask the blur)
-  late Paint _maskPaint;
+  double strength;
 
   /// Snapshotted background image
   ui.Image? image;
@@ -58,36 +58,52 @@ class BlurContent extends PaintContent {
   void draw(Canvas canvas, Size size, bool deeper) {
     if (image == null) return;
 
-    // Use a mask paint derived from the config but optimized for masking out the blurred image
-    _maskPaint = paint.copyWith()
-      ..color = Colors.black
-      ..blendMode = BlendMode.dstIn; // Keep only pixels where the image overlaps the stroked path
+    final Rect canvasRect = Offset.zero & size;
+    final Rect srcRect = Rect.fromLTWH(
+      0,
+      0,
+      image!.width.toDouble(),
+      image!.height.toDouble(),
+    );
 
-    // 1. Save a layer bounding the entire canvas
-    canvas.saveLayer(Offset.zero & size, Paint());
+    // 1. Save a layer bounding the entire canvas with layer opacity support
+    final double opacity = paint.color.a;
+    final Paint layerPaint = Paint();
+    if (opacity < 1.0) {
+      layerPaint.color = Colors.white.withValues(alpha: opacity);
+    }
+    canvas.saveLayer(canvasRect, layerPaint);
 
-    // 2. Draw the blurred image into the layer
-    // The blur sigma derives from our strength parameter (e.g. 0.0 - 1.0 mapped to 0 - 20)
-    // Here we're interpreting paint.strokeWidth loosely as a proxy, or ideally we'd pass strength directly if available.
-    // However, since we don't have direct access to 'strength' in the 'paint' object, we'll map strokeWidth.
-    // For now, let's blur up to 10 pixels radius
-    final double sigma = paint.strokeWidth * 0.5;
-    
+    // 2. Draw the blurred snapshot image scaled accurately to canvasRect
+    final double sigma = (strength * 10.0) * (paint.strokeWidth / 20.0).clamp(0.5, 2.0);
     final Paint blurPaint = Paint()
-      ..imageFilter = ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma, tileMode: ui.TileMode.clamp);
-    
-    canvas.drawImage(image!, Offset.zero, blurPaint);
+      ..filterQuality = ui.FilterQuality.high
+      ..imageFilter = ui.ImageFilter.blur(
+        sigmaX: sigma,
+        sigmaY: sigma,
+        tileMode: ui.TileMode.clamp,
+      );
 
-    // 3. Draw the stroke path with dstIn to mask out everything EXCEPT the path bounds
-    // This effectively causes the blur effect to ONLY exist where our path is drawn
-    canvas.saveLayer(Offset.zero & size, _maskPaint);
-    final Paint regularStrokePaint = paint.copyWith()
+    canvas.drawImageRect(image!, srcRect, canvasRect, blurPaint);
+
+    // 3. Draw the stroke path with dstIn to mask out everything EXCEPT the path bounds.
+    // Apply strokeCap & strokeJoin round with a controlled maskBlurRadius for exact preview matching.
+    final Paint maskPaint = Paint()..blendMode = BlendMode.dstIn;
+    canvas.saveLayer(canvasRect, maskPaint);
+
+    final double maskBlurRadius = (paint.strokeWidth * 0.2).clamp(1.0, 6.0);
+    final Paint strokePaint = paint.copyWith()
       ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, maskBlurRadius)
       ..blendMode = BlendMode.srcOver;
-    canvas.drawPath(path.path, regularStrokePaint);
+
+    canvas.drawPath(path.path, strokePaint);
     canvas.restore();
 
-    // 4. Restore the original canvas state (the layer is composited down)
+    // 4. Restore the original canvas state
     canvas.restore();
   }
 
@@ -95,6 +111,7 @@ class BlurContent extends PaintContent {
   BlurContent copy() => BlurContent.data(
         path: path.copy(),
         paint: paint.copyWith(),
+        strength: strength,
         image: image,
       )..cachedBase64Image = cachedBase64Image;
 
@@ -103,10 +120,12 @@ class BlurContent extends PaintContent {
     return <String, dynamic>{
       'path': path.toJson(),
       'paint': paint.toJson(),
+      'strength': strength,
       'imageDataBase64': cachedBase64Image,
     };
   }
 
+  @override
   Future<void> prepareExport() async {
     if (image != null && cachedBase64Image == null) {
       final ByteData? byteData = await image!.toByteData(format: ui.ImageByteFormat.png);
