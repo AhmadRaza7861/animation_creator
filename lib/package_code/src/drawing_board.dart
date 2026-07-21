@@ -9,6 +9,7 @@ import 'helper/ex_value_builder.dart';
 import 'helper/get_size.dart';
 import 'painter.dart';
 import 'ruler/ruler_overlay.dart';
+import '../../widgets/grid_overlay.dart';
 
 /// 画板组件
 ///
@@ -46,6 +47,17 @@ class DrawingBoard extends StatelessWidget {
     this.enablePalmRejection = false,
     this.foreground,
     this.isDrawingEnabled = true,
+    this.isGridEnabled = false,
+    this.gridOpacity = 0.25,
+    this.gridVerticalSpacing = 80.0,
+    this.gridHorizontalSpacing = 80.0,
+    this.isOnionEnabled = false,
+    this.onionColorMode = false,
+    this.onionLoop = false,
+    this.onionBefore = 1,
+    this.onionAfter = 0,
+    this.allControllers,
+    this.currentIndex = 0,
   });
 
   /// 画板背景控件
@@ -165,6 +177,19 @@ class DrawingBoard extends StatelessWidget {
   /// Whether drawing is enabled
   final bool isDrawingEnabled;
 
+  final bool isGridEnabled;
+  final double gridOpacity;
+  final double gridVerticalSpacing;
+  final double gridHorizontalSpacing;
+
+  final bool isOnionEnabled;
+  final bool onionColorMode;
+  final bool onionLoop;
+  final int onionBefore;
+  final int onionAfter;
+  final List<DrawingController>? allControllers;
+  final int currentIndex;
+
   DrawingController get _controller => controller;
 
   @override
@@ -236,6 +261,14 @@ class DrawingBoard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (isGridEnabled)
+                Positioned.fill(
+                  child: GridOverlay(
+                    opacity: gridOpacity,
+                    verticalSpacing: gridVerticalSpacing,
+                    horizontalSpacing: gridHorizontalSpacing,
+                  ),
+                ),
               Positioned.fill(child: RulerOverlay(controller: _controller)),
             ],
           ),
@@ -291,6 +324,13 @@ class DrawingBoard extends StatelessWidget {
         onPointerUp: onPointerUp,
         enablePalmRejection: enablePalmRejection,
         isDrawingEnabled: isDrawingEnabled,
+        isOnionEnabled: isOnionEnabled,
+        onionColorMode: onionColorMode,
+        onionLoop: onionLoop,
+        onionBefore: onionBefore,
+        onionAfter: onionAfter,
+        allControllers: allControllers,
+        currentIndex: currentIndex,
       ),
     );
   }

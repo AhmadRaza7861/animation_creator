@@ -154,6 +154,15 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final TransformationController _transformationController =
       TransformationController();
   bool _isTextToolSelected = false;
+  bool _isOnionEnabled = true;
+  bool _onionColorMode = false;
+  bool _onionLoop = false;
+  int _onionBefore = 1;
+  int _onionAfter = 0;
+  bool _isGridEnabled = false;
+  double _gridOpacity = 0.25;
+  double _gridVerticalSpacing = 80.0;
+  double _gridHorizontalSpacing = 80.0;
   Object? _activeStickerBacking;
   Object? get _activeSticker => _activeStickerBacking;
   set _activeSticker(Object? value) {
@@ -518,84 +527,579 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'Settings',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF3C3043)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Settings',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF3C3043)),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        )
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    )
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: const Icon(Icons.wallpaper_rounded, color: Colors.orangeAccent),
+                      title: const Text('Project settings', style: TextStyle(fontWeight: FontWeight.w600)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showBackgroundSettings();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.view_sidebar_rounded, color: Colors.purpleAccent),
+                      title: const Text('Frames viewer', style: TextStyle(fontWeight: FontWeight.w600)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _openFramesScreen();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.layers_rounded, color: Color(0xFF3C3043)),
+                      title: const Text('Onion', style: TextStyle(fontWeight: FontWeight.w600)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showOnionSettingsSheet();
+                            },
+                            child: const Text(
+                              'Edit',
+                              style: TextStyle(color: Color(0xFFFF4081), fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Switch(
+                            value: _isOnionEnabled,
+                            activeColor: const Color(0xFFFF4081),
+                            onChanged: (bool value) {
+                              setSheetState(() {
+                                _isOnionEnabled = value;
+                              });
+                              setState(() {
+                                _isOnionEnabled = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.grid_on_rounded, color: Color(0xFF3C3043)),
+                      title: const Text('Grid', style: TextStyle(fontWeight: FontWeight.w600)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showGridSettingsSheet();
+                            },
+                            child: const Text(
+                              'Edit',
+                              style: TextStyle(color: Color(0xFFFF4081), fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Switch(
+                            value: _isGridEnabled,
+                            activeColor: const Color(0xFFFF4081),
+                            onChanged: (bool value) {
+                              setSheetState(() {
+                                _isGridEnabled = value;
+                              });
+                              setState(() {
+                                _isGridEnabled = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.video_library_rounded, color: Colors.green),
+                      title: const Text('Import Video', style: TextStyle(fontWeight: FontWeight.w600)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _importVideo();
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.clear_all_rounded, color: Colors.redAccent),
+                      title: const Text('Clear Canvas', style: TextStyle(fontWeight: FontWeight.w600)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        if (_drawingController.isCurrentLayerLocked) return;
+                        _drawingController.clear();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.save_rounded, color: Colors.teal),
+                      title: const Text('Save Frame JSON to Device', style: TextStyle(fontWeight: FontWeight.w600)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _saveCanvasData();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.file_open_rounded, color: Colors.amber),
+                      title: const Text('Load Frame JSON from Device', style: TextStyle(fontWeight: FontWeight.w600)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _loadCanvasData();
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF4081),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showExportBottomSheet();
+                      },
+                      child: const Text(
+                        'MAKE MOVIE',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.wallpaper_rounded, color: Colors.orangeAccent),
-                  title: const Text('Background Settings', style: TextStyle(fontWeight: FontWeight.w600)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showBackgroundSettings();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.view_sidebar_rounded, color: Colors.purpleAccent),
-                  title: const Text('Reorder / Manage Frames', style: TextStyle(fontWeight: FontWeight.w600)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _openFramesScreen();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.video_library_rounded, color: Colors.green),
-                  title: const Text('Import Video', style: TextStyle(fontWeight: FontWeight.w600)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _importVideo();
-                  },
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.clear_all_rounded, color: Colors.redAccent),
-                  title: const Text('Clear Canvas', style: TextStyle(fontWeight: FontWeight.w600)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (_drawingController.isCurrentLayerLocked) return;
-                    _drawingController.clear();
-                  },
-                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
-                ListTile(
-                  leading: const Icon(Icons.save_rounded, color: Colors.teal),
-                  title: const Text('Save Frame JSON to Device', style: TextStyle(fontWeight: FontWeight.w600)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _saveCanvasData();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.file_open_rounded, color: Colors.amber),
-                  title: const Text('Load Frame JSON from Device', style: TextStyle(fontWeight: FontWeight.w600)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _loadCanvasData();
-                  },
-                ),
-              ],
-            ),
-          ),
+  void _showOnionSettingsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Color(0xFF3C3043)),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Text(
+                        'Onion',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF3C3043),
+                        ),
+                      ),
+                      Switch(
+                        value: _isOnionEnabled,
+                        activeColor: const Color(0xFFFF4081),
+                        onChanged: (val) {
+                          setSheetState(() {
+                            _isOnionEnabled = val;
+                          });
+                          setState(() {
+                            _isOnionEnabled = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Transform.translate(
+                            offset: const Offset(-25, 0),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isOnionEnabled
+                                    ? (_onionColorMode ? Colors.red.withOpacity(0.2) : Colors.black.withOpacity(0.15))
+                                    : Colors.black.withOpacity(0.05),
+                                border: Border.all(
+                                  color: _isOnionEnabled
+                                      ? (_onionColorMode ? Colors.red.withOpacity(0.4) : Colors.black.withOpacity(0.2))
+                                      : Colors.black.withOpacity(0.1),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.grey.shade400,
+                              border: Border.all(color: Colors.grey.shade600, width: 2),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                              ],
+                            ),
+                          ),
+                          Transform.translate(
+                            offset: const Offset(25, 0),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isOnionEnabled
+                                    ? (_onionColorMode ? Colors.green.withOpacity(0.2) : Colors.black.withOpacity(0.15))
+                                    : Colors.black.withOpacity(0.05),
+                                border: Border.all(
+                                  color: _isOnionEnabled
+                                      ? (_onionColorMode ? Colors.green.withOpacity(0.4) : Colors.black.withOpacity(0.2))
+                                      : Colors.black.withOpacity(0.1),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Color', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF3C3043))),
+                    trailing: Switch(
+                      value: _onionColorMode,
+                      activeColor: const Color(0xFFFF4081),
+                      onChanged: _isOnionEnabled
+                          ? (val) {
+                              setSheetState(() {
+                                _onionColorMode = val;
+                              });
+                              setState(() {
+                                _onionColorMode = val;
+                              });
+                            }
+                          : null,
+                    ),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Loop', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF3C3043))),
+                    trailing: Switch(
+                      value: _onionLoop,
+                      activeColor: const Color(0xFFFF4081),
+                      onChanged: _isOnionEnabled
+                          ? (val) {
+                              setSheetState(() {
+                                _onionLoop = val;
+                              });
+                              setState(() {
+                                _onionLoop = val;
+                              });
+                            }
+                          : null,
+                    ),
+                  ),
+                  const Divider(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Frames before', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF3C3043))),
+                            Row(
+                              children: [
+                                Text('$_onionBefore', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF4081))),
+                                const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Slider(
+                          value: _onionBefore.toDouble(),
+                          min: 0,
+                          max: 5,
+                          divisions: 5,
+                          activeColor: const Color(0xFFFF4081),
+                          onChanged: _isOnionEnabled
+                              ? (val) {
+                                  setSheetState(() {
+                                    _onionBefore = val.round();
+                                  });
+                                  setState(() {
+                                    _onionBefore = val.round();
+                                  });
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Frames after', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF3C3043))),
+                            Row(
+                              children: [
+                                Text('$_onionAfter', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF4081))),
+                                const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Slider(
+                          value: _onionAfter.toDouble(),
+                          min: 0,
+                          max: 5,
+                          divisions: 5,
+                          activeColor: const Color(0xFFFF4081),
+                          onChanged: _isOnionEnabled
+                              ? (val) {
+                                  setSheetState(() {
+                                    _onionAfter = val.round();
+                                  });
+                                  setState(() {
+                                    _onionAfter = val.round();
+                                  });
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showGridSettingsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Color(0xFF3C3043)),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Text(
+                        'Grid',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF3C3043),
+                        ),
+                      ),
+                      Switch(
+                        value: _isGridEnabled,
+                        activeColor: const Color(0xFFFF4081),
+                        onChanged: (val) {
+                          setSheetState(() {
+                            _isGridEnabled = val;
+                          });
+                          setState(() {
+                            _isGridEnabled = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: _GridPainterPreview(
+                                opacity: _isGridEnabled ? _gridOpacity : 0.05,
+                                verticalSpacing: _gridVerticalSpacing / 2,
+                                horizontalSpacing: _gridHorizontalSpacing / 2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Line opacity', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF3C3043))),
+                            Text('${(_gridOpacity * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF4081))),
+                          ],
+                        ),
+                        Slider(
+                          value: _gridOpacity,
+                          min: 0.05,
+                          max: 1.0,
+                          activeColor: const Color(0xFFFF4081),
+                          onChanged: _isGridEnabled
+                              ? (val) {
+                                  setSheetState(() {
+                                    _gridOpacity = val;
+                                  });
+                                  setState(() {
+                                    _gridOpacity = val;
+                                  });
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Vertical line spacing', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF3C3043))),
+                            Text('${_gridVerticalSpacing.round()}px', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF4081))),
+                          ],
+                        ),
+                        Slider(
+                          value: _gridVerticalSpacing,
+                          min: 20.0,
+                          max: 200.0,
+                          activeColor: const Color(0xFFFF4081),
+                          onChanged: _isGridEnabled
+                              ? (val) {
+                                  setSheetState(() {
+                                    _gridVerticalSpacing = val;
+                                  });
+                                  setState(() {
+                                    _gridVerticalSpacing = val;
+                                  });
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Horizontal line spacing', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF3C3043))),
+                            Text('${_gridHorizontalSpacing.round()}px', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF4081))),
+                          ],
+                        ),
+                        Slider(
+                          value: _gridHorizontalSpacing,
+                          min: 20.0,
+                          max: 200.0,
+                          activeColor: const Color(0xFFFF4081),
+                          onChanged: _isGridEnabled
+                              ? (val) {
+                                  setSheetState(() {
+                                    _gridHorizontalSpacing = val;
+                                  });
+                                  setState(() {
+                                    _gridHorizontalSpacing = val;
+                                  });
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -3376,9 +3880,20 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                             child: Stack(
                               children: [
                                 DrawingBoard(
-                                transformationController:
-                                    _transformationController,
-                                controller: _drawingController,
+                                  transformationController:
+                                      _transformationController,
+                                  controller: _drawingController,
+                                  isGridEnabled: _isGridEnabled,
+                                  gridOpacity: _gridOpacity,
+                                  gridVerticalSpacing: _gridVerticalSpacing,
+                                  gridHorizontalSpacing: _gridHorizontalSpacing,
+                                  isOnionEnabled: _isOnionEnabled,
+                                  onionColorMode: _onionColorMode,
+                                  onionLoop: _onionLoop,
+                                  onionBefore: _onionBefore,
+                                  onionAfter: _onionAfter,
+                                  allControllers: _canvases,
+                                  currentIndex: _currentIndex,
                                 onPointerDown: (e) {
                                   if (_drawingController.isCurrentLayerLocked) {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -3815,6 +4330,43 @@ class CustomSliderTrackShape extends RoundedRectSliderTrackShape {
     final double trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
     final double trackWidth = parentBox.size.width - (padding * 2);
     return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
+  }
+}
+
+class _GridPainterPreview extends CustomPainter {
+  const _GridPainterPreview({
+    required this.opacity,
+    required this.verticalSpacing,
+    required this.horizontalSpacing,
+  });
+
+  final double opacity;
+  final double verticalSpacing;
+  final double horizontalSpacing;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (opacity <= 0.0 || verticalSpacing <= 0.0 || horizontalSpacing <= 0.0) {
+      return;
+    }
+
+    final paint = Paint()
+      ..color = const Color(0xFFE91E63).withOpacity(opacity)
+      ..strokeWidth = 1.0;
+
+    for (double x = 0.0; x <= size.width; x += verticalSpacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0.0; y <= size.height; y += horizontalSpacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GridPainterPreview oldDelegate) {
+    return oldDelegate.opacity != opacity ||
+        oldDelegate.verticalSpacing != verticalSpacing ||
+        oldDelegate.horizontalSpacing != horizontalSpacing;
   }
 }
 

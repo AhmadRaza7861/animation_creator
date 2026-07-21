@@ -24,6 +24,13 @@ class Painter extends StatefulWidget {
     this.onPointerUp,
     this.enablePalmRejection = false,
     this.isDrawingEnabled = true,
+    this.isOnionEnabled = false,
+    this.onionColorMode = false,
+    this.onionLoop = false,
+    this.onionBefore = 1,
+    this.onionAfter = 0,
+    this.allControllers,
+    this.currentIndex = 0,
   });
 
   /// 绘制控制器
@@ -60,6 +67,14 @@ class Painter extends StatefulWidget {
   ///
   /// Whether drawing is enabled
   final bool isDrawingEnabled;
+
+  final bool isOnionEnabled;
+  final bool onionColorMode;
+  final bool onionLoop;
+  final int onionBefore;
+  final int onionAfter;
+  final List<DrawingController>? allControllers;
+  final int currentIndex;
 
   @override
   State<Painter> createState() => _PainterState();
@@ -189,7 +204,16 @@ class _PainterState extends State<Painter> {
           child: RepaintBoundary(
             child: CustomPaint(
               isComplex: true,
-              painter: _DeepPainter(controller: widget.drawingController),
+              painter: _DeepPainter(
+                controller: widget.drawingController,
+                isOnionEnabled: widget.isOnionEnabled,
+                onionColorMode: widget.onionColorMode,
+                onionLoop: widget.onionLoop,
+                onionBefore: widget.onionBefore,
+                onionAfter: widget.onionAfter,
+                allControllers: widget.allControllers,
+                currentIndex: widget.currentIndex,
+              ),
               child: RepaintBoundary(
                 child: CustomPaint(
                   isComplex: true,
@@ -295,8 +319,89 @@ class _UpPainter extends CustomPainter {
 /// Responsible for drawing all historical content and generating cached images
 /// Uses caching mechanism to optimize performance and avoid redundant drawing
 class _DeepPainter extends CustomPainter {
-  _DeepPainter({required this.controller}) : super(repaint: controller.realPainter);
+  _DeepPainter({
+    required this.controller,
+    this.isOnionEnabled = false,
+    this.onionColorMode = false,
+    this.onionLoop = false,
+    this.onionBefore = 1,
+    this.onionAfter = 0,
+    this.allControllers,
+    required this.currentIndex,
+  }) : super(repaint: controller.realPainter);
+
   final DrawingController controller;
+  final bool isOnionEnabled;
+  final bool onionColorMode;
+  final bool onionLoop;
+  final int onionBefore;
+  final int onionAfter;
+  final List<DrawingController>? allControllers;
+  final int currentIndex;
+
+  void _drawOnionSkins(Canvas canvas, Size size) {
+    final N = allControllers!.length;
+    if (N <= 1) return;
+
+    // Draw previous frames
+    for (int k = onionBefore; k >= 1; k--) {
+      int prevIndex = currentIndex - k;
+      if (onionLoop) {
+        prevIndex = (prevIndex + N) % N;
+      }
+      if (prevIndex >= 0 && prevIndex < N && prevIndex != currentIndex) {
+        double opacity = 0.4 * (1.0 - (k - 1) / onionBefore);
+        opacity = opacity.clamp(0.05, 0.4);
+        _drawFrameSkin(canvas, size, prevIndex, opacity, isPrevious: true);
+      }
+    }
+
+    // Draw future frames
+    for (int k = onionAfter; k >= 1; k--) {
+      int nextIndex = currentIndex + k;
+      if (onionLoop) {
+        nextIndex = nextIndex % N;
+      }
+      if (nextIndex >= 0 && nextIndex < N && nextIndex != currentIndex) {
+        double opacity = 0.4 * (1.0 - (k - 1) / onionAfter);
+        opacity = opacity.clamp(0.05, 0.4);
+        _drawFrameSkin(canvas, size, nextIndex, opacity, isPrevious: false);
+      }
+    }
+  }
+
+  void _drawFrameSkin(Canvas canvas, Size size, int index, double opacity, {required bool isPrevious}) {
+    final frameController = allControllers![index];
+    
+    Paint? layerPaint;
+    if (onionColorMode) {
+      final Color tintColor = isPrevious ? Colors.red : Colors.green;
+      layerPaint = Paint()
+        ..colorFilter = ColorFilter.mode(tintColor.withOpacity(opacity), BlendMode.srcIn);
+    } else {
+      layerPaint = Paint()..color = Colors.white.withOpacity(opacity);
+    }
+
+    canvas.saveLayer(Offset.zero & size, layerPaint);
+
+    for (int i = frameController.layers.length - 1; i >= 0; i--) {
+      final layer = frameController.layers[i];
+      if (!layer.isVisible) continue;
+      
+      canvas.saveLayer(
+        Offset.zero & size,
+        Paint()
+          ..blendMode = layer.blendMode
+          ..color = Colors.white.withOpacity(layer.opacity),
+      );
+      for (int j = 0; j < layer.currentIndex; j++) {
+        layer.history[j].draw(canvas, size, true);
+      }
+      canvas.restore();
+    }
+
+    canvas.restore();
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -305,6 +410,11 @@ class _DeepPainter extends CustomPainter {
     if (controller.eraserContent != null) {
       debugPrint('_DeepPainter.paint: Eraser active, skipping');
       return;
+    }
+
+    // 1. Draw Onion Skins if enabled
+    if (isOnionEnabled && allControllers != null) {
+      _drawOnionSkins(canvas, size);
     }
 
     int totalContents = controller.layers.fold(0, (sum, layer) => sum + (layer.isVisible ? layer.currentIndex : 0));
