@@ -30,6 +30,7 @@ import 'widgets/freehand_line_sticker_widget.dart'; // Added new import
 import 'widgets/layer_panel.dart';
 import 'widgets/canvas_selector.dart';
 import 'widgets/color_picker_dialog.dart';
+import 'widgets/font_presets.dart';
 import 'screens/animation_preview_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/frames_reorder_screen.dart';
@@ -152,6 +153,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   final TransformationController _transformationController =
       TransformationController();
+  bool _isTextToolSelected = false;
   Object? _activeStickerBacking;
   Object? get _activeSticker => _activeStickerBacking;
   set _activeSticker(Object? value) {
@@ -187,6 +189,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         scale: sticker.scale,
         rotation: sticker.rotation,
         isBold: sticker.isBold,
+        isItalic: sticker.isItalic,
+        isUnderline: sticker.isUnderline,
+        textAlign: sticker.textAlign,
+        opacity: sticker.opacity,
         fontFamily: sticker.fontFamily,
       );
     } else if (sticker is ActiveShapeSticker) {
@@ -225,6 +231,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           a.scale != b.scale ||
           a.rotation != b.rotation ||
           a.isBold != b.isBold ||
+          a.isItalic != b.isItalic ||
+          a.isUnderline != b.isUnderline ||
+          a.textAlign != b.textAlign ||
+          a.opacity != b.opacity ||
           a.fontFamily != b.fontFamily;
     }
     if (a is ActiveShapeSticker && b is ActiveShapeSticker) {
@@ -806,6 +816,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   _bottomToolbarCategoryItem(
                     label: 'Text',
                     icon: Icons.text_fields_rounded,
+                    color: _isTextToolSelected ? const Color(0xFFFF9114) : null,
                     onTap: _addTextSticker,
                   ),
                   _bottomToolbarCategoryItem(
@@ -836,7 +847,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   }) {
     final displayColor = color ?? Colors.grey.shade700;
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        if (label != 'Text' && label != 'Ruler') {
+          setState(() {
+            _isTextToolSelected = false;
+          });
+        }
+        onTap();
+      },
       child: Container(
         width: 64,
         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -858,6 +876,459 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           ],
         ),
       ),
+    );
+  }
+
+  void _editTextStickerContent(ActiveTextSticker sticker) {
+    String text = sticker.text;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Text Sticker'),
+          content: TextField(
+            controller: TextEditingController(text: sticker.text),
+            onChanged: (v) => text = v,
+            decoration: const InputDecoration(hintText: 'Enter text here'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (text.isNotEmpty) {
+                  setState(() {
+                    sticker.text = text;
+                  });
+                  _updateSnapshot();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openTextStickerColorPicker(ActiveTextSticker sticker) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ColorPickerDialog(
+          initialColor: sticker.color,
+          initialOpacity: sticker.opacity,
+          onColorChanged: (Color newColor, double newOpacity) {
+            setState(() {
+              sticker.color = newColor;
+              sticker.opacity = newOpacity;
+            });
+            _updateSnapshot();
+          },
+        );
+      },
+    );
+  }
+
+  Widget _styleToggleButton({
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+    required TextStyle style,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFFF9114) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: style.copyWith(
+            color: isActive ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _alignmentButton({
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFFF9114) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: isActive ? Colors.white : Colors.black87,
+        ),
+      ),
+    );
+  }
+
+  Widget _bottomTextToolItem({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 80,
+        height: 60,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: const Color(0xFFFF9114), size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF3C3043),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextStickerToolbar(ActiveTextSticker sticker) {
+    return Container(
+      height: 72,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade100, width: 1)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _bottomTextToolItem(
+            label: 'Edit Text',
+            icon: Icons.edit_rounded,
+            onTap: () => _editTextStickerContent(sticker),
+          ),
+          _bottomTextToolItem(
+            label: 'Fonts',
+            icon: Icons.font_download_rounded,
+            onTap: () => _showFontSelectionSheet(sticker),
+          ),
+          _bottomTextToolItem(
+            label: 'Format',
+            icon: Icons.format_size_rounded,
+            onTap: () => _showSizeOpacitySheet(sticker),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFontSelectionSheet(ActiveTextSticker sticker) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Fonts',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: fontPresets.length,
+                      itemBuilder: (context, index) {
+                        final preset = fontPresets[index];
+                        final isSelected = sticker.fontFamily == preset.name;
+                        
+                        return ListTile(
+                          title: Text(
+                            preset.name,
+                            style: preset.getTextStyle(
+                              color: Colors.black87,
+                              fontSize: 16,
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? const Icon(Icons.check_circle, color: Color(0xFFFF9114))
+                              : null,
+                          onTap: () {
+                            setState(() {
+                              sticker.fontFamily = preset.name;
+                            });
+                            setModalState(() {});
+                            _updateSnapshot();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showSizeOpacitySheet(ActiveTextSticker sticker) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Text Style & Size',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Icon(Icons.format_size_rounded, color: Colors.grey),
+                      const SizedBox(width: 12),
+                      const Text('Size', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 3,
+                            activeTrackColor: const Color(0xFFFF9114),
+                            thumbColor: const Color(0xFFFF9114),
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                          ),
+                          child: Slider(
+                            value: sticker.fontSize.clamp(10.0, 100.0),
+                            min: 10.0,
+                            max: 100.0,
+                            onChanged: (val) {
+                              setState(() {
+                                sticker.fontSize = val;
+                              });
+                              setModalState(() {});
+                              _updateSnapshot();
+                            },
+                          ),
+                        ),
+                      ),
+                      Text('${sticker.fontSize.round()}px', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Icon(Icons.opacity_rounded, color: Colors.grey),
+                      const SizedBox(width: 12),
+                      const Text('Opacity', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 3,
+                            activeTrackColor: const Color(0xFFFF9114),
+                            thumbColor: const Color(0xFFFF9114),
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                          ),
+                          child: Slider(
+                            value: sticker.opacity.clamp(0.0, 1.0),
+                            min: 0.0,
+                            max: 1.0,
+                            onChanged: (val) {
+                              setState(() {
+                                sticker.opacity = val;
+                                sticker.color = sticker.color.withOpacity(val);
+                              });
+                              setModalState(() {});
+                              _updateSnapshot();
+                            },
+                          ),
+                        ),
+                      ),
+                      Text('${(sticker.opacity * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Format', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                            const SizedBox(height: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _styleToggleButton(
+                                    label: 'B',
+                                    isActive: sticker.isBold,
+                                    onTap: () {
+                                      setState(() {
+                                        sticker.isBold = !sticker.isBold;
+                                      });
+                                      setModalState(() {});
+                                      _updateSnapshot();
+                                    },
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  _styleToggleButton(
+                                    label: 'I',
+                                    isActive: sticker.isItalic,
+                                    onTap: () {
+                                      setState(() {
+                                        sticker.isItalic = !sticker.isItalic;
+                                      });
+                                      setModalState(() {});
+                                      _updateSnapshot();
+                                    },
+                                    style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 16),
+                                  ),
+                                  _styleToggleButton(
+                                    label: 'U',
+                                    isActive: sticker.isUnderline,
+                                    onTap: () {
+                                      setState(() {
+                                        sticker.isUnderline = !sticker.isUnderline;
+                                      });
+                                      setModalState(() {});
+                                      _updateSnapshot();
+                                    },
+                                    style: const TextStyle(decoration: TextDecoration.underline, fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Alignment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                            const SizedBox(height: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _alignmentButton(
+                                    icon: Icons.format_align_left_rounded,
+                                    isActive: sticker.textAlign == TextAlign.left,
+                                    onTap: () {
+                                      setState(() {
+                                        sticker.textAlign = TextAlign.left;
+                                      });
+                                      setModalState(() {});
+                                      _updateSnapshot();
+                                    },
+                                  ),
+                                  _alignmentButton(
+                                    icon: Icons.format_align_center_rounded,
+                                    isActive: sticker.textAlign == TextAlign.center,
+                                    onTap: () {
+                                      setState(() {
+                                        sticker.textAlign = TextAlign.center;
+                                      });
+                                      setModalState(() {});
+                                      _updateSnapshot();
+                                    },
+                                  ),
+                                  _alignmentButton(
+                                    icon: Icons.format_align_right_rounded,
+                                    isActive: sticker.textAlign == TextAlign.right,
+                                    onTap: () {
+                                      setState(() {
+                                        sticker.textAlign = TextAlign.right;
+                                      });
+                                      setModalState(() {});
+                                      _updateSnapshot();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1714,15 +2185,16 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                 final textPainter = TextPainter(
                   text: TextSpan(
                     text: textSticker.text,
-                    style: TextStyle(
+                    style: getFontPresetByName(textSticker.fontFamily).getTextStyle(
                       color: textSticker.color,
                       fontSize: textSticker.fontSize,
-                      fontWeight: textSticker.isBold
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      fontFamily: textSticker.fontFamily,
+                      opacity: textSticker.opacity,
+                      forceBold: textSticker.isBold,
+                      forceItalic: textSticker.isItalic,
+                      forceUnderline: textSticker.isUnderline,
                     ),
                   ),
+                  textAlign: textSticker.textAlign,
                   textDirection: TextDirection.ltr,
                 )..layout();
 
@@ -2009,6 +2481,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             rotation: content.rotation,
             fontFamily: content.fontFamily,
             isBold: content.isBold,
+            isItalic: content.isItalic,
+            isUnderline: content.isUnderline,
+            textAlign: content.textAlign,
+            opacity: content.opacity,
           );
         });
         _updateSnapshot();
@@ -2039,6 +2515,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         rotation: sticker.rotation,
         fontSize: sticker.fontSize,
         isBold: sticker.isBold,
+        isItalic: sticker.isItalic,
+        isUnderline: sticker.isUnderline,
+        textAlign: sticker.textAlign,
+        opacity: sticker.opacity,
         fontFamily: sticker.fontFamily,
         paint: paint,
       );
@@ -2101,6 +2581,24 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       ).showSnackBar(const SnackBar(content: Text('Current layer is locked.')));
       return;
     }
+    setState(() {
+      _isTextToolSelected = !_isTextToolSelected;
+      if (_isTextToolSelected) {
+        _activeCategory = 'Text';
+        _activeSticker = null;
+      } else {
+        _activeCategory = 'Brush';
+      }
+    });
+  }
+
+  void _showAddTextStickerDialogAtPosition(Offset position) {
+    if (_drawingController.isCurrentLayerLocked) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Current layer is locked.')));
+      return;
+    }
     String text = '';
     showDialog(
       context: context,
@@ -2108,10 +2606,15 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         return AlertDialog(
           title: const Text('Add Text Sticker'),
           content: TextField(
+            autofocus: true,
             onChanged: (v) => text = v,
             decoration: const InputDecoration(hintText: 'Enter text here'),
           ),
           actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -2122,6 +2625,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       text: text,
                       color: _drawingController.drawConfig.value.color,
                       fontSize: 24,
+                      offset: position,
                     );
                   });
                   _updateSnapshot();
@@ -2705,10 +3209,16 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           onColorChanged: (Color newColor, double newOpacity) {
             setState(() {
               _colorOpacity = newOpacity;
+              if (_activeSticker is ActiveTextSticker) {
+                final textSticker = _activeSticker as ActiveTextSticker;
+                textSticker.color = newColor.withValues(alpha: newOpacity);
+                textSticker.opacity = newOpacity;
+              }
             });
             _drawingController.setStyle(
               color: newColor.withValues(alpha: newOpacity),
             );
+            _updateSnapshot();
           },
         );
       },
@@ -2850,9 +3360,22 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     child: LayoutBuilder(
                       builder: (BuildContext context, BoxConstraints constraints) {
                         Widget buildBoard(BoxConstraints c) {
-                          return Stack(
-                            children: [
-                              DrawingBoard(
+                          return GestureDetector(
+                            onTapDown: (_isTextToolSelected && _activeSticker == null)
+                                ? (details) {
+                                    final renderBox = context.findRenderObject() as RenderBox?;
+                                    if (renderBox != null) {
+                                      final localPosition = details.localPosition;
+                                      final Matrix4 matrix = _transformationController.value;
+                                      final Matrix4 inverse = Matrix4.inverted(matrix);
+                                      final Offset canvasPoint = MatrixUtils.transformPoint(inverse, localPosition);
+                                      _showAddTextStickerDialogAtPosition(canvasPoint);
+                                    }
+                                  }
+                                : null,
+                            child: Stack(
+                              children: [
+                                DrawingBoard(
                                 transformationController:
                                     _transformationController,
                                 controller: _drawingController,
@@ -2879,6 +3402,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                     !_drawingController.isCurrentLayerLocked,
                                 isDrawingEnabled:
                                     _activeSticker == null &&
+                                    !_isTextToolSelected &&
                                     !_drawingController.isCurrentLayerLocked,
                                 background: ValueListenableBuilder<DrawConfig>(
                                   valueListenable:
@@ -3103,8 +3627,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                               ),
                               // Floating overlays moved to Scaffold body Stack to prevent canvas aspect-ratio clipping
                             ],
-                          );
-                        }
+                          ),
+                        );
+                      }
 
                         if (_aspectRatio != null) {
                           return Center(
@@ -3127,7 +3652,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       },
                     ),
                   ),
-                  if (_currentSubMenu == 'brush')
+                  if (_activeSticker is ActiveTextSticker)
+                    _buildTextStickerToolbar(_activeSticker as ActiveTextSticker)
+                  else if (_currentSubMenu == 'brush')
                     _buildBrushSubMenu()
                   else if (_currentSubMenu == 'shapes')
                     _buildShapesSubMenu()

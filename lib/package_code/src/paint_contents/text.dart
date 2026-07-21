@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/font_presets.dart';
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
 
@@ -15,6 +16,10 @@ class TextContent extends PaintContent {
     this.rotation = 0.0,
     this.fontSize = 24.0,
     this.isBold = true,
+    this.isItalic = false,
+    this.isUnderline = false,
+    this.textAlign = TextAlign.left,
+    this.opacity = 1.0,
     this.fontFamily,
   });
 
@@ -25,6 +30,10 @@ class TextContent extends PaintContent {
     required this.rotation,
     required this.fontSize,
     required this.isBold,
+    this.isItalic = false,
+    this.isUnderline = false,
+    this.textAlign = TextAlign.left,
+    this.opacity = 1.0,
     this.fontFamily,
     required Paint paint,
   }) : super.paint(paint);
@@ -37,6 +46,12 @@ class TextContent extends PaintContent {
       rotation: data['rotation'] as double,
       fontSize: data['fontSize'] as double,
       isBold: data['isBold'] as bool? ?? true,
+      isItalic: data['isItalic'] as bool? ?? false,
+      isUnderline: data['isUnderline'] as bool? ?? false,
+      textAlign: data['textAlign'] != null
+          ? TextAlign.values[data['textAlign'] as int]
+          : TextAlign.left,
+      opacity: (data['opacity'] as num?)?.toDouble() ?? 1.0,
       fontFamily: data['fontFamily'] as String?,
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
     );
@@ -58,6 +73,18 @@ class TextContent extends PaintContent {
 
   /// 是否加粗
   bool isBold = true;
+
+  /// 是否斜体
+  bool isItalic = false;
+
+  /// 是否下划线
+  bool isUnderline = false;
+
+  /// 对齐方式
+  TextAlign textAlign = TextAlign.left;
+
+  /// 透明度
+  double opacity = 1.0;
 
   /// 字体
   String? fontFamily;
@@ -85,13 +112,16 @@ class TextContent extends PaintContent {
     final TextPainter textPainter = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(
+        style: getFontPresetByName(fontFamily).getTextStyle(
           color: paint.color,
           fontSize: fontSize,
-          fontFamily: fontFamily,
-          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          opacity: opacity,
+          forceBold: isBold,
+          forceItalic: isItalic,
+          forceUnderline: isUnderline,
         ),
       ),
+      textAlign: textAlign,
       textDirection: TextDirection.ltr,
     );
     textPainter.layout(minWidth: 0, maxWidth: size.width);
@@ -123,6 +153,10 @@ class TextContent extends PaintContent {
     rotation: rotation,
     fontSize: fontSize,
     isBold: isBold,
+    isItalic: isItalic,
+    isUnderline: isUnderline,
+    textAlign: textAlign,
+    opacity: opacity,
     fontFamily: fontFamily,
     paint: paint.copyWith(),
   );
@@ -136,6 +170,10 @@ class TextContent extends PaintContent {
       'rotation': rotation,
       'fontSize': fontSize,
       'isBold': isBold,
+      'isItalic': isItalic,
+      'isUnderline': isUnderline,
+      'textAlign': textAlign.index,
+      'opacity': opacity,
       'fontFamily': fontFamily,
       'paint': paint.toJson(),
     };

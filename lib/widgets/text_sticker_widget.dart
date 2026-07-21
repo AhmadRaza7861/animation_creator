@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../animated_dashed_border.dart';
+import 'font_presets.dart';
 
 class ActiveTextSticker {
   ActiveTextSticker({
@@ -12,6 +13,10 @@ class ActiveTextSticker {
     this.scale = 1.0,
     this.rotation = 0.0,
     this.isBold = true,
+    this.isItalic = false,
+    this.isUnderline = false,
+    this.textAlign = TextAlign.left,
+    this.opacity = 1.0,
     this.fontFamily,
   });
 
@@ -23,6 +28,10 @@ class ActiveTextSticker {
   double scale;
   double rotation;
   bool isBold;
+  bool isItalic;
+  bool isUnderline;
+  TextAlign textAlign;
+  double opacity;
   String? fontFamily;
 }
 
@@ -198,14 +207,15 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                       alignment: Alignment.center,
                       child: Text(
                         widget.data.text,
-                        style: TextStyle(
+                        style: getFontPresetByName(widget.data.fontFamily).getTextStyle(
                           color: widget.data.color,
                           fontSize: widget.data.fontSize,
-                          fontFamily: widget.data.fontFamily,
-                          fontWeight: widget.data.isBold
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                          opacity: widget.data.opacity,
+                          forceBold: widget.data.isBold,
+                          forceItalic: widget.data.isItalic,
+                          forceUnderline: widget.data.isUnderline,
                         ),
+                        textAlign: widget.data.textAlign,
                       ),
                     ),
                   ),
