@@ -708,6 +708,85 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final List<Widget> previewCircles = [];
+
+            // 1. Add "before" (past) frames in reverse order (further ones are drawn under)
+            for (int i = _onionBefore; i >= 1; i--) {
+              final double dx = -i * 22.0;
+              final double dy = -30.0 + (i * 8.0) + (i * i * 0.8);
+              final double opacity = (0.4 * (1.0 - (i - 1) / _onionBefore)).clamp(0.05, 0.4);
+
+              previewCircles.add(
+                Transform.translate(
+                  offset: Offset(dx, dy),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isOnionEnabled
+                          ? (_onionColorMode ? Colors.red.withOpacity(opacity) : Colors.black.withOpacity(opacity * 0.5))
+                          : Colors.black.withOpacity(0.05),
+                      border: Border.all(
+                        color: _isOnionEnabled
+                            ? (_onionColorMode ? Colors.red.withOpacity(opacity * 1.5) : Colors.black.withOpacity(opacity))
+                            : Colors.black.withOpacity(0.1),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            // 2. Add "after" (future) frames in reverse order (further ones are drawn under)
+            for (int j = _onionAfter; j >= 1; j--) {
+              final double dx = j * 22.0;
+              final double dy = -30.0 + (j * 8.0) + (j * j * 0.8);
+              final double opacity = (0.4 * (1.0 - (j - 1) / _onionAfter)).clamp(0.05, 0.4);
+
+              previewCircles.add(
+                Transform.translate(
+                  offset: Offset(dx, dy),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isOnionEnabled
+                          ? (_onionColorMode ? Colors.green.withOpacity(opacity) : Colors.black.withOpacity(opacity * 0.5))
+                          : Colors.black.withOpacity(0.05),
+                      border: Border.all(
+                        color: _isOnionEnabled
+                            ? (_onionColorMode ? Colors.green.withOpacity(opacity * 1.5) : Colors.black.withOpacity(opacity))
+                            : Colors.black.withOpacity(0.1),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            // 3. Add active current frame (always on top)
+            previewCircles.add(
+              Transform.translate(
+                offset: const Offset(0, -30),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey.shade400,
+                    border: Border.all(color: Colors.grey.shade600, width: 2),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+
             return Container(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -754,58 +833,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     child: Center(
                       child: Stack(
                         alignment: Alignment.center,
-                        children: [
-                          Transform.translate(
-                            offset: const Offset(-25, 0),
-                            child: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _isOnionEnabled
-                                    ? (_onionColorMode ? Colors.red.withOpacity(0.2) : Colors.black.withOpacity(0.15))
-                                    : Colors.black.withOpacity(0.05),
-                                border: Border.all(
-                                  color: _isOnionEnabled
-                                      ? (_onionColorMode ? Colors.red.withOpacity(0.4) : Colors.black.withOpacity(0.2))
-                                      : Colors.black.withOpacity(0.1),
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.grey.shade400,
-                              border: Border.all(color: Colors.grey.shade600, width: 2),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-                              ],
-                            ),
-                          ),
-                          Transform.translate(
-                            offset: const Offset(25, 0),
-                            child: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _isOnionEnabled
-                                    ? (_onionColorMode ? Colors.green.withOpacity(0.2) : Colors.black.withOpacity(0.15))
-                                    : Colors.black.withOpacity(0.05),
-                                border: Border.all(
-                                  color: _isOnionEnabled
-                                      ? (_onionColorMode ? Colors.green.withOpacity(0.4) : Colors.black.withOpacity(0.2))
-                                      : Colors.black.withOpacity(0.1),
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        children: previewCircles,
                       ),
                     ),
                   ),
