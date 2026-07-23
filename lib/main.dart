@@ -434,7 +434,24 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   String? _savedJsonData;
 
   void _onDrawConfigChanged() {
-    // Keep Ruler menu and selection active across all tools
+    final Size? activeSize = _drawingController.drawConfig.value.size;
+    if (activeSize != null && !activeSize.isEmpty) {
+      bool propagated = false;
+      for (var controller in _canvases) {
+        if (controller.drawConfig.value.size != activeSize) {
+          controller.drawConfig.removeListener(_onDrawConfigChanged);
+          controller.drawConfig.value = controller.drawConfig.value.copyWith(size: activeSize);
+          controller.drawConfig.addListener(_onDrawConfigChanged);
+          propagated = true;
+        }
+      }
+
+      for (int i = 0; i < _canvases.length; i++) {
+        if (_thumbnails[i] == null) {
+          _canvases[i].updateSnapshot(includeBackground: false);
+        }
+      }
+    }
   }
 
   Widget _buildVerticalRulerMenu() {
