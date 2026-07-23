@@ -2345,7 +2345,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     List<int>? thumbBytes;
     if (_canvases.isNotEmpty) {
       ui.Image? templateImage;
-      if (_templateFolder != null && _templateExtension != null) {
+      if (_templateMode == 'drawAccordingTemplate' && _templateFolder != null && _templateExtension != null) {
         try {
           final String assetPath = 'assets/animal/$_templateFolder/1$_templateExtension';
           templateImage = await _getAssetImage(assetPath);
@@ -3829,7 +3829,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Color(0xFF3C3043)),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () async {
+                  await _saveProject();
+                  if (mounted) {
+                    Navigator.pop(context);
+                  }
+                },
               ),
               ValueListenableBuilder<DrawConfig>(
                 valueListenable: _drawingController.drawConfig,
