@@ -107,8 +107,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
         final List<Map<String, dynamic>> historyJson = [
           {
             'type': 'ImageContent',
-            'startPoint': {'x': 0.0, 'y': 0.0},
-            'size': {'x': width, 'y': height},
+            'startPoint': {'dx': 0.0, 'dy': 0.0},
+            'size': {'dx': width, 'dy': height},
             'imageUrl': assetPath,
             'paint': {
               'color': Colors.black.value,
@@ -118,6 +118,11 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
               'strokeCap': StrokeCap.round.index,
               'strokeJoin': StrokeJoin.round.index,
               'blendMode': BlendMode.srcOver.index,
+              'invertColors': false,
+              'filterQuality': ui.FilterQuality.none.index,
+              'colorFilter': null,
+              'imageFilter': null,
+              'maskFilter': null,
             }
           }
         ];
