@@ -29,6 +29,7 @@ class ShapeStickerWidget extends StatefulWidget {
     required this.onDelete,
     required this.onConfirm,
     this.onUpdateEnd,
+    this.canvasSize,
   });
 
   final ActiveShapeSticker data;
@@ -36,6 +37,7 @@ class ShapeStickerWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onConfirm;
   final VoidCallback? onUpdateEnd;
+  final Size? canvasSize;
 
   @override
   State<ShapeStickerWidget> createState() => _ShapeStickerWidgetState();
@@ -192,7 +194,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                       alignment: Alignment.center,
                       child: CustomPaint(
                         size: widget.data.size,
-                        painter: _StickerPainter(widget.data.content),
+                        painter: _StickerPainter(widget.data.content, widget.canvasSize),
                       ),
                     ),
                   ),
@@ -373,11 +375,12 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
 
 class _StickerPainter extends CustomPainter {
   final PaintContent content;
-  _StickerPainter(this.content);
+  final Size? canvasSize;
+  _StickerPainter(this.content, this.canvasSize);
 
   @override
   void paint(Canvas canvas, Size size) {
-    content.draw(canvas, size, false);
+    content.draw(canvas, canvasSize ?? size, false);
   }
 
   @override

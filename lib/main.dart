@@ -4160,6 +4160,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                               data:
                                                   _activeSticker
                                                       as ActiveShapeSticker,
+                                              canvasSize:
+                                                  _drawingController
+                                                      .drawConfig
+                                                      .value
+                                                      .size,
                                               onUpdate: (offset, scale, rotation) {
                                                 (_activeSticker
                                                             as ActiveShapeSticker)
