@@ -128,7 +128,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
         ];
 
         canvasesData.add({
-          'size': {'width': width, 'height': height},
+          'size': null,
           'backgroundColor': Colors.white.value,
           'layers': [
             {
