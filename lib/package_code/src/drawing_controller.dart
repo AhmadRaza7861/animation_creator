@@ -814,6 +814,7 @@ class DrawingController extends ChangeNotifier {
     void Function(Canvas canvas, Size size)? additionalDraw,
     ui.Image? backgroundImage,
     double backgroundImageOpacity = 1.0,
+    ui.Image? templateImage,
   }) async {
     final Size? size = drawConfig.value.size;
     if (size == null || size.isEmpty) return null;
@@ -840,6 +841,21 @@ class DrawingController extends ChangeNotifier {
         rect: Offset.zero & size,
         image: backgroundImage,
         fit: BoxFit.cover,
+      );
+      canvas.restore();
+    }
+
+    // Draw template image if provided
+    if (templateImage != null) {
+      canvas.saveLayer(
+        Offset.zero & size,
+        Paint(),
+      );
+      paintImage(
+        canvas: canvas,
+        rect: Offset.zero & size,
+        image: templateImage,
+        fit: BoxFit.contain,
       );
       canvas.restore();
     }

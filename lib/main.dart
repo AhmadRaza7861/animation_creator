@@ -2344,11 +2344,22 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
     List<int>? thumbBytes;
     if (_canvases.isNotEmpty) {
+      ui.Image? templateImage;
+      if (_templateFolder != null && _templateExtension != null) {
+        try {
+          final String assetPath = 'assets/animal/$_templateFolder/1$_templateExtension';
+          templateImage = await _getAssetImage(assetPath);
+        } catch (e) {
+          debugPrint('Failed to load template image for thumbnail: $e');
+        }
+      }
+
       final ui.Image? firstFrameImage = await _canvases.first.captureFullImage(
         backgroundColor: _globalBackground.color,
         maxDimension: 256.0,
         backgroundImage: _globalBackground.image,
         backgroundImageOpacity: _globalBackground.imageOpacity,
+        templateImage: templateImage,
       );
       if (firstFrameImage != null) {
         final byteData = await firstFrameImage.toByteData(

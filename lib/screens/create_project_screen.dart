@@ -451,9 +451,20 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         'canvases': canvasesData,
       };
 
+      List<int>? initialThumbnailBytes;
+      if (widget.template != null) {
+        try {
+          final data = await rootBundle.load(widget.template!.previewAsset);
+          initialThumbnailBytes = data.buffer.asUint8List();
+        } catch (e) {
+          debugPrint('Failed to load initial template preview bytes: $e');
+        }
+      }
+
       final projectId = await widget.repository.saveProject(
         title: title,
         state: state,
+        thumbnailBytes: initialThumbnailBytes,
       );
 
       if (mounted) {
