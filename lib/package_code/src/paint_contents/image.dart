@@ -45,10 +45,16 @@ class ImageContent extends PaintContent {
   void draw(Canvas canvas, Size size, bool deeper) {
     if (image == null) return;
     debugPrint('ImageContent.draw: imageUrl=$imageUrl, size=$size, this.size=${this.size}, imageSize=(${image!.width}, ${image!.height})');
-    final Rect rect = (imageUrl != null && imageUrl!.startsWith('assets/'))
+    final bool isAsset = imageUrl != null && imageUrl!.startsWith('assets/');
+    final Rect rect = isAsset
         ? (Offset.zero & size)
         : Rect.fromPoints(startPoint, startPoint + this.size);
-    paintImage(canvas: canvas, rect: rect, image: image!, fit: BoxFit.fill);
+    paintImage(
+      canvas: canvas,
+      rect: rect,
+      image: image!,
+      fit: isAsset ? BoxFit.contain : BoxFit.fill,
+    );
   }
 
   @override

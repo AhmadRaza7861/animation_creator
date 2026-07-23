@@ -544,7 +544,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               ),
               const SizedBox(height: 10),
               GestureDetector(
-                onTap: widget.template != null ? null : () async {
+                onTap: () async {
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -581,9 +581,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         ),
                       ),
                       const Spacer(),
-                      Icon(
-                        widget.template != null ? Icons.lock_outline_rounded : Icons.keyboard_arrow_down,
-                        color: const Color(0xFF8E8895),
+                      const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Color(0xFF8E8895),
                       ),
                     ],
                   ),
