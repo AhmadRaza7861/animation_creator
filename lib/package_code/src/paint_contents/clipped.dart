@@ -143,7 +143,7 @@ class ClippedHistoryContent extends PaintContent {
     const Size unconstrainedSize = Size(100000, 100000);
     for (final content in history) {
       if (content is ImageContent) {
-        content.draw(canvas, canvasSize ?? size, deeper);
+        content.draw(canvas, size, deeper);
       } else {
         content.draw(canvas, unconstrainedSize, deeper);
       }

@@ -65,7 +65,7 @@ class ShapeStickerContent extends PaintContent {
     canvas.scale(scale);
     canvas.translate(-size.width / 2, -size.height / 2);
 
-    child.draw(canvas, size, deeper);
+    child.draw(canvas, canvasSize, deeper);
 
     canvas.restore();
   }
