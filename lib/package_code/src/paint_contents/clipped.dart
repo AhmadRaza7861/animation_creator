@@ -20,6 +20,8 @@ import 'eyedropper.dart';
 import 'blur.dart';
 import 'smudge.dart';
 import 'lasso.dart';
+import 'image.dart';
+import 'paint_content_decoder.dart';
 
 /// Content wrapper that applies an offset to its child
 class OffsetContent extends PaintContent {
@@ -73,33 +75,9 @@ class ClippedHistoryContent extends PaintContent {
     
     for (final item in historyData) {
       if (item is Map<String, dynamic>) {
-        final String type = item['type'] as String;
-        switch (type) {
-          case 'SimpleLine': 
-            if (item.containsKey('points') || item.containsKey('path')) {
-              historyList.add(FreehandLine.fromJson(item));
-            } else {
-              historyList.add(SimpleLine.fromJson(item));
-            }
-            break;
-          case 'FreehandLine': historyList.add(FreehandLine.fromJson(item)); break;
-          case 'SmoothLine': historyList.add(SmoothLine.fromJson(item)); break;
-          case 'StraightLine': historyList.add(StraightLine.fromJson(item)); break;
-          case 'Rectangle': historyList.add(Rectangle.fromJson(item)); break;
-          case 'Circle': historyList.add(Circle.fromJson(item)); break;
-          case 'Triangle': historyList.add(Triangle.fromJson(item)); break;
-          case 'Eraser': historyList.add(Eraser.fromJson(item)); break;
-          case 'Lasso': historyList.add(Lasso.fromJson(item)); break;
-          case 'TextContent': historyList.add(TextContent.fromJson(item)); break;
-          case 'ShapeStickerContent': historyList.add(ShapeStickerContent.fromJson(item)); break;
-          case 'GroupContent': historyList.add(GroupContent.fromJson(item)); break;
-          case 'FillContent': historyList.add(FillContent.fromJson(item)); break;
-          case 'ClippedHistoryContent': historyList.add(ClippedHistoryContent.fromJson(item)); break;
-          case 'EraserHole': historyList.add(EraserHole.fromJson(item)); break;
-          case 'Eyedropper': historyList.add(Eyedropper.fromJson(item)); break;
-          case 'BlurContent': historyList.add(BlurContent.fromJson(item)); break;
-          case 'SmudgeContent': historyList.add(SmudgeContent.fromJson(item)); break;
-          case 'EmptyContent': historyList.add(EmptyContent.fromJson(item)); break;
+        final content = decodePaintContent(item['type'] as String, item);
+        if (content != null) {
+          historyList.add(content);
         }
       }
     }
@@ -152,7 +130,11 @@ class ClippedHistoryContent extends PaintContent {
     // to the sticker's narrow bounding box width.
     const Size unconstrainedSize = Size(100000, 100000);
     for (final content in history) {
-      content.draw(canvas, unconstrainedSize, deeper);
+      if (content is ImageContent) {
+        content.draw(canvas, size, deeper);
+      } else {
+        content.draw(canvas, unconstrainedSize, deeper);
+      }
     }
     
     // Restore saveLayer
