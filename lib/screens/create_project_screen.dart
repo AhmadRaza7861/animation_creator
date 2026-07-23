@@ -380,32 +380,37 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
       final List<Map<String, dynamic>> canvasesData = [];
 
       if (widget.template != null) {
-        final paintColor = widget.templateMode == TemplateMode.drawAccordingTemplate
-            ? Colors.grey.withOpacity(0.35)
-            : Colors.black;
+        final bool isDrawAccordingMode = widget.templateMode == TemplateMode.drawAccordingTemplate;
 
         for (int i = 0; i < widget.template!.frameCount; i++) {
-          final imageUrl = widget.template!.frameAssets[i];
-          final Map<String, dynamic> imageContentJson = {
-            'type': 'ImageContent',
-            'startPoint': {'dx': 0.0, 'dy': 0.0},
-            'size': {'dx': _canvasWidth.toDouble(), 'dy': _canvasHeight.toDouble()},
-            'imageUrl': imageUrl,
-            'paint': {
-              'color': paintColor.value,
-              'strokeWidth': 4.0,
-              'isAntiAlias': true,
-              'style': PaintingStyle.stroke.index,
-              'strokeCap': StrokeCap.round.index,
-              'strokeJoin': StrokeJoin.round.index,
-              'blendMode': BlendMode.srcOver.index,
-              'invertColors': false,
-              'filterQuality': ui.FilterQuality.none.index,
-              'colorFilter': null,
-              'imageFilter': null,
-              'maskFilter': null,
-            }
-          };
+          List<Map<String, dynamic>> historyList = [];
+          int currentIndex = 0;
+
+          if (!isDrawAccordingMode) {
+            final imageUrl = widget.template!.frameAssets[i];
+            final Map<String, dynamic> imageContentJson = {
+              'type': 'ImageContent',
+              'startPoint': {'dx': 0.0, 'dy': 0.0},
+              'size': {'dx': _canvasWidth.toDouble(), 'dy': _canvasHeight.toDouble()},
+              'imageUrl': imageUrl,
+              'paint': {
+                'color': Colors.black.value,
+                'strokeWidth': 4.0,
+                'isAntiAlias': true,
+                'style': PaintingStyle.stroke.index,
+                'strokeCap': StrokeCap.round.index,
+                'strokeJoin': StrokeJoin.round.index,
+                'blendMode': BlendMode.srcOver.index,
+                'invertColors': false,
+                'filterQuality': ui.FilterQuality.none.index,
+                'colorFilter': null,
+                'imageFilter': null,
+                'maskFilter': null,
+              }
+            };
+            historyList.add(imageContentJson);
+            currentIndex = 1;
+          }
 
           canvasesData.add({
             'size': null,
@@ -418,8 +423,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                 'isLocked': false,
                 'opacity': 1.0,
                 'blendMode': BlendMode.srcOver.index,
-                'currentIndex': 1,
-                'history': [imageContentJson],
+                'currentIndex': currentIndex,
+                'history': historyList,
               }
             ],
             'activeLayerId': 'layer_0',
@@ -437,6 +442,12 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         'aspectRatio': aspectRatio,
         'fps': _fps,
         'exportType': _exportType,
+        'templateFolder': widget.template?.folder,
+        'templateExtension': widget.template?.extension,
+        'templateMode': widget.templateMode == TemplateMode.drawAccordingTemplate
+            ? 'drawAccordingTemplate'
+            : (widget.template != null ? 'useTemplate' : null),
+        'templateFrameCount': widget.template?.frameCount,
         'canvases': canvasesData,
       };
 

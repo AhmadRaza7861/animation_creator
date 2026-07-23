@@ -430,6 +430,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   String _activeCategory = 'Brush';
 
   double? _aspectRatio;
+  String? _templateFolder;
+  String? _templateExtension;
+  String? _templateMode;
+  int? _templateFrameCount;
   int _fps = 9;
   String? _savedJsonData;
 
@@ -2245,6 +2249,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       if (data.state.containsKey('fps')) {
         _fps = data.state['fps'] as int;
       }
+      _templateFolder = data.state['templateFolder'] as String?;
+      _templateExtension = data.state['templateExtension'] as String?;
+      _templateMode = data.state['templateMode'] as String?;
+      _templateFrameCount = data.state['templateFrameCount'] as int?;
 
       // Restore background
       final bgMap = data.state['globalBackground'] as Map<String, dynamic>?;
@@ -2315,6 +2323,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       },
       'aspectRatio': _aspectRatio,
       'fps': _fps,
+      'templateFolder': _templateFolder,
+      'templateExtension': _templateExtension,
+      'templateMode': _templateMode,
+      'templateFrameCount': _templateFrameCount,
       'canvases': [],
     };
 
@@ -3975,44 +3987,64 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                     !_isTextToolSelected &&
                                     !_drawingController.isCurrentLayerLocked,
                                 background: ValueListenableBuilder<DrawConfig>(
-                                  valueListenable:
-                                      _drawingController.drawConfig,
-                                  builder: (context, config, child) {
-                                    return Container(
-                                      width: config.size?.width ?? c.maxWidth,
-                                      height:
-                                          config.size?.height ?? c.maxHeight,
-                                      color: _globalBackground.color,
-                                      child: Stack(
-                                        children: [
-                                          if (_globalBackground.image != null)
-                                            Positioned.fill(
-                                              child: Opacity(
-                                                opacity: _globalBackground
-                                                    .imageOpacity,
-                                                child: RawImage(
-                                                  image:
-                                                      _globalBackground.image,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            ),
-                                          if (_globalBackground.pattern !=
-                                                  null &&
-                                              _globalBackground.pattern !=
-                                                  'none')
-                                            Positioned.fill(
-                                              child: CustomPaint(
-                                                painter: PatternPainter(
-                                                  _globalBackground.pattern!,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                                   valueListenable:
+                                       _drawingController.drawConfig,
+                                   builder: (context, config, child) {
+                                     Widget? guideWidget;
+                                     if (_templateMode == 'drawAccordingTemplate' &&
+                                         _templateFolder != null &&
+                                         _templateExtension != null &&
+                                         _templateFrameCount != null &&
+                                         _currentIndex < _templateFrameCount!) {
+                                       final String assetPath =
+                                           'assets/animal/$_templateFolder/${_currentIndex + 1}$_templateExtension';
+                                       guideWidget = Positioned.fill(
+                                         child: Opacity(
+                                           opacity: 0.25,
+                                           child: Image.asset(
+                                             assetPath,
+                                             fit: BoxFit.contain,
+                                           ),
+                                         ),
+                                       );
+                                     }
+
+                                     return Container(
+                                       width: config.size?.width ?? c.maxWidth,
+                                       height:
+                                           config.size?.height ?? c.maxHeight,
+                                       color: _globalBackground.color,
+                                       child: Stack(
+                                         children: [
+                                           if (guideWidget != null) guideWidget,
+                                           if (_globalBackground.image != null)
+                                             Positioned.fill(
+                                               child: Opacity(
+                                                 opacity: _globalBackground
+                                                     .imageOpacity,
+                                                 child: RawImage(
+                                                   image:
+                                                       _globalBackground.image,
+                                                   fit: BoxFit.cover,
+                                                 ),
+                                               ),
+                                             ),
+                                           if (_globalBackground.pattern !=
+                                                   null &&
+                                               _globalBackground.pattern !=
+                                                   'none')
+                                             Positioned.fill(
+                                               child: CustomPaint(
+                                                 painter: PatternPainter(
+                                                   _globalBackground.pattern!,
+                                                 ),
+                                               ),
+                                             ),
+                                         ],
+                                       ),
+                                     );
+                                   },
+                                 ),
                                 foreground: _activeSticker == null
                                     ? null
                                     : Stack(
