@@ -5,6 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../main.dart';
 import '../repositories/project_repository.dart';
+import 'template_detail_screen.dart';
+
+enum TemplateMode {
+  useTemplate,
+  drawAccordingTemplate,
+}
 
 class TemplateModel {
   final String id;
@@ -252,7 +258,17 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
             itemBuilder: (context, index) {
               final template = _templates[index];
               return GestureDetector(
-                onTap: () => _selectTemplate(template),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TemplateDetailScreen(
+                        repository: widget.repository,
+                        template: template,
+                      ),
+                    ),
+                  );
+                },
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,

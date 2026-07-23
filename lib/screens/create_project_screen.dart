@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../repositories/project_repository.dart';
@@ -7,10 +9,19 @@ import '../widgets/color_picker_dialog.dart';
 import 'canvas_size_screen.dart';
 import 'fps_screen.dart';
 
+import 'templates_screen.dart';
+
 class CreateProjectScreen extends StatefulWidget {
   final ProjectRepository repository;
+  final TemplateModel? template;
+  final TemplateMode? templateMode;
 
-  const CreateProjectScreen({super.key, required this.repository});
+  const CreateProjectScreen({
+    super.key,
+    required this.repository,
+    this.template,
+    this.templateMode,
+  });
 
   @override
   State<CreateProjectScreen> createState() => _CreateProjectScreenState();
@@ -31,6 +42,43 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   String _canvasSizeLabel = 'Landscape (16:9)';
   int _fps = 14;
   String _exportType = 'Mp4'; // 'Mp4' or 'GIF'
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.template != null) {
+      _nameController.text = '${widget.template!.name} Animation';
+      _loadTemplateDimensions();
+    }
+  }
+
+  Future<void> _loadTemplateDimensions() async {
+    try {
+      final data = await rootBundle.load(widget.template!.previewAsset);
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+      
+      setState(() {
+        _canvasWidth = image.width;
+        _canvasHeight = image.height;
+        
+        final double ratio = _canvasWidth / _canvasHeight;
+        if ((ratio - 1.0).abs() < 0.05) {
+          _canvasSizeLabel = 'Square (1:1)';
+        } else if ((ratio - 16.0 / 9.0).abs() < 0.05) {
+          _canvasSizeLabel = 'Landscape (16:9)';
+        } else if ((ratio - 9.0 / 16.0).abs() < 0.05) {
+          _canvasSizeLabel = 'Portrait (9:16)';
+        } else {
+          _canvasSizeLabel = 'Template Ratio (${_canvasWidth}:${_canvasHeight})';
+        }
+      });
+    } catch (e) {
+      debugPrint('Failed to load template dimensions: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -301,36 +349,124 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         ? _nameController.text.trim()
         : 'My Animation';
 
-    final double aspectRatio = _canvasWidth / _canvasHeight;
-
-    final Map<String, dynamic> state = {
-      'globalBackground': {
-        'color': _backgroundColor.value,
-        'imagePath': _backgroundImagePath,
-        'imageOpacity': 1.0,
-        'pattern': _backgroundPattern,
-      },
-      'aspectRatio': aspectRatio,
-      'fps': _fps,
-      'exportType': _exportType,
-      'canvases': [],
-    };
-
-    final projectId = await widget.repository.saveProject(
-      title: title,
-      state: state,
-    );
-
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MyHomePage(
-            repository: widget.repository,
-            projectId: projectId,
+    if (widget.template != null && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (c) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: const Row(
+              children: [
+                CircularProgressIndicator(color: Color(0xFF5C52E5)),
+                SizedBox(width: 24),
+                Text(
+                  'Creating Project...',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
+    }
+
+    try {
+      final double aspectRatio = _canvasWidth / _canvasHeight;
+      final List<Map<String, dynamic>> canvasesData = [];
+
+      if (widget.template != null) {
+        final paintColor = widget.templateMode == TemplateMode.drawAccordingTemplate
+            ? Colors.grey.withOpacity(0.35)
+            : Colors.black;
+
+        for (int i = 0; i < widget.template!.frameCount; i++) {
+          final imageUrl = widget.template!.frameAssets[i];
+          final Map<String, dynamic> imageContentJson = {
+            'type': 'ImageContent',
+            'startPoint': {'dx': 0.0, 'dy': 0.0},
+            'size': {'dx': _canvasWidth.toDouble(), 'dy': _canvasHeight.toDouble()},
+            'imageUrl': imageUrl,
+            'paint': {
+              'color': paintColor.value,
+              'strokeWidth': 4.0,
+              'isAntiAlias': true,
+              'style': PaintingStyle.stroke.index,
+              'strokeCap': StrokeCap.round.index,
+              'strokeJoin': StrokeJoin.round.index,
+              'blendMode': BlendMode.srcOver.index,
+              'invertColors': false,
+              'filterQuality': ui.FilterQuality.none.index,
+              'colorFilter': null,
+              'imageFilter': null,
+              'maskFilter': null,
+            }
+          };
+
+          canvasesData.add({
+            'size': null,
+            'backgroundColor': Colors.white.value,
+            'layers': [
+              {
+                'id': 'layer_0',
+                'name': 'Layer 1',
+                'isVisible': true,
+                'isLocked': false,
+                'opacity': 1.0,
+                'blendMode': BlendMode.srcOver.index,
+                'currentIndex': 1,
+                'history': [imageContentJson],
+              }
+            ],
+            'activeLayerId': 'layer_0',
+          });
+        }
+      }
+
+      final Map<String, dynamic> state = {
+        'globalBackground': {
+          'color': _backgroundColor.value,
+          'imagePath': _backgroundImagePath,
+          'imageOpacity': 1.0,
+          'pattern': _backgroundPattern,
+        },
+        'aspectRatio': aspectRatio,
+        'fps': _fps,
+        'exportType': _exportType,
+        'canvases': canvasesData,
+      };
+
+      final projectId = await widget.repository.saveProject(
+        title: title,
+        state: state,
+      );
+
+      if (mounted) {
+        if (widget.template != null) {
+          // Dismiss creating dialog
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MyHomePage(
+              repository: widget.repository,
+              projectId: projectId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (widget.template != null && mounted) {
+        // Dismiss dialog on error
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      debugPrint('Failed to create template project: $e');
     }
   }
 
@@ -408,7 +544,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               ),
               const SizedBox(height: 10),
               GestureDetector(
-                onTap: () async {
+                onTap: widget.template != null ? null : () async {
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -445,9 +581,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: Color(0xFF8E8895),
+                      Icon(
+                        widget.template != null ? Icons.lock_outline_rounded : Icons.keyboard_arrow_down,
+                        color: const Color(0xFF8E8895),
                       ),
                     ],
                   ),
