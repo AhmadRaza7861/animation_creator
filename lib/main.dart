@@ -149,6 +149,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     return imageInfo.image;
   }
 
+  Future<ui.Image> _getAssetImage(String assetPath) async {
+    final ByteData data = await rootBundle.load(assetPath);
+    final Uint8List bytes = data.buffer.asUint8List();
+    final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+    final ui.FrameInfo fi = await codec.getNextFrame();
+    return fi.image;
+  }
+
   DrawingController get _drawingController => _canvases[_currentIndex];
 
   final TransformationController _transformationController =
@@ -3559,6 +3567,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           try {
             if (imageUrl.startsWith('http') || imageUrl.startsWith('https')) {
               content.image = await _getImage(imageUrl);
+            } else if (imageUrl.startsWith('assets/')) {
+              content.image = await _getAssetImage(imageUrl);
             } else {
               content.image = await _getFileImage(imageUrl);
             }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import '../repositories/project_repository.dart';
 import 'create_project_screen.dart';
+import 'templates_screen.dart';
 
 class ProjectsScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -436,9 +437,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               // Browse Templates Button
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Templates library coming soon!')),
-                  );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TemplatesScreen(
+                        repository: widget.repository,
+                      ),
+                    ),
+                  ).then((_) => _loadProjects());
                 },
                 child: Container(
                   height: 50,
