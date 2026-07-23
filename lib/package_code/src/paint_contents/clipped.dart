@@ -67,7 +67,13 @@ class OffsetContent extends PaintContent {
 
 /// Content wrapper that clips vector history to a specific path
 class ClippedHistoryContent extends PaintContent {
-  ClippedHistoryContent(this.history, this.clipPath, this.clipRect, {Paint? paint}) : super.paint(paint ?? Paint());
+  ClippedHistoryContent(
+    this.history,
+    this.clipPath,
+    this.clipRect, {
+    this.canvasSize,
+    Paint? paint,
+  }) : super.paint(paint ?? Paint());
 
   factory ClippedHistoryContent.fromJson(Map<String, dynamic> data) {
     final List<PaintContent> historyList = [];
@@ -87,10 +93,15 @@ class ClippedHistoryContent extends PaintContent {
     final double r = (data['clipRect_right'] as num?)?.toDouble() ?? 0;
     final double b = (data['clipRect_bottom'] as num?)?.toDouble() ?? 0;
 
+    final double? csv = (data['canvasSize_width'] as num?)?.toDouble();
+    final double? csh = (data['canvasSize_height'] as num?)?.toDouble();
+    final Size? canvasSize = (csv != null && csh != null) ? Size(csv, csh) : null;
+
     return ClippedHistoryContent(
       historyList,
       DrawPath.fromJson(data['clipPath'] as Map<String, dynamic>),
       Rect.fromLTRB(l, t, r, b),
+      canvasSize: canvasSize,
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
     );
   }
@@ -98,6 +109,7 @@ class ClippedHistoryContent extends PaintContent {
   final List<PaintContent> history;
   final DrawPath clipPath;
   final Rect clipRect;
+  final Size? canvasSize;
 
   @override
   String get contentType => 'ClippedHistoryContent';
@@ -131,7 +143,7 @@ class ClippedHistoryContent extends PaintContent {
     const Size unconstrainedSize = Size(100000, 100000);
     for (final content in history) {
       if (content is ImageContent) {
-        content.draw(canvas, size, deeper);
+        content.draw(canvas, canvasSize ?? size, deeper);
       } else {
         content.draw(canvas, unconstrainedSize, deeper);
       }
@@ -149,6 +161,7 @@ class ClippedHistoryContent extends PaintContent {
     history.map((e) => e.copy()).toList(), 
     clipPath.copy(), 
     clipRect, 
+    canvasSize: canvasSize,
     paint: paint.copyWith(),
   );
 
@@ -166,6 +179,8 @@ class ClippedHistoryContent extends PaintContent {
       'clipRect_top': clipRect.top,
       'clipRect_right': clipRect.right,
       'clipRect_bottom': clipRect.bottom,
+      'canvasSize_width': canvasSize?.width,
+      'canvasSize_height': canvasSize?.height,
       'paint': paint.toJson(),
     };
   }

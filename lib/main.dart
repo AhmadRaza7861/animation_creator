@@ -2995,6 +2995,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           historyCopy,
           drawPath,
           bounds,
+          canvasSize: controller.drawConfig.value.size,
         );
 
         setState(() {
