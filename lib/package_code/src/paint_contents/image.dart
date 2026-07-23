@@ -43,7 +43,9 @@ class ImageContent extends PaintContent {
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (image == null) return;
-    final Rect rect = Rect.fromPoints(startPoint, startPoint + this.size);
+    final Rect rect = (imageUrl != null && imageUrl!.startsWith('assets/'))
+        ? (Offset.zero & size)
+        : Rect.fromPoints(startPoint, startPoint + this.size);
     paintImage(canvas: canvas, rect: rect, image: image!, fit: BoxFit.fill);
   }
 
