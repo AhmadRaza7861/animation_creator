@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/painting.dart';
 
 class ProjectMeta {
   final String id;
@@ -143,6 +144,9 @@ class ProjectRepository {
         final thumbFile = File('${dir.path}/thumb.png');
         await thumbFile.writeAsBytes(thumbnailBytes);
         thumbnailPath = thumbFile.path;
+        try {
+          await FileImage(thumbFile).evict();
+        } catch (_) {}
       }
 
       ProjectMeta meta;
