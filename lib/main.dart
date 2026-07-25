@@ -672,6 +672,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                           });
                           setState(() {
                             _enableStickers = value;
+                            if (!value && _activeSticker != null) {
+                              _stampActiveSticker();
+                            }
                           });
                         },
                       ),
