@@ -448,6 +448,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
             ? 'drawAccordingTemplate'
             : (widget.template != null ? 'useTemplate' : null),
         'templateFrameCount': widget.template?.frameCount,
+        'enableStickers': true,
         'canvases': canvasesData,
       };
 

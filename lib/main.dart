@@ -436,6 +436,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   int? _templateFrameCount;
   int _fps = 9;
   String? _savedJsonData;
+  bool _enableStickers = true;
 
   void _onDrawConfigChanged() {
     final Size? activeSize = _drawingController.drawConfig.value.size;
@@ -657,6 +658,22 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                             },
                           ),
                         ],
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.palette_rounded, color: Color(0xFF3C3043)),
+                      title: const Text('Add as Sticker', style: TextStyle(fontWeight: FontWeight.w600)),
+                      trailing: Switch(
+                        value: _enableStickers,
+                        activeColor: const Color(0xFFFF4081),
+                        onChanged: (bool value) {
+                          setSheetState(() {
+                            _enableStickers = value;
+                          });
+                          setState(() {
+                            _enableStickers = value;
+                          });
+                        },
                       ),
                     ),
                     ListTile(
@@ -2253,6 +2270,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       _templateExtension = data.state['templateExtension'] as String?;
       _templateMode = data.state['templateMode'] as String?;
       _templateFrameCount = data.state['templateFrameCount'] as int?;
+      if (data.state.containsKey('enableStickers')) {
+        _enableStickers = data.state['enableStickers'] as bool;
+      }
 
       // Restore background
       final bgMap = data.state['globalBackground'] as Map<String, dynamic>?;
@@ -2327,6 +2347,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       'templateExtension': _templateExtension,
       'templateMode': _templateMode,
       'templateFrameCount': _templateFrameCount,
+      'enableStickers': _enableStickers,
       'canvases': [],
     };
 
@@ -2820,6 +2841,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   ) {
     return (content) {
       if (controller.isCurrentLayerLocked) return false;
+      if (!_enableStickers && content is! Lasso && content is! ShapeStickerContent) {
+        return false;
+      }
       if (content is Circle && content.radius > 0) {
         final double inflation = content.paint.strokeWidth / 2;
         final actualCenter = content.startFromCenter
