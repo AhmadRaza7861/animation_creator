@@ -39,6 +39,8 @@ import 'repositories/project_repository.dart';
 import 'screens/projects_screen.dart';
 import 'screens/video_trimming_screen.dart';
 import 'screens/splash_screen.dart';
+import 'package_code/src/drawing_bar/brush_preset_panel.dart';
+import 'package_code/src/drawing_bar/brush_presets.dart';
 
 Future<ui.Image> _getImage(String path) async {
   final Completer<ImageInfo> completer = Completer<ImageInfo>();
@@ -1965,6 +1967,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       _drawingController.setPaintContent(SmoothLine());
                       _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
                     });
+                    BrushPresetPanel.show(context, _drawingController);
                   },
                 ),
                 _bottomSubToolItem(
