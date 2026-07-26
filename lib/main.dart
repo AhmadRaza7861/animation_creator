@@ -41,6 +41,7 @@ import 'screens/video_trimming_screen.dart';
 import 'screens/splash_screen.dart';
 import 'package_code/src/drawing_bar/brush_preset_panel.dart';
 import 'package_code/src/drawing_bar/brush_presets.dart';
+import 'package_code/src/drawing_bar/brush_tip_shape_panel.dart';
 
 Future<ui.Image> _getImage(String path) async {
   final Completer<ImageInfo> completer = Completer<ImageInfo>();
@@ -1962,12 +1963,16 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   icon: Icons.brush_rounded,
                   isActive: _selectedSubTool == 'brush',
                   onTap: () {
-                    setState(() {
-                      _selectedSubTool = 'brush';
-                      _drawingController.setPaintContent(SmoothLine());
-                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
-                    });
-                    BrushPresetPanel.show(context, _drawingController);
+                    if (_selectedSubTool == 'brush') {
+                      BrushTipShapePanel.show(context, _drawingController);
+                    } else {
+                      setState(() {
+                        _selectedSubTool = 'brush';
+                        _drawingController.setPaintContent(SmoothLine());
+                        _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                      });
+                      BrushPresetPanel.show(context, _drawingController);
+                    }
                   },
                 ),
                 _bottomSubToolItem(

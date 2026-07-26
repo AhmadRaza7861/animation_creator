@@ -329,7 +329,7 @@ class BrushTipShapePanel extends StatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF2B2B2B),
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
       ),
@@ -350,12 +350,12 @@ class BrushTipShapePanel extends StatefulWidget {
 
 class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
   // 面板背景/控件配色 / Panel palette
-  static const Color _bg = Color(0xFF2B2B2B);
-  static const Color _cell = Color(0xFF3C3C3C);
-  static const Color _cellSel = Color(0xFF1E1E1E);
-  static const Color _accent = Color(0xFF2D8CEB);
-  static const Color _text = Color(0xFFCCCCCC);
-  static const Color _dab = Color(0xFFE0E0E0);
+  static const Color _bg = Colors.white;
+  static const Color _cell = Color(0xFFF7F8FA);
+  static const Color _cellSel = Color(0xFFFFF2E5);
+  static const Color _accent = Color(0xFFFF9114);
+  static const Color _text = Color(0xFF3C3043);
+  static const Color _dab = Color(0xFF3C3043);
 
   late BrushTipKind _kind;
   late double _size;
@@ -469,10 +469,10 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           _header(),
-          const Divider(height: 1, color: Color(0xFF1E1E1E)),
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
           _tabs(),
           Flexible(child: _grid()),
-          const Divider(height: 1, color: Color(0xFF1E1E1E)),
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
           _controls(),
           _previewStrip(),
         ],
@@ -617,7 +617,7 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
             data: SliderThemeData(
               trackHeight: 2,
               activeTrackColor: _accent,
-              inactiveTrackColor: const Color(0xFF555555),
+              inactiveTrackColor: const Color(0xFFE5E5E5),
               thumbColor: _text,
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
@@ -712,13 +712,13 @@ class _CategoryChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? accent : const Color(0xFF3C3C3C),
+          color: selected ? accent : const Color(0xFFEEEEEE),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : const Color(0xFFBBBBBB),
+            color: selected ? Colors.white : const Color(0xFF666666),
             fontSize: 12.5,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
           ),
@@ -753,7 +753,7 @@ class _TipCell extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: cell,
-          border: Border.all(color: selected ? accent : const Color(0xFF555555), width: selected ? 2 : 1),
+          border: Border.all(color: selected ? accent : const Color(0xFFEEEEEE), width: selected ? 2 : 1),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Stack(
