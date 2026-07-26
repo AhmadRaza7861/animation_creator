@@ -33,6 +33,7 @@ import 'widgets/color_picker_dialog.dart';
 import 'widgets/font_presets.dart';
 import 'screens/animation_preview_screen.dart';
 import 'screens/gallery_screen.dart';
+import 'screens/create_project_screen.dart';
 import 'screens/frames_reorder_screen.dart';
 import 'repositories/project_repository.dart';
 import 'screens/projects_screen.dart';
@@ -585,9 +586,20 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       leading: const Icon(Icons.wallpaper_rounded, color: Colors.orangeAccent),
                       title: const Text('Project settings', style: TextStyle(fontWeight: FontWeight.w600)),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
+                      onTap: () async {
                         Navigator.pop(context);
-                        _showBackgroundSettings();
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreateProjectScreen(
+                              repository: widget.repository,
+                              projectId: widget.projectId,
+                            ),
+                          ),
+                        );
+                        if (result == true) {
+                          _loadProjectData();
+                        }
                       },
                     ),
                     ListTile(

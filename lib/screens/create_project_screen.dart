@@ -15,12 +15,14 @@ class CreateProjectScreen extends StatefulWidget {
   final ProjectRepository repository;
   final TemplateModel? template;
   final TemplateMode? templateMode;
+  final String? projectId;
 
   const CreateProjectScreen({
     super.key,
     required this.repository,
     this.template,
     this.templateMode,
+    this.projectId,
   });
 
   @override
@@ -46,9 +48,60 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.template != null) {
+    if (widget.projectId != null) {
+      _loadExistingProjectSettings();
+    } else if (widget.template != null) {
       _nameController.text = '${widget.template!.name} Animation';
       _loadTemplateDimensions();
+    }
+  }
+
+  Future<void> _loadExistingProjectSettings() async {
+    try {
+      final project = await widget.repository.loadProject(widget.projectId!);
+      if (project != null) {
+        setState(() {
+          _nameController.text = project.meta.title;
+          _fps = project.state['fps'] as int? ?? 14;
+          _exportType = project.state['exportType'] as String? ?? 'Mp4';
+          final bgMap = project.state['globalBackground'] as Map<String, dynamic>?;
+          if (bgMap != null) {
+            _backgroundColor = Color(bgMap['color'] as int? ?? Colors.white.value);
+            _backgroundImagePath = bgMap['imagePath'] as String?;
+            _backgroundPattern = bgMap['pattern'] as String?;
+          }
+          final double? ratio = project.state['aspectRatio'] as double?;
+          if (ratio != null) {
+            if ((ratio - 1.0).abs() < 0.05) {
+              _canvasWidth = 1000;
+              _canvasHeight = 1000;
+              _canvasSizeLabel = 'Square (1:1)';
+            } else if ((ratio - 16.0 / 9.0).abs() < 0.05) {
+              _canvasWidth = 1280;
+              _canvasHeight = 720;
+              _canvasSizeLabel = 'Landscape (16:9)';
+            } else if ((ratio - 9.0 / 16.0).abs() < 0.05) {
+              _canvasWidth = 720;
+              _canvasHeight = 1280;
+              _canvasSizeLabel = 'Portrait (9:16)';
+            } else if ((ratio - 4.0 / 3.0).abs() < 0.05) {
+              _canvasWidth = 1024;
+              _canvasHeight = 768;
+              _canvasSizeLabel = 'Tablet (4:3)';
+            } else if ((ratio - 3.0 / 4.0).abs() < 0.05) {
+              _canvasWidth = 768;
+              _canvasHeight = 1024;
+              _canvasSizeLabel = 'Tablet Portrait (3:4)';
+            } else {
+              _canvasWidth = 1280;
+              _canvasHeight = (1280 / ratio).round();
+              _canvasSizeLabel = 'Custom Aspect Ratio';
+            }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load existing project settings: $e');
     }
   }
 
@@ -349,6 +402,38 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         ? _nameController.text.trim()
         : 'My Animation';
 
+    if (widget.projectId != null) {
+      try {
+        final project = await widget.repository.loadProject(widget.projectId!);
+        if (project != null) {
+          final Map<String, dynamic> newState = Map<String, dynamic>.from(project.state);
+          newState['globalBackground'] = {
+            'color': _backgroundColor.value,
+            'imagePath': _backgroundImagePath,
+            'imageOpacity': 1.0,
+            'pattern': _backgroundPattern,
+          };
+          newState['fps'] = _fps;
+          newState['exportType'] = _exportType;
+
+          await widget.repository.saveProject(
+            projectId: widget.projectId,
+            title: title,
+            state: newState,
+            thumbnailBytes: null, // Keep existing thumbnail
+          );
+
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+          return;
+        }
+      } catch (e) {
+        debugPrint('Failed to save project settings: $e');
+      }
+      return;
+    }
+
     if (widget.template != null && mounted) {
       showDialog(
         context: context,
@@ -567,29 +652,39 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               ),
               const SizedBox(height: 10),
               GestureDetector(
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CanvasSizeScreen(
-                        initialWidth: _canvasWidth,
-                        initialHeight: _canvasHeight,
-                        initialName: _canvasSizeLabel,
-                      ),
-                    ),
-                  );
+                onTap: widget.projectId != null
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Aspect ratio cannot be changed after project creation.'),
+                          ),
+                        );
+                      }
+                    : () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CanvasSizeScreen(
+                              initialWidth: _canvasWidth,
+                              initialHeight: _canvasHeight,
+                              initialName: _canvasSizeLabel,
+                            ),
+                          ),
+                        );
 
-                  if (result != null && result is Map<String, dynamic>) {
-                    setState(() {
-                      _canvasWidth = result['width'] as int;
-                      _canvasHeight = result['height'] as int;
-                      _canvasSizeLabel = result['name'] as String;
-                    });
-                  }
-                },
+                        if (result != null && result is Map<String, dynamic>) {
+                          setState(() {
+                            _canvasWidth = result['width'] as int;
+                            _canvasHeight = result['height'] as int;
+                            _canvasSizeLabel = result['name'] as String;
+                          });
+                        }
+                      },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF7F8FA),
+                    color: widget.projectId != null
+                        ? const Color(0xFFF1F2F4)
+                        : const Color(0xFFF7F8FA),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -597,16 +692,20 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                     children: [
                       Text(
                         _canvasSizeLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF3C3043),
+                          color: widget.projectId != null
+                              ? const Color(0xFF8E8895)
+                              : const Color(0xFF3C3043),
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: Color(0xFF8E8895),
+                      Icon(
+                        widget.projectId != null
+                            ? Icons.lock_outline_rounded
+                            : Icons.keyboard_arrow_down,
+                        color: const Color(0xFF8E8895),
                       ),
                     ],
                   ),
