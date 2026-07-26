@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, AssetManifest;
 import '../main.dart';
 import '../repositories/project_repository.dart';
 import 'template_detail_screen.dart';
@@ -18,6 +18,7 @@ class TemplateModel {
   final String folder;
   final String extension;
   final int frameCount;
+  final List<String> frameAssets;
 
   const TemplateModel({
     required this.id,
@@ -25,13 +26,10 @@ class TemplateModel {
     required this.folder,
     required this.extension,
     required this.frameCount,
+    required this.frameAssets,
   });
 
-  String get previewAsset => 'assets/animal/$folder/1$extension';
-
-  List<String> get frameAssets {
-    return List.generate(frameCount, (index) => 'assets/animal/$folder/${index + 1}$extension');
-  }
+  String get previewAsset => frameAssets.isEmpty ? '' : frameAssets.first;
 }
 
 class TemplatesScreen extends StatefulWidget {
@@ -44,22 +42,79 @@ class TemplatesScreen extends StatefulWidget {
 }
 
 class _TemplatesScreenState extends State<TemplatesScreen> {
-  final List<TemplateModel> _templates = const [
-    TemplateModel(id: 'bird', name: 'Bird', folder: 'bird', extension: '.png', frameCount: 5),
-    TemplateModel(id: 'bird1', name: 'Bird 1', folder: 'bird1', extension: '.webp', frameCount: 6),
-    TemplateModel(id: 'birdfly', name: 'Bird Fly', folder: 'birdfly', extension: '.webp', frameCount: 9),
-    TemplateModel(id: 'cat', name: 'Cat', folder: 'cat', extension: '.png', frameCount: 12),
-    TemplateModel(id: 'catlove', name: 'Cat Love', folder: 'catlove', extension: '.webp', frameCount: 6),
-    TemplateModel(id: 'cute_dog', name: 'Cute Dog', folder: 'cute_dog', extension: '.webp', frameCount: 6),
-    TemplateModel(id: 'dancingDog', name: 'Dancing Dog', folder: 'dancingDog', extension: '.webp', frameCount: 12),
-    TemplateModel(id: 'dog', name: 'Dog', folder: 'dog', extension: '.webp', frameCount: 8),
-    TemplateModel(id: 'duckWalk', name: 'Duck Walk', folder: 'duckWalk', extension: '.webp', frameCount: 7),
-    TemplateModel(id: 'monkeey', name: 'Monkeey', folder: 'monkeey', extension: '.png', frameCount: 4),
-    TemplateModel(id: 'monkey', name: 'Monkey', folder: 'monkey', extension: '.webp', frameCount: 8),
-    TemplateModel(id: 'penguin', name: 'Penguin', folder: 'penguin', extension: '.webp', frameCount: 8),
-    TemplateModel(id: 'rabbit', name: 'Rabbit', folder: 'rabbit', extension: '.webp', frameCount: 8),
-    TemplateModel(id: 'turtle', name: 'Turtle', folder: 'turtle', extension: '.webp', frameCount: 8),
-  ];
+  List<TemplateModel> _templates = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTemplatesFromManifest();
+  }
+
+  Future<void> _loadTemplatesFromManifest() async {
+    try {
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final List<String> allAssets = manifest.listAssets();
+
+      final Map<String, List<String>> folders = {};
+      for (final asset in allAssets) {
+        if (asset.startsWith('assets/templates/')) {
+          final parts = asset.split('/');
+          if (parts.length >= 4) {
+            final folderName = parts[2];
+            folders.putIfAbsent(folderName, () => []).add(asset);
+          }
+        }
+      }
+
+      final List<TemplateModel> loadedTemplates = [];
+      for (final folder in folders.keys) {
+        final frameAssets = folders[folder]!..sort();
+        if (frameAssets.isEmpty) continue;
+
+        final firstFile = frameAssets.first;
+        final dotIndex = firstFile.lastIndexOf('.');
+        final ext = dotIndex != -1 ? firstFile.substring(dotIndex) : '.png';
+        final name = _getDisplayName(folder);
+
+        loadedTemplates.add(TemplateModel(
+          id: folder,
+          name: name,
+          folder: folder,
+          extension: ext,
+          frameCount: frameAssets.length,
+          frameAssets: frameAssets,
+        ));
+      }
+
+      loadedTemplates.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+      if (mounted) {
+        setState(() {
+          _templates = loadedTemplates;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading templates manifest: $e');
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  String _getDisplayName(String folder) {
+    if (folder == '01_01_Nope') return 'Nope';
+    final words = folder
+        .split(RegExp(r'[_.\s-]+'))
+        ..removeWhere((w) => w.isEmpty);
+    return words.map((w) {
+      if (w.isEmpty) return '';
+      return w[0].toUpperCase() + w.substring(1);
+    }).join(' ');
+  }
 
   Future<ui.Image> _loadUiImage(String assetPath) async {
     final data = await rootBundle.load(assetPath);
@@ -168,6 +223,12 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
         },
         'aspectRatio': aspectRatio,
         'fps': 12,
+        'templateFolder': template.folder,
+        'templateExtension': template.extension,
+        'templateMode': 'useTemplate',
+        'templateFrameCount': template.frameCount,
+        'templateFrameAssets': template.frameAssets,
+        'enableStickers': true,
         'canvases': canvasesData,
       };
 
@@ -247,15 +308,21 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.82,
-            ),
-            itemCount: _templates.length,
-            itemBuilder: (context, index) {
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFFFF9114),
+                  ),
+                )
+              : GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.82,
+                  ),
+                  itemCount: _templates.length,
+                  itemBuilder: (context, index) {
               final template = _templates[index];
               return GestureDetector(
                 onTap: () {

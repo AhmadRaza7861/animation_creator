@@ -64,20 +64,42 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/animal/bird/
-    - assets/animal/bird1/
-    - assets/animal/birdfly/
-    - assets/animal/cat/
-    - assets/animal/catlove/
-    - assets/animal/cute_dog/
-    - assets/animal/dancingDog/
-    - assets/animal/dog/
-    - assets/animal/duckWalk/
-    - assets/animal/monkeey/
-    - assets/animal/monkey/
-    - assets/animal/penguin/
-    - assets/animal/rabbit/
-    - assets/animal/turtle/
+    - assets/templates/01_01_Nope/
+    - assets/templates/bat/
+    - assets/templates/battery/
+    - assets/templates/bear2/
+    - assets/templates/blue_flying_bird/
+    - assets/templates/bouncy_ball/
+    - assets/templates/boy_sprites/
+    - assets/templates/cactus/
+    - assets/templates/cat_love/
+    - assets/templates/chicken2/
+    - assets/templates/circle_walk/
+    - assets/templates/color_morp/
+    - assets/templates/cute_bunny_enjoy/
+    - assets/templates/cute_dog/
+    - assets/templates/dancing_bear/
+    - assets/templates/dog/
+    - assets/templates/draw_star/
+    - assets/templates/drop/
+    - assets/templates/duck_dance/
+    - assets/templates/fire/
+    - assets/templates/football/
+    - assets/templates/freestyle_football/
+    - assets/templates/funny_girl/
+    - assets/templates/gym/
+    - assets/templates/heart/
+    - assets/templates/hello_lamp/
+    - assets/templates/morphing/
+    - assets/templates/number/
+    - assets/templates/orange/
+    - assets/templates/rabbit/
+    - assets/templates/shape/
+    - assets/templates/stickman_crying/
+    - assets/templates/turtle/
+    - assets/templates/two_dogs/
+    - assets/templates/world/
+    - assets/templates/yoga_women/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

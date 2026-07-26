@@ -434,6 +434,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   String? _templateExtension;
   String? _templateMode;
   int? _templateFrameCount;
+  List<String> _templateFrameAssets = [];
   int _fps = 9;
   String? _savedJsonData;
   bool _enableStickers = true;
@@ -2273,6 +2274,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       _templateExtension = data.state['templateExtension'] as String?;
       _templateMode = data.state['templateMode'] as String?;
       _templateFrameCount = data.state['templateFrameCount'] as int?;
+      if (data.state.containsKey('templateFrameAssets')) {
+        _templateFrameAssets = List<String>.from(data.state['templateFrameAssets'] as List);
+      } else {
+        _templateFrameAssets = [];
+      }
       if (data.state.containsKey('enableStickers')) {
         _enableStickers = data.state['enableStickers'] as bool;
       }
@@ -2350,6 +2356,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       'templateExtension': _templateExtension,
       'templateMode': _templateMode,
       'templateFrameCount': _templateFrameCount,
+      'templateFrameAssets': _templateFrameAssets,
       'enableStickers': _enableStickers,
       'canvases': [],
     };
@@ -2369,9 +2376,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     List<int>? thumbBytes;
     if (_canvases.isNotEmpty) {
       ui.Image? templateImage;
-      if (_templateMode == 'drawAccordingTemplate' && _templateFolder != null && _templateExtension != null) {
+      if (_templateMode == 'drawAccordingTemplate' && _templateFrameAssets.isNotEmpty) {
         try {
-          final String assetPath = 'assets/animal/$_templateFolder/1$_templateExtension';
+          final String assetPath = _templateFrameAssets.first;
           templateImage = await _getAssetImage(assetPath);
         } catch (e) {
           debugPrint('Failed to load template image for thumbnail: $e');
@@ -4036,12 +4043,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                    builder: (context, config, child) {
                                      Widget? guideWidget;
                                      if (_templateMode == 'drawAccordingTemplate' &&
-                                         _templateFolder != null &&
-                                         _templateExtension != null &&
-                                         _templateFrameCount != null &&
-                                         _currentIndex < _templateFrameCount!) {
-                                       final String assetPath =
-                                           'assets/animal/$_templateFolder/${_currentIndex + 1}$_templateExtension';
+                                         _currentIndex < _templateFrameAssets.length) {
+                                       final String assetPath = _templateFrameAssets[_currentIndex];
                                        guideWidget = Positioned.fill(
                                          child: Opacity(
                                            opacity: 0.25,
