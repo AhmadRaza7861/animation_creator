@@ -106,6 +106,17 @@ class SmoothLine extends PaintContent {
   }
 
   @override
+  Path getPath() {
+    if (points.isEmpty) return Path();
+    final Path p = Path();
+    p.moveTo(points[0].dx, points[0].dy);
+    for (int i = 1; i < points.length; i++) {
+      p.lineTo(points[i].dx, points[i].dy);
+    }
+    return p;
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (points.isEmpty) {
       return;

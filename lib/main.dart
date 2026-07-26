@@ -233,7 +233,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     } else if (sticker is ActiveFreehandLineSticker) {
       return ActiveFreehandLineSticker(
         id: sticker.id,
-        content: sticker.content.copy() as FreehandLine,
+        content: sticker.content.copy(),
       );
     }
     throw ArgumentError('Unknown sticker type: ${sticker.runtimeType}');
@@ -265,10 +265,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       return a.startPoint != b.startPoint || a.endPoint != b.endPoint;
     }
     if (a is ActiveFreehandLineSticker && b is ActiveFreehandLineSticker) {
-      if (a.content.points?.length != b.content.points?.length) return true;
-      if (a.content.points == null || b.content.points == null) return false;
-      for (int i = 0; i < a.content.points!.length; i++) {
-        if (a.content.points![i] != b.content.points![i]) return true;
+      if (a.points.length != b.points.length) return true;
+      for (int i = 0; i < a.points.length; i++) {
+        if (a.points[i] != b.points[i]) return true;
       }
       return false;
     }
@@ -2930,8 +2929,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         });
         _updateSnapshot();
         return true;
-      } else if (content is FreehandLine) {
-        if (content.points == null || content.points!.isEmpty) return false;
+      } else if (content is FreehandLine || content is SmoothLine) {
+        final List<Offset> points = content is FreehandLine
+            ? (content as FreehandLine).points ?? const []
+            : (content as SmoothLine).points;
+        if (points.isEmpty) return false;
 
         setState(() {
           _activeSticker = ActiveFreehandLineSticker(

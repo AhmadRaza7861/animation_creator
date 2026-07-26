@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+import '../package_code/src/paint_contents/paint_content.dart';
 import '../package_code/src/paint_contents/simple_line.dart';
+import '../package_code/src/paint_contents/smooth_line.dart';
 
 class ActiveFreehandLineSticker {
   ActiveFreehandLineSticker({
@@ -9,7 +11,25 @@ class ActiveFreehandLineSticker {
   });
 
   final String id;
-  final FreehandLine content;
+  final PaintContent content;
+
+  List<Offset> get points {
+    if (content is FreehandLine) {
+      return (content as FreehandLine).points ?? const [];
+    } else if (content is SmoothLine) {
+      return (content as SmoothLine).points;
+    }
+    return const [];
+  }
+
+  double get minPointDistance {
+    if (content is FreehandLine) {
+      return (content as FreehandLine).minPointDistance;
+    } else if (content is SmoothLine) {
+      return (content as SmoothLine).minPointDistance;
+    }
+    return 0.5;
+  }
 }
 
 class FreehandLineStickerWidget extends StatefulWidget {
@@ -37,8 +57,8 @@ class FreehandLineStickerWidget extends StatefulWidget {
 class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
   @override
   Widget build(BuildContext context) {
-    final points = widget.data.content.points;
-    if (points == null || points.isEmpty) return const SizedBox.shrink();
+    final points = widget.data.points;
+    if (points.isEmpty) return const SizedBox.shrink();
 
     final Offset startPoint = points.first;
     final Offset endPoint = points.last;
@@ -109,8 +129,8 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
 
   void _onPanUpdateEndpoint(DragUpdateDetails details, bool isStart) {
     setState(() {
-      final points = widget.data.content.points;
-      if (points != null && points.isNotEmpty) {
+      final points = widget.data.points;
+      if (points.isNotEmpty) {
         if (isStart) {
           // Continue/Prepend logic
           final Offset firstPoint = points.first;
@@ -122,7 +142,7 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
           final Offset anchor = points.length > 1 ? points[1] : points.last;
 
           Offset newPoint;
-          if (distance > widget.data.content.minPointDistance) {
+          if (distance > widget.data.minPointDistance) {
             newPoint = firstPoint + delta;
             if (widget.onSnap != null) newPoint = widget.onSnap!(newPoint, anchor);
             points.insert(0, newPoint);
@@ -140,7 +160,7 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
           final Offset anchor = points.length > 1 ? points[points.length - 2] : points.first;
 
           Offset newPoint;
-          if (distance > widget.data.content.minPointDistance) {
+          if (distance > widget.data.minPointDistance) {
             newPoint = lastPoint + delta;
             if (widget.onSnap != null) newPoint = widget.onSnap!(newPoint, anchor);
             points.add(newPoint);
@@ -157,11 +177,9 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
 
   void _onPanUpdateLine(DragUpdateDetails details) {
     setState(() {
-      final points = widget.data.content.points;
-      if (points != null) {
-        for (int i = 0; i < points.length; i++) {
-          points[i] += details.delta;
-        }
+      final points = widget.data.points;
+      for (int i = 0; i < points.length; i++) {
+        points[i] += details.delta;
       }
     });
     widget.onUpdate();
@@ -169,7 +187,7 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
 }
 
 class _FreehandLineStickerPainter extends CustomPainter {
-  final FreehandLine content;
+  final PaintContent content;
 
   _FreehandLineStickerPainter({required this.content});
 
