@@ -36,6 +36,7 @@ void main() {
 
     // Click Apply button in CreateProjectScreen
     await tester.runAsync(() async {
+      await tester.ensureVisible(find.text('Apply'));
       await tester.tap(find.text('Apply'));
       await tester.pump();
       await Future.delayed(const Duration(milliseconds: 600));

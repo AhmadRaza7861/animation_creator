@@ -44,6 +44,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   String _canvasSizeLabel = 'Landscape (16:9)';
   int _fps = 14;
   String _exportType = 'Mp4'; // 'Mp4' or 'GIF'
+  bool _enableStickers = true;
 
   @override
   void initState() {
@@ -64,6 +65,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           _nameController.text = project.meta.title;
           _fps = project.state['fps'] as int? ?? 14;
           _exportType = project.state['exportType'] as String? ?? 'Mp4';
+          _enableStickers = project.state['enableStickers'] as bool? ?? true;
           final bgMap = project.state['globalBackground'] as Map<String, dynamic>?;
           if (bgMap != null) {
             _backgroundColor = Color(bgMap['color'] as int? ?? Colors.white.value);
@@ -415,6 +417,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           };
           newState['fps'] = _fps;
           newState['exportType'] = _exportType;
+          newState['enableStickers'] = _enableStickers;
 
           await widget.repository.saveProject(
             projectId: widget.projectId,
@@ -533,7 +536,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
             ? 'drawAccordingTemplate'
             : (widget.template != null ? 'useTemplate' : null),
         'templateFrameCount': widget.template?.frameCount,
-        'enableStickers': true,
+        'enableStickers': _enableStickers,
         'canvases': canvasesData,
       };
 
@@ -851,6 +854,59 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                           ),
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              // 4.5 Sticker Mode Selector
+              const Text(
+                'Add as Sticker',
+                style: TextStyle(
+                  color: Color(0xFF3C3043),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F8FA),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Enable Sticker Mode',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF3C3043),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Add shapes, lines, and text as adjustable stickers',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF8E8895),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _enableStickers,
+                      activeColor: const Color(0xFFFF9114),
+                      onChanged: (bool value) {
+                        setState(() {
+                          _enableStickers = value;
+                        });
+                      },
                     ),
                   ],
                 ),
