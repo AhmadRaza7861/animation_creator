@@ -3862,28 +3862,45 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade200, width: 1)),
-          ),
-          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Color(0xFF3C3043)),
-                onPressed: () async {
-                  await _saveProject();
-                  if (mounted) {
-                    Navigator.pop(context);
-                  }
-                },
-              ),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        await _saveProject();
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => ProjectsScreen(repository: widget.repository)),
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: const Color(0xFFF5F5F5),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Colors.grey.shade200, width: 1)),
+            ),
+            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Color(0xFF3C3043)),
+                  onPressed: () async {
+                    await _saveProject();
+                    if (mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => ProjectsScreen(repository: widget.repository)),
+                        (route) => false,
+                      );
+                    }
+                  },
+                ),
               ValueListenableBuilder<DrawConfig>(
                 valueListenable: _drawingController.drawConfig,
                 builder: (context, config, child) {
@@ -4381,7 +4398,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 
