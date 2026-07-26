@@ -30,6 +30,56 @@ class ActiveFreehandLineSticker {
     }
     return 0.5;
   }
+  void addPoint(Offset point) {
+    if (content is FreehandLine) {
+      final line = content as FreehandLine;
+      line.points ??= [];
+      line.points!.add(point);
+    } else if (content is SmoothLine) {
+      final line = content as SmoothLine;
+      line.points.add(point);
+      double lastWidth = line.strokeWidthList.isNotEmpty
+          ? line.strokeWidthList.last
+          : line.paint.strokeWidth;
+      line.strokeWidthList.add(lastWidth);
+    }
+  }
+
+  void insertPoint(int index, Offset point) {
+    if (content is FreehandLine) {
+      final line = content as FreehandLine;
+      line.points ??= [];
+      line.points!.insert(index, point);
+    } else if (content is SmoothLine) {
+      final line = content as SmoothLine;
+      line.points.insert(index, point);
+      double prevWidth = line.strokeWidthList.isNotEmpty
+          ? line.strokeWidthList.first
+          : line.paint.strokeWidth;
+      line.strokeWidthList.insert(index, prevWidth);
+    }
+  }
+
+  void updatePoint(int index, Offset point) {
+    if (content is FreehandLine) {
+      final line = content as FreehandLine;
+      if (line.points != null && index < line.points!.length) {
+        line.points![index] = point;
+      }
+    } else if (content is SmoothLine) {
+      final line = content as SmoothLine;
+      if (index < line.points.length) {
+        line.points[index] = point;
+      }
+    }
+  }
+
+  void translatePoints(Offset delta) {
+    final pts = points;
+    for (int i = 0; i < pts.length; i++) {
+      updatePoint(i, pts[i] + delta);
+    }
+  }
 }
 
 class FreehandLineStickerWidget extends StatefulWidget {
@@ -145,11 +195,11 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
           if (distance > widget.data.minPointDistance) {
             newPoint = firstPoint + delta;
             if (widget.onSnap != null) newPoint = widget.onSnap!(newPoint, anchor);
-            points.insert(0, newPoint);
+            widget.data.insertPoint(0, newPoint);
           } else {
             newPoint = points[0] + delta;
             if (widget.onSnap != null) newPoint = widget.onSnap!(newPoint, anchor);
-            points[0] = newPoint;
+            widget.data.updatePoint(0, newPoint);
           }
         } else {
           // Continue/Append logic
@@ -163,11 +213,11 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
           if (distance > widget.data.minPointDistance) {
             newPoint = lastPoint + delta;
             if (widget.onSnap != null) newPoint = widget.onSnap!(newPoint, anchor);
-            points.add(newPoint);
+            widget.data.addPoint(newPoint);
           } else {
             newPoint = points[points.length - 1] + delta;
             if (widget.onSnap != null) newPoint = widget.onSnap!(newPoint, anchor);
-            points[points.length - 1] = newPoint;
+            widget.data.updatePoint(points.length - 1, newPoint);
           }
         }
       }
@@ -177,10 +227,7 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
 
   void _onPanUpdateLine(DragUpdateDetails details) {
     setState(() {
-      final points = widget.data.points;
-      for (int i = 0; i < points.length; i++) {
-        points[i] += details.delta;
-      }
+      widget.data.translatePoints(details.delta);
     });
     widget.onUpdate();
   }
