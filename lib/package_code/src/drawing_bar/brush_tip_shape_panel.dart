@@ -32,19 +32,14 @@ class _TipItem {
 
   bool get isStamp => stampKey != null;
 
-  // 以内容而非实例判断相等，选中状态不依赖对象标识
-  // Compare by value, so selection does not depend on object identity
   @override
   bool operator ==(Object other) =>
       other is _TipItem &&
       other.kind == kind &&
-      other.stampKey == stampKey &&
-      other.size == size &&
-      other.hardness == hardness &&
-      other.roundness == roundness;
+      other.stampKey == stampKey;
 
   @override
-  int get hashCode => Object.hash(kind, stampKey, size, hardness, roundness);
+  int get hashCode => Object.hash(kind, stampKey);
 }
 
 /// 笔尖分类（顶部标签用）/ Tip categories (for the top tabs)
@@ -411,10 +406,7 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
         if (t.stampKey == _stampKey) {
           return t;
         }
-      } else if (!t.isStamp &&
-          t.kind == _kind &&
-          t.hardness == _hardness &&
-          t.roundness == _roundness) {
+      } else if (!t.isStamp && t.kind == _kind) {
         return t;
       }
     }
