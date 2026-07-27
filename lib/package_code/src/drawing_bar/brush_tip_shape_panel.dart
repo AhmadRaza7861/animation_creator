@@ -422,7 +422,6 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
   }
 
   void _apply() {
-    widget.controller.setStyle(strokeWidth: _size);
     if (_stampKey != null) {
       widget.controller.setPaintContent(
         ImageTipBrush(
@@ -464,14 +463,14 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
       color: _bg,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           _header(),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
           _tabs(),
-          Flexible(child: _grid()),
+          Expanded(child: _grid()),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
           _controls(),
           _previewStrip(),
@@ -558,10 +557,6 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
       child: Column(
         children: <Widget>[
-          _slider('Size', '${_size.round()} px', _size, 1, 100, (double v) {
-            setState(() => _size = v);
-            _apply();
-          }),
           Row(
             children: <Widget>[
               _flipCheck('Flip X', _flipX, (bool v) {
