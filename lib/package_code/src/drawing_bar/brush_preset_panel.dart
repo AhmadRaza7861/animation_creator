@@ -82,8 +82,23 @@ class _BrushPresetPanelState extends State<BrushPresetPanel> {
 
   List<BrushPreset> get _presets => widget.presets ?? kDefaultBrushPresets;
 
+  @override
+  void initState() {
+    super.initState();
+    final presetId = widget.controller.activeBrushPresetId;
+    if (presetId != null) {
+      _selected = _presets.firstWhere(
+        (p) => p.id == presetId,
+        orElse: () => _presets.first,
+      );
+    } else {
+      _selected = _presets.first;
+    }
+  }
+
   void _select(BrushPreset preset) {
     setState(() => _selected = preset);
+    widget.controller.activeBrushPresetId = preset.id;
     widget.controller.setPaintContent(preset.create());
     widget.onSelected?.call(preset);
   }
@@ -163,8 +178,6 @@ class _BrushPresetPanelState extends State<BrushPresetPanel> {
                 },
               ),
             ),
-            const Divider(height: 1),
-            _DiameterControl(controller: widget.controller, value: config.strokeWidth),
           ],
         );
       },
@@ -295,45 +308,4 @@ class _BrushPreviewPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _BrushPreviewPainter oldDelegate) =>
       oldDelegate.color != color || oldDelegate.preset != preset;
-}
-
-/// 主直径（画笔粗细）控制条 / Master diameter (stroke width) control
-class _DiameterControl extends StatelessWidget {
-  const _DiameterControl({required this.controller, required this.value});
-
-  final DrawingController controller;
-  final double value;
-
-  @override
-  Widget build(BuildContext context) {
-    final double clamped = value.clamp(1.0, 100.0);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-      child: Row(
-        children: <Widget>[
-          const Text(
-            'Master Diameter',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-          ),
-          Expanded(
-            child: Slider(
-              value: clamped,
-              min: 1,
-              max: 100,
-              onChanged: (double v) => controller.setStyle(strokeWidth: v),
-            ),
-          ),
-          Container(
-            width: 52,
-            alignment: Alignment.centerRight,
-            child: Text(
-              '${clamped.round()} px',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
