@@ -425,6 +425,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   bool _showRulerMenu = false;
   bool _showLayerPanel = false;
+  Offset? _layersPanelPosition;
 
   double _colorOpacity = 1;
   String _currentSubMenu = 'none';
@@ -4386,13 +4387,30 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                 ),
               if (_showLayerPanel)
                 Positioned(
-                  right: 16,
-                  bottom: 200,
+                  left: _layersPanelPosition?.dx ?? (MediaQuery.of(context).size.width - 250 - 16),
+                  top: _layersPanelPosition?.dy ?? (MediaQuery.of(context).size.height - 480),
                   child: LayerPanel(
                     controller: _drawingController,
                     onClose: () {
                       setState(() {
                         _showLayerPanel = false;
+                      });
+                    },
+                    onHeaderDrag: (details) {
+                      setState(() {
+                        final double currentX = _layersPanelPosition?.dx ?? (MediaQuery.of(context).size.width - 250 - 16);
+                        final double currentY = _layersPanelPosition?.dy ?? (MediaQuery.of(context).size.height - 480);
+                        
+                        final double newX = (currentX + details.delta.dx).clamp(
+                          0.0,
+                          MediaQuery.of(context).size.width - 250,
+                        );
+                        final double newY = (currentY + details.delta.dy).clamp(
+                          MediaQuery.of(context).padding.top,
+                          MediaQuery.of(context).size.height - 180,
+                        );
+                        
+                        _layersPanelPosition = Offset(newX, newY);
                       });
                     },
                   ),

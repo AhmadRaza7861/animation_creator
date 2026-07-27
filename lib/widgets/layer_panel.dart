@@ -5,11 +5,13 @@ import 'package:dummy/package_code/src/paint_contents/layer_data.dart';
 class LayerPanel extends StatefulWidget {
   final DrawingController controller;
   final VoidCallback onClose;
+  final GestureDragUpdateCallback? onHeaderDrag;
 
   const LayerPanel({
     super.key,
     required this.controller,
     required this.onClose,
+    this.onHeaderDrag,
   });
 
   @override
@@ -174,24 +176,28 @@ class _LayerPanelState extends State<LayerPanel> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F7F7),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Layers',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
-          ),
-          InkWell(
-            onTap: widget.onClose,
-            child: const Icon(Icons.close, size: 20, color: Colors.black54),
-          ),
-        ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanUpdate: widget.onHeaderDrag,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F7F7),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Layers',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            InkWell(
+              onTap: widget.onClose,
+              child: const Icon(Icons.close, size: 20, color: Colors.black54),
+            ),
+          ],
+        ),
       ),
     );
   }
