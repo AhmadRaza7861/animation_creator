@@ -20,6 +20,12 @@ import 'image.dart';
 import 'empty_content.dart';
 import '../ruler/mirror_content.dart';
 import 'extra_shapes.dart';
+import 'dashed_line.dart';
+import 'dotted_line.dart';
+import 'highlighter_line.dart';
+import 'image_tip_brush.dart';
+import 'shape_brush_line.dart';
+import 'tip_brush.dart';
 
 PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
   switch (type) {
@@ -77,6 +83,36 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
       return CubeShape.fromJson(data);
     case 'CylinderShape':
       return CylinderShape.fromJson(data);
+    case 'DashedLine':
+      return DashedLine.fromJson(data);
+    case 'DottedLine':
+      return DottedLine.fromJson(data);
+    case 'HighlighterLine':
+      return HighlighterLine.fromJson(data);
+    case 'ImageTipBrush':
+      return ImageTipBrush.fromJson(data);
+    case 'TipBrush':
+      return TipBrush.fromJson(data);
+    case 'SquareBrush':
+      return SquareBrush.fromJson(data);
+    case 'DiamondBrush':
+      return DiamondBrush.fromJson(data);
+    case 'TriangleBrush':
+      return TriangleBrush.fromJson(data);
+    case 'StarBrush':
+      return StarBrush.fromJson(data);
+    case 'CalligraphyBrush':
+      return CalligraphyBrush.fromJson(data);
+    case 'SoftRoundBrush':
+      return SoftRoundBrush.fromJson(data);
+    case 'HardRoundBrush':
+      return HardRoundBrush.fromJson(data);
+    case 'AirbrushBrush':
+      return AirbrushBrush.fromJson(data);
+    case 'ChalkBrush':
+      return ChalkBrush.fromJson(data);
+    case 'ScatterBrush':
+      return ScatterBrush.fromJson(data);
     default:
       return null;
   }
