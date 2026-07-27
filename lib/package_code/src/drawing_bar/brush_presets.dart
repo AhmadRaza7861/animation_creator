@@ -5,7 +5,6 @@ import 'package:dummy/package_code/src/paint_contents/image_tip_brush.dart';
 import 'package:dummy/package_code/src/paint_contents/shape_brush_line.dart';
 import 'package:dummy/package_code/src/paint_contents/tip_brush.dart';
 import 'package:flutter/material.dart';
-
 import '../../paint_contents.dart';
 import '../paint_contents/preset_strokes.dart';
 import '../paint_contents/stroke_styles.dart';
@@ -122,7 +121,8 @@ List<BrushPreset> get kDefaultBrushPresets => <BrushPreset>[
     name: 'Crayon',
     description: 'Waxy coarse grain',
     icon: Icons.color_lens_outlined,
-    create: () => PencilLine(density: 14, opacity: 0.85, spread: 1.1, speck: 0.16),
+    create: () =>
+        PencilLine(density: 14, opacity: 0.85, spread: 1.1, speck: 0.16),
   ),
   BrushPreset(
     id: 'pencil',
@@ -136,28 +136,32 @@ List<BrushPreset> get kDefaultBrushPresets => <BrushPreset>[
     name: 'Pencil H',
     description: 'Hard, light graphite',
     icon: Icons.edit_outlined,
-    create: () => PencilLine(density: 7, opacity: 0.3, spread: 0.9, speck: 0.07),
+    create: () =>
+        PencilLine(density: 7, opacity: 0.3, spread: 0.9, speck: 0.07),
   ),
   BrushPreset(
     id: 'pencilHB',
     name: 'Pencil HB',
     description: 'Medium graphite',
     icon: Icons.edit_outlined,
-    create: () => PencilLine(density: 11, opacity: 0.6, spread: 1.0, speck: 0.09),
+    create: () =>
+        PencilLine(density: 11, opacity: 0.6, spread: 1.0, speck: 0.09),
   ),
   BrushPreset(
     id: 'pencil6B',
     name: 'Pencil 6B',
     description: 'Soft, dark graphite',
     icon: Icons.edit_outlined,
-    create: () => PencilLine(density: 16, opacity: 0.9, spread: 1.2, speck: 0.11),
+    create: () =>
+        PencilLine(density: 16, opacity: 0.9, spread: 1.2, speck: 0.11),
   ),
   BrushPreset(
     id: 'grain',
     name: 'Grain',
     description: 'Fine speckled grain',
     icon: Icons.grain,
-    create: () => PencilLine(density: 18, opacity: 0.35, spread: 1.3, speck: 0.06),
+    create: () =>
+        PencilLine(density: 18, opacity: 0.35, spread: 1.3, speck: 0.06),
   ),
 
   // ---- 画笔 / 喷枪 / Brushes and airbrush ----
@@ -187,7 +191,8 @@ List<BrushPreset> get kDefaultBrushPresets => <BrushPreset>[
     name: 'Airbrush (Darker)',
     description: 'Dense soft spray',
     icon: Icons.blur_circular,
-    create: () => ImageTipBrush(stampKey: 'spray', spacing: 0.05, hardness: 0.8),
+    create: () =>
+        ImageTipBrush(stampKey: 'spray', spacing: 0.05, hardness: 0.8),
   ),
   BrushPreset(
     id: 'spray',
