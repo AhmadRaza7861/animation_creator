@@ -35,11 +35,10 @@ class _TipItem {
   @override
   bool operator ==(Object other) =>
       other is _TipItem &&
-      other.kind == kind &&
-      other.stampKey == stampKey;
+      other.label == label;
 
   @override
-  int get hashCode => Object.hash(kind, stampKey);
+  int get hashCode => label.hashCode;
 }
 
 /// 笔尖分类（顶部标签用）/ Tip categories (for the top tabs)
@@ -397,7 +396,22 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
       _hardness = first.hardness;
       _spacing = 0.25;
     }
-    _selected = _matchItem();
+    
+    final String? tipLabel = widget.controller.activeTipLabel;
+    if (tipLabel != null) {
+      _selected = _kTipItems.firstWhere(
+        (t) => t.label == tipLabel,
+        orElse: () => _kTipItems.first,
+      );
+      if (_selected != null) {
+        _stampKey = _selected!.stampKey;
+        _kind = _selected!.kind;
+        _hardness = _selected!.hardness;
+        _roundness = _selected!.roundness;
+      }
+    } else {
+      _selected = _matchItem();
+    }
   }
 
   _TipItem? _matchItem() {
@@ -449,6 +463,7 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
       _roundness = item.roundness;
       _size = item.size.toDouble();
     });
+    widget.controller.activeTipLabel = item.label;
     _apply();
   }
 

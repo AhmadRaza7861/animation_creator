@@ -240,6 +240,7 @@ class GlobalToolState extends ChangeNotifier {
   double lastEraserWidth = 20.0;
   double lastBrushWidth = 4.0;
   String? activeBrushPresetId;
+  String? activeTipLabel;
 
   void setStyle({
     BlendMode? blendMode,
@@ -327,6 +328,11 @@ class DrawingController extends ChangeNotifier {
   String? get activeBrushPresetId => GlobalToolState.instance.activeBrushPresetId;
   set activeBrushPresetId(String? value) {
     GlobalToolState.instance.activeBrushPresetId = value;
+  }
+
+  String? get activeTipLabel => GlobalToolState.instance.activeTipLabel;
+  set activeTipLabel(String? value) {
+    GlobalToolState.instance.activeTipLabel = value;
   }
 
   void _syncFromGlobal() {
