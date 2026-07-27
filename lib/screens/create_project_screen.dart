@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart' show rootBundle;
@@ -10,6 +11,7 @@ import 'canvas_size_screen.dart';
 import 'fps_screen.dart';
 
 import 'templates_screen.dart';
+import 'background_presets_screen.dart';
 
 class CreateProjectScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -311,77 +313,22 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     );
   }
 
-  void _showPresetsPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+  Future<void> _showPresetsPicker() async {
+    final Map<String, dynamic>? result = await Navigator.push<Map<String, dynamic>?>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BackgroundPresetsScreen(
+          initialPattern: _backgroundPattern,
+        ),
       ),
-      builder: (context) {
-        final presets = [
-          {'name': 'Plain', 'value': null, 'icon': Icons.crop_din_rounded},
-          {'name': 'Grid paper', 'value': 'grid', 'icon': Icons.grid_on_rounded},
-          {'name': 'Dot paper', 'value': 'dots', 'icon': Icons.grain_rounded},
-          {'name': 'Lined paper', 'value': 'lines', 'icon': Icons.format_align_justify_rounded},
-        ];
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Background Presets',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF3C3043),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Column(
-                children: presets.map((p) {
-                  final isSelected = _backgroundPattern == p['value'];
-
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFFFF2E5) : const Color(0xFFF7F8FA),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        p['icon'] as IconData,
-                        color: isSelected ? const Color(0xFFFF9114) : Colors.black54,
-                      ),
-                    ),
-                    title: Text(
-                      p['name'] as String,
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? const Color(0xFFFF9114) : const Color(0xFF3C3043),
-                      ),
-                    ),
-                    trailing: isSelected
-                        ? const Icon(Icons.check_circle, color: Color(0xFFFF9114))
-                        : null,
-                    onTap: () {
-                      setState(() {
-                        _backgroundPattern = p['value'] as String?;
-                      });
-                      Navigator.pop(context);
-                    },
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        );
-      },
     );
+
+    if (result != null) {
+      setState(() {
+        _backgroundPattern = result['pattern'] as String?;
+        _backgroundImagePath = null; // Clear image when a preset is selected
+      });
+    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -968,7 +915,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         // Solid color
                         Positioned.fill(
                           child: Container(
-                            color: _backgroundColor,
+                            color: _backgroundPattern == 'blueprint'
+                                ? const Color(0xFF1E3D59)
+                                : (_backgroundPattern == 'graph' ? const Color(0xFFF1F8F6) : _backgroundColor),
                           ),
                         ),
                         // Image file
@@ -1076,6 +1025,112 @@ class PreviewPatternPainter extends CustomPainter {
         ..color = Colors.redAccent.withOpacity(0.2)
         ..strokeWidth = 1.2;
       canvas.drawLine(const Offset(30, 0), Offset(30, size.height), marginPaint);
+    } else if (pattern == 'checkboard') {
+      const double spacing = 20.0;
+      final cellPaint = Paint()..color = Colors.black.withOpacity(0.04);
+      for (double x = 0; x < size.width; x += spacing) {
+        for (double y = 0; y < size.height; y += spacing) {
+          if (((x / spacing).floor() + (y / spacing).floor()) % 2 == 0) {
+            canvas.drawRect(Rect.fromLTWH(x, y, spacing, spacing), cellPaint);
+          }
+        }
+      }
+    } else if (pattern == 'isometric') {
+      const double spacing = 16.0;
+      final double h = spacing * 0.866025;
+      for (double x = 0; x < size.width + spacing; x += spacing) {
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+      }
+      final double slope = 0.57735;
+      for (double y = -size.width * slope; y < size.height; y += h * 2) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y + size.width * slope), paint);
+        canvas.drawLine(Offset(0, y + size.width * slope), Offset(size.width, y), paint);
+      }
+    } else if (pattern == 'blueprint') {
+      final bpPaint = Paint()
+        ..color = Colors.white.withOpacity(0.12)
+        ..strokeWidth = 1.0;
+      const double spacing = 16.0;
+      for (double x = 0; x < size.width; x += spacing) {
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), bpPaint);
+      }
+      for (double y = 0; y < size.height; y += spacing) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), bpPaint);
+      }
+    } else if (pattern == 'graph') {
+      final minorPaint = Paint()
+        ..color = const Color(0xFF81B214).withOpacity(0.08)
+        ..strokeWidth = 0.5;
+      final majorPaint = Paint()
+        ..color = const Color(0xFF81B214).withOpacity(0.2)
+        ..strokeWidth = 1.0;
+      const double minorSpacing = 6.0;
+      const double majorSpacing = 30.0;
+      for (double x = 0; x < size.width; x += minorSpacing) {
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), (x % majorSpacing == 0) ? majorPaint : minorPaint);
+      }
+      for (double y = 0; y < size.height; y += minorSpacing) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), (y % majorSpacing == 0) ? majorPaint : minorPaint);
+      }
+    } else if (pattern == 'polar') {
+      final center = Offset(size.width / 2, size.height / 2);
+      final maxRadius = sqrt(size.width * size.width + size.height * size.height) / 2;
+      for (double r = 20.0; r < maxRadius; r += 20.0) {
+        canvas.drawCircle(center, r, paint);
+      }
+      for (int angle = 0; angle < 360; angle += 30) {
+        final rad = angle * pi / 180;
+        final end = center + Offset(cos(rad) * maxRadius, sin(rad) * maxRadius);
+        canvas.drawLine(center, end, paint);
+      }
+    } else if (pattern == 'brick') {
+      const double brickW = 30.0;
+      const double brickH = 15.0;
+      int rowIndex = 0;
+      for (double y = 0; y < size.height + brickH; y += brickH) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+        final double offset = (rowIndex % 2 == 0) ? 0 : brickW / 2;
+        for (double x = -offset; x < size.width + brickW; x += brickW) {
+          canvas.drawLine(Offset(x, y), Offset(x, y + brickH), paint);
+        }
+        rowIndex++;
+      }
+    } else if (pattern == 'music') {
+      const double lineSpacing = 6.0;
+      const double groupSpacing = 28.0;
+      double y = 15.0;
+      while (y < size.height - 20.0) {
+        for (int i = 0; i < 5; i++) {
+          final double py = y + i * lineSpacing;
+          canvas.drawLine(Offset(0, py), Offset(size.width, py), paint);
+        }
+        y += 4 * lineSpacing + groupSpacing;
+      }
+    } else if (pattern == 'hex') {
+      const double r = 12.0;
+      final double h = r * sin(pi / 3);
+      final path = Path();
+      for (double x = 0; x < size.width + r * 2; x += r * 3) {
+        int col = 0;
+        for (double y = 0; y < size.height + r * 2; y += h) {
+          final double ox = (col % 2 == 0) ? 0 : r * 1.5;
+          path.moveTo(ox + x, y);
+          path.lineTo(ox + x + r / 2, y + h);
+          path.lineTo(ox + x + r * 1.5, y + h);
+          path.lineTo(ox + x + r * 2, y);
+          col++;
+        }
+      }
+      canvas.drawPath(path, paint..style = PaintingStyle.stroke);
+    } else if (pattern == 'cross') {
+      const double spacing = 18.0;
+      const double crossSize = 2.0;
+      for (double x = spacing; x < size.width; x += spacing) {
+        for (double y = spacing; y < size.height; y += spacing) {
+          canvas.drawLine(Offset(x - crossSize, y), Offset(x + crossSize, y), paint);
+          canvas.drawLine(Offset(x, y - crossSize), Offset(x, y + crossSize), paint);
+        }
+      }
     }
   }
 
