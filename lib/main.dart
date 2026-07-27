@@ -1963,16 +1963,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   icon: Icons.brush_rounded,
                   isActive: _selectedSubTool == 'brush',
                   onTap: () {
-                    if (_selectedSubTool == 'brush') {
-                      BrushTipShapePanel.show(context, _drawingController);
-                    } else {
-                      setState(() {
-                        _selectedSubTool = 'brush';
-                        _drawingController.setPaintContent(SmoothLine());
-                        _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
-                      });
-                      BrushPresetPanel.show(context, _drawingController);
-                    }
+                    setState(() {
+                      _selectedSubTool = 'brush';
+                      _drawingController.setPaintContent(SmoothLine());
+                      _drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+                    });
+                    BrushPresetPanel.show(context, _drawingController);
                   },
                 ),
                 _bottomSubToolItem(

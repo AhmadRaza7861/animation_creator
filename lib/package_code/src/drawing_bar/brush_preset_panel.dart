@@ -6,6 +6,7 @@ import '../drawing_controller.dart';
 import '../helper/ex_value_builder.dart';
 import '../paint_contents/paint_content.dart';
 import 'brush_presets.dart';
+import 'brush_tip_shape_panel.dart';
 
 /// 笔刷预设面板
 ///
@@ -114,9 +115,29 @@ class _BrushPresetPanelState extends State<BrushPresetPanel> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-              child: Text(
-                widget.title,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF3C3043),
+                    ),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFFF9114),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    label: const Text('Customize Tip', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      BrushTipShapePanel.show(context, widget.controller);
+                    },
+                  ),
+                ],
               ),
             ),
             Flexible(
