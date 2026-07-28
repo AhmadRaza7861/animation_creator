@@ -1,6 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:dummy/package_code/src/drawing_controller.dart';
 import 'package:dummy/package_code/src/paint_contents/layer_data.dart';
+const List<BlendMode> _kCommonBlendModes = [
+  BlendMode.srcOver,
+  BlendMode.multiply,
+  BlendMode.screen,
+  BlendMode.overlay,
+  BlendMode.darken,
+  BlendMode.lighten,
+  BlendMode.colorDodge,
+  BlendMode.colorBurn,
+  BlendMode.hardLight,
+  BlendMode.softLight,
+  BlendMode.difference,
+  BlendMode.exclusion,
+  BlendMode.hue,
+  BlendMode.saturation,
+  BlendMode.color,
+  BlendMode.luminosity,
+];
+
+const Map<BlendMode, String> _kBlendModeLabels = {
+  BlendMode.srcOver: 'Normal',
+  BlendMode.multiply: 'Multiply',
+  BlendMode.screen: 'Screen',
+  BlendMode.overlay: 'Overlay',
+  BlendMode.darken: 'Darken',
+  BlendMode.lighten: 'Lighten',
+  BlendMode.colorDodge: 'Color Dodge',
+  BlendMode.colorBurn: 'Color Burn',
+  BlendMode.hardLight: 'Hard Light',
+  BlendMode.softLight: 'Soft Light',
+  BlendMode.difference: 'Difference',
+  BlendMode.exclusion: 'Exclusion',
+  BlendMode.hue: 'Hue',
+  BlendMode.saturation: 'Saturation',
+  BlendMode.color: 'Color',
+  BlendMode.luminosity: 'Luminosity',
+};
 
 class LayerPanel extends StatefulWidget {
   final DrawingController controller;
@@ -310,27 +347,40 @@ class _LayerPanelState extends State<LayerPanel> {
           ),
           Row(
             children: [
-              const Icon(Icons.invert_colors, size: 16, color: Colors.black54),
+              const Icon(Icons.layers_outlined, size: 16, color: Colors.black54),
               const SizedBox(width: 8),
               Expanded(
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<BlendMode>(
-                    isExpanded: true,
-                    isDense: true,
-                    value: layer.blendMode,
-                    icon: const Icon(Icons.arrow_drop_down, size: 18),
-                    items: BlendMode.values.map((mode) {
-                      return DropdownMenuItem(
-                        value: mode,
-                        child: Text(
-                          mode.name.split('.').last,
-                          style: const TextStyle(fontSize: 12, color: Colors.black87),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (mode) {
-                      if (mode != null) _changeBlendMode(layer, mode);
-                    },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F8FA),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<BlendMode>(
+                      isExpanded: true,
+                      isDense: true,
+                      value: _kCommonBlendModes.contains(layer.blendMode) ? layer.blendMode : BlendMode.srcOver,
+                      icon: const Icon(Icons.unfold_more_rounded, size: 16, color: Colors.black54),
+                      items: _kCommonBlendModes.map((mode) {
+                        return DropdownMenuItem(
+                          value: mode,
+                          child: Text(
+                            _kBlendModeLabels[mode] ?? mode.name,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF3C3043),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (mode) {
+                        if (mode != null) _changeBlendMode(layer, mode);
+                      },
+                    ),
                   ),
                 ),
               ),
