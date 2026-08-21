@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/font_presets.dart';
+import '../../../core/widgets/font_presets.dart';
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
 

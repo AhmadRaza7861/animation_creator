@@ -9,7 +9,7 @@ import 'helper/ex_value_builder.dart';
 import 'helper/get_size.dart';
 import 'painter.dart';
 import 'ruler/ruler_overlay.dart';
-import '../../widgets/grid_overlay.dart';
+import '../../features/editor/presentation/widgets/grid_overlay.dart';
 
 /// 画板组件
 ///
