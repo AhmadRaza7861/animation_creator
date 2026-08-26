@@ -156,7 +156,7 @@ class _LayerPanelState extends State<LayerPanel> {
           maxHeight: MediaQuery.of(context).size.height * 0.5,
         ),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: ColorConstants.background,
           borderRadius: BorderRadius.circular(16),
           boxShadow: const [
             BoxShadow(
@@ -181,7 +181,7 @@ class _LayerPanelState extends State<LayerPanel> {
                   return Material(
                     elevation: 4,
                     shadowColor: Colors.black26,
-                    color: AppColors.background,
+                    color: ColorConstants.background,
                     child: child,
                   );
                 },
@@ -229,7 +229,7 @@ class _LayerPanelState extends State<LayerPanel> {
           children: [
             const Text(
               'Layers',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.darkText),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ColorConstants.darkText),
             ),
             InkWell(
               onTap: widget.onClose,
@@ -259,7 +259,7 @@ class _LayerPanelState extends State<LayerPanel> {
              });
           },
           child: Container(
-            color: isActive ? AppColors.accent.withOpacity(0.1) : Colors.transparent,
+            color: isActive ? ColorConstants.accent.withOpacity(0.1) : Colors.transparent,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
@@ -267,7 +267,7 @@ class _LayerPanelState extends State<LayerPanel> {
                   onTap: () => _toggleVisibility(layer),
                   child: Icon(
                     layer.isVisible ? Icons.visibility : Icons.visibility_off,
-                    color: layer.isVisible ? AppColors.darkText : Colors.grey,
+                    color: layer.isVisible ? ColorConstants.darkText : Colors.grey,
                     size: 20,
                   ),
                 ),
@@ -277,7 +277,7 @@ class _LayerPanelState extends State<LayerPanel> {
                     layer.name,
                     style: TextStyle(
                       fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                      color: isActive ? AppColors.accent : AppColors.darkText,
+                      color: isActive ? ColorConstants.accent : ColorConstants.darkText,
                       fontSize: 14,
                     ),
                   ),
@@ -331,8 +331,8 @@ class _LayerPanelState extends State<LayerPanel> {
                   ),
                   child: Slider(
                     value: layer.opacity,
-                    activeColor: AppColors.accent,
-                    inactiveColor: AppColors.accent.withOpacity(0.2),
+                    activeColor: ColorConstants.accent,
+                    inactiveColor: ColorConstants.accent.withOpacity(0.2),
                     onChanged: (v) => _changeOpacity(layer, v),
                   ),
                 ),
@@ -341,7 +341,7 @@ class _LayerPanelState extends State<LayerPanel> {
                 width: 36,
                 child: Text(
                   '${(layer.opacity * 100).toInt()}%',
-                  style: const TextStyle(fontSize: 11, color: AppColors.darkText),
+                  style: const TextStyle(fontSize: 11, color: ColorConstants.darkText),
                   textAlign: TextAlign.right,
                 ),
               ),
@@ -447,12 +447,12 @@ class _LayerPanelState extends State<LayerPanel> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: const [
-            Icon(Icons.add_circle, color: AppColors.accent, size: 20),
+            Icon(Icons.add_circle, color: ColorConstants.accent, size: 20),
             SizedBox(width: 8),
             Text(
               'New Layer',
               style: TextStyle(
-                color: AppColors.accent,
+                color: ColorConstants.accent,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),

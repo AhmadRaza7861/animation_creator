@@ -72,18 +72,18 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.darkText),
+          icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Preview Animation',
           style: TextStyle(
-            color: AppColors.darkText,
+            color: ColorConstants.darkText,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         elevation: 0.5,
       ),
       body: SafeArea(
@@ -126,7 +126,7 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
                           decoration: isSelected
                               ? const BoxDecoration(
                                   border: Border(
-                                    bottom: BorderSide(color: AppColors.darkText, width: 2),
+                                    bottom: BorderSide(color: ColorConstants.darkText, width: 2),
                                   ),
                                 )
                               : null,
@@ -135,7 +135,7 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
                             style: TextStyle(
                               fontSize: isSelected ? 18 : 14,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? AppColors.darkText : Colors.black38,
+                              color: isSelected ? ColorConstants.darkText : Colors.black38,
                             ),
                           ),
                         ),

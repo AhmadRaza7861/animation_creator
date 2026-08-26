@@ -102,12 +102,12 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ColorConstants.background,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_isProcessing) const CircularProgressIndicator(color: AppColors.accent),
+            if (_isProcessing) const CircularProgressIndicator(color: ColorConstants.accent),
             const SizedBox(height: 24),
             Text(
               _statusMessage, 

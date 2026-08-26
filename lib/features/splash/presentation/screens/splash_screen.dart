@@ -73,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ColorConstants.background,
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -105,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.darkText,
+                      color: ColorConstants.darkText,
                       letterSpacing: -1.5,
                     ),
                   ),
@@ -114,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
+                      color: ColorConstants.primary,
                       letterSpacing: -1.5,
                     ),
                   ),
@@ -129,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen>
                     width: 4,
                     height: 4,
                     decoration: const BoxDecoration(
-                      color: AppColors.primary,
+                      color: ColorConstants.primary,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -139,7 +139,7 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.mediumText,
+                      color: ColorConstants.mediumText,
                       letterSpacing: 3.5,
                     ),
                   ),
@@ -148,7 +148,7 @@ class _SplashScreenState extends State<SplashScreen>
                     width: 4,
                     height: 4,
                     decoration: const BoxDecoration(
-                      color: AppColors.primary,
+                      color: ColorConstants.primary,
                       shape: BoxShape.circle,
                     ),
                   ),

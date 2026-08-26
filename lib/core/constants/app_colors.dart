@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
-  AppColors._();
+class ColorConstants {
+  ColorConstants._();
 
-  static const Color primary = Color(0xFFFF9214);
+  static const Color primary = Color(0xFFFF9318);
   static const Color primaryDark = Color(0xFFE07C0A);
   static const Color primaryLight = Color(0xFFFFECCC);
 
@@ -24,4 +24,11 @@ class AppColors {
   static const Color dotPatternColor = Colors.black26;
   static const Color rulerActive = Colors.pink;
   static const Color rulerInactive = Colors.grey;
+  static const Color border_color = Color(0xffF4F4F4);
+  static const Color text_color = Color(0xff3E3737);
+  static const Color shadow_color = Color(0xffFFDAB3);
+  static const Color subTextColor = Color(0xffA19F9F);
+  static const Color shodow = Color(0xff716E6E);
+  static const Color selected_type = Color(0xffF0F0F0);
+  static const Color background_color = Color(0xffFFFDFD);
 }

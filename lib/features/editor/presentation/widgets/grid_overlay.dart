@@ -45,7 +45,7 @@ class _GridPainter extends CustomPainter {
     }
 
     final paint = Paint()
-      ..color = AppColors.accent.withOpacity(opacity) // accent pink
+      ..color = ColorConstants.accent.withOpacity(opacity) // accent pink
       ..strokeWidth = 1.0;
 
     // Draw vertical lines

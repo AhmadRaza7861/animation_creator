@@ -15,16 +15,16 @@ class GalleryScreen extends StatelessWidget {
         title: const Text(
           'Canvas Gallery',
           style: TextStyle(
-            color: AppColors.darkText,
+            color: ColorConstants.darkText,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
           ),
         ),
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.darkText),
+          icon: const Icon(Icons.arrow_back_ios_new, color: ColorConstants.darkText),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -61,7 +61,7 @@ class GalleryScreen extends StatelessWidget {
   Widget _buildGalleryItem(BuildContext context, int index) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: ColorConstants.background,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

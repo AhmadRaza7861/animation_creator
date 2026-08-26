@@ -47,7 +47,7 @@ class CanvasSelector extends StatelessWidget {
             child: Material(
               color: Colors.transparent,
               child: IconButton(
-                icon: const Icon(Icons.layers_rounded, size: 28, color: AppColors.darkText),
+                icon: const Icon(Icons.layers_rounded, size: 28, color: ColorConstants.darkText),
                 onPressed: onOpenFrames,
                 tooltip: 'Layers',
               ),
@@ -59,7 +59,7 @@ class CanvasSelector extends StatelessWidget {
             child: Material(
               color: Colors.transparent,
               child: IconButton(
-                icon: const Icon(Icons.play_arrow_rounded, size: 28, color: AppColors.darkText),
+                icon: const Icon(Icons.play_arrow_rounded, size: 28, color: ColorConstants.darkText),
                 onPressed: onPlay,
                 tooltip: 'Play Animation',
               ),
@@ -113,7 +113,7 @@ class CanvasSelector extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
-            child: Icon(Icons.add, size: 24, color: AppColors.darkText),
+            child: Icon(Icons.add, size: 24, color: ColorConstants.darkText),
           ),
         ),
       ),
@@ -137,7 +137,7 @@ class CanvasSelector extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? ColorConstants.primary : Colors.transparent,
                 width: 2.0,
               ),
               boxShadow: const [
@@ -240,7 +240,7 @@ class CanvasSelector extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                  color: ColorConstants.primary,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

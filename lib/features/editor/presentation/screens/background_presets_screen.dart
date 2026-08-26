@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
+import '../../../../core/widgets/primary_button.dart';
 
 class BackgroundPresetsScreen extends StatefulWidget {
   final String? initialPattern;
@@ -42,16 +43,16 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.darkText),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: ColorConstants.darkText),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Background Presets',
           style: TextStyle(
-            color: AppColors.darkText,
+            color: ColorConstants.darkText,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -86,7 +87,7 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : Colors.transparent,
+                          color: isSelected ? ColorConstants.primary : Colors.transparent,
                           width: 2.5,
                         ),
                         boxShadow: [
@@ -132,14 +133,14 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
-                                          color: isSelected ? AppColors.primary : AppColors.darkText,
+                                          color: isSelected ? ColorConstants.primary : ColorConstants.darkText,
                                         ),
                                       ),
                                     ),
                                     if (isSelected)
                                       const Icon(
                                         Icons.check_circle_rounded,
-                                        color: AppColors.primary,
+                                        color: ColorConstants.primary,
                                         size: 16,
                                       ),
                                   ],
@@ -166,29 +167,11 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
             ),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context, {'pattern': _selectedPattern});
-                  },
-                  child: const Text(
-                    'Select Preset',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              child: PrimaryButton(
+                text: 'Select Preset',
+                onPressed: () {
+                  Navigator.pop(context, {'pattern': _selectedPattern});
+                },
               ),
             ),
           ],

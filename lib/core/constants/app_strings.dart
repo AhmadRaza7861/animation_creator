@@ -24,4 +24,24 @@ class StringConstants {
   static const String startCreating = 'Start Creating';
   static const String exportType = 'Export Type';
   static const String background = 'Background';
+  static const String explore_templates = 'Explore Templates';
+  static const String browse_templates = 'Browse Templates';
+  static const String where_ideas_turn_into_motion = 'Where Ideas turn into motion';
+  static const String start_faster = 'Start faster with ready-made animations for any project';
+  static const String recent_projects = 'Recent Projects';
+  static const String see_all = 'See all';
+  static const String new_project = 'New Project';
+  static const String project_name = 'Project Name';
+  static const String name_your_animation = 'Name Your Animation';
+  static const String aspect_ratio = 'Aspect Ratio';
+  static const String frame_rate = 'Frame Rate';
+  static const String export_type = 'Export Type';
+  static const String mp4 = 'Mp4';
+  static const String gif = 'GIF';
+  static const String add_as_sticker = 'Add as Sticker';
+  static const String enable_sticker_mode = 'Enable Sticker Mode';
+  static const String add_shapes_lines = 'Add shapes, lines, and text as adjustable stickers';
+  static const String background_color = 'Background Color';
+  static const String add = '+ Add';
+  static const String crate_project = 'Create Project';
 }

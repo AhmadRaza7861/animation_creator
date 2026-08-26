@@ -5,6 +5,7 @@ import '../../../../core/constants/app_assets.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
 import '../../domain/template_model.dart';
+import '../../../../core/widgets/primary_button.dart';
 
 class TemplateDetailScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -65,12 +66,12 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ColorConstants.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.darkText, size: 22),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
         title: null,
@@ -110,7 +111,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.darkText,
+                  color: ColorConstants.darkText,
                 ),
               ),
               const SizedBox(height: 12),
@@ -129,7 +130,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                         color: const Color(0xFFF1F3F6),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isCurrent ? AppColors.primary : Colors.transparent,
+                          color: isCurrent ? ColorConstants.primary : Colors.transparent,
                           width: 2.0,
                         ),
                       ),
@@ -152,7 +153,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.darkText,
+                  color: ColorConstants.darkText,
                 ),
               ),
               const SizedBox(height: 12),
@@ -196,7 +197,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.darkText,
+                                color: ColorConstants.darkText,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -247,7 +248,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.darkText,
+                                color: ColorConstants.darkText,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -261,25 +262,10 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
               const SizedBox(height: 36),
 
               // 4. Continue Button
-              ElevatedButton(
+              PrimaryButton(
+                text: 'Continue',
                 onPressed: _navigateToCreateProject,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5C52E5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 0,
-                  minimumSize: const Size(double.infinity, 54),
-                ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                backgroundColor: const Color(0xFF5C52E5),
               ),
               const SizedBox(height: 24),
             ],

@@ -123,10 +123,10 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ColorConstants.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.darkText),
+          icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
           onPressed: () {
             Navigator.pop(context, {
               'width': _width,
@@ -138,12 +138,12 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
         title: const Text(
           'Canvas size',
           style: TextStyle(
-            color: AppColors.darkText,
+            color: ColorConstants.darkText,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         elevation: 0.5,
       ),
       body: SafeArea(
@@ -176,7 +176,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                                 style: const TextStyle(
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.darkText,
+                                  color: ColorConstants.darkText,
                                 ),
                                 decoration: const InputDecoration(
                                   isDense: true,
@@ -185,7 +185,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                                     borderSide: BorderSide(color: Colors.black12, width: 2),
                                   ),
                                   focusedBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(color: AppColors.accent, width: 2),
+                                    borderSide: BorderSide(color: ColorConstants.accent, width: 2),
                                   ),
                                 ),
                               ),
@@ -209,7 +209,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                     child: IconButton(
                       icon: Icon(
                         _isAspectRatioLocked ? Icons.link : Icons.link_off,
-                        color: _isAspectRatioLocked ? AppColors.accent : Colors.grey,
+                        color: _isAspectRatioLocked ? ColorConstants.accent : Colors.grey,
                         size: 28,
                       ),
                       onPressed: () {
@@ -242,7 +242,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                                 style: const TextStyle(
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.darkText,
+                                  color: ColorConstants.darkText,
                                 ),
                                 decoration: const InputDecoration(
                                   isDense: true,
@@ -251,7 +251,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                                     borderSide: BorderSide(color: Colors.black12, width: 2),
                                   ),
                                   focusedBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(color: AppColors.accent, width: 2),
+                                    borderSide: BorderSide(color: ColorConstants.accent, width: 2),
                                   ),
                                 ),
                               ),
@@ -291,7 +291,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? AppColors.darkText : Colors.black54,
+                        color: isSelected ? ColorConstants.darkText : Colors.black54,
                       ),
                     ),
                     subtitle: Text(
@@ -301,7 +301,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                     trailing: isSelected
                         ? const Icon(
                             Icons.check_circle,
-                            color: AppColors.accent,
+                            color: ColorConstants.accent,
                             size: 24,
                           )
                         : null,

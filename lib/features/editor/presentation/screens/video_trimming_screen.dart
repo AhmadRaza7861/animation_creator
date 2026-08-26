@@ -81,28 +81,28 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
   Widget build(BuildContext context) {
     if (!_isInitialized) {
       return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        backgroundColor: ColorConstants.background,
+        body: Center(child: CircularProgressIndicator(color: ColorConstants.accent)),
       );
     }
 
     final durationMillis = _controller.value.duration.inMilliseconds.toDouble();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ColorConstants.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.darkText),
+          icon: const Icon(Icons.close, color: ColorConstants.darkText),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Video import', style: TextStyle(color: AppColors.darkText, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('Video import', style: TextStyle(color: ColorConstants.darkText, fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: false,
         actions: [
           TextButton(
             onPressed: _onConfirm,
-            child: const Text('Confirm', style: TextStyle(color: AppColors.darkText, fontWeight: FontWeight.bold)),
+            child: const Text('Confirm', style: TextStyle(color: ColorConstants.darkText, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -177,10 +177,10 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                IconButton(icon: const Icon(Icons.skip_previous, size: 28), color: AppColors.darkText, onPressed: () {
+                IconButton(icon: const Icon(Icons.skip_previous, size: 28), color: ColorConstants.darkText, onPressed: () {
                   _controller.seekTo(Duration(milliseconds: _startValue.toInt()));
                 }),
-                IconButton(icon: const Icon(Icons.fast_rewind, size: 28), color: AppColors.darkText, onPressed: () {
+                IconButton(icon: const Icon(Icons.fast_rewind, size: 28), color: ColorConstants.darkText, onPressed: () {
                   _controller.seekTo(Duration(milliseconds: (_controller.value.position.inMilliseconds - 1000).clamp(_startValue.toInt(), _endValue.toInt())));
                 }),
                 ValueListenableBuilder(
@@ -188,17 +188,17 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
                   builder: (context, VideoPlayerValue value, child) {
                     return IconButton(
                       icon: Icon(value.isPlaying ? Icons.pause_circle_outline : Icons.play_circle_outline, size: 36), 
-                      color: AppColors.darkText, 
+                      color: ColorConstants.darkText,
                       onPressed: () {
                         value.isPlaying ? _controller.pause() : _controller.play();
                       }
                     );
                   }
                 ),
-                IconButton(icon: const Icon(Icons.fast_forward, size: 28), color: AppColors.darkText, onPressed: () {
+                IconButton(icon: const Icon(Icons.fast_forward, size: 28), color: ColorConstants.darkText, onPressed: () {
                   _controller.seekTo(Duration(milliseconds: (_controller.value.position.inMilliseconds + 1000).clamp(_startValue.toInt(), _endValue.toInt())));
                 }),
-                IconButton(icon: const Icon(Icons.skip_next, size: 28), color: AppColors.darkText, onPressed: () {
+                IconButton(icon: const Icon(Icons.skip_next, size: 28), color: ColorConstants.darkText, onPressed: () {
                   _controller.seekTo(Duration(milliseconds: _endValue.toInt()));
                 }),
               ],
@@ -258,10 +258,10 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 20,
-                    activeTrackColor: AppColors.accent.withOpacity(0.5),
+                    activeTrackColor: ColorConstants.accent.withOpacity(0.5),
                     inactiveTrackColor: Colors.grey[200],
-                    thumbColor: AppColors.accent,
-                    overlayColor: AppColors.accent.withOpacity(0.2),
+                    thumbColor: ColorConstants.accent,
+                    overlayColor: ColorConstants.accent.withOpacity(0.2),
                   ),
                   child: RangeSlider(
                     values: RangeValues(_startValue, _endValue),
@@ -308,12 +308,12 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.1),
+                      color: ColorConstants.accent.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       "${((_endValue - _startValue) / 1000 * 10).round()} Frames Selected",
-                      style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
                 ),

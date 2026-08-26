@@ -11,7 +11,6 @@ import '../../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
 import '../../../../../package_code/src/paint_contents/simple_line.dart';
 import '../../../../../package_code/src/paint_contents/smooth_line.dart';
 import '../../../../../core/constants/app_colors.dart';
-import '../../../../../core/widgets/color_picker_dialog.dart';
 import '../../../../../core/widgets/font_presets.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
@@ -165,7 +164,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             label: 'Export',
             icon: Icons.ios_share_rounded,
             onTap: () => _showExportBottomSheet(ref),
-            color: AppColors.accent,
+            color: ColorConstants.accent,
           ),
           Container(
             height: 36,
@@ -181,7 +180,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Brush',
                     icon: Icons.brush_rounded,
-                    color: controller.activeCategory == 'Brush' ? AppColors.accent : null,
+                    color: controller.activeCategory == 'Brush' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.currentSubMenu = 'brush';
                       controller.activeCategory = 'Brush';
@@ -196,7 +195,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Paint',
                     icon: Icons.format_paint_rounded,
-                    color: controller.activeCategory == 'Paint' ? AppColors.accent : null,
+                    color: controller.activeCategory == 'Paint' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(FillContent());
                       controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
@@ -206,7 +205,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Eyedropper',
                     icon: Icons.colorize_rounded,
-                    color: controller.activeCategory == 'Eyedropper' ? AppColors.accent : null,
+                    color: controller.activeCategory == 'Eyedropper' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(Eyedropper());
                       controller.activeCategory = 'Eyedropper';
@@ -215,7 +214,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Blur',
                     icon: Icons.water_drop_rounded,
-                    color: controller.activeCategory == 'Blur' ? AppColors.accent : null,
+                    color: controller.activeCategory == 'Blur' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(BlurContent());
                       controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
@@ -225,7 +224,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Smudge',
                     icon: Icons.fingerprint_rounded,
-                    color: controller.activeCategory == 'Smudge' ? AppColors.accent : null,
+                    color: controller.activeCategory == 'Smudge' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(SmudgeContent());
                       controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
@@ -235,7 +234,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Shapes',
                     icon: Icons.interests_rounded,
-                    color: controller.activeCategory == 'Shapes' ? AppColors.accent : null,
+                    color: controller.activeCategory == 'Shapes' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.currentSubMenu = 'shapes';
                       controller.activeCategory = 'Shapes';
@@ -286,7 +285,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Erase',
                     icon: Icons.auto_fix_normal_rounded,
-                    color: controller.activeCategory == 'Erase' ? AppColors.accent : null,
+                    color: controller.activeCategory == 'Erase' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(Eraser());
                       controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
@@ -296,7 +295,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Lasso',
                     icon: Icons.gesture_rounded,
-                    color: controller.activeCategory == 'Lasso' ? AppColors.accent : null,
+                    color: controller.activeCategory == 'Lasso' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(Lasso());
                       controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
@@ -306,7 +305,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Text',
                     icon: Icons.text_fields_rounded,
-                    color: controller.isTextToolSelected ? AppColors.accent : null,
+                    color: controller.isTextToolSelected ? ColorConstants.accent : null,
                     onTap: () {
                       if (controller.drawingController.isCurrentLayerLocked) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -326,7 +325,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Ruler',
                     icon: Icons.straighten_rounded,
-                    color: controller.showRulerMenu ? AppColors.accent : null,
+                    color: controller.showRulerMenu ? ColorConstants.accent : null,
                     onTap: () {
                       controller.showRulerMenu = !controller.showRulerMenu;
                     },
@@ -558,12 +557,12 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: isActive ? AppColors.accent : Colors.grey.shade600, size: 24),
+          Icon(icon, color: isActive ? ColorConstants.accent : Colors.grey.shade600, size: 24),
           const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
-              color: isActive ? AppColors.accent : Colors.grey.shade600,
+              color: isActive ? ColorConstants.accent : Colors.grey.shade600,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -619,12 +618,12 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: AppColors.accent, size: 24),
+            Icon(icon, color: ColorConstants.accent, size: 24),
             const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(
-                color: AppColors.accent,
+                color: ColorConstants.accent,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -717,7 +716,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                             ),
                           ),
                           trailing: isSelected
-                              ? const Icon(Icons.check_circle, color: AppColors.accent)
+                              ? const Icon(Icons.check_circle, color: ColorConstants.accent)
                               : null,
                           onTap: () {
                             sticker.fontFamily = preset.name;
@@ -777,8 +776,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             trackHeight: 3,
-                            activeTrackColor: AppColors.accent,
-                            thumbColor: AppColors.accent,
+                            activeTrackColor: ColorConstants.accent,
+                            thumbColor: ColorConstants.accent,
                             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                           ),
                           child: Slider(
@@ -807,8 +806,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             trackHeight: 3,
-                            activeTrackColor: AppColors.accent,
-                            thumbColor: AppColors.accent,
+                            activeTrackColor: ColorConstants.accent,
+                            thumbColor: ColorConstants.accent,
                             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                           ),
                           child: Slider(
@@ -960,7 +959,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isActive ? AppColors.accent : Colors.transparent,
+          color: isActive ? ColorConstants.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
@@ -985,7 +984,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isActive ? AppColors.accent : Colors.transparent,
+          color: isActive ? ColorConstants.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Icon(

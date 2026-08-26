@@ -69,10 +69,10 @@ class _FpsScreenState extends State<FpsScreen> {
     final frameData = _bounceFrames[_currentFrame];
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ColorConstants.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.darkText),
+          icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
           onPressed: () {
             Navigator.pop(context, _selectedFps);
           },
@@ -80,12 +80,12 @@ class _FpsScreenState extends State<FpsScreen> {
         title: const Text(
           'Frames per second',
           style: TextStyle(
-            color: AppColors.darkText,
+            color: ColorConstants.darkText,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         elevation: 0.5,
       ),
       body: SafeArea(
@@ -95,7 +95,7 @@ class _FpsScreenState extends State<FpsScreen> {
             Expanded(
               flex: 4,
               child: Container(
-                color: AppColors.background,
+                color: ColorConstants.background,
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -198,7 +198,7 @@ class _FpsScreenState extends State<FpsScreen> {
                         height: 54,
                         decoration: const BoxDecoration(
                           border: Border.symmetric(
-                            horizontal: BorderSide(color: AppColors.accent, width: 1.5),
+                            horizontal: BorderSide(color: ColorConstants.accent, width: 1.5),
                           ),
                         ),
                       ),
@@ -227,7 +227,7 @@ class _FpsScreenState extends State<FpsScreen> {
                               style: TextStyle(
                                 fontSize: isSelected ? 24 : 18,
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? AppColors.accent : Colors.black45,
+                                color: isSelected ? ColorConstants.accent : Colors.black45,
                               ),
                             ),
                           );

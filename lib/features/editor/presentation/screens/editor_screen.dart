@@ -12,7 +12,8 @@ import '../widgets/timeline_panel.dart';
 import '../widgets/toolbar_panel.dart';
 import '../widgets/layer_panel.dart';
 import '../widgets/sticker_widgets/text_sticker_widget.dart';
-import '../../../../core/widgets/color_picker_dialog.dart';
+import '../../../../core/widgets/color_picker_screen.dart';
+import '../../../../core/widgets/custom_switch.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
@@ -55,10 +56,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
   }
 
   void _openColorPicker(Color currentColor, EditorController controller) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return ColorPickerDialog(
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ColorPickerScreen(
           initialColor: currentColor,
           initialOpacity: controller.colorOpacity,
           onColorChanged: (Color newColor, double newOpacity) {
@@ -74,8 +75,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
               color: newColor.withValues(alpha: newOpacity),
             );
           },
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -101,7 +102,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                       children: [
                         const Text(
                           'Settings',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.darkText),
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ColorConstants.darkText),
                         ),
                         IconButton(
                           icon: const Icon(Icons.close),
@@ -131,7 +132,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.layers_rounded, color: AppColors.darkText),
+                      leading: const Icon(Icons.layers_rounded, color: ColorConstants.darkText),
                       title: const Text('Onion', style: TextStyle(fontWeight: FontWeight.w600)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -143,12 +144,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             },
                             child: const Text(
                               'Edit',
-                              style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold),
                             ),
                           ),
-                          Switch(
+                           CustomSwitch(
                             value: currentController.isOnionEnabled,
-                            activeColor: AppColors.accent,
                             onChanged: (bool value) {
                               currentController.updateOnion(enabled: value);
                             },
@@ -157,7 +157,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                       ),
                     ),
                     ListTile(
-                      leading: const Icon(Icons.grid_on_rounded, color: AppColors.darkText),
+                      leading: const Icon(Icons.grid_on_rounded, color: ColorConstants.darkText),
                       title: const Text('Grid', style: TextStyle(fontWeight: FontWeight.w600)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -169,12 +169,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             },
                             child: const Text(
                               'Edit',
-                              style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold),
                             ),
                           ),
-                          Switch(
+                          CustomSwitch(
                             value: currentController.isGridEnabled,
-                            activeColor: AppColors.accent,
                             onChanged: (bool value) {
                               currentController.updateGrid(enabled: value);
                             },
@@ -183,11 +182,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                       ),
                     ),
                     ListTile(
-                      leading: const Icon(Icons.palette_rounded, color: AppColors.darkText),
+                      leading: const Icon(Icons.palette_rounded, color: ColorConstants.darkText),
                       title: const Text('Add as Sticker', style: TextStyle(fontWeight: FontWeight.w600)),
-                      trailing: Switch(
+                      trailing: CustomSwitch(
                         value: currentController.enableStickers,
-                        activeColor: AppColors.accent,
                         onChanged: (bool value) {
                           currentController.enableStickers = value;
                         },
@@ -300,7 +298,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.close, color: AppColors.darkText),
+                        icon: const Icon(Icons.close, color: ColorConstants.darkText),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const Text(
@@ -308,12 +306,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.darkText,
+                          color: ColorConstants.darkText,
                         ),
                       ),
-                      Switch(
+                      CustomSwitch(
                         value: ctrl.isOnionEnabled,
-                        activeColor: AppColors.accent,
                         onChanged: (val) {
                           ctrl.updateOnion(enabled: val);
                         },
@@ -338,10 +335,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   const SizedBox(height: 24),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Color', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.darkText)),
-                    trailing: Switch(
+                    title: const Text('Color', style: TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText)),
+                    trailing: CustomSwitch(
                       value: ctrl.onionColorMode,
-                      activeColor: AppColors.accent,
                       onChanged: ctrl.isOnionEnabled
                           ? (val) {
                               ctrl.updateOnion(colorMode: val);
@@ -351,10 +347,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Loop', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.darkText)),
-                    trailing: Switch(
+                    title: const Text('Loop', style: TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText)),
+                    trailing: CustomSwitch(
                       value: ctrl.onionLoop,
-                      activeColor: AppColors.accent,
                       onChanged: ctrl.isOnionEnabled
                           ? (val) {
                               ctrl.updateOnion(loop: val);
@@ -371,10 +366,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Frames before', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.darkText)),
+                            const Text('Frames before', style: TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText)),
                             Row(
                               children: [
-                                Text('${ctrl.onionBefore}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+                                Text('${ctrl.onionBefore}', style: const TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.accent)),
                                 const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
                               ],
                             ),
@@ -385,7 +380,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                           min: 0,
                           max: 5,
                           divisions: 5,
-                          activeColor: AppColors.accent,
+                          activeColor: ColorConstants.accent,
                           onChanged: ctrl.isOnionEnabled
                               ? (val) {
                                   ctrl.updateOnion(before: val.round());
@@ -403,10 +398,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Frames after', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.darkText)),
+                            const Text('Frames after', style: TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText)),
                             Row(
                               children: [
-                                Text('${ctrl.onionAfter}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+                                Text('${ctrl.onionAfter}', style: const TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.accent)),
                                 const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
                               ],
                             ),
@@ -417,7 +412,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                           min: 0,
                           max: 5,
                           divisions: 5,
-                          activeColor: AppColors.accent,
+                          activeColor: ColorConstants.accent,
                           onChanged: ctrl.isOnionEnabled
                               ? (val) {
                                   ctrl.updateOnion(after: val.round());
@@ -458,7 +453,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.close, color: AppColors.darkText),
+                        icon: const Icon(Icons.close, color: ColorConstants.darkText),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const Text(
@@ -466,12 +461,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.darkText,
+                          color: ColorConstants.darkText,
                         ),
                       ),
-                      Switch(
+                      CustomSwitch(
                         value: ctrl.isGridEnabled,
-                        activeColor: AppColors.accent,
                         onChanged: (val) {
                           ctrl.updateGrid(enabled: val);
                         },
@@ -512,15 +506,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Line opacity', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.darkText)),
-                            Text('${(ctrl.gridOpacity * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+                            const Text('Line opacity', style: TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText)),
+                            Text('${(ctrl.gridOpacity * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.accent)),
                           ],
                         ),
                         Slider(
                           value: ctrl.gridOpacity,
                           min: 0.05,
                           max: 1.0,
-                          activeColor: AppColors.accent,
+                          activeColor: ColorConstants.accent,
                           onChanged: ctrl.isGridEnabled
                               ? (val) {
                                   ctrl.updateGrid(opacity: val);
@@ -538,15 +532,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Vertical line spacing', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.darkText)),
-                            Text('${ctrl.gridVerticalSpacing.round()}px', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+                            const Text('Vertical line spacing', style: TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText)),
+                            Text('${ctrl.gridVerticalSpacing.round()}px', style: const TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.accent)),
                           ],
                         ),
                         Slider(
                           value: ctrl.gridVerticalSpacing,
                           min: 20.0,
                           max: 200.0,
-                          activeColor: AppColors.accent,
+                          activeColor: ColorConstants.accent,
                           onChanged: ctrl.isGridEnabled
                               ? (val) {
                                   ctrl.updateGrid(vertical: val);
@@ -564,15 +558,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Horizontal line spacing', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.darkText)),
-                            Text('${ctrl.gridHorizontalSpacing.round()}px', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+                            const Text('Horizontal line spacing', style: TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText)),
+                            Text('${ctrl.gridHorizontalSpacing.round()}px', style: const TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.accent)),
                           ],
                         ),
                         Slider(
                           value: ctrl.gridHorizontalSpacing,
                           min: 20.0,
                           max: 200.0,
-                          activeColor: AppColors.accent,
+                          activeColor: ColorConstants.accent,
                           onChanged: ctrl.isGridEnabled
                               ? (val) {
                                   ctrl.updateGrid(horizontal: val);
@@ -663,7 +657,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
     bool isLock = false,
   }) {
     final isSelected = isLock ? config.isLocked : config.type == type;
-    final color = isSelected ? AppColors.accent : Colors.grey.shade600;
+    final color = isSelected ? ColorConstants.accent : Colors.grey.shade600;
 
     return GestureDetector(
       onTap: () {
@@ -680,7 +674,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? ColorConstants.accent.withOpacity(0.1) : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: color, size: 20),
@@ -694,9 +688,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
 
     if (controller.isLoadingProject) {
       return const Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.accent),
+          child: CircularProgressIndicator(color: ColorConstants.accent),
         ),
       );
     }
@@ -716,7 +710,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.darkText),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText),
                   onPressed: () async {
                     await controller.saveProject();
                     if (context.mounted) {
@@ -762,10 +756,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                               data: SliderTheme.of(context).copyWith(
                                 trackHeight: 4,
                                 trackShape: CustomSliderTrackShape(),
-                                activeTrackColor: AppColors.accent,
+                                activeTrackColor: ColorConstants.accent,
                                 inactiveTrackColor: const Color(0xFFFFF2E5),
-                                thumbColor: AppColors.accent,
-                                overlayColor: AppColors.accent.withValues(alpha: 0.2),
+                                thumbColor: ColorConstants.accent,
+                                overlayColor: ColorConstants.accent.withValues(alpha: 0.2),
                                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
                               ),
@@ -790,7 +784,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.darkText,
+                                color: ColorConstants.darkText,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -802,20 +796,20 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.undo_rounded, color: AppColors.darkText),
+                  icon: const Icon(Icons.undo_rounded, color: ColorConstants.darkText),
                   onPressed: () => controller.drawingController.undo(),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.redo_rounded, color: AppColors.darkText),
+                  icon: const Icon(Icons.redo_rounded, color: ColorConstants.darkText),
                   onPressed: () => controller.drawingController.redo(),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.center_focus_strong_rounded, color: AppColors.darkText),
+                  icon: const Icon(Icons.center_focus_strong_rounded, color: ColorConstants.darkText),
                   onPressed: _resetBoard,
                   tooltip: 'Reset Zoom / Position',
                 ),
                 IconButton(
-                  icon: const Icon(Icons.settings_rounded, color: AppColors.darkText),
+                  icon: const Icon(Icons.settings_rounded, color: ColorConstants.darkText),
                   onPressed: () => _showSettingsSheet(context, controller),
                 ),
                 const SizedBox(width: 8),
@@ -900,7 +894,7 @@ class _GridPainterPreview extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.accent.withOpacity(opacity)
+      ..color = ColorConstants.accent.withOpacity(opacity)
       ..strokeWidth = 1.0;
     for (double x = 0; x <= size.width; x += verticalSpacing) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);

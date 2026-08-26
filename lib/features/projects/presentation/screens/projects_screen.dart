@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_assets.dart';
@@ -9,6 +10,7 @@ import '../widgets/project_card.dart';
 import 'create_project_screen.dart';
 import '../../../templates/presentation/screens/templates_screen.dart';
 import '../../../editor/presentation/screens/editor_screen.dart';
+import '../../../../core/widgets/animated_dashed_border.dart';
 
 class ProjectsScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -71,15 +73,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Rename Project',
-          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.darkText),
+          style: TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
         ),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
             labelText: 'New Title',
-            labelStyle: TextStyle(color: AppColors.primary),
+            labelStyle: TextStyle(color: ColorConstants.primary),
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.primary),
+              borderSide: BorderSide(color: ColorConstants.primary),
             ),
           ),
           autofocus: true,
@@ -91,7 +93,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(c, controller.text),
-            child: const Text('Rename', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            child: const Text('Rename', style: TextStyle(color: ColorConstants.primary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -152,7 +154,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Delete Project?',
-          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.darkText),
+          style: TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
         ),
         content: Text('Are you sure you want to delete "${project.title}"?'),
         actions: [
@@ -181,9 +183,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       backgroundColor: const Color(0xFFF9FAFC),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            ? const Center(child: CircularProgressIndicator(color: ColorConstants.primary))
             : Padding(
-                padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 16.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 16.0),
                 child: _currentTab == 0 ? _buildHomeTab() : _buildProjectsTab(),
               ),
       ),
@@ -222,14 +224,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       children: [
                         Icon(
                           Icons.home,
-                          color: _currentTab == 0 ? AppColors.primary : const Color(0xFFBEB9C5),
+                          color: _currentTab == 0 ? ColorConstants.primary : const Color(0xFFBEB9C5),
                           size: 26,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           StringConstants.homeTab,
                           style: TextStyle(
-                            color: _currentTab == 0 ? AppColors.primary : const Color(0xFFBEB9C5),
+                            color: _currentTab == 0 ? ColorConstants.primary : const Color(0xFFBEB9C5),
                             fontSize: 11,
                             fontWeight: _currentTab == 0 ? FontWeight.w800 : FontWeight.w500,
                           ),
@@ -250,14 +252,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       children: [
                         Icon(
                           Icons.folder_open,
-                          color: _currentTab == 1 ? AppColors.primary : const Color(0xFFBEB9C5),
+                          color: _currentTab == 1 ? ColorConstants.primary : const Color(0xFFBEB9C5),
                           size: 26,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           StringConstants.projectsTab,
                           style: TextStyle(
-                            color: _currentTab == 1 ? AppColors.primary : const Color(0xFFBEB9C5),
+                            color: _currentTab == 1 ? ColorConstants.primary : const Color(0xFFBEB9C5),
                             fontSize: 11,
                             fontWeight: _currentTab == 1 ? FontWeight.w800 : FontWeight.w500,
                           ),
@@ -273,7 +275,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             top: -28,
             child: FloatingActionButton(
               onPressed: _createNewProject,
-              backgroundColor: AppColors.primary,
+              backgroundColor: ColorConstants.primary,
               elevation: 6,
               shape: const CircleBorder(),
               child: const Icon(
@@ -300,26 +302,29 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               text: const TextSpan(
                 children: [
                   TextSpan(
-                    text: 'Clip',
+                    text: 'C',
                     style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                      letterSpacing: -1.0,
+                      fontFamily: 'Roboto',
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: ColorConstants.primary,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   TextSpan(
-                    text: 'ax',
+                    text: 'lipax',
                     style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
+                      fontFamily: 'Roboto',
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
                       color: Color(0xFF8B5CF6),
-                      letterSpacing: -1.0,
+                      letterSpacing: -0.5,
                     ),
                   ),
                 ],
               ),
             ),
+
             const Spacer(),
             // Get Pro Pill
             GestureDetector(
@@ -327,7 +332,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Pro Subscription features coming soon!'),
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: ColorConstants.primary,
                   ),
                 );
               },
@@ -337,12 +342,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.primary,
+                    color: ColorConstants.primary,
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: ColorConstants.primary.withOpacity(0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     )
@@ -354,7 +359,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     Text(
                       'Get Pro',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color: ColorConstants.darkText,
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
                       ),
@@ -373,7 +378,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             IconButton(
               icon: const Icon(
                 Icons.menu,
-                color: AppColors.darkText,
+                color: ColorConstants.darkText,
                 size: 28,
               ),
               onPressed: () {
@@ -384,119 +389,147 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        const Text(
-          'Where Ideas turn into motion',
+        // const SizedBox(height: 2),
+         Text(
+          StringConstants.where_ideas_turn_into_motion,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.mediumText,
+            fontWeight: FontWeight.w400,
+            color: ColorConstants.subTextColor,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
         // Explore Templates Card
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.only(left: 12,top: 16,bottom: 16,right: 12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            image: DecorationImage(image:AssetImage(AssetConstants.templates_card_bg,
+            ),fit: BoxFit.fill),
+            // boxShadow: [
+            //   BoxShadow(
+            //     color: Colors.black.withOpacity(0.03),
+            //     blurRadius: 20,
+            //     offset: const Offset(0, 8),
+            //   ),
+            // ],
             border: Border.all(
-              color: Colors.grey.shade100,
+              color: ColorConstants.border_color,
               width: 1,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              const Text(
-                'Explore Templates',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.darkText,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Start faster with ready-made animations for any project',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.mediumText,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Browse Templates Button
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TemplatesScreen(
-                        repository: widget.repository,
-                      ),
-                    ),
-                  ).then((_) => _loadProjects());
-                },
-                child: Container(
-                  height: 50,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5),
-                      )
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Browse Templates',
+              SvgPicture.asset(AssetConstants.templates_card_icon),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                     Padding(
+                       padding: const EdgeInsets.only(left: 17),
+                       child: Text(
+                        StringConstants.explore_templates,
                         style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
                           fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: ColorConstants.text_color,
+                        ),
+                                           ),
+                     ),
+                    const SizedBox(height:14),
+                     Padding(
+                       padding: const EdgeInsets.only(left: 17),
+                       child: Text(
+                        StringConstants.start_faster,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: ColorConstants.subTextColor,
+                          height: 1.2,
+                        ),
+                                           ),
+                     ),
+                    const SizedBox(height: 16),
+                    // Browse Templates Button
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TemplatesScreen(
+                              repository: widget.repository,
+                            ),
+                          ),
+                        ).then((_) => _loadProjects());
+                      },
+                      child: Container(
+                        // height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 25),
+                        decoration: BoxDecoration(
+                          color: ColorConstants.primary,
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 8.2,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 2),
+                            ),
+                
+                            BoxShadow(
+                              color: ColorConstants.shadow_color.withValues(alpha: 0.1),
+                              blurRadius: 8.7,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child:  Padding(
+                          padding: EdgeInsetsGeometry.only(top: 13,bottom: 13,),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  StringConstants.browse_templates,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      Spacer(),
-                      Icon(
-                        Icons.arrow_forward,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 20),
 
         // Recent Projects Header
         Row(
           children: [
-            const Text(
-              'Recent Projects',
+             Text(
+              StringConstants.recent_projects,
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.darkText,
+                fontWeight: FontWeight.w500,
+                color: ColorConstants.text_color,
               ),
             ),
             const Spacer(),
@@ -506,12 +539,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   _currentTab = 1;
                 });
               },
-              child: const Text(
-                'See all',
+              child:  Text(
+                StringConstants.see_all,
                 style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFBEB9C5),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color:ColorConstants.subTextColor,
                 ),
               ),
             ),
@@ -523,7 +556,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadProjects,
-            color: AppColors.primary,
+            color: ColorConstants.primary,
             child: recentProjects.isEmpty
                 ? SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -546,7 +579,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
-            color: AppColors.darkText,
+            color: ColorConstants.darkText,
           ),
         ),
         const SizedBox(height: 4),
@@ -555,7 +588,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppColors.mediumText,
+            color: ColorConstants.mediumText,
           ),
         ),
         const SizedBox(height: 24),
@@ -564,7 +597,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadProjects,
-            color: AppColors.primary,
+            color: ColorConstants.primary,
             child: _projects.isEmpty
                 ? SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -578,31 +611,58 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 60.0),
-      child: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'No Project Yet',
-              style: TextStyle(
-                color: Color(0xFFBEB9C5),
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+    return AnimatedDashedBorder(
+      color: const Color(0xFFFFD4A3),
+      strokeWidth: 1.5,
+      dashLength: 8,
+      dashGap: 6,
+      borderRadius: 24,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 40.0),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.4),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFFFF7ED),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.folder_open_outlined,
+                    color: Color(0xFFFFB054),
+                    size: 32,
+                  ),
+                ),
               ),
-            ),
-            SizedBox(height: 6),
-            Text(
-              'Click + to create one',
-              style: TextStyle(
-                color: Color(0xFFBEB9C5),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+              const SizedBox(height: 16),
+              const Text(
+                'No Project Yet',
+                style: TextStyle(
+                  color: ColorConstants.darkText,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              const Text(
+                'Click + to create one',
+                style: TextStyle(
+                  color: ColorConstants.mediumText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

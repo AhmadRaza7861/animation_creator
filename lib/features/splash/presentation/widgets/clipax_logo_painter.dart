@@ -10,7 +10,7 @@ class ClipaxLogoPainter extends CustomPainter {
 
     // 1. Draw Orange Film Strip Arc on the left
     final orangePaint = Paint()
-      ..color = AppColors.primary
+      ..color = ColorConstants.primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = size.width * 0.2
       ..strokeCap = StrokeCap.round;
@@ -67,7 +67,7 @@ class ClipaxLogoPainter extends CustomPainter {
 
     // 3. Draw Dark Purple Play Button on the right
     final darkPurplePaint = Paint()
-      ..color = AppColors.darkText
+      ..color = ColorConstants.darkText
       ..style = PaintingStyle.fill;
 
     // Vertices of the triangle play icon
@@ -85,7 +85,7 @@ class ClipaxLogoPainter extends CustomPainter {
 
     // Use a nice rounded join path to make it look smooth and premium
     final trianglePaint = Paint()
-      ..color = AppColors.darkText
+      ..color = ColorConstants.darkText
       ..style = PaintingStyle.fill
       ..strokeJoin = StrokeJoin.round;
 

@@ -1,11 +1,15 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
-import '../../../../core/widgets/color_picker_dialog.dart';
+import '../../../../core/widgets/color_picker_screen.dart';
+import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/custom_switch.dart';
 import '../../data/project_repository.dart';
 import '../../../templates/domain/template_model.dart';
 import '../widgets/preview_pattern_painter.dart';
@@ -145,10 +149,10 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   }
 
   void _openCustomBackgroundColorPicker() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return ColorPickerDialog(
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ColorPickerScreen(
           initialColor: _backgroundColor,
           initialOpacity: _backgroundColor.opacity,
           onColorChanged: (Color newColor, double newOpacity) {
@@ -157,160 +161,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               _backgroundImagePath = null;
             });
           },
-        );
-      },
-    );
-  }
-
-  void _showColorPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
       ),
-      builder: (context) {
-        final colors = [
-          Colors.white,
-          const Color(0xFFFDFBF7), // Ivory
-          const Color(0xFFF3E5F5), // Lavender
-          const Color(0xFFFFF3E0), // Peach
-          const Color(0xFFE8F5E9), // Mint
-          const Color(0xFFE1F5FE), // Sky
-          const Color(0xFFECEFF1), // Light Grey
-          const Color(0xFF37474F), // Slate/Dark Mode
-          const Color(0xFF1E1E1E), // Black/Dark
-        ];
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Background Color',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkText,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    ...colors.map((color) {
-                      final isSelected = _backgroundColor == color && _backgroundImagePath == null;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _backgroundColor = color;
-                            _backgroundImagePath = null;
-                          });
-                          Navigator.pop(context);
-                        },
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          margin: const EdgeInsets.only(right: 14),
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected ? AppColors.primary : Colors.black12,
-                              width: isSelected ? 3 : 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              )
-                            ],
-                          ),
-                          child: isSelected
-                              ? Icon(
-                                  Icons.check,
-                                  color: color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
-                                )
-                              : null,
-                        ),
-                      );
-                    }).toList(),
-
-                    // If custom color is currently selected, show it here!
-                    if (_backgroundImagePath == null && !colors.contains(_backgroundColor))
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                          _openCustomBackgroundColorPicker();
-                        },
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          margin: const EdgeInsets.only(right: 14),
-                          decoration: BoxDecoration(
-                            color: _backgroundColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.primary,
-                              width: 3,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              )
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.check,
-                            color: _backgroundColor.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
-                          ),
-                        ),
-                      ),
-
-                    // Add Custom Color Button
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _openCustomBackgroundColorPicker();
-                      },
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.black12,
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            )
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          size: 24,
-                          color: Color(0xFFBEB9C5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -529,73 +381,84 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      extendBodyBehindAppBar: true,
+      //backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.darkText),
+          icon: const Icon(Icons.arrow_back_ios_new, color: ColorConstants.darkText,size: 20,),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'New Project',
+        title:Text(
+          StringConstants.new_project,
           style: TextStyle(
-            color: AppColors.darkText,
-            fontWeight: FontWeight.w900,
+            color: ColorConstants.darkText,
+            fontWeight: FontWeight.w700,
             fontSize: 22,
           ),
         ),
         centerTitle: true,
-        backgroundColor: AppColors.background,
         elevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Project Name Field
-              const Text(
-                'Project Name',
+               Text(
+                StringConstants.project_name,
                 style: TextStyle(
-                  color: AppColors.darkText,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
+                  color: ColorConstants.text_color,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
                 ),
               ),
               const SizedBox(height: 10),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF7F8FA),
-                  borderRadius: BorderRadius.circular(16),
+                  color:Colors.white,
+                  borderRadius: BorderRadius.circular(21),
+                  border: Border.all(color: ColorConstants.border_color,
+                  width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color:ColorConstants.shodow.withValues(alpha: 0.05),
+                      offset: Offset(2,2),
+                      spreadRadius: 0,
+                      blurRadius: 13,
+                    )
+                  ]
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextField(
                   controller: _nameController,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.darkText,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
                   ),
-                  decoration: const InputDecoration(
-                    hintText: 'Name Your Animation',
+                  decoration:  InputDecoration(
+                    hintText: StringConstants.name_your_animation,
                     hintStyle: TextStyle(
-                      color: Color(0xFFBEB9C5),
-                      fontWeight: FontWeight.w500,
+                      color: ColorConstants.subTextColor,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 16
                     ),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 18),
+                    border:InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 13),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-
+              const SizedBox(height: 20),
               // 2. Aspect Ratio Dropdown
-              const Text(
-                'Aspect Ratio',
+               Text(
+                StringConstants.aspect_ratio,
                 style: TextStyle(
-                  color: AppColors.darkText,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
+                  color: ColorConstants.text_color,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
                 ),
               ),
               const SizedBox(height: 10),
@@ -633,19 +496,19 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                     color: widget.projectId != null
                         ? const Color(0xFFF1F2F4)
                         : const Color(0xFFF7F8FA),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(21),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 16),
                   child: Row(
                     children: [
                       Text(
                         _canvasSizeLabel,
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w400,
                           color: widget.projectId != null
-                              ? const Color(0xFF8E8895)
-                              : AppColors.darkText,
+                              ? Colors.black
+                              : ColorConstants.text_color,
                         ),
                       ),
                       const Spacer(),
@@ -653,21 +516,21 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         widget.projectId != null
                             ? Icons.lock_outline_rounded
                             : Icons.keyboard_arrow_down,
-                        color: const Color(0xFF8E8895),
+                        color: ColorConstants.subTextColor,
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // 3. Frame Rate Dropdown
-              const Text(
-                'Frame Rate',
+               Text(
+                StringConstants.frame_rate,
                 style: TextStyle(
-                  color: AppColors.darkText,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
+                  color: ColorConstants.text_color,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
                 ),
               ),
               const SizedBox(height: 10),
@@ -689,47 +552,57 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFFF7F8FA),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(21),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 16),
                   child: Row(
                     children: [
                       Text(
                         '${_fps}fps',
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.darkText,
+                          fontWeight: FontWeight.w400,
+                          color: ColorConstants.text_color,
                         ),
                       ),
                       const Spacer(),
                       const Icon(
                         Icons.keyboard_arrow_down,
-                        color: Color(0xFF8E8895),
+                        color: ColorConstants.subTextColor,
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // 4. Export Type Selector
-              const Text(
-                'Export Type',
+               Text(
+                StringConstants.export_type,
                 style: TextStyle(
-                  color: AppColors.darkText,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
+                  color: ColorConstants.text_color,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
                 ),
               ),
               const SizedBox(height: 10),
               Container(
                 height: 52,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF7F8FA),
-                  borderRadius: BorderRadius.circular(26),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(21),
+                  border: Border.all(
+                    color: ColorConstants.border_color
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ColorConstants.shodow.withValues(alpha: 0.05),
+                      blurRadius: 13,
+                      spreadRadius: 0,
+                      offset: Offset(2, 2)
+                    )
+                  ]
                 ),
-                padding: const EdgeInsets.all(4),
                 child: Row(
                   children: [
                     // Mp4
@@ -742,25 +615,25 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: _exportType == 'Mp4' ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(22),
-                            boxShadow: _exportType == 'Mp4'
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.04),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
+                            color: _exportType == 'Mp4' ? ColorConstants.selected_type : Colors.transparent,
+                            borderRadius: BorderRadius.only(topLeft: Radius.circular(21),bottomLeft:Radius.circular(21)),
+                            // boxShadow: _exportType == 'Mp4'
+                            //     ? [
+                            //         BoxShadow(
+                            //           color: Colors.black.withOpacity(0.04),
+                            //           blurRadius: 4,
+                            //           offset: const Offset(0, 2),
+                            //         )
+                            //       ]
+                            //     : null,
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            'Mp4',
+                            StringConstants.mp4,
                             style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: _exportType == 'Mp4' ? FontWeight.bold : FontWeight.w600,
-                              color: _exportType == 'Mp4' ? AppColors.darkText : const Color(0xFF8E8895),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              color: _exportType == 'Mp4' ? ColorConstants.text_color : ColorConstants.text_color,
                             ),
                           ),
                         ),
@@ -776,25 +649,25 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: _exportType == 'GIF' ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(22),
-                            boxShadow: _exportType == 'GIF'
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.04),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
+                            color: _exportType == 'GIF' ?ColorConstants.selected_type : Colors.transparent,
+                            borderRadius: BorderRadius.only(topRight: Radius.circular(21),bottomRight:Radius.circular(21)),
+                            // boxShadow: _exportType == 'GIF'
+                            //     ? [
+                            //         BoxShadow(
+                            //           color: Colors.black.withOpacity(0.04),
+                            //           blurRadius: 4,
+                            //           offset: const Offset(0, 2),
+                            //         )
+                            //       ]
+                            //     : null,
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            'GIF',
+                            StringConstants.gif,
                             style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: _exportType == 'GIF' ? FontWeight.bold : FontWeight.w600,
-                              color: _exportType == 'GIF' ? AppColors.darkText : const Color(0xFF8E8895),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              color: _exportType == 'GIF' ? ColorConstants.text_color : ColorConstants.text_color,
                             ),
                           ),
                         ),
@@ -803,14 +676,15 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+
+              const SizedBox(height: 20),
               // 4.5 Sticker Mode Selector
-              const Text(
-                'Add as Sticker',
+               Text(
+                StringConstants.add_as_sticker,
                 style: TextStyle(
-                  color: AppColors.darkText,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
+                  color: ColorConstants.text_color,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
                 ),
               ),
               const SizedBox(height: 10),
@@ -827,16 +701,16 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Enable Sticker Mode',
+                            StringConstants.enable_sticker_mode,
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.darkText,
+                              color: ColorConstants.darkText,
                             ),
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Add shapes, lines, and text as adjustable stickers',
+                            StringConstants.add_shapes_lines,
                             style: TextStyle(
                               fontSize: 12,
                               color: Color(0xFF8E8895),
@@ -845,9 +719,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         ],
                       ),
                     ),
-                    Switch(
+                    SizedBox(width: 4),
+                    CustomSwitch(
                       value: _enableStickers,
-                      activeColor: AppColors.primary,
                       onChanged: (bool value) {
                         setState(() {
                           _enableStickers = value;
@@ -857,38 +731,58 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // 5. Background Section
               Row(
                 children: [
-                  const Text(
-                    'Background',
+                   Text(
+                    StringConstants.background,
                     style: TextStyle(
-                      color: AppColors.darkText,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
+                      color: ColorConstants.darkText,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 18,
                     ),
                   ),
                   const Spacer(),
-                  // Presets Icon
-                  IconButton(
-                    icon: const Icon(Icons.grid_on_outlined, color: AppColors.darkText, size: 22),
-                    onPressed: _showPresetsPicker,
-                    tooltip: 'Presets',
-                  ),
+
                   // Color Fill Icon
                   IconButton(
-                    icon: const Icon(Icons.format_color_fill_outlined, color: AppColors.darkText, size: 22),
-                    onPressed: _showColorPicker,
-                    tooltip: 'Colors',
+                    onPressed: _openCustomBackgroundColorPicker,
+                    icon: SvgPicture.asset(
+                      AssetConstants.color_bucket,
+                    ),
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
-                  // Gallery Icon
+                  SizedBox(width: 18,),
                   IconButton(
-                    icon: const Icon(Icons.image_outlined, color: AppColors.darkText, size: 22),
+                    icon:SvgPicture.asset(AssetConstants.image_picker),
                     onPressed: () => _pickImage(ImageSource.gallery),
                     tooltip: 'Gallery',
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
+                  SizedBox(width: 18,),
+                  // Presets Icon
+                  IconButton(
+                    icon:SvgPicture.asset(AssetConstants.bg_picker),
+                    onPressed: _showPresetsPicker,
+                    tooltip: 'Presets',
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  // Gallery Icon
+
                 ],
               ),
               const SizedBox(height: 10),
@@ -897,21 +791,29 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               GestureDetector(
                 onTap: () {
                   // Prompt to select background
-                  _showColorPicker();
+                  _openCustomBackgroundColorPicker();
                 },
                 child: Container(
-                  height: 140,
+                  height: 116,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF7F8FA),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.black12.withOpacity(0.05)),
+                    color:ColorConstants.background_color,
+                    borderRadius: BorderRadius.circular(21),
+                    border: Border.all(color: ColorConstants.border_color),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ColorConstants.shodow.withValues(alpha: 0.05),
+                        offset: Offset(2, 2),
+                        spreadRadius: 0,
+                        blurRadius: 13
+                      )
+                    ]
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(15),
                     child: Stack(
                       children: [
-                        // Solid color
+                        // // Solid color
                         Positioned.fill(
                           child: Container(
                             color: _backgroundPattern == 'blueprint'
@@ -919,7 +821,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                                 : (_backgroundPattern == 'graph' ? const Color(0xFFF1F8F6) : _backgroundColor),
                           ),
                         ),
-                        // Image file
+                      //  Image file
                         if (_backgroundImagePath != null)
                           Positioned.fill(
                             child: Image.file(
@@ -940,11 +842,11 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                '+ Add',
+                                StringConstants.add,
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFFBEB9C5),
+                                  color: ColorConstants.subTextColor,
                                 ),
                               ),
                             ],
@@ -955,30 +857,12 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
 
               // 6. Apply Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: _createProject,
-                  child: const Text(
-                    'Apply',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              PrimaryButton(
+                text: StringConstants.crate_project,
+                onPressed: _createProject,
               ),
               const SizedBox(height: 32),
             ],

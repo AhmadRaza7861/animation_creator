@@ -47,13 +47,13 @@ class _FramesReorderScreenState extends State<FramesReorderScreen> {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text('Frames', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.darkText,
+        backgroundColor: ColorConstants.background,
+        foregroundColor: ColorConstants.darkText,
         elevation: 1,
         actions: [
           TextButton.icon(
-            icon: const Icon(Icons.check, color: AppColors.accent),
-            label: const Text('Done', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+            icon: const Icon(Icons.check, color: ColorConstants.accent),
+            label: const Text('Done', style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold)),
             onPressed: () {
               Navigator.pop(context, {'order': _order, 'active': _active});
             },
@@ -83,10 +83,10 @@ class _FramesReorderScreenState extends State<FramesReorderScreen> {
             key: ValueKey(originalIndex),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.accent.withOpacity(0.05) : AppColors.background,
+              color: isSelected ? ColorConstants.accent.withOpacity(0.05) : ColorConstants.background,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isSelected ? AppColors.accent.withOpacity(0.5) : AppColors.divider,
+                color: isSelected ? ColorConstants.accent.withOpacity(0.5) : ColorConstants.divider,
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: [
@@ -122,7 +122,7 @@ class _FramesReorderScreenState extends State<FramesReorderScreen> {
                 ),
               ),
               subtitle: isSelected 
-                ? const Text('Currently Active', style: TextStyle(color: AppColors.accent, fontSize: 12)) 
+                ? const Text('Currently Active', style: TextStyle(color: ColorConstants.accent, fontSize: 12))
                 : const Text('Tap to set active', style: TextStyle(color: Colors.black54, fontSize: 12)),
               trailing: const Icon(Icons.drag_indicator, color: Colors.black38),
               onTap: () {

@@ -107,16 +107,16 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: ColorConstants.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.darkText, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Templates',
           style: TextStyle(
-            color: AppColors.darkText,
+            color: ColorConstants.darkText,
             fontWeight: FontWeight.w800,
             fontSize: 20,
           ),
@@ -129,7 +129,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
           child: _loading
               ? const Center(
                   child: CircularProgressIndicator(
-                    color: AppColors.primary,
+                    color: ColorConstants.primary,
                   ),
                 )
               : GridView.builder(
@@ -156,7 +156,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                       },
                       child: Container(
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: ColorConstants.background,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -205,7 +205,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w800,
-                                      color: AppColors.darkText,
+                                      color: ColorConstants.darkText,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -216,7 +216,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.primary,
+                                      color: ColorConstants.primary,
                                     ),
                                   ),
                                 ],
