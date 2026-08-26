@@ -8,8 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../../package_code/paint_contents.dart';
 import '../../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
-import '../../../../../package_code/src/paint_contents/simple_line.dart';
-import '../../../../../package_code/src/paint_contents/smooth_line.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/widgets/font_presets.dart';
 import '../controllers/editor_controller.dart';

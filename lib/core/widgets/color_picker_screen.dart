@@ -25,8 +25,12 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
   late double _chroma;
   late double _tone;
   late double _opacity;
+  late double _saturation;
+  late double _value;
   late TextEditingController _hexController;
+  late TextEditingController _opacityController;
   late FocusNode _hexFocusNode;
+  late FocusNode _opacityFocusNode;
   bool _copied = false;
 
   final List<Color> _presets = [
@@ -63,11 +67,24 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
     _tone = hct.tone;
     _opacity = widget.initialOpacity;
 
+    final hsv = HSVColor.fromColor(color);
+    _saturation = hsv.saturation;
+    _value = hsv.value;
+
     _hexController = TextEditingController(text: _colorToHex(color, _opacity));
+    _opacityController = TextEditingController(text: '${(_opacity * 100).round()}%');
+
     _hexFocusNode = FocusNode();
     _hexFocusNode.addListener(() {
       if (!_hexFocusNode.hasFocus) {
         _updateFromHex(_hexController.text);
+      }
+    });
+
+    _opacityFocusNode = FocusNode();
+    _opacityFocusNode.addListener(() {
+      if (!_opacityFocusNode.hasFocus) {
+        _updateFromOpacityText(_opacityController.text);
       }
     });
   }
@@ -75,7 +92,9 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
   @override
   void dispose() {
     _hexController.dispose();
+    _opacityController.dispose();
     _hexFocusNode.dispose();
+    _opacityFocusNode.dispose();
     super.dispose();
   }
 
@@ -88,29 +107,83 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
     return '#$alphaHex$redHex$greenHex$blueHex';
   }
 
+  void _updateColorState({
+    double? hue,
+    double? chroma,
+    double? tone,
+    double? saturation,
+    double? value,
+    double? opacity,
+  }) {
+    setState(() {
+      if (opacity != null) {
+        _opacity = opacity;
+      }
+
+      if (hue != null) {
+        _hue = hue;
+      }
+
+      if (saturation != null && value != null) {
+        _saturation = saturation;
+        _value = value;
+
+        final newColor = HSVColor.fromAHSV(1.0, _hue, _saturation, _value).toColor();
+        final hct = Hct.fromInt(newColor.value);
+        _chroma = hct.chroma;
+        _tone = hct.tone;
+      } else {
+        if (chroma != null) _chroma = chroma;
+        if (tone != null) _tone = tone;
+
+        final hct = Hct.from(_hue, _chroma, _tone);
+        final rgbColor = Color(hct.toInt());
+        
+        final hsv = HSVColor.fromColor(rgbColor);
+        _saturation = hsv.saturation;
+        _value = hsv.value;
+      }
+
+      _hexController.text = _colorToHex(_currentColor, _opacity);
+      _opacityController.text = '${(_opacity * 100).round()}%';
+    });
+  }
+
   void _updateFromHex(String hex) {
     String cleanHex = hex.trim().replaceAll('#', '');
     if (cleanHex.length == 6) {
       cleanHex = 'FF$cleanHex';
     }
     if (cleanHex.length == 8) {
-      final int? value = int.tryParse(cleanHex, radix: 16);
-      if (value != null) {
-        final color = Color(value);
+      final int? val = int.tryParse(cleanHex, radix: 16);
+      if (val != null) {
+        final color = Color(val);
         final hct = Hct.fromInt(color.value);
+        final hsv = HSVColor.fromColor(color);
         setState(() {
           _hue = hct.hue;
           _chroma = hct.chroma.clamp(0.0, 120.0);
           _tone = hct.tone.clamp(0.0, 100.0);
           _opacity = color.opacity;
+          _saturation = hsv.saturation;
+          _value = hsv.value;
+          _hexController.text = _colorToHex(_currentColor, _opacity);
+          _opacityController.text = '${(_opacity * 100).round()}%';
         });
       }
     }
   }
 
+  void _updateFromOpacityText(String text) {
+    final String cleanText = text.replaceAll('%', '').trim();
+    final int? val = int.tryParse(cleanText);
+    if (val != null) {
+      _updateColorState(opacity: (val.clamp(0, 100) / 100.0));
+    }
+  }
+
   Color get _currentColor {
-    final hct = Hct.from(_hue, _chroma, _tone);
-    return Color(hct.toInt()).withOpacity(_opacity);
+    return HSVColor.fromAHSV(1.0, _hue, _saturation, _value).toColor().withOpacity(_opacity);
   }
 
   Color hctToColor(double h, double c, double t, double o) {
@@ -125,6 +198,9 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
     final corePalette = CorePalette.of(Hct.from(_hue, _chroma, _tone).toInt());
     final tones = [10, 30, 50, 70, 90, 95];
 
+    // Compute active hue color for the SV area background
+    final hueColor = HSVColor.fromAHSV(1.0, _hue, 1.0, 1.0).toColor();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -132,7 +208,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
         elevation: 0,
         surfaceTintColor: Colors.white,
         title: const Text(
-          'HCT Color Picker',
+          'Color Picker',
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 20,
@@ -146,135 +222,85 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 6.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Color Preview Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: ColorConstants.border_color.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    // Color circle with checker background
-                    Stack(
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                          ),
-                          child: ClipOval(
-                            child: CustomPaint(
-                              painter: const CheckeredPainter(),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: curColor,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 3,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              )
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 16),
-                    // Hex and RGB stats
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              // 1. Saturation-Value 2D Area
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final double width = constraints.maxWidth;
+                  const double height = 150.0;
+
+                  final double thumbX = _saturation * width;
+                  final double thumbY = (1.0 - _value) * height;
+
+                  void handleGesture(Offset localPosition) {
+                    final double s = (localPosition.dx / width).clamp(0.0, 1.0);
+                    final double v = (1.0 - (localPosition.dy / height)).clamp(0.0, 1.0);
+                    _updateColorState(saturation: s, value: v);
+                  }
+
+                  return GestureDetector(
+                    onPanDown: (details) => handleGesture(details.localPosition),
+                    onPanUpdate: (details) => handleGesture(details.localPosition),
+                    onTapDown: (details) => handleGesture(details.localPosition),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                      child: Stack(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: SizedBox(
-                                  height: 40,
-                                  child: TextField(
-                                    controller: _hexController,
-                                    focusNode: _hexFocusNode,
-                                    onChanged: _updateFromHex,
-                                    decoration: InputDecoration(
-                                      isDense: true,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderSide: const BorderSide(color: ColorConstants.primary, width: 1.5),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(color: Colors.grey.shade300, width: 1.0),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: ColorConstants.darkText,
-                                    ),
-                                  ),
-                                ),
+                          // SV Gradient Box
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: SizedBox(
+                              width: width,
+                              height: height,
+                              child: CustomPaint(
+                                painter: SaturationValuePainter(hueColor: hueColor),
                               ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                constraints: const BoxConstraints(),
-                                padding: EdgeInsets.zero,
-                                icon: Icon(
-                                  _copied ? Icons.check_circle : Icons.copy_all_rounded,
-                                  color: _copied ? Colors.green : ColorConstants.primary,
-                                  size: 24,
-                                ),
-                                onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: _hexController.text));
-                                  setState(() {
-                                    _copied = true;
-                                  });
-                                  Future.delayed(const Duration(seconds: 2), () {
-                                    if (mounted) {
-                                      setState(() {
-                                        _copied = false;
-                                      });
-                                    }
-                                  });
-                                },
-                              ),
-                            ],
+                            ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'RGB: ${rgbColor.red}, ${rgbColor.green}, ${rgbColor.blue}  |  Alpha: ${(_opacity * 100).round()}%',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: ColorConstants.mediumText,
+                          // Drag Thumb
+                          Positioned(
+                            left: thumbX - 9,
+                            top: thumbY - 9,
+                            child: Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.transparent,
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.24),
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 1.5),
+                                  )
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
-              // 2. Sliders
-              _buildSliderLabel('Hue (Color Family)', '${_hue.round()}°'),
-              const SizedBox(height: 6),
+              // 2. Sliders (Hue, Chroma, Tone, Opacity)
+              _buildSliderLabel('Hue', '${_hue.round()}°'),
+              const SizedBox(height: 4),
               _buildSliderTrack(
                 gradient: const LinearGradient(
                   colors: [
@@ -291,41 +317,13 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   value: _hue,
                   min: 0.0,
                   max: 360.0,
-                  onChanged: (val) {
-                    setState(() {
-                      _hue = val;
-                      _hexController.text = _colorToHex(_currentColor, _opacity);
-                    });
-                  },
+                  onChanged: (val) => _updateColorState(hue: val),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 10),
 
-              _buildSliderLabel('Chroma (Color Intensity)', '${_chroma.round()}'),
-              const SizedBox(height: 6),
-              _buildSliderTrack(
-                gradient: LinearGradient(
-                  colors: [
-                    hctToColor(_hue, 0.0, _tone, 1.0),
-                    hctToColor(_hue, 120.0, _tone, 1.0),
-                  ],
-                ),
-                child: Slider(
-                  value: _chroma,
-                  min: 0.0,
-                  max: 120.0,
-                  onChanged: (val) {
-                    setState(() {
-                      _chroma = val;
-                      _hexController.text = _colorToHex(_currentColor, _opacity);
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              _buildSliderLabel('Tone (Lightness)', '${_tone.round()}%'),
-              const SizedBox(height: 6),
+              _buildSliderLabel('Tone', '${_tone.round()}%'),
+              const SizedBox(height: 4),
               _buildSliderTrack(
                 gradient: LinearGradient(
                   colors: [
@@ -338,18 +336,13 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   value: _tone,
                   min: 0.0,
                   max: 100.0,
-                  onChanged: (val) {
-                    setState(() {
-                      _tone = val;
-                      _hexController.text = _colorToHex(_currentColor, _opacity);
-                    });
-                  },
+                  onChanged: (val) => _updateColorState(tone: val),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 10),
 
-              _buildSliderLabel('Opacity (Alpha)', '${(_opacity * 100).round()}%'),
-              const SizedBox(height: 6),
+              _buildSliderLabel('Opacity', '${(_opacity * 100).round()}%'),
+              const SizedBox(height: 4),
               _buildSliderTrack(
                 isCheckered: true,
                 gradient: LinearGradient(
@@ -362,108 +355,244 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   value: _opacity,
                   min: 0.0,
                   max: 1.0,
-                  onChanged: (val) {
-                    setState(() {
-                      _opacity = val;
-                      _hexController.text = _colorToHex(_currentColor, _opacity);
-                    });
-                  },
+                  onChanged: (val) => _updateColorState(opacity: val),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
-              // 3. Dynamic Tonal Palette Section
+              // 3. Formatted inputs with Selected Color Preview Box
+              Row(
+                children: [
+                  // Active Color Preview Box (with Checkerboard Background)
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: ClipOval(
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: const CheckeredPainter(),
+                            ),
+                          ),
+                          Positioned.fill(
+                            child: Container(
+                              color: curColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Hex Dropdown Selector
+                  Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Hex',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: ColorConstants.mediumText,
+                          ),
+                        ),
+                        SizedBox(width: 2),
+                        Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey, size: 16),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Hex Input Field
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(
+                      height: 36,
+                      child: TextField(
+                        controller: _hexController,
+                        focusNode: _hexFocusNode,
+                        onChanged: _updateFromHex,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: ColorConstants.primary, width: 1.5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.0),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: ColorConstants.darkText,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Opacity Percentage Input Field
+                  Expanded(
+                    flex: 1,
+                    child: SizedBox(
+                      height: 36,
+                      child: TextField(
+                        controller: _opacityController,
+                        focusNode: _opacityFocusNode,
+                        onChanged: (text) => _updateFromOpacityText(text),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: ColorConstants.primary, width: 1.5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.0),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: ColorConstants.darkText,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // 4. Dynamic Tonal Palette Section
               const Text(
                 'Harmonic Tonal Palette',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: ColorConstants.darkText,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: tones.map((t) {
                   final colorVal = corePalette.primary.get(t);
                   final toneColor = Color(colorVal);
+                  final isSelected = _tone.round() == t;
                   return GestureDetector(
                     onTap: () {
                       final hct = Hct.fromInt(colorVal);
-                      setState(() {
-                        _hue = hct.hue;
-                        _chroma = hct.chroma;
-                        _tone = hct.tone;
-                        _hexController.text = _colorToHex(_currentColor, _opacity);
-                      });
+                      _updateColorState(
+                        hue: hct.hue,
+                        chroma: hct.chroma,
+                        tone: hct.tone,
+                      );
                     },
                     child: Container(
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: toneColor,
                         border: Border.all(
-                          color: _tone.round() == t ? Colors.black : Colors.transparent,
-                          width: 2.5,
+                          color: isSelected ? ColorConstants.primary : Colors.transparent,
+                          width: 1.5,
                         ),
-                        boxShadow: [
-                          if (_tone.round() == t)
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: toneColor,
+                          boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 4,
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
                             )
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
-              // 4. Preset Brand Swatches
+              // 5. Preset Brand Swatches
               const Text(
                 'Curated Presets',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: ColorConstants.darkText,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 7,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
                 ),
                 itemCount: _presets.length,
                 itemBuilder: (context, index) {
                   final color = _presets[index];
+                  final isPresetSelected = rgbColor.red == color.red &&
+                                           rgbColor.green == color.green &&
+                                           rgbColor.blue == color.blue;
                   return GestureDetector(
                     onTap: () {
                       final hct = Hct.fromInt(color.value);
-                      setState(() {
-                        _hue = hct.hue;
-                        _chroma = hct.chroma;
-                        _tone = hct.tone;
-                        _hexController.text = _colorToHex(_currentColor, _opacity);
-                      });
+                      _updateColorState(
+                        hue: hct.hue,
+                        chroma: hct.chroma,
+                        tone: hct.tone,
+                      );
                     },
                     child: Container(
+                      width: 26,
+                      height: 26,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: color,
-                        border: Border.all(color: Colors.grey.shade200),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 3,
-                            offset: const Offset(0, 1.5),
-                          )
-                        ],
+                        border: Border.all(
+                          color: isPresetSelected ? ColorConstants.primary : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color,
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 2,
+                              offset: const Offset(0, 1.0),
+                            )
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -475,7 +604,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
           child: PrimaryButton(
             text: 'Apply Color',
             onPressed: () {
@@ -522,23 +651,23 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
       children: [
         // Track Background
         Positioned(
-          left: 12,
-          right: 12,
+          left: 10,
+          right: 10,
           child: Stack(
             children: [
               if (isCheckered)
                 Positioned.fill(
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(4),
                     child: CustomPaint(
                       painter: const CheckeredPainter(),
                     ),
                   ),
                 ),
               Container(
-                height: 10,
+                height: 6,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(3),
                   gradient: gradient,
                   border: isCheckered ? Border.all(color: Colors.grey.shade300, width: 0.5) : null,
                 ),
@@ -553,16 +682,51 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
             inactiveTrackColor: Colors.transparent,
             thumbColor: Colors.white,
             overlayColor: ColorConstants.primary.withOpacity(0.12),
-            trackHeight: 12,
+            trackHeight: 8,
             thumbShape: const RoundSliderThumbShape(
-              enabledThumbRadius: 9,
-              elevation: 3,
+              enabledThumbRadius: 7,
+              elevation: 2,
             ),
           ),
           child: child,
         ),
       ],
     );
+  }
+}
+
+class SaturationValuePainter extends CustomPainter {
+  final Color hueColor;
+
+  const SaturationValuePainter({required this.hueColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+
+    // 1. Horizontal Gradient (White to Hue Color)
+    final horizontalGradient = LinearGradient(
+      colors: [Colors.white, hueColor],
+    );
+    final horizontalPaint = Paint()
+      ..shader = horizontalGradient.createShader(rect);
+    canvas.drawRect(rect, horizontalPaint);
+
+    // 2. Vertical Gradient (Transparent to Black)
+    final verticalGradient = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Colors.transparent, Colors.black],
+    );
+    final verticalPaint = Paint()
+      ..shader = verticalGradient.createShader(rect)
+      ..blendMode = BlendMode.multiply;
+    canvas.drawRect(rect, verticalPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant SaturationValuePainter oldDelegate) {
+    return oldDelegate.hueColor != hueColor;
   }
 }
 
