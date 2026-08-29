@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:dummy/common_widgets/show_toast.dart';
 import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
@@ -465,11 +467,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               GestureDetector(
                 onTap: widget.projectId != null
                     ? () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Aspect ratio cannot be changed after project creation.'),
-                          ),
-                        );
+                 showToast(message: StringConstants.aspect_ratio_cannot_be_changed);
                       }
                     : () async {
                         final result = await Navigator.push(

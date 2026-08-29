@@ -1,3 +1,4 @@
+import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
@@ -207,11 +208,11 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.white,
-        title: const Text(
-          'Color Picker',
+        title:  Text(
+          StringConstants.color_picker,
           style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
             color: ColorConstants.darkText,
           ),
         ),
@@ -222,7 +223,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 6.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -296,11 +297,11 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 15),
 
               // 2. Sliders (Hue, Chroma, Tone, Opacity)
-              _buildSliderLabel('Hue', '${_hue.round()}°'),
-              const SizedBox(height: 4),
+              _buildSliderLabel(StringConstants.hue, '${_hue.round()}°'),
+             // const SizedBox(height: 4),
               _buildSliderTrack(
                 gradient: const LinearGradient(
                   colors: [
@@ -320,10 +321,10 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   onChanged: (val) => _updateColorState(hue: val),
                 ),
               ),
-              const SizedBox(height: 10),
+              //const SizedBox(height: 10),
 
-              _buildSliderLabel('Tone', '${_tone.round()}%'),
-              const SizedBox(height: 4),
+              _buildSliderLabel(StringConstants.tone, '${_tone.round()}%'),
+              //const SizedBox(height: 4),
               _buildSliderTrack(
                 gradient: LinearGradient(
                   colors: [
@@ -339,10 +340,10 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   onChanged: (val) => _updateColorState(tone: val),
                 ),
               ),
-              const SizedBox(height: 10),
+             // const SizedBox(height: 10),
 
-              _buildSliderLabel('Opacity', '${(_opacity * 100).round()}%'),
-              const SizedBox(height: 4),
+              _buildSliderLabel(StringConstants.opacity, '${(_opacity * 100).round()}%'),
+             // const SizedBox(height: 4),
               _buildSliderTrack(
                 isCheckered: true,
                 gradient: LinearGradient(

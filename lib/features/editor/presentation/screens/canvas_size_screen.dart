@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/constants/app_strings.dart';
 
 class CanvasPreset {
   final String name;
@@ -37,17 +38,17 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
   late TextEditingController _widthController;
   late TextEditingController _heightController;
 
-  static const List<CanvasPreset> _presets = [
-    CanvasPreset('YouTube (1080p)', 1920, 1080),
-    CanvasPreset('YouTube (720p)', 1280, 720),
-    CanvasPreset('Instagram (16x9)', 1920, 1080),
-    CanvasPreset('Instagram (1x1)', 1080, 1080),
-    CanvasPreset('TikTok (1080p)', 1080, 1920),
-    CanvasPreset('TikTok (720p)', 720, 1280),
-    CanvasPreset('Vimeo (1080p)', 1920, 1080),
-    CanvasPreset('Facebook (720p)', 1280, 720),
-    CanvasPreset('Tumblr (16x9)', 1280, 720),
-    CanvasPreset('Tumblr (4x3)', 1024, 768),
+  static final List<CanvasPreset> _presets = [
+    CanvasPreset('${StringConstants.youTube} (1080p)', 1920, 1080),
+    CanvasPreset('${StringConstants.youTube} (720p)', 1280, 720),
+    CanvasPreset('${StringConstants.instagram} (16x9)', 1920, 1080),
+    CanvasPreset('${StringConstants.instagram} (1x1)', 1080, 1080),
+    CanvasPreset('${StringConstants.tikTok} (1080p)', 1080, 1920),
+    CanvasPreset('${StringConstants.tikTok} (720p)', 720, 1280),
+    CanvasPreset('${StringConstants.vimeo} (1080p)', 1920, 1080),
+    CanvasPreset('${StringConstants.facebook} (720p)', 1280, 720),
+    CanvasPreset('${StringConstants.tumblr} (16x9)', 1280, 720),
+    CanvasPreset('${StringConstants.tumblr} (4x3)', 1024, 768),
   ];
 
   @override
@@ -123,7 +124,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorConstants.background,
+   //   backgroundColor: ColorConstants.background,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
@@ -135,16 +136,14 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
             });
           },
         ),
-        title: const Text(
-          'Canvas size',
+        title:  Text(
+          StringConstants.canvasSize,
           style: TextStyle(
-            color: ColorConstants.darkText,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+            color: ColorConstants.text_color,
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
           ),
         ),
-        backgroundColor: ColorConstants.background,
-        elevation: 0.5,
       ),
       body: SafeArea(
         child: Column(

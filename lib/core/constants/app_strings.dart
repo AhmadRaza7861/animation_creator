@@ -44,4 +44,17 @@ class StringConstants {
   static const String background_color = 'Background Color';
   static const String add = '+ Add';
   static const String crate_project = 'Create Project';
+  static const String color_picker = 'Color Picker';
+  static const String hue = 'Hue';
+  static const String tone = 'Tone';
+  static const String opacity = 'Opacity';
+  static const String youTube = 'YouTube';
+  static const String instagram = 'Instagram';
+  static const String tikTok = 'TikTok';
+  static const String vimeo = 'Vimeo';
+  static const String facebook = 'Facebook';
+  static const String tumblr = 'Tumblr';
+  static const String canvas_size = 'Canvas size';
+
+  static const String aspect_ratio_cannot_be_changed = 'Aspect ratio cannot be changed after project creation.';
 }

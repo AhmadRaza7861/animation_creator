@@ -43,6 +43,7 @@ dependencies:
   flutter_riverpod: ^2.5.1
   flutter_svg: ^2.3.0
   material_color_utilities: ^0.13.0
+  fluttertoast: ^10.0.0
 
 
 dev_dependencies:
