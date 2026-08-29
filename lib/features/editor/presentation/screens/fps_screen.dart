@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
@@ -77,12 +78,12 @@ class _FpsScreenState extends State<FpsScreen> {
             Navigator.pop(context, _selectedFps);
           },
         ),
-        title: const Text(
-          'Frames per second',
+        title:  Text(
+          StringConstants.frames_per_second,
           style: TextStyle(
-            color: ColorConstants.darkText,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+            color: ColorConstants.text_color,
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
           ),
         ),
         backgroundColor: ColorConstants.background,

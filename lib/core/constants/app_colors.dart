@@ -31,4 +31,6 @@ class ColorConstants {
   static const Color shodow = Color(0xff716E6E);
   static const Color selected_type = Color(0xffF0F0F0);
   static const Color background_color = Color(0xffFFFDFD);
+  static const Color text_sub2_color = Color(0xff918A8A);
+  static const Color divider_color = Color(0xffE9E9E9);
 }

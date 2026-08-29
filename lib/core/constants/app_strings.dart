@@ -55,6 +55,9 @@ class StringConstants {
   static const String facebook = 'Facebook';
   static const String tumblr = 'Tumblr';
   static const String canvas_size = 'Canvas size';
+  static const String frames_per_second = 'Frames per second';
+  static const String width = 'WIDTH';
+  static const String height = 'HEIGHT';
 
   static const String aspect_ratio_cannot_be_changed = 'Aspect ratio cannot be changed after project creation.';
 }

@@ -276,7 +276,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                 ),
               ),
             ),
-            const Divider(height: 1),
+            const Divider(height: 1,color: ColorConstants.divider_color,),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
               child: Row(
@@ -286,14 +286,14 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'WIDTH',
+                          StringConstants.width,
                           style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            color: ColorConstants.text_sub2_color,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             Expanded(
@@ -322,7 +322,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                             Text(
                               'px',
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: ColorConstants.text_sub2_color,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -352,14 +352,14 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'HEIGHT',
+                          StringConstants.height,
                           style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            color: ColorConstants.text_sub2_color,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             Expanded(
@@ -388,7 +388,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                             Text(
                               'px',
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: ColorConstants.text_sub2_color,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -401,7 +401,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                 ],
               ),
             ),
-            const Divider(height: 1),
+             Divider(height: 1,color: ColorConstants.divider_color,),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -417,14 +417,14 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                     title: Text(
                       preset.name,
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? ColorConstants.darkText : Colors.black54,
+                        fontSize: 18,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w400,
+                        color: isSelected ? ColorConstants.text_color : ColorConstants.text_color,
                       ),
                     ),
                     subtitle: Text(
                       '${preset.width} x ${preset.height}',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                      style: TextStyle(color: Colors.grey[500], fontSize: 16,fontWeight: FontWeight.w400),
                     ),
                     trailing: isSelected
                         ? const Icon(
