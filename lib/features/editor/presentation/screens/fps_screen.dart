@@ -172,7 +172,7 @@ class _FpsScreenState extends State<FpsScreen> {
                           'Currently you would need to draw $_selectedFps frames to make 1 second',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.grey[700],
+                            color: ColorConstants.text_color,
                             fontSize: 16,
                             height: 1.4,
                           ),
@@ -183,12 +183,12 @@ class _FpsScreenState extends State<FpsScreen> {
                 ),
               ),
             ),
-            const Divider(height: 1),
+         //   const Divider(height: 1),
             // Picker Section
             Expanded(
               flex: 3,
               child: Container(
-                color: Colors.grey[50],
+                color: Colors.transparent,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

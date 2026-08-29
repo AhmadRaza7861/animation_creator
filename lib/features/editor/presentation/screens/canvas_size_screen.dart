@@ -121,6 +121,24 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
     _presetName = 'Custom';
   }
 
+  IconData _getPlatformIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('youtube')) {
+      return Icons.play_circle_fill_rounded;
+    } else if (lower.contains('instagram')) {
+      return Icons.camera_alt_rounded;
+    } else if (lower.contains('tiktok')) {
+      return Icons.phone_android_rounded;
+    } else if (lower.contains('vimeo')) {
+      return Icons.video_collection_rounded;
+    } else if (lower.contains('facebook')) {
+      return Icons.facebook_rounded;
+    } else if (lower.contains('tumblr')) {
+      return Icons.photo_size_select_actual_rounded;
+    }
+    return Icons.aspect_ratio_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,6 +166,117 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Aspect Ratio Preview Section
+            Container(
+              height: 170,
+              width: double.infinity,
+              color: Colors.grey.shade50,
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final double maxW = constraints.maxWidth - 20;
+                            final double maxH = constraints.maxHeight - 20;
+                            final double ratio = _width / _height;
+                            
+                            double widthVal;
+                            double heightVal;
+                            if (ratio > maxW / maxH) {
+                              widthVal = maxW;
+                              heightVal = maxW / ratio;
+                            } else {
+                              heightVal = maxH;
+                              widthVal = maxH * ratio;
+                            }
+
+                            final IconData platformIcon = _getPlatformIcon(_presetName);
+
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeInOut,
+                              width: widthVal,
+                              height: heightVal,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: ColorConstants.accent,
+                                  width: 2.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Grid pattern overlay for canvas texture
+                                  Positioned.fill(
+                                    child: Opacity(
+                                      opacity: 0.04,
+                                      child: CustomPaint(
+                                        painter: const PreviewGridPainter(),
+                                      ),
+                                    ),
+                                  ),
+                                  // Center labels & Icon
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          platformIcon,
+                                          size: (heightVal > 60) ? 24 : 16,
+                                          color: ColorConstants.accent,
+                                        ),
+                                        if (heightVal > 70) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _presetName,
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: ColorConstants.darkText,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${_width}x${_height}',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: Colors.grey[500],
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
               child: Row(
@@ -314,4 +443,26 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
       ),
     );
   }
+}
+
+class PreviewGridPainter extends CustomPainter {
+  const PreviewGridPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey.shade400
+      ..strokeWidth = 0.5;
+
+    const double step = 8.0;
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
