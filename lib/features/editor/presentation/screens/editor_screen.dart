@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'package:dummy/core/constants/app_assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
@@ -744,57 +747,408 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     );
                   },
                 ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: ValueListenableBuilder<DrawConfig>(
-                    valueListenable: controller.drawingController.drawConfig,
-                    builder: (context, config, child) {
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                trackHeight: 4,
-                                trackShape: CustomSliderTrackShape(),
-                                activeTrackColor: ColorConstants.accent,
-                                inactiveTrackColor: const Color(0xFFFFF2E5),
-                                thumbColor: ColorConstants.accent,
-                                overlayColor: ColorConstants.accent.withValues(alpha: 0.2),
-                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                                overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                              ),
-                              child: Slider(
-                                value: controller.globalStrokeWidth.clamp(1.0, 50.0),
-                                min: 1.0,
-                                max: 50.0,
-                                divisions: 49,
-                                label: controller.globalStrokeWidth.round().toString(),
-                                  onChanged: (double val) {
-                                    controller.globalStrokeWidth = val;
-                                    controller.drawingController.setStyle(strokeWidth: val);
-                                  },
-                              ),
+                const SizedBox(width: 8),
+                ValueListenableBuilder<DrawConfig>(
+                  valueListenable: controller.drawingController.drawConfig,
+                  builder: (context, config, child) {
+                    final showSize = config.contentType != Lasso &&
+                        config.contentType != BlurContent &&
+                        config.contentType != SmudgeContent;
+                    if (!showSize) return const SizedBox.shrink();
+
+                    return MenuAnchor(
+                      style: MenuStyle(
+                        padding: WidgetStateProperty.all(const EdgeInsets.all(16)),
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        backgroundColor: WidgetStateProperty.all(Colors.white),
+                        elevation: WidgetStateProperty.all(8),
+                      ),
+                      builder: (BuildContext context, MenuController menuController, Widget? child) {
+                        return GestureDetector(
+                          onTap: () {
+                            if (menuController.isOpen) {
+                              menuController.close();
+                            } else {
+                              menuController.open();
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.black.withOpacity(0.05)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 14,
+                                  height: 14,
+                                  alignment: Alignment.center,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                  ),
+                                  child: Container(
+                                    width: (controller.globalStrokeWidth * 0.4).clamp(2.0, 12.0),
+                                    height: (controller.globalStrokeWidth * 0.4).clamp(2.0, 12.0),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: config.color,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${controller.globalStrokeWidth.round()}px',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: ColorConstants.darkText,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          SizedBox(
-                            width: 22,
-                            child: Text(
-                              '${controller.globalStrokeWidth.round()}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: ColorConstants.darkText,
+                        );
+                      },
+                      menuChildren: [
+                        StatefulBuilder(
+                          builder: (context, setPopupState) {
+                            final double currentWidth = controller.globalStrokeWidth;
+                            final double currentOpacity = controller.colorOpacity;
+                            final sizePresets = [2.0, 5.0, 10.0, 18.0, 30.0, 50.0];
+                            final opacityPresets = [0.2, 0.45, 0.7, 1.0];
+
+                            final baseColor = config.color.withOpacity(1.0);
+                            final previewColor = baseColor.withOpacity(currentOpacity);
+
+                            return Container(
+                              width: 250,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Container(
+                                    height: 58,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Colors.grey.shade200),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(15),
+                                      child: Stack(
+                                        children: [
+                                          Positioned.fill(
+                                            child: CustomPaint(
+                                              painter: const _CheckerboardPainter(),
+                                            ),
+                                          ),
+                                          Positioned.fill(
+                                            child: CustomPaint(
+                                              painter: StrokePreviewPainter(
+                                                currentWidth,
+                                                previewColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Brush Size',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade800,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${currentWidth.round()} px',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: ColorConstants.accent,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: sizePresets.map((p) {
+                                      final isSelected = currentWidth.round() == p.round();
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setPopupState(() {
+                                            controller.globalStrokeWidth = p;
+                                          });
+                                          controller.drawingController.setStyle(strokeWidth: p);
+                                          setState(() {});
+                                        },
+                                        child: Container(
+                                          width: 34,
+                                          height: 34,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: isSelected ? ColorConstants.accent : Colors.grey.shade50,
+                                            border: Border.all(
+                                              color: isSelected ? Colors.transparent : Colors.grey.shade200,
+                                            ),
+                                            boxShadow: isSelected
+                                                ? [
+                                                    BoxShadow(
+                                                      color: ColorConstants.accent.withValues(alpha: 0.3),
+                                                      blurRadius: 6,
+                                                      offset: const Offset(0, 2),
+                                                    )
+                                                  ]
+                                                : null,
+                                          ),
+                                          child: Text(
+                                            '${p.round()}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected ? Colors.white : Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Center(
+                                    child: Container(
+                                      height: 38,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ContinuousPressButton(
+                                            icon: Icons.remove,
+                                            isCapsuleSide: true,
+                                            onPress: () {
+                                              final val = (currentWidth - 1.0).clamp(1.0, 50.0);
+                                              setPopupState(() {
+                                                controller.globalStrokeWidth = val;
+                                              });
+                                              controller.drawingController.setStyle(strokeWidth: val);
+                                              setState(() {});
+                                            },
+                                            onStep: () {
+                                              final val = (controller.globalStrokeWidth - 1.0).clamp(1.0, 50.0);
+                                              setPopupState(() {
+                                                controller.globalStrokeWidth = val;
+                                              });
+                                              controller.drawingController.setStyle(strokeWidth: val);
+                                              setState(() {});
+                                            },
+                                          ),
+                                          Container(width: 1, height: 18, color: Colors.grey.shade200),
+                                          Container(
+                                            width: 60,
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              '${currentWidth.round()}',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: ColorConstants.darkText,
+                                              ),
+                                            ),
+                                          ),
+                                          Container(width: 1, height: 18, color: Colors.grey.shade200),
+                                          ContinuousPressButton(
+                                            icon: Icons.add,
+                                            isCapsuleSide: true,
+                                            onPress: () {
+                                              final val = (currentWidth + 1.0).clamp(1.0, 50.0);
+                                              setPopupState(() {
+                                                controller.globalStrokeWidth = val;
+                                              });
+                                              controller.drawingController.setStyle(strokeWidth: val);
+                                              setState(() {});
+                                            },
+                                            onStep: () {
+                                              final val = (controller.globalStrokeWidth + 1.0).clamp(1.0, 50.0);
+                                              setPopupState(() {
+                                                controller.globalStrokeWidth = val;
+                                              });
+                                              controller.drawingController.setStyle(strokeWidth: val);
+                                              setState(() {});
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    height: 1,
+                                    margin: const EdgeInsets.symmetric(vertical: 18),
+                                    color: Colors.grey.shade200,
+                                  ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Opacity',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade800,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${(currentOpacity * 100).round()}%',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: ColorConstants.accent,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: opacityPresets.map((o) {
+                                      final isSelected = (currentOpacity - o).abs() < 0.04;
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setPopupState(() {
+                                            controller.colorOpacity = o;
+                                          });
+                                          controller.drawingController.setStyle(color: baseColor.withOpacity(o));
+                                          setState(() {});
+                                        },
+                                        child: Container(
+                                          width: 48,
+                                          height: 32,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(16),
+                                            color: isSelected ? ColorConstants.accent : Colors.grey.shade50,
+                                            border: Border.all(
+                                              color: isSelected ? Colors.transparent : Colors.grey.shade200,
+                                            ),
+                                            boxShadow: isSelected
+                                                ? [
+                                                    BoxShadow(
+                                                      color: ColorConstants.accent.withValues(alpha: 0.3),
+                                                      blurRadius: 6,
+                                                      offset: const Offset(0, 2),
+                                                    )
+                                                  ]
+                                                : null,
+                                          ),
+                                          child: Text(
+                                            '${(o * 100).round()}%',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected ? Colors.white : Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Center(
+                                    child: Container(
+                                      height: 38,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ContinuousPressButton(
+                                            icon: Icons.remove,
+                                            isCapsuleSide: true,
+                                            onPress: () {
+                                              final val = (currentOpacity - 0.05).clamp(0.05, 1.0);
+                                              setPopupState(() {
+                                                controller.colorOpacity = val;
+                                              });
+                                              controller.drawingController.setStyle(color: baseColor.withOpacity(val));
+                                              setState(() {});
+                                            },
+                                            onStep: () {
+                                              final val = (controller.colorOpacity - 0.05).clamp(0.05, 1.0);
+                                              setPopupState(() {
+                                                controller.colorOpacity = val;
+                                              });
+                                              controller.drawingController.setStyle(color: baseColor.withOpacity(val));
+                                              setState(() {});
+                                            },
+                                          ),
+                                          Container(width: 1, height: 18, color: Colors.grey.shade200),
+                                          Container(
+                                            width: 70,
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              '${(currentOpacity * 100).round()}%',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: ColorConstants.darkText,
+                                              ),
+                                            ),
+                                          ),
+                                          Container(width: 1, height: 18, color: Colors.grey.shade200),
+                                          ContinuousPressButton(
+                                            icon: Icons.add,
+                                            isCapsuleSide: true,
+                                            onPress: () {
+                                              final val = (currentOpacity + 0.05).clamp(0.05, 1.0);
+                                              setPopupState(() {
+                                                controller.colorOpacity = val;
+                                              });
+                                              controller.drawingController.setStyle(color: baseColor.withOpacity(val));
+                                              setState(() {});
+                                            },
+                                            onStep: () {
+                                              final val = (controller.colorOpacity + 0.05).clamp(0.05, 1.0);
+                                              setPopupState(() {
+                                                controller.colorOpacity = val;
+                                              });
+                                              controller.drawingController.setStyle(color: baseColor.withOpacity(val));
+                                              setState(() {});
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                        ],
-                      );
-                    }
-                  ),
+                            );
+                          },
+                        ),
+                      ],
+                    );
+                  },
                 ),
+                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.undo_rounded, color: ColorConstants.darkText),
                   onPressed: () => controller.drawingController.undo(),
@@ -804,12 +1158,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   onPressed: () => controller.drawingController.redo(),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.center_focus_strong_rounded, color: ColorConstants.darkText),
+                  icon: SvgPicture.asset(AssetConstants.expander_icon),
                   onPressed: _resetBoard,
                   tooltip: 'Reset Zoom / Position',
                 ),
                 IconButton(
-                  icon: const Icon(Icons.settings_rounded, color: ColorConstants.darkText),
+                  icon:  SvgPicture.asset(AssetConstants.setting_icon),
                   onPressed: () => _showSettingsSheet(context, controller),
                 ),
                 const SizedBox(width: 8),
@@ -924,4 +1278,136 @@ class CustomSliderTrackShape extends RoundedRectSliderTrackShape {
     final double trackWidth = parentBox.size.width - (padding * 2);
     return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
   }
+}
+
+class ContinuousPressButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onPress;
+  final VoidCallback onStep;
+  final bool isCapsuleSide;
+
+  const ContinuousPressButton({
+    super.key,
+    required this.icon,
+    required this.onPress,
+    required this.onStep,
+    this.isCapsuleSide = false,
+  });
+
+  @override
+  State<ContinuousPressButton> createState() => _ContinuousPressButtonState();
+}
+
+class _ContinuousPressButtonState extends State<ContinuousPressButton> {
+  Timer? _timer;
+  Timer? _delayTimer;
+
+  void _startTimer() {
+    _timer?.cancel();
+    _delayTimer?.cancel();
+    
+    // Perform initial tap action
+    widget.onPress();
+    
+    // Wait for a brief delay before starting continuous updates
+    _delayTimer = Timer(const Duration(milliseconds: 300), () {
+      _timer = Timer.periodic(const Duration(milliseconds: 60), (timer) {
+        widget.onStep();
+      });
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+    _delayTimer?.cancel();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _delayTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _startTimer(),
+      onTapUp: (_) => _stopTimer(),
+      onTapCancel: () => _stopTimer(),
+      child: Container(
+        width: 44,
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: widget.isCapsuleSide ? Colors.transparent : Colors.grey.shade100,
+          borderRadius: widget.isCapsuleSide
+              ? BorderRadius.horizontal(
+                  left: widget.icon == Icons.remove ? const Radius.circular(20) : Radius.zero,
+                  right: widget.icon == Icons.add ? const Radius.circular(20) : Radius.zero,
+                )
+              : BorderRadius.circular(19),
+          border: widget.isCapsuleSide ? null : Border.all(color: Colors.grey.shade200),
+        ),
+        child: Icon(widget.icon, size: 18, color: Colors.grey.shade700),
+      ),
+    );
+  }
+}
+
+class StrokePreviewPainter extends CustomPainter {
+  final double strokeWidth;
+  final Color color;
+
+  StrokePreviewPainter(this.strokeWidth, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth.clamp(1.0, 50.0)
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    path.moveTo(20, size.height / 2);
+    path.cubicTo(
+      size.width * 0.25,
+      size.height / 2 - 15,
+      size.width * 0.75,
+      size.height / 2 + 15,
+      size.width - 20,
+      size.height / 2,
+    );
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant StrokePreviewPainter oldDelegate) {
+    return oldDelegate.strokeWidth != strokeWidth || oldDelegate.color != color;
+  }
+}
+
+class _CheckerboardPainter extends CustomPainter {
+  const _CheckerboardPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paintLight = Paint()..color = Colors.white;
+    final paintDark = Paint()..color = Colors.grey.shade200;
+    const double sizeSquare = 8.0;
+
+    for (double y = 0; y < size.height; y += sizeSquare) {
+      for (double x = 0; x < size.width; x += sizeSquare) {
+        final isDark = ((x / sizeSquare).floor() + (y / sizeSquare).floor()) % 2 == 0;
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, sizeSquare, sizeSquare),
+          isDark ? paintDark : paintLight,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

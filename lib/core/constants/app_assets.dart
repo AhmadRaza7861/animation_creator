@@ -13,4 +13,6 @@ class AssetConstants {
   static const String color_bucket = 'assets/icons/color_bucket.svg';
   static const String bg_picker = 'assets/icons/bg_picker.svg';
   static const String image_picker = 'assets/icons/image_picker.svg';
+  static const String expander_icon = 'assets/icons/expander_icon.svg';
+  static const String setting_icon = 'assets/icons/setting_icon.svg';
 }
