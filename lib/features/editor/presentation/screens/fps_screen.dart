@@ -75,9 +75,25 @@ class _FpsScreenState extends State<FpsScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
           onPressed: () {
-            Navigator.pop(context, _selectedFps);
+            Navigator.pop(context); // Cancel changes by popping with null
           },
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, _selectedFps); // Apply changes
+            },
+            child: const Text(
+              'Done',
+              style: TextStyle(
+                color: ColorConstants.accent,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
         title:  Text(
           StringConstants.frames_per_second,
           style: TextStyle(

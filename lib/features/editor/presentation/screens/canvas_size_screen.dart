@@ -147,13 +147,29 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
           onPressed: () {
-            Navigator.pop(context, {
-              'width': _width,
-              'height': _height,
-              'name': _presetName,
-            });
+            Navigator.pop(context); // Pop without returning data (cancels changes)
           },
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, {
+                'width': _width,
+                'height': _height,
+                'name': _presetName,
+              });
+            },
+            child: const Text(
+              'Done',
+              style: TextStyle(
+                color: ColorConstants.accent,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
         title:  Text(
           StringConstants.canvasSize,
           style: TextStyle(

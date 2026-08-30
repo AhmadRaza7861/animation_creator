@@ -58,6 +58,10 @@ class StringConstants {
   static const String frames_per_second = 'Frames per second';
   static const String width = 'WIDTH';
   static const String height = 'HEIGHT';
+  static const String backgrounds = 'Backgrounds';
+  static const String select = 'Select';
+  static const String select_preset = 'Select Preset';
+  static const String background_presets = 'Background Presets';
 
   static const String aspect_ratio_cannot_be_changed = 'Aspect ratio cannot be changed after project creation.';
 }

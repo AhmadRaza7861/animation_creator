@@ -1,3 +1,4 @@
+import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
@@ -41,20 +42,19 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        backgroundColor: ColorConstants.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: ColorConstants.darkText),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Background Presets',
+        title:  Text(
+          StringConstants.background_presets,
+          //preset
           style: TextStyle(
             color: ColorConstants.darkText,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
           ),
         ),
         centerTitle: true,
@@ -168,7 +168,7 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: PrimaryButton(
-                text: 'Select Preset',
+                text: StringConstants.select_preset,
                 onPressed: () {
                   Navigator.pop(context, {'pattern': _selectedPattern});
                 },
