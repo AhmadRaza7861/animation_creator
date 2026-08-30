@@ -655,7 +655,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
     RulerType type,
     RulerConfig config, {
     bool isLock = false,
-  }) {
+  })
+  {
     final isSelected = isLock ? config.isLocked : config.type == type;
     final color = isSelected ? ColorConstants.accent : Colors.grey.shade600;
 
@@ -696,16 +697,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: SafeArea(
           child: Container(
             height: kToolbarHeight,
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA), width: 0.5)),
+            decoration:  BoxDecoration(
+              color: ColorConstants.border_color,
+           //   border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA), width: 0.5)),
             ),
             child: Row(
               children: [
