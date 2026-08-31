@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:dummy/core/constants/app_assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
+import '../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../controllers/editor_providers.dart';
 import '../controllers/editor_controller.dart';
@@ -33,6 +35,8 @@ class EditorScreen extends ConsumerStatefulWidget {
 
 class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBindingObserver {
   final TransformationController _transformationController = TransformationController();
+  bool _isRulerMenuExpanded = false;
+  Offset? _brushPanelPosition;
 
   @override
   void initState() {
@@ -589,102 +593,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
     );
   }
 
-  Widget _buildVerticalRulerMenu(EditorController controller) {
-    return ValueListenableBuilder<RulerConfig>(
-      valueListenable: controller.drawingController.rulerConfig,
-      builder: (context, config, child) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 10,
-                spreadRadius: 1,
-              ),
-            ],
-            border: Border.all(color: Colors.grey.shade200, width: 1),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _verticalRulerButton(
-                controller,
-                config.isLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
-                RulerType.none,
-                config,
-                isLock: true,
-              ),
-              const SizedBox(height: 12),
-              _verticalRulerButton(
-                controller,
-                Icons.crop_square,
-                RulerType.box,
-                config,
-              ),
-              const SizedBox(height: 12),
-              _verticalRulerButton(
-                controller,
-                Icons.circle_outlined,
-                RulerType.circle,
-                config,
-              ),
-              const SizedBox(height: 12),
-              _verticalRulerButton(
-                controller,
-                Icons.horizontal_rule,
-                RulerType.line,
-                config,
-              ),
-              const SizedBox(height: 12),
-              _verticalRulerButton(
-                controller,
-                Icons.flip_camera_android_rounded,
-                RulerType.mirror,
-                config,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _verticalRulerButton(
-    EditorController controller,
-    IconData icon,
-    RulerType type,
-    RulerConfig config, {
-    bool isLock = false,
-  })
-  {
-    final isSelected = isLock ? config.isLocked : config.type == type;
-    final color = isSelected ? ColorConstants.accent : Colors.grey.shade600;
-
-    return GestureDetector(
-      onTap: () {
-        if (isLock) {
-          controller.drawingController.rulerConfig.value = config.copyWith(
-            isLocked: !config.isLocked,
-          );
-        } else {
-          final newType = config.type == type ? RulerType.none : type;
-          controller.drawingController.rulerConfig.value = config.copyWith(type: newType);
-        }
-      },
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: isSelected ? ColorConstants.accent.withOpacity(0.1) : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: color, size: 20),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1195,11 +1103,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 bottom: 0,
                 child: TimelinePanel(projectId: widget.projectId),
               ),
-              if (controller.showRulerMenu)
+              if (controller.activeCategory == 'Brush')
                 Positioned(
-                  right: 16,
-                  top: 120,
-                  child: _buildVerticalRulerMenu(controller),
+                  left: _brushPanelPosition?.dx ?? (MediaQuery.of(context).size.width - 56 - 16),
+                  top: _brushPanelPosition?.dy ?? 120.0,
+                  child: _buildRightVerticalPanel(controller),
                 ),
               if (controller.showLayerPanel)
                 Positioned(
@@ -1230,6 +1138,280 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRightVerticalPanel(EditorController controller) {
+    return ValueListenableBuilder<RulerConfig>(
+      valueListenable: controller.drawingController.rulerConfig,
+      builder: (context, rulerConfig, child) {
+        return Container(
+          width: 58,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.grey.shade200, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 16,
+                spreadRadius: 1,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Grip Drag Handle
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onPanUpdate: (details) {
+                  setState(() {
+                    final double currentX = _brushPanelPosition?.dx ?? (MediaQuery.of(context).size.width - 58 - 16);
+                    final double currentY = _brushPanelPosition?.dy ?? 120.0;
+                    
+                    final double newX = (currentX + details.delta.dx).clamp(
+                      16.0,
+                      MediaQuery.of(context).size.width - 58 - 16,
+                    );
+                    final double newY = (currentY + details.delta.dy).clamp(
+                      MediaQuery.of(context).padding.top + 20.0,
+                      MediaQuery.of(context).size.height - 240.0,
+                    );
+                    
+                    _brushPanelPosition = Offset(newX, newY);
+                  });
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 20,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              // 1. Brush Tips Button (opens Brushes bottom sheet directly)
+              GestureDetector(
+                onTap: () {
+                  BrushPresetPanel.show(context, controller.drawingController);
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                  ),
+                  child: SvgPicture.asset(
+                    AssetConstants.brush_tips,
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      Colors.grey.shade700,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // 2. Brush Tool Button (just sets activeCategory to Brush, NO bottom presets/submenu trigger)
+              GestureDetector(
+                onTap: () {
+                  controller.activeCategory = 'Brush';
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: controller.activeCategory == 'Brush'
+                        ? ColorConstants.accent.withOpacity(0.08)
+                        : Colors.transparent,
+                  ),
+                  child: SvgPicture.asset(
+                    AssetConstants.brush_icon,
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      controller.activeCategory == 'Brush' ? ColorConstants.accent : Colors.grey.shade700,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // 3. Ruler Button
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isRulerMenuExpanded = !_isRulerMenuExpanded;
+                  });
+                },
+                child: Container(
+                  width: 40,
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        AssetConstants.ruler_icon,
+                        width: 24,
+                        height: 24,
+                        colorFilter: ColorFilter.mode(
+                          (rulerConfig.type != RulerType.none || _isRulerMenuExpanded)
+                              ? ColorConstants.accent
+                              : Colors.grey.shade700,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Icon(
+                        _isRulerMenuExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 14,
+                        color: _isRulerMenuExpanded ? ColorConstants.accent : Colors.grey.shade500,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Expandable Ruler Options Section
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.fastOutSlowIn,
+                child: _isRulerMenuExpanded
+                    ? Column(
+                        children: [
+                          Container(
+                            height: 1,
+                            color: Colors.grey.shade100,
+                            margin: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          _buildRulerOptionItem(
+                            label: 'Box',
+                            assetPath: AssetConstants.ruller_box,
+                            isSelected: rulerConfig.type == RulerType.box,
+                            onTap: () {
+                              final newType = rulerConfig.type == RulerType.box ? RulerType.none : RulerType.box;
+                              controller.drawingController.rulerConfig.value = rulerConfig.copyWith(type: newType);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildRulerOptionItem(
+                            label: 'Circle',
+                            assetPath: AssetConstants.ruler_circle,
+                            isSelected: rulerConfig.type == RulerType.circle,
+                            onTap: () {
+                              final newType = rulerConfig.type == RulerType.circle ? RulerType.none : RulerType.circle;
+                              controller.drawingController.rulerConfig.value = rulerConfig.copyWith(type: newType);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildRulerOptionItem(
+                            label: 'Line',
+                            assetPath: AssetConstants.ruler_line,
+                            isSelected: rulerConfig.type == RulerType.line,
+                            onTap: () {
+                              final newType = rulerConfig.type == RulerType.line ? RulerType.none : RulerType.line;
+                              controller.drawingController.rulerConfig.value = rulerConfig.copyWith(type: newType);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildRulerOptionItem(
+                            label: 'Mirror',
+                            assetPath: AssetConstants.ruler_mirer,
+                            isSelected: rulerConfig.type == RulerType.mirror,
+                            onTap: () {
+                              final newType = rulerConfig.type == RulerType.mirror ? RulerType.none : RulerType.mirror;
+                              controller.drawingController.rulerConfig.value = rulerConfig.copyWith(type: newType);
+                            },
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRulerOptionItem({
+    required String label,
+    required String assetPath,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected ? ColorConstants.accent.withOpacity(0.05) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Stack(
+              children: [
+                if (isSelected)
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: DashedBorderPainter(
+                        color: ColorConstants.accent,
+                        strokeWidth: 1.5,
+                        radius: 10,
+                      ),
+                    ),
+                  ),
+                Positioned.fill(
+                  child: Container(
+                    margin: const EdgeInsets.all(4),
+                    alignment: Alignment.center,
+                    child: SvgPicture.asset(
+                      assetPath,
+                      width: 22,
+                      height: 22,
+                      colorFilter: ColorFilter.mode(
+                        isSelected ? ColorConstants.accent : Colors.grey.shade700,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? ColorConstants.accent : Colors.grey.shade600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1410,4 +1592,57 @@ class _CheckerboardPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double dashLength;
+  final double radius;
+
+  DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 1.0,
+    this.gap = 3.0,
+    this.dashLength = 4.0,
+    this.radius = 8.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    path.addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(radius),
+    ));
+
+    final dashPath = Path();
+    double distance = 0.0;
+    for (final ui.PathMetric pathMetric in path.computeMetrics()) {
+      while (distance < pathMetric.length) {
+        dashPath.addPath(
+          pathMetric.extractPath(distance, distance + dashLength),
+          Offset.zero,
+        );
+        distance += dashLength + gap;
+      }
+      distance = 0.0;
+    }
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.gap != gap ||
+        oldDelegate.dashLength != dashLength ||
+        oldDelegate.radius != radius;
+  }
 }

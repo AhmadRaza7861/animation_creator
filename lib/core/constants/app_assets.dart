@@ -24,4 +24,8 @@ class AssetConstants {
   static const String text_icon = 'assets/icons/text_icon.svg';
   static const String ruler_icon = 'assets/icons/ruler_icon.svg';
   static const String brush_tips = 'assets/icons/brush_tips.svg';
+  static const String ruller_box = 'assets/icons/ruler_box.svg';
+  static const String ruler_circle = 'assets/icons/ruler_circle.svg';
+  static const String ruler_line = 'assets/icons/ruler_line.svg';
+  static const String ruler_mirer = 'assets/icons/ruler_mirer.svg';
 }

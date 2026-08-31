@@ -180,7 +180,6 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     icon: Icons.brush_rounded,
                     color: controller.activeCategory == 'Brush' ? ColorConstants.accent : null,
                     onTap: () {
-                      controller.currentSubMenu = 'brush';
                       controller.activeCategory = 'Brush';
                       if (controller.selectedSubTool == 'brush') {
                         controller.drawingController.setPaintContent(SmoothLine());
