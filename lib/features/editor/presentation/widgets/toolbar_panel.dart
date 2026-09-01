@@ -181,11 +181,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     color: controller.activeCategory == 'Brush' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.activeCategory = 'Brush';
-                      if (controller.selectedSubTool == 'brush') {
-                        controller.drawingController.setPaintContent(SmoothLine());
-                      } else {
-                        controller.drawingController.setPaintContent(FreehandLine());
-                      }
+                      controller.drawingController.activeBrushPresetId = null;
+                      controller.drawingController.setPaintContent(FreehandLine());
                       controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
                     },
                   ),

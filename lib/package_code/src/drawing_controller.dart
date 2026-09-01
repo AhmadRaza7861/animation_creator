@@ -327,7 +327,10 @@ class DrawingController extends ChangeNotifier {
 
   String? get activeBrushPresetId => GlobalToolState.instance.activeBrushPresetId;
   set activeBrushPresetId(String? value) {
-    GlobalToolState.instance.activeBrushPresetId = value;
+    if (GlobalToolState.instance.activeBrushPresetId != value) {
+      GlobalToolState.instance.activeBrushPresetId = value;
+      notifyListeners();
+    }
   }
 
   String? get activeTipLabel => GlobalToolState.instance.activeTipLabel;

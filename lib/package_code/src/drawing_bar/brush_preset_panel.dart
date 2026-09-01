@@ -87,12 +87,12 @@ class _BrushPresetPanelState extends State<BrushPresetPanel> {
     super.initState();
     final presetId = widget.controller.activeBrushPresetId;
     if (presetId != null) {
-      _selected = _presets.firstWhere(
-        (p) => p.id == presetId,
-        orElse: () => _presets.first,
+      _selected = _presets.cast<BrushPreset?>().firstWhere(
+        (p) => p?.id == presetId,
+        orElse: () => null,
       );
     } else {
-      _selected = _presets.first;
+      _selected = null;
     }
   }
 
