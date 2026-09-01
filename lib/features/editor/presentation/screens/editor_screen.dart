@@ -1088,9 +1088,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
               Column(
                 children: [
                   Expanded(
-                    child: CanvasArea(
-                      projectId: widget.projectId,
-                      transformationController: _transformationController,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: ColorConstants.selected_type
+                      ),
+                      child: CanvasArea(
+                        projectId: widget.projectId,
+                        transformationController: _transformationController,
+                      ),
                     ),
                   ),
                   ToolbarPanel(projectId: widget.projectId),

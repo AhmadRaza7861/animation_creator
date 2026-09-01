@@ -36,8 +36,8 @@ class CanvasSelector extends StatelessWidget {
       height: 80,
       padding: const EdgeInsets.symmetric(vertical: 0),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F8FA),
-        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
+        color:ColorConstants.border_color,
+        border: Border(top: BorderSide(color: ColorConstants.border_color_2, width: 1)),
       ),
       child: Row(
         children: [

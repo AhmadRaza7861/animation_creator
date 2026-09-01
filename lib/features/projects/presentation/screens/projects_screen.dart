@@ -407,8 +407,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            image: DecorationImage(image:AssetImage(AssetConstants.templates_card_bg,
-            ),fit: BoxFit.fill),
+            image: DecorationImage(image:AssetImage(
+              AssetConstants.templates_card_bg,),
+              fit: BoxFit.fill,
+            ),
             // boxShadow: [
             //   BoxShadow(
             //     color: Colors.black.withOpacity(0.03),
@@ -423,7 +425,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           child: Row(
             children: [
-              SvgPicture.asset(AssetConstants.templates_card_icon),
+              SvgPicture.asset(AssetConstants.templates_card_icon,width: 90,height: 90,),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
