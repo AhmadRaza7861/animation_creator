@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../package_code/paint_contents.dart';
 import '../../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/constants/app_assets.dart';
 import '../../../../../core/widgets/font_presets.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
@@ -177,7 +179,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 children: [
                   _bottomToolbarCategoryItem(
                     label: 'Brush',
-                    icon: Icons.brush_rounded,
+                    svgAsset: AssetConstants.brush_icon,
                     color: controller.activeCategory == 'Brush' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.activeCategory = 'Brush';
@@ -188,7 +190,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Paint',
-                    icon: Icons.format_paint_rounded,
+                    svgAsset: AssetConstants.paint_icon,
                     color: controller.activeCategory == 'Paint' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(FillContent());
@@ -198,7 +200,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Eyedropper',
-                    icon: Icons.colorize_rounded,
+                    svgAsset: AssetConstants.eyedropper,
                     color: controller.activeCategory == 'Eyedropper' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(Eyedropper());
@@ -207,7 +209,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Blur',
-                    icon: Icons.water_drop_rounded,
+                    svgAsset: AssetConstants.blur_icon,
                     color: controller.activeCategory == 'Blur' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(BlurContent());
@@ -217,7 +219,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Smudge',
-                    icon: Icons.fingerprint_rounded,
+                    svgAsset: AssetConstants.smudge_icon,
                     color: controller.activeCategory == 'Smudge' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(SmudgeContent());
@@ -227,7 +229,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Shapes',
-                    icon: Icons.interests_rounded,
+                    svgAsset: AssetConstants.shapes_icon,
                     color: controller.activeCategory == 'Shapes' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.currentSubMenu = 'shapes';
@@ -238,7 +240,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Assets',
-                    icon: Icons.photo_library_rounded,
+                    svgAsset: AssetConstants.assets_icon,
+                    color: controller.activeCategory == 'Assets' ? ColorConstants.accent : null,
                     onTap: () async {
                       final ImageSource? source = await showModalBottomSheet<ImageSource>(
                         context: context,
@@ -278,7 +281,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Erase',
-                    icon: Icons.auto_fix_normal_rounded,
+                    svgAsset: AssetConstants.erase_icon,
                     color: controller.activeCategory == 'Erase' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(Eraser());
@@ -288,7 +291,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Lasso',
-                    icon: Icons.gesture_rounded,
+                    svgAsset: AssetConstants.lesso_icon,
                     color: controller.activeCategory == 'Lasso' ? ColorConstants.accent : null,
                     onTap: () {
                       controller.drawingController.setPaintContent(Lasso());
@@ -298,7 +301,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Text',
-                    icon: Icons.text_fields_rounded,
+                    svgAsset: AssetConstants.text_icon,
                     color: controller.isTextToolSelected ? ColorConstants.accent : null,
                     onTap: () {
                       if (controller.drawingController.isCurrentLayerLocked) {
@@ -318,7 +321,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Ruler',
-                    icon: Icons.straighten_rounded,
+                    svgAsset: AssetConstants.ruler_icon,
                     color: controller.showRulerMenu ? ColorConstants.accent : null,
                     onTap: () {
                       controller.showRulerMenu = !controller.showRulerMenu;
@@ -336,7 +339,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
 
   Widget _bottomToolbarCategoryItem({
     required String label,
-    required IconData icon,
+    IconData? icon,
+    String? svgAsset,
     required VoidCallback onTap,
     Color? color,
   }) {
@@ -355,7 +359,18 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: displayColor, size: 24),
+            if (svgAsset != null)
+              SvgPicture.asset(
+                svgAsset,
+                width: 24,
+                height: 24,
+                colorFilter: ColorFilter.mode(
+                  displayColor,
+                  BlendMode.srcIn,
+                ),
+              )
+            else if (icon != null)
+              Icon(icon, color: displayColor, size: 24),
             const SizedBox(height: 4),
             Text(
               label,

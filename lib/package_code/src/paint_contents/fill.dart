@@ -42,7 +42,12 @@ class FillContent extends PaintContent {
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (image != null) {
-      canvas.drawImage(image!, Offset.zero, paint);
+      canvas.drawImageRect(
+        image!,
+        Rect.fromLTWH(0, 0, image!.width.toDouble(), image!.height.toDouble()),
+        Offset.zero & size,
+        paint,
+      );
     }
   }
 
@@ -60,6 +65,7 @@ class FillContent extends PaintContent {
     };
   }
 
+  @override
   Future<void> prepareExport() async {
     if (image != null && cachedBase64Image == null) {
       final ByteData? byteData = await image!.toByteData(format: ui.ImageByteFormat.png);

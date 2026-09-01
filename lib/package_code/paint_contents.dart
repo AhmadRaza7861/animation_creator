@@ -28,3 +28,7 @@ export 'src/paint_contents/eyedropper.dart';
 export 'src/paint_contents/blur.dart';
 export 'src/paint_contents/smudge.dart';
 export 'src/paint_contents/extra_shapes.dart';
+export 'src/paint_contents/preset_strokes.dart';
+export 'src/paint_contents/stroke_styles.dart';
+export 'src/paint_contents/tip_brush.dart';
+export 'src/paint_contents/image_tip_brush.dart';

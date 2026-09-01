@@ -2,25 +2,8 @@ import 'package:flutter/painting.dart';
 import '../draw_path/draw_path.dart';
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
-import 'circle.dart';
-import 'rectangle.dart';
-import 'empty_content.dart';
-import 'eraser.dart';
-import 'paint_content.dart';
-import 'simple_line.dart';
-import 'smooth_line.dart';
-import 'straight_line.dart';
-import 'text.dart';
-import 'triangle.dart';
-import 'shape_sticker.dart';
-import 'group.dart';
-import 'fill.dart';
-import 'eraser_hole.dart';
-import 'eyedropper.dart';
-import 'blur.dart';
-import 'smudge.dart';
-import 'lasso.dart';
 import 'image.dart';
+import 'paint_content.dart';
 import 'paint_content_decoder.dart';
 
 /// Content wrapper that applies an offset to its child

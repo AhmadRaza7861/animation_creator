@@ -59,12 +59,14 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
 
   final List<String> _categories = const [
     'All',
-    'Pens & Ink',
+    'Artistic & Inks',
     'Pencils & Sketch',
     'Brushes & Spray',
-    'Halftone & Pixel',
-    'FX & Textures',
-    'Shapes & Waves',
+    'Magic & Glow',
+    'Nature & Elements',
+    'Stamps & Shapes',
+    'Textures & FX',
+    'Patterns & 3D',
   ];
 
   @override
@@ -75,9 +77,9 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
     final String? presetId = widget.drawingController.activeBrushPresetId;
     if (presetId != null) {
       _selectedPreset = _allPresets.cast<BrushPreset?>().firstWhere(
-            (p) => p?.id == presetId,
-            orElse: () => null,
-          );
+        (p) => p?.id == presetId,
+        orElse: () => null,
+      );
     }
   }
 
@@ -93,33 +95,151 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       if (_selectedCategory != 'All') {
         final id = preset.id.toLowerCase();
         switch (_selectedCategory) {
-          case 'Pens & Ink':
-            if (!id.contains('pen') && !id.contains('ink') && !id.contains('calligraphy')) {
+          case 'Artistic & Inks':
+            if (!id.contains('ink') &&
+                !id.contains('dip') &&
+                !id.contains('calligraphy') &&
+                !id.contains('rough') &&
+                !id.contains('soft') &&
+                !id.contains('choppy') &&
+                !id.contains('watercolor') &&
+                !id.contains('charcoal') &&
+                !id.contains('chalk') &&
+                !id.contains('bristle') &&
+                !id.contains('dry') &&
+                !id.contains('sponge') &&
+                !id.contains('splash') &&
+                !id.contains('splatter') &&
+                !id.contains('spatter') &&
+                !id.contains('rake')) {
               return false;
             }
             break;
           case 'Pencils & Sketch':
-            if (!id.contains('pencil') && !id.contains('sketch') && !id.contains('crayon') && !id.contains('grain')) {
+            if (!id.contains('pencil') &&
+                !id.contains('sketch') &&
+                !id.contains('crayon') &&
+                !id.contains('grain') &&
+                !id.contains('sand') &&
+                !id.contains('scratches')) {
               return false;
             }
             break;
           case 'Brushes & Spray':
-            if (!id.contains('brush') && !id.contains('spray') && !id.contains('stipple') && !id.contains('highlighter')) {
+            if (!id.contains('brush') &&
+                !id.contains('spray') &&
+                !id.contains('stipple') &&
+                !id.contains('highlighter') &&
+                !id.contains('smoke') &&
+                !id.contains('bokeh')) {
               return false;
             }
             break;
-          case 'Halftone & Pixel':
-            if (!id.contains('pixel') && !id.contains('mosaic') && !id.contains('halftone') && !id.contains('hatch')) {
+          case 'Magic & Glow':
+            if (!id.contains('neon') &&
+                !id.contains('rainbow') &&
+                !id.contains('ribbon') &&
+                !id.contains('constellation') &&
+                !id.contains('electric') &&
+                !id.contains('bubble') &&
+                !id.contains('chain') &&
+                !id.contains('audio') &&
+                !id.contains('stitch') &&
+                !id.contains('galaxy') &&
+                !id.contains('embers') &&
+                !id.contains('glitter') &&
+                !id.contains('starglow') &&
+                !id.contains('bubbles') &&
+                !id.contains('crackle') &&
+                !id.contains('sparkles') &&
+                !id.contains('circuit')) {
               return false;
             }
             break;
-          case 'FX & Textures':
-            if (!id.contains('sparkles') && !id.contains('leaves') && !id.contains('hair') && !id.contains('fur') && !id.contains('grunge') && !id.contains('orange') && !id.contains('sprinkles') && !id.contains('static') && !id.contains('gradient') && !id.contains('3d') && !id.contains('candy')) {
+          case 'Nature & Elements':
+            if (!id.contains('leaves') &&
+                !id.contains('petals') &&
+                !id.contains('blossom') &&
+                !id.contains('pinetree') &&
+                !id.contains('grass') &&
+                !id.contains('cloud') &&
+                !id.contains('snow') &&
+                !id.contains('rain') &&
+                !id.contains('flame') &&
+                !id.contains('feather') &&
+                !id.contains('ripple') &&
+                !id.contains('sun') &&
+                !id.contains('crescent')) {
               return false;
             }
             break;
-          case 'Shapes & Waves':
-            if (!id.contains('dots') && !id.contains('squares') && !id.contains('dash') && !id.contains('saw') && !id.contains('gear') && !id.contains('heartbeat')) {
+          case 'Stamps & Shapes':
+            if (!id.contains('butterfly') &&
+                !id.contains('paw') &&
+                !id.contains('fish') &&
+                !id.contains('heart') &&
+                !id.contains('star') &&
+                !id.contains('crown') &&
+                !id.contains('gem') &&
+                !id.contains('lightning') &&
+                !id.contains('music') &&
+                !id.contains('confetti') &&
+                !id.contains('ghost') &&
+                !id.contains('rocket') &&
+                !id.contains('atom') &&
+                !id.contains('puzzle') &&
+                !id.contains('anchor') &&
+                !id.contains('hourglass') &&
+                !id.contains('lightbulb') &&
+                !id.contains('bell') &&
+                !id.contains('key') &&
+                !id.contains('bowtie') &&
+                !id.contains('crosshair') &&
+                !id.contains('outline') &&
+                !id.contains('ring') &&
+                !id.contains('diamond') &&
+                !id.contains('triangle') &&
+                !id.contains('hexagon') &&
+                !id.contains('octagon') &&
+                !id.contains('shield') &&
+                !id.contains('spiral') &&
+                !id.contains('teardrop')) {
+              return false;
+            }
+            break;
+          case 'Textures & FX':
+            if (!id.contains('marble') &&
+                !id.contains('honeycomb') &&
+                !id.contains('lace') &&
+                !id.contains('weave') &&
+                !id.contains('cobweb') &&
+                !id.contains('cells') &&
+                !id.contains('fur') &&
+                !id.contains('hair') &&
+                !id.contains('grunge') &&
+                !id.contains('orange') &&
+                !id.contains('static') &&
+                !id.contains('sprinkles')) {
+              return false;
+            }
+            break;
+          case 'Patterns & 3D':
+            if (!id.contains('dots') &&
+                !id.contains('squares') &&
+                !id.contains('dash') &&
+                !id.contains('pixel') &&
+                !id.contains('mosaic') &&
+                !id.contains('halftone') &&
+                !id.contains('hatch') &&
+                !id.contains('gradient') &&
+                !id.contains('3d') &&
+                !id.contains('candy') &&
+                !id.contains('saw') &&
+                !id.contains('gear') &&
+                !id.contains('heartbeat') &&
+                !id.contains('stitch') &&
+                !id.contains('audio') &&
+                !id.contains('chain')) {
               return false;
             }
             break;
@@ -165,7 +285,8 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
 
     return ExValueBuilder<DrawConfig>(
       valueListenable: widget.drawingController.drawConfig,
-      shouldRebuild: (p, n) => p.color != n.color || p.strokeWidth != n.strokeWidth,
+      shouldRebuild: (p, n) =>
+          p.color != n.color || p.strokeWidth != n.strokeWidth,
       builder: (context, config, _) {
         return Scaffold(
           backgroundColor: const Color(0xFFF8F9FB),
@@ -179,9 +300,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               _buildFilterSection(accent),
 
               // Presets Grid
-              Expanded(
-                child: _buildPresetsGrid(config, accent),
-              ),
+              Expanded(child: _buildPresetsGrid(config, accent)),
 
               // Bottom Action & Apply Bar
               _buildBottomBar(config, accent),
@@ -327,7 +446,10 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(8),
@@ -335,11 +457,19 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: const [
-                        Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF6B7280)),
+                        Icon(
+                          Icons.refresh_rounded,
+                          size: 14,
+                          color: Color(0xFF6B7280),
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Clear Pad',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF6B7280),
+                          ),
                         ),
                       ],
                     ),
@@ -410,11 +540,19 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
           // Stroke Thickness Quick Slider
           Row(
             children: [
-              const Icon(Icons.line_weight_rounded, size: 16, color: Color(0xFF888E9B)),
+              const Icon(
+                Icons.line_weight_rounded,
+                size: 16,
+                color: Color(0xFF888E9B),
+              ),
               const SizedBox(width: 8),
               Text(
                 'Size: ${_strokeWidth.toInt()}px',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF4B5563)),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF4B5563),
+                ),
               ),
               Expanded(
                 child: SliderTheme(
@@ -422,9 +560,13 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                     activeTrackColor: accent,
                     inactiveTrackColor: const Color(0xFFE5E7EB),
                     thumbColor: accent,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
                     trackHeight: 3,
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 14,
+                    ),
                   ),
                   child: Slider(
                     value: _strokeWidth.clamp(1.0, 50.0),
@@ -468,11 +610,22 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               style: const TextStyle(fontSize: 13, color: Color(0xFF1E2024)),
               decoration: InputDecoration(
                 hintText: 'Search brushes by name...',
-                hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-                prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF9CA3AF)),
+                hintStyle: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF9CA3AF),
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 18,
+                  color: Color(0xFF9CA3AF),
+                ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF9CA3AF)),
+                        icon: const Icon(
+                          Icons.clear_rounded,
+                          size: 16,
+                          color: Color(0xFF9CA3AF),
+                        ),
                         onPressed: () {
                           _searchController.clear();
                           setState(() {
@@ -523,7 +676,10 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   color: isSelected ? Colors.white : const Color(0xFF4B5563),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 showCheckmark: false,
               );
             },
@@ -545,7 +701,11 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
             const SizedBox(height: 12),
             Text(
               'No brushes found',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -704,7 +864,9 @@ class _StudioBrushCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: isSelected ? accent.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.02),
+              color: isSelected
+                  ? accent.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.02),
               blurRadius: isSelected ? 8 : 4,
               offset: const Offset(0, 2),
             ),
@@ -747,7 +909,9 @@ class _StudioBrushCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
                           color: isSelected ? accent : const Color(0xFF1F2937),
                         ),
                       ),

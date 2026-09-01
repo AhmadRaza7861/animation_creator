@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:flutter/painting.dart';
+import 'package:flutter/material.dart';
 
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
@@ -762,6 +762,602 @@ class StaticLine extends PresetStroke {
 
   @override
   StaticLine copy() => StaticLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+// ---------------------------------------------------------------------------
+// 新增特色笔刷 / Brand New Signature Preset Strokes
+// ---------------------------------------------------------------------------
+
+/// 霓虹辉光笔迹（Neon Glow）：多层高斯发光与高亮内芯
+class NeonGlowLine extends PresetStroke {
+  NeonGlowLine({super.minPointDistance});
+
+  NeonGlowLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory NeonGlowLine.fromJson(Map<String, dynamic> d) => NeonGlowLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'NeonGlowLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final Path path = buildSmoothPath();
+    final double w = paint.strokeWidth;
+    final Color base = paint.color;
+
+    // Outer aura
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = base.withValues(alpha: 0.25)
+        ..strokeWidth = w * 2.6
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.8)
+        ..isAntiAlias = true,
+    );
+
+    // Medium glow
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = base.withValues(alpha: 0.6)
+        ..strokeWidth = w * 1.5
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.3)
+        ..isAntiAlias = true,
+    );
+
+    // Inner bright colored core
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = base
+        ..strokeWidth = w * 0.7
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..isAntiAlias = true,
+    );
+
+    // Core white neon hot spot
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.9)
+        ..strokeWidth = (w * 0.28).clamp(1.0, double.infinity)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..isAntiAlias = true,
+    );
+  }
+
+  @override
+  NeonGlowLine copy() => NeonGlowLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+/// 彩虹流光笔迹（Rainbow Line）：沿路径平滑过渡七彩光谱
+class RainbowLine extends PresetStroke {
+  RainbowLine({super.minPointDistance});
+
+  RainbowLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory RainbowLine.fromJson(Map<String, dynamic> d) => RainbowLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'RainbowLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final double w = paint.strokeWidth;
+    final double step = (w * 0.2).clamp(1.0, 6.0);
+    Offset? prev;
+
+    walk(step, (ui.Tangent t, double d, double total, int i) {
+      final double progress = total > 0 ? (d / total) : 0;
+      final double hue = (progress * 360 * 1.5) % 360;
+      final Color col = HSVColor.fromAHSV(1.0, hue, 0.9, 1.0).toColor();
+
+      if (prev != null) {
+        canvas.drawLine(
+          prev!,
+          t.position,
+          Paint()
+            ..color = col
+            ..strokeWidth = w
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..isAntiAlias = true,
+        );
+      }
+      prev = t.position;
+    });
+  }
+
+  @override
+  RainbowLine copy() => RainbowLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+/// 双轨丝带笔迹（Ribbon Line）：动态扭转的双边缘丝带
+class RibbonLine extends PresetStroke {
+  RibbonLine({super.minPointDistance});
+
+  RibbonLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory RibbonLine.fromJson(Map<String, dynamic> d) => RibbonLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'RibbonLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final double w = paint.strokeWidth;
+    final double half = w * 0.6;
+    final Path path1 = Path();
+    final Path path2 = Path();
+    final Path fillStrip = Path();
+    bool first = true;
+    final List<Offset> leftPoints = [];
+    final List<Offset> rightPoints = [];
+
+    walk(2.0, (ui.Tangent t, double d, double total, int i) {
+      final Offset n = normalOf(t);
+      final double wave = sin(d * 0.05) * 0.35 + 0.65;
+      final Offset p1 = t.position + n * (half * wave);
+      final Offset p2 = t.position - n * (half * wave);
+
+      leftPoints.add(p1);
+      rightPoints.add(p2);
+
+      if (first) {
+        path1.moveTo(p1.dx, p1.dy);
+        path2.moveTo(p2.dx, p2.dy);
+        first = false;
+      } else {
+        path1.lineTo(p1.dx, p1.dy);
+        path2.lineTo(p2.dx, p2.dy);
+      }
+    });
+
+    if (leftPoints.isNotEmpty && rightPoints.isNotEmpty) {
+      fillStrip.moveTo(leftPoints.first.dx, leftPoints.first.dy);
+      for (final p in leftPoints) {
+        fillStrip.lineTo(p.dx, p.dy);
+      }
+      for (final p in rightPoints.reversed) {
+        fillStrip.lineTo(p.dx, p.dy);
+      }
+      fillStrip.close();
+
+      // Semi-transparent ribbon body
+      canvas.drawPath(
+        fillStrip,
+        Paint()
+          ..color = paint.color.withValues(alpha: 0.35)
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true,
+      );
+
+      // Border lines
+      final Paint borderPaint = Paint()
+        ..color = paint.color
+        ..strokeWidth = (w * 0.15).clamp(1.0, 4.0)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true;
+
+      canvas.drawPath(path1, borderPaint);
+      canvas.drawPath(path2, borderPaint);
+    }
+  }
+
+  @override
+  RibbonLine copy() => RibbonLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+/// 星座连线笔迹（Constellation Line）：星光节点与几何连线
+class ConstellationLine extends PresetStroke {
+  ConstellationLine({super.minPointDistance});
+
+  ConstellationLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory ConstellationLine.fromJson(Map<String, dynamic> d) => ConstellationLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'ConstellationLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final double w = paint.strokeWidth;
+    final List<Offset> stars = [];
+
+    // Central thin connector line
+    canvas.drawPath(
+      buildSmoothPath(),
+      Paint()
+        ..color = paint.color.withValues(alpha: 0.4)
+        ..strokeWidth = (w * 0.12).clamp(0.8, 3.0)
+        ..style = PaintingStyle.stroke
+        ..isAntiAlias = true,
+    );
+
+    walk(w * 1.5, (ui.Tangent t, double d, double total, int i) {
+      final Offset offset = normalOf(t) * (_rand(seed, i, 1) * w * 0.8);
+      stars.add(t.position + offset);
+    });
+
+    // Draw cross connections and star nodes
+    final Paint linePaint = Paint()
+      ..color = paint.color.withValues(alpha: 0.3)
+      ..strokeWidth = 0.8
+      ..isAntiAlias = true;
+
+    for (int i = 0; i < stars.length; i++) {
+      if (i > 0) canvas.drawLine(stars[i - 1], stars[i], linePaint);
+      if (i > 1 && _rand01(seed, i, 7) > 0.4) {
+        canvas.drawLine(stars[i - 2], stars[i], linePaint);
+      }
+
+      // Star glint
+      final Offset st = stars[i];
+      final double starR = (w * 0.25).clamp(2.0, 8.0);
+      canvas.drawCircle(
+        st,
+        starR,
+        Paint()
+          ..color = paint.color
+          ..isAntiAlias = true,
+      );
+      canvas.drawCircle(
+        st,
+        starR * 0.5,
+        Paint()
+          ..color = Colors.white
+          ..isAntiAlias = true,
+      );
+    }
+  }
+
+  @override
+  ConstellationLine copy() => ConstellationLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+/// 铁链链条笔迹（Chain Line）：沿切线方向的金属环链
+class ChainLine extends PresetStroke {
+  ChainLine({super.minPointDistance});
+
+  ChainLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory ChainLine.fromJson(Map<String, dynamic> d) => ChainLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'ChainLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final double w = paint.strokeWidth;
+    final double linkLen = w * 1.1;
+
+    walk(linkLen * 0.7, (ui.Tangent t, double d, double total, int i) {
+      canvas.save();
+      canvas.translate(t.position.dx, t.position.dy);
+      canvas.rotate(t.angle);
+
+      final bool isAlt = i % 2 == 0;
+      final double rW = linkLen;
+      final double rH = isAlt ? (w * 0.6) : (w * 0.35);
+
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset.zero, width: rW, height: rH),
+          Radius.circular(rH / 2),
+        ),
+        Paint()
+          ..color = paint.color
+          ..strokeWidth = (w * 0.18).clamp(1.5, 6.0)
+          ..style = PaintingStyle.stroke
+          ..isAntiAlias = true,
+      );
+      canvas.restore();
+    });
+  }
+
+  @override
+  ChainLine copy() => ChainLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+/// 电弧闪电笔迹（Electric Arc Line）：高压动态等离子电弧
+class ElectricArcLine extends PresetStroke {
+  ElectricArcLine({super.minPointDistance});
+
+  ElectricArcLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory ElectricArcLine.fromJson(Map<String, dynamic> d) => ElectricArcLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'ElectricArcLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final double w = paint.strokeWidth;
+    final Path mainArc = Path();
+    final Path branchArc = Path();
+    bool first = true;
+
+    walk(w * 0.4, (ui.Tangent t, double d, double total, int i) {
+      final double jitter = _rand(seed, i, 9) * w * 0.6;
+      final Offset p = t.position + normalOf(t) * jitter;
+
+      if (first) {
+        mainArc.moveTo(p.dx, p.dy);
+        first = false;
+      } else {
+        mainArc.lineTo(p.dx, p.dy);
+      }
+
+      if (_rand01(seed, i, 15) > 0.65) {
+        final Offset b = p + normalOf(t) * (_rand(seed, i, 20) * w * 1.2);
+        branchArc.moveTo(p.dx, p.dy);
+        branchArc.lineTo(b.dx, b.dy);
+      }
+    });
+
+    // Outer electric glow
+    canvas.drawPath(
+      mainArc,
+      Paint()
+        ..color = paint.color.withValues(alpha: 0.45)
+        ..strokeWidth = w * 1.4
+        ..style = PaintingStyle.stroke
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.4)
+        ..isAntiAlias = true,
+    );
+
+    // Sharp jagged core
+    canvas.drawPath(
+      mainArc,
+      Paint()
+        ..color = Colors.white
+        ..strokeWidth = (w * 0.25).clamp(1.2, 4.0)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true,
+    );
+
+    // Branches
+    canvas.drawPath(
+      branchArc,
+      Paint()
+        ..color = paint.color.withValues(alpha: 0.7)
+        ..strokeWidth = (w * 0.15).clamp(0.8, 2.5)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true,
+    );
+  }
+
+  @override
+  ElectricArcLine copy() => ElectricArcLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+/// 泡泡轨迹笔迹（Bubble Trail Line）：高光立体透明泡泡串
+class BubbleTrailLine extends PresetStroke {
+  BubbleTrailLine({super.minPointDistance});
+
+  BubbleTrailLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory BubbleTrailLine.fromJson(Map<String, dynamic> d) => BubbleTrailLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'BubbleTrailLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final double w = paint.strokeWidth;
+
+    walk(w * 0.6, (ui.Tangent t, double d, double total, int i) {
+      final double r = w * (0.3 + _rand01(seed, i, 3) * 0.5);
+      final Offset center = t.position + normalOf(t) * (_rand(seed, i, 1) * w * 0.5);
+
+      // Bubble rim
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..color = paint.color.withValues(alpha: 0.6)
+          ..strokeWidth = (r * 0.15).clamp(1.0, 3.0)
+          ..style = PaintingStyle.stroke
+          ..isAntiAlias = true,
+      );
+
+      // Bubble body soft tint
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..color = paint.color.withValues(alpha: 0.12)
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true,
+      );
+
+      // Specular glare reflection
+      final Offset glare = center + Offset(-r * 0.35, -r * 0.35);
+      canvas.drawCircle(
+        glare,
+        r * 0.25,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.85)
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true,
+      );
+    });
+  }
+
+  @override
+  BubbleTrailLine copy() => BubbleTrailLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+/// 音频声波笔迹（Audio Spectrum Line）：律动跳跃的音频均衡器频谱
+class AudioSpectrumLine extends PresetStroke {
+  AudioSpectrumLine({super.minPointDistance});
+
+  AudioSpectrumLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory AudioSpectrumLine.fromJson(Map<String, dynamic> d) => AudioSpectrumLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'AudioSpectrumLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final double w = paint.strokeWidth;
+    final double barWidth = (w * 0.2).clamp(1.5, 6.0);
+
+    walk(barWidth * 2.2, (ui.Tangent t, double d, double total, int i) {
+      final double h = w * (0.3 + sin(i * 0.7).abs() * 0.9 + _rand01(seed, i, 5) * 0.4);
+      final Offset norm = normalOf(t);
+      final Offset p1 = t.position + norm * (h / 2);
+      final Offset p2 = t.position - norm * (h / 2);
+
+      canvas.drawLine(
+        p1,
+        p2,
+        Paint()
+          ..color = paint.color
+          ..strokeWidth = barWidth
+          ..strokeCap = StrokeCap.round
+          ..isAntiAlias = true,
+      );
+    });
+  }
+
+  @override
+  AudioSpectrumLine copy() => AudioSpectrumLine(minPointDistance: minPointDistance);
+
+  @override
+  Map<String, dynamic> toContentJson() => baseJson();
+}
+
+/// 缝线刺绣笔迹（Stitch Line）：逼真衣物缝线与交叉十字绣
+class StitchLine extends PresetStroke {
+  StitchLine({super.minPointDistance});
+
+  StitchLine.data({super.minPointDistance, required super.points, required super.paint})
+      : super.data();
+
+  factory StitchLine.fromJson(Map<String, dynamic> d) => StitchLine.data(
+        minPointDistance: (d['minPointDistance'] ?? 2.0) as double,
+        points: _pointsFromJson(d['points']),
+        paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+      );
+
+  @override
+  String get contentType => 'StitchLine';
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    if (points.length < 2) return;
+    final double w = paint.strokeWidth;
+    final double stitchLen = w * 0.8;
+
+    walk(stitchLen * 1.5, (ui.Tangent t, double d, double total, int i) {
+      canvas.save();
+      canvas.translate(t.position.dx, t.position.dy);
+      canvas.rotate(t.angle);
+
+      final double s = stitchLen * 0.4;
+      // Cross stitch X
+      final Paint thread = Paint()
+        ..color = paint.color
+        ..strokeWidth = (w * 0.18).clamp(1.5, 4.5)
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true;
+
+      canvas.drawLine(Offset(-s, -s), Offset(s, s), thread);
+      canvas.drawLine(Offset(-s, s), Offset(s, -s), thread);
+
+      canvas.restore();
+    });
+  }
+
+  @override
+  StitchLine copy() => StitchLine(minPointDistance: minPointDistance);
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();

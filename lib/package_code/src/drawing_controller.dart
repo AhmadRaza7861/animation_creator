@@ -743,16 +743,49 @@ class DrawingController extends ChangeNotifier {
 
   /// 执行填充操作
   Future<void> _drawFill(Offset startPoint) async {
-    final ui.Image? image = cachedImage;
-    if (image == null) {
+    final Size? size = drawConfig.value.size;
+    if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0) {
       return;
     }
 
+    final int width = size.width.round();
+    final int height = size.height.round();
+    if (width <= 0 || height <= 0) return;
+
+    // 渲染所有可见图层的 1:1 像素快照，与 startPoint 逻辑坐标完全对齐
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
+
+    canvas.saveLayer(Offset.zero & size, Paint());
+
+    for (int i = layers.length - 1; i >= 0; i--) {
+      final layer = layers[i];
+      if (!layer.isVisible) continue;
+
+      canvas.saveLayer(
+        Offset.zero & size,
+        Paint()
+          ..blendMode = layer.blendMode
+          ..color = Colors.white.withValues(alpha: layer.opacity),
+      );
+
+      for (int j = 0; j < layer.currentIndex; j++) {
+        layer.history[j].draw(canvas, size, true);
+      }
+
+      canvas.restore();
+    }
+
+    canvas.restore();
+
+    final ui.Picture picture = recorder.endRecording();
+    final ui.Image snapshotImage = await picture.toImage(width, height);
+
     final ui.Image? filledImage = await FloodFill.fill(
-      image: image,
+      image: snapshotImage,
       startPoint: startPoint,
       fillColor: drawConfig.value.color,
-      tolerance: 0.1, // 默认赋予一点点容差，提升体验
+      tolerance: 0.15,
     );
 
     if (filledImage != null) {
