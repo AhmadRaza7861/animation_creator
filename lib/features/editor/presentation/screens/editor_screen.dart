@@ -8,7 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
-import '../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
+import 'brush_studio_screen.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../controllers/editor_providers.dart';
 import '../controllers/editor_controller.dart';
@@ -1209,10 +1209,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   ),
                   const SizedBox(height: 4),
 
-                  // 1. Brush Tips Button (opens Brushes bottom sheet directly)
+                  // 1. Brush Tips Button (opens Brush Studio Screen)
                   GestureDetector(
                     onTap: () {
-                      BrushPresetPanel.show(context, controller.drawingController);
+                      BrushStudioScreen.open(
+                        context,
+                        drawingController: controller.drawingController,
+                        editorController: controller,
+                      );
                     },
                     child: Container(
                       width: 40,
