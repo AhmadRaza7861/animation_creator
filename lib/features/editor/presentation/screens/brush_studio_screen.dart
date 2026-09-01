@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_bar/brush_presets.dart';
-import '../../../../package_code/src/drawing_bar/brush_tip_shape_panel.dart';
+import 'brush_tip_studio_screen.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/helper/ex_value_builder.dart';
 import '../controllers/editor_controller.dart';
@@ -55,6 +55,8 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   final List<PaintContent> _scratchpadStrokes = <PaintContent>[];
   PaintContent? _currentDrawingStroke;
 
+  late double _strokeWidth;
+
   final List<String> _categories = const [
     'All',
     'Pens & Ink',
@@ -69,6 +71,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   void initState() {
     super.initState();
     _allPresets = widget.presets ?? kDefaultBrushPresets;
+    _strokeWidth = widget.drawingController.drawConfig.value.strokeWidth;
     final String? presetId = widget.drawingController.activeBrushPresetId;
     if (presetId != null) {
       _selectedPreset = _allPresets.cast<BrushPreset?>().firstWhere(
@@ -143,10 +146,6 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       _scratchpadStrokes.clear();
       _currentDrawingStroke = null;
     });
-
-    widget.editorController.activeCategory = 'Brush';
-    widget.drawingController.activeBrushPresetId = preset.id;
-    widget.drawingController.setPaintContent(preset.create());
   }
 
   void _applyAndClose() {
@@ -154,6 +153,8 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       widget.editorController.activeCategory = 'Brush';
       widget.drawingController.activeBrushPresetId = _selectedPreset!.id;
       widget.drawingController.setPaintContent(_selectedPreset!.create());
+      widget.editorController.globalStrokeWidth = _strokeWidth;
+      widget.drawingController.setStyle(strokeWidth: _strokeWidth);
     }
     Navigator.of(context).pop();
   }
@@ -252,8 +253,15 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               'Customize Tip',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
-            onPressed: () {
-              BrushTipShapePanel.show(context, widget.drawingController);
+            onPressed: () async {
+              final applied = await BrushTipStudioScreen.open(
+                context,
+                drawingController: widget.drawingController,
+                editorController: widget.editorController,
+              );
+              if (applied == true && context.mounted) {
+                Navigator.of(context).pop();
+              }
             },
           ),
         ),
@@ -358,7 +366,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                   final stroke = preset.create()
                     ..paint = (Paint()
                       ..color = config.color
-                      ..strokeWidth = config.strokeWidth
+                      ..strokeWidth = _strokeWidth
                       ..style = PaintingStyle.stroke
                       ..strokeCap = StrokeCap.round
                       ..strokeJoin = StrokeJoin.round
@@ -389,7 +397,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                     currentStroke: _currentDrawingStroke,
                     preset: _selectedPreset,
                     color: config.color,
-                    strokeWidth: config.strokeWidth,
+                    strokeWidth: _strokeWidth,
                   ),
                   size: Size.infinite,
                 ),
@@ -405,7 +413,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               const Icon(Icons.line_weight_rounded, size: 16, color: Color(0xFF888E9B)),
               const SizedBox(width: 8),
               Text(
-                'Size: ${config.strokeWidth.toInt()}px',
+                'Size: ${_strokeWidth.toInt()}px',
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF4B5563)),
               ),
               Expanded(
@@ -419,12 +427,13 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
                   ),
                   child: Slider(
-                    value: config.strokeWidth.clamp(1.0, 50.0),
+                    value: _strokeWidth.clamp(1.0, 50.0),
                     min: 1.0,
                     max: 50.0,
                     onChanged: (val) {
-                      widget.editorController.globalStrokeWidth = val;
-                      widget.drawingController.setStyle(strokeWidth: val);
+                      setState(() {
+                        _strokeWidth = val;
+                      });
                     },
                   ),
                 ),
