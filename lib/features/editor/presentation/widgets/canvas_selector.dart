@@ -43,19 +43,31 @@ class CanvasSelector extends StatelessWidget {
         children: [
           // Layers Button
           Padding(
-            padding: const EdgeInsets.only(left: 16.0),
+            padding: const EdgeInsets.only(left: 12.0),
             child: Material(
               color: Colors.transparent,
               child: IconButton(
-                icon: const Icon(Icons.layers_rounded, size: 28, color: ColorConstants.darkText),
+                icon: const Icon(Icons.layers_rounded, size: 26, color: ColorConstants.darkText),
                 onPressed: onOpenFrames,
                 tooltip: 'Layers',
               ),
             ),
           ),
+          // Video Import Button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2.0),
+            child: Material(
+              color: Colors.transparent,
+              child: IconButton(
+                icon: const Icon(Icons.video_library_rounded, size: 24, color: ColorConstants.darkText),
+                onPressed: onImportVideo,
+                tooltip: 'Import Video',
+              ),
+            ),
+          ),
           // Play Button
           Padding(
-            padding: const EdgeInsets.only(left: 8.0, right: 8.0),
+            padding: const EdgeInsets.only(left: 2.0, right: 6.0),
             child: Material(
               color: Colors.transparent,
               child: IconButton(

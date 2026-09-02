@@ -1,13 +1,20 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:dummy/core/constants/app_assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
+import 'canvas_size_screen.dart';
+import 'fps_screen.dart';
+import 'background_presets_screen.dart';
+import 'frames_reorder_screen.dart';
+import 'video_trimming_screen.dart';
 import 'brush_studio_screen.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../controllers/editor_providers.dart';
@@ -58,6 +65,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
     }
   }
 
+
   void _resetBoard() {
     _transformationController.value = Matrix4.identity();
   }
@@ -90,6 +98,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
   void _showSettingsSheet(BuildContext context, EditorController controller) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -97,108 +106,348 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
         return Consumer(
           builder: (context, ref, child) {
             final currentController = ref.watch(editorControllerProvider(widget.projectId));
-            return SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Settings',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ColorConstants.darkText),
+
+            // Helper to get Canvas Size Label
+            String canvasSizeLabel = 'Landscape (16:9)';
+            final double ratio = currentController.aspectRatio ?? (16.0 / 9.0);
+            if ((ratio - 1.0).abs() < 0.05) {
+              canvasSizeLabel = 'Square (1:1)';
+            } else if ((ratio - 9.0 / 16.0).abs() < 0.05) {
+              canvasSizeLabel = 'Portrait (9:16)';
+            } else if ((ratio - 4.0 / 3.0).abs() < 0.05) {
+              canvasSizeLabel = 'Standard (4:3)';
+            } else if ((ratio - 16.0 / 9.0).abs() < 0.05) {
+              canvasSizeLabel = 'Landscape (16:9)';
+            } else {
+              canvasSizeLabel = 'Custom (${ratio.toStringAsFixed(2)})';
+            }
+
+            // Helper to get background label
+            String bgLabel = 'Plain Canvas';
+            if (currentController.globalBackground.pattern != null) {
+              bgLabel = currentController.globalBackground.pattern!.toUpperCase();
+            } else if (currentController.globalBackground.imagePath != null) {
+              bgLabel = 'Custom Image';
+            }
+
+            return SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Settings',
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ColorConstants.darkText),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orangeAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.settings_suggest_rounded, color: Colors.orangeAccent, size: 22),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        )
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      leading: const Icon(Icons.wallpaper_rounded, color: Colors.orangeAccent),
-                      title: const Text('Project settings', style: TextStyle(fontWeight: FontWeight.w600)),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CreateProjectScreen(
-                              repository: currentController.repository,
-                              projectId: widget.projectId,
+                        title: const Text('Project settings', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text('Title, dimensions & export options', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CreateProjectScreen(
+                                repository: currentController.repository,
+                                projectId: widget.projectId,
+                              ),
                             ),
-                          ),
-                        );
-                        if (result == true) {
-                          currentController.loadProjectData();
-                        }
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.layers_rounded, color: ColorConstants.darkText),
-                      title: const Text('Onion', style: TextStyle(fontWeight: FontWeight.w600)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _showOnionSettingsSheet(context, currentController);
-                            },
-                            child: const Text(
-                              'Edit',
-                              style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                           CustomSwitch(
-                            value: currentController.isOnionEnabled,
-                            onChanged: (bool value) {
-                              currentController.updateOnion(enabled: value);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.grid_on_rounded, color: ColorConstants.darkText),
-                      title: const Text('Grid', style: TextStyle(fontWeight: FontWeight.w600)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _showGridSettingsSheet(context, currentController);
-                            },
-                            child: const Text(
-                              'Edit',
-                              style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          CustomSwitch(
-                            value: currentController.isGridEnabled,
-                            onChanged: (bool value) {
-                              currentController.updateGrid(enabled: value);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.palette_rounded, color: ColorConstants.darkText),
-                      title: const Text('Add as Sticker', style: TextStyle(fontWeight: FontWeight.w600)),
-                      trailing: CustomSwitch(
-                        value: currentController.enableStickers,
-                        onChanged: (bool value) {
-                          currentController.enableStickers = value;
+                          );
+                          if (result == true) {
+                            currentController.loadProjectData();
+                          }
                         },
                       ),
-                    ),
-                  ],
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.indigoAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.dashboard_customize_rounded, color: Colors.indigoAccent, size: 22),
+                        ),
+                        title: const Text('Frames Viewer', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text('${currentController.canvases.length} frames', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FramesReorderScreen(
+                                thumbnails: currentController.thumbnails,
+                                currentIndex: currentController.currentIndex,
+                              ),
+                            ),
+                          );
+                          if (result != null && result is Map<String, dynamic>) {
+                            final order = (result['order'] as List<dynamic>?)?.cast<int>();
+                            final active = result['active'] as int? ?? 0;
+                            if (order != null) {
+                              currentController.applyFramesOrder(order, active);
+                            }
+                          }
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrangeAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.video_library_rounded, color: Colors.deepOrangeAccent, size: 22),
+                        ),
+                        title: const Text('Import Video', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text('Trim and extract video frames into canvas', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final ImagePicker picker = ImagePicker();
+                          final XFile? file = await picker.pickVideo(source: ImageSource.gallery);
+                          if (file == null) return;
+
+                          final trimmedFrames = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => VideoTrimmingScreen(videoFile: File(file.path)),
+                            ),
+                          );
+
+                          if (trimmedFrames != null && trimmedFrames is List<String>) {
+                            await currentController.importVideoFrames(trimmedFrames);
+                          }
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurpleAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.aspect_ratio_rounded, color: Colors.deepPurpleAccent, size: 22),
+                        ),
+                        title: const Text('Canvas Size', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(canvasSizeLabel, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          int initW = 1280;
+                          int initH = 720;
+                          String initName = 'Landscape (16:9)';
+                          if ((ratio - 1.0).abs() < 0.05) {
+                            initW = 1000;
+                            initH = 1000;
+                            initName = 'Square (1:1)';
+                          } else if ((ratio - 9.0 / 16.0).abs() < 0.05) {
+                            initW = 720;
+                            initH = 1280;
+                            initName = 'Portrait (9:16)';
+                          } else if ((ratio - 4.0 / 3.0).abs() < 0.05) {
+                            initW = 1024;
+                            initH = 768;
+                            initName = 'Standard (4:3)';
+                          }
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CanvasSizeScreen(
+                                initialWidth: initW,
+                                initialHeight: initH,
+                                initialName: initName,
+                              ),
+                            ),
+                          );
+                          if (result != null && result is Map<String, dynamic>) {
+                            final double? newRatio = result['aspectRatio'] as double?;
+                            if (newRatio != null) {
+                              currentController.aspectRatio = newRatio;
+                            }
+                          }
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.speed_rounded, color: Colors.teal, size: 22),
+                        ),
+                        title: const Text('Frames per second', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text('${currentController.fps} FPS', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FpsScreen(initialFps: currentController.fps),
+                            ),
+                          );
+                          if (result != null && result is int) {
+                            currentController.fps = result;
+                          }
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.wallpaper_rounded, color: Colors.blueAccent, size: 22),
+                        ),
+                        title: const Text('Background', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(bgLabel, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => BackgroundPresetsScreen(
+                                initialPattern: currentController.globalBackground.pattern,
+                              ),
+                            ),
+                          );
+                          if (result != null && result is Map<String, dynamic>) {
+                            final String? pattern = result['pattern'] as String?;
+                            currentController.globalBackground = currentController.globalBackground.copyWith(
+                              pattern: pattern,
+                            );
+                          }
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.layers_rounded, color: Colors.amber, size: 22),
+                        ),
+                        title: const Text('Onion', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text('Ghost previous/next frames', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showOnionSettingsSheet(context, currentController);
+                              },
+                              child: const Text(
+                                'Edit',
+                                style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CustomSwitch(
+                              value: currentController.isOnionEnabled,
+                              onChanged: (bool value) {
+                                currentController.updateOnion(enabled: value);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.cyan.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.grid_on_rounded, color: Colors.cyan, size: 22),
+                        ),
+                        title: const Text('Grid', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text('Alignment and spacing guide', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showGridSettingsSheet(context, currentController);
+                              },
+                              child: const Text(
+                                'Edit',
+                                style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            CustomSwitch(
+                              value: currentController.isGridEnabled,
+                              onChanged: (bool value) {
+                                currentController.updateGrid(enabled: value);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.pinkAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.palette_rounded, color: Colors.pinkAccent, size: 22),
+                        ),
+                        title: const Text('Add as Sticker', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text('Treat strokes as selectable objects', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: CustomSwitch(
+                          value: currentController.enableStickers,
+                          onChanged: (bool value) {
+                            currentController.enableStickers = value;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

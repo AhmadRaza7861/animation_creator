@@ -59,10 +59,9 @@ class EditorController extends ChangeNotifier {
     required this.repository,
     this.projectId,
   }) {
+    _addNewCanvas(initial: true);
     if (projectId != null) {
       loadProjectData();
-    } else {
-      _addNewCanvas(initial: true);
     }
   }
 
@@ -122,7 +121,13 @@ class EditorController extends ChangeNotifier {
   List<ui.Image?> get thumbnails => _thumbnails;
   CanvasBackground get globalBackground => _globalBackground;
   int get currentIndex => _currentIndex;
-  DrawingController get drawingController => _canvases[_currentIndex];
+  DrawingController get drawingController {
+    if (_canvases.isEmpty) {
+      _addNewCanvas(initial: true);
+    }
+    final int safeIndex = _currentIndex.clamp(0, _canvases.length - 1);
+    return _canvases[safeIndex];
+  }
   bool get isLoadingProject => _isLoadingProject;
 
   double? get aspectRatio => _aspectRatio;
@@ -634,6 +639,65 @@ class EditorController extends ChangeNotifier {
     _addNewCanvas(atIndex: targetIndex);
   }
 
+  Future<void> importVideoFrames(List<String> framePaths) async {
+    if (framePaths.isEmpty) return;
+
+    final int targetStartIndex = _currentIndex.clamp(0, _canvases.isNotEmpty ? _canvases.length - 1 : 0);
+
+    for (int i = 0; i < framePaths.length; i++) {
+      final path = framePaths[i];
+      try {
+        final File file = File(path);
+        if (!await file.exists()) continue;
+        final Uint8List bytes = await file.readAsBytes();
+        final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+        final ui.FrameInfo fi = await codec.getNextFrame();
+        final ui.Image image = fi.image;
+
+        final imageContent = ImageContent(image, imageUrl: path);
+        imageContent.startPoint = Offset.zero;
+        imageContent.size = Offset.zero;
+
+        final int frameIndex = targetStartIndex + i;
+
+        if (frameIndex < _canvases.length) {
+          // Existing frame: insert video frame underneath existing drawings
+          final existingCanvas = _canvases[frameIndex];
+          existingCanvas.insertContentAsBase(imageContent);
+          _thumbnails[frameIndex] = image;
+        } else {
+          // Additional frame: append new canvas frame
+          final newCanvas = DrawingController();
+          newCanvas.drawConfig.value = newCanvas.drawConfig.value.copyWith(
+            strokeWidth: _globalStrokeWidth,
+            size: drawingControllerSize,
+          );
+          newCanvas.drawConfig.addListener(_onDrawConfigChanged);
+          newCanvas.interceptDraw = _createInterceptDraw(newCanvas);
+          newCanvas.realTimeSnapshot.addListener(() {
+            final idx = _canvases.indexOf(newCanvas);
+            if (idx != -1) {
+              _thumbnails[idx] = newCanvas.realTimeSnapshot.value;
+              notifyListeners();
+            }
+          });
+
+          newCanvas.addContent(imageContent);
+          _canvases.add(newCanvas);
+          _thumbnails.add(image);
+        }
+      } catch (e) {
+        debugPrint('Error importing video frame $path: $e');
+      }
+    }
+
+    if (_canvases.isNotEmpty) {
+      _currentIndex = targetStartIndex.clamp(0, _canvases.length - 1);
+    }
+    _activeSticker = null;
+    notifyListeners();
+  }
+
   void deleteFrame(int index) {
     if (_canvases.length <= 1) return;
     final controller = _canvases.removeAt(index);
@@ -665,6 +729,22 @@ class EditorController extends ChangeNotifier {
     } else if (_currentIndex < oldIndex && _currentIndex >= newIndex) {
       _currentIndex += 1;
     }
+    notifyListeners();
+  }
+
+  void applyFramesOrder(List<int> order, int activeIndex) {
+    if (order.length != _canvases.length) return;
+    final List<DrawingController> newCanvases = [];
+    final List<ui.Image?> newThumbs = [];
+    for (final idx in order) {
+      newCanvases.add(_canvases[idx]);
+      newThumbs.add(_thumbnails[idx]);
+    }
+    _canvases.clear();
+    _canvases.addAll(newCanvases);
+    _thumbnails.clear();
+    _thumbnails.addAll(newThumbs);
+    _currentIndex = activeIndex.clamp(0, _canvases.length - 1);
     notifyListeners();
   }
 

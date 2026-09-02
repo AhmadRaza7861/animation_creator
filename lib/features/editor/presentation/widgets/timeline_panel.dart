@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../controllers/editor_providers.dart';
 import 'canvas_selector.dart';
 import '../screens/gallery_screen.dart';
-import '../screens/frames_reorder_screen.dart';
 import '../screens/video_trimming_screen.dart';
 import '../screens/animation_preview_screen.dart';
 import 'package:image_picker/image_picker.dart';
@@ -32,37 +31,6 @@ class TimelinePanel extends ConsumerWidget {
       );
     }
 
-    void openFramesReorder() async {
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => FramesReorderScreen(
-            thumbnails: controller.thumbnails,
-            currentIndex: controller.currentIndex,
-          ),
-        ),
-      );
-
-      if (result != null && result is Map<String, dynamic>) {
-        final List<int> order = result['order'] as List<int>;
-        final int active = result['active'] as int;
-
-        // Reorder canvases according to the returned order list
-        final originalCanvases = List.from(controller.canvases);
-        final originalThumbs = List.from(controller.thumbnails);
-
-        controller.canvases.clear();
-        controller.thumbnails.clear();
-
-        for (int index in order) {
-          controller.canvases.add(originalCanvases[index]);
-          controller.thumbnails.add(originalThumbs[index]);
-        }
-
-        controller.selectCanvas(active);
-      }
-    }
-
     void importVideo() async {
       final ImagePicker picker = ImagePicker();
       final XFile? file = await picker.pickVideo(source: ImageSource.gallery);
@@ -76,12 +44,7 @@ class TimelinePanel extends ConsumerWidget {
       );
 
       if (trimmedFrames != null && trimmedFrames is List<String>) {
-        // Load the extracted frame files into the animation timeline.
-        for (final path in trimmedFrames) {
-          controller.addFrame();
-          // We can optionally paint the frame image as background or insert it.
-          // For simplicity, matching MyHomePage's original implementation.
-        }
+        await controller.importVideoFrames(trimmedFrames);
       }
     }
 

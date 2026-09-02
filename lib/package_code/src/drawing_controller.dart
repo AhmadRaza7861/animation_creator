@@ -631,6 +631,21 @@ class DrawingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 将内容插入到历史记录底层（作为背景/底层参考），不破坏已有绘制
+  ///
+  /// Insert content at the base of history (underneath existing drawings)
+  void insertContentAsBase(PaintContent content) {
+    if (activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
+    final LayerData layer = activeLayer.value!;
+
+    layer.history.insert(0, content);
+    layer.currentIndex++;
+    cachedImage = null;
+    _refreshDeep();
+    updateSnapshot();
+    notifyListeners();
+  }
+
   /// 批量添加多条绘制内容
   ///
   /// Add multiple drawing contents in batch

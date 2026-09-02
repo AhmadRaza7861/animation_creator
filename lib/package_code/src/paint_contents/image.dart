@@ -1,6 +1,5 @@
 import 'dart:ui' as ui;
 import 'package:flutter/painting.dart';
-import 'package:flutter/foundation.dart';
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
 import 'paint_content.dart';
@@ -44,16 +43,16 @@ class ImageContent extends PaintContent {
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (image == null) return;
-    debugPrint('ImageContent.draw: imageUrl=$imageUrl, size=$size, this.size=${this.size}, imageSize=(${image!.width}, ${image!.height})');
     final bool isAsset = imageUrl != null && imageUrl!.startsWith('assets/');
-    final Rect rect = isAsset
+    final bool isZeroSize = this.size == Offset.zero || (this.size.dx == 0 && this.size.dy == 0);
+    final Rect rect = (isAsset || isZeroSize)
         ? (Offset.zero & size)
         : Rect.fromPoints(startPoint, startPoint + this.size);
     paintImage(
       canvas: canvas,
       rect: rect,
       image: image!,
-      fit: isAsset ? BoxFit.contain : BoxFit.fill,
+      fit: BoxFit.contain,
     );
   }
 

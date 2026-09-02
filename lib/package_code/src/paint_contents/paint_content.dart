@@ -20,7 +20,7 @@ abstract class PaintContent {
   /// 画笔配置
   ///
   /// Paint configuration for drawing
-  late Paint paint;
+  Paint paint = Paint();
 
   /// 复制实例，避免对象引用传递
   ///
