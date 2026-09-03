@@ -234,8 +234,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     onTap: () {
                       controller.currentSubMenu = 'shapes';
                       controller.activeCategory = 'Shapes';
-                      controller.drawingController.setPaintContent(Pentagon());
-                      controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                      controller.selectShape(controller.selectedShape);
                     },
                   ),
                   _bottomToolbarCategoryItem(
@@ -495,56 +494,42 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
               children: [
                 _bottomSubToolItem(
                   label: 'Heart',
-                  icon: Icons.favorite_border_rounded,
-                  isActive: controller.drawingController.drawConfig.value.contentType == Heart,
+                  svgAsset: AssetConstants.heart,
+                  isActive: controller.selectedShape == 'heart',
                   onTap: () {
-                    controller.drawingController.setPaintContent(Heart());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
-                  },
-                ),
-                _bottomSubToolItem(
-                  label: 'Pentagon',
-                  icon: Icons.pentagon_outlined,
-                  isActive: controller.drawingController.drawConfig.value.contentType == Pentagon,
-                  onTap: () {
-                    controller.drawingController.setPaintContent(Pentagon());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                    controller.selectShape('heart');
                   },
                 ),
                 _bottomSubToolItem(
                   label: 'Circle',
-                  icon: Icons.circle_outlined,
-                  isActive: controller.drawingController.drawConfig.value.contentType == Circle,
+                  svgAsset: AssetConstants.circle,
+                  isActive: controller.selectedShape == 'circle',
                   onTap: () {
-                    controller.drawingController.setPaintContent(Circle());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                    controller.selectShape('circle');
                   },
                 ),
                 _bottomSubToolItem(
-                  label: 'Cube',
-                  icon: Icons.inventory_2_outlined,
-                  isActive: controller.drawingController.drawConfig.value.contentType == CubeShape,
+                  label: 'Square',
+                  svgAsset: AssetConstants.square,
+                  isActive: controller.selectedShape == 'square',
                   onTap: () {
-                    controller.drawingController.setPaintContent(CubeShape());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                    controller.selectShape('square');
                   },
                 ),
                 _bottomSubToolItem(
-                  label: 'Cylinder',
-                  icon: Icons.data_usage_rounded,
-                  isActive: controller.drawingController.drawConfig.value.contentType == CylinderShape,
+                  label: 'Triangle',
+                  svgAsset: AssetConstants.triangle,
+                  isActive: controller.selectedShape == 'triangle',
                   onTap: () {
-                    controller.drawingController.setPaintContent(CylinderShape());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                    controller.selectShape('triangle');
                   },
                 ),
                 _bottomSubToolItem(
                   label: 'Line',
-                  icon: Icons.horizontal_rule_rounded,
-                  isActive: controller.drawingController.drawConfig.value.contentType == SimpleLine,
+                  svgAsset: AssetConstants.line_icon,
+                  isActive: controller.selectedShape == 'line',
                   onTap: () {
-                    controller.drawingController.setPaintContent(SimpleLine());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                    controller.selectShape('line');
                   },
                 ),
               ],
@@ -557,26 +542,51 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
 
   Widget _bottomSubToolItem({
     required String label,
-    required IconData icon,
+    IconData? icon,
+    String? svgAsset,
     required bool isActive,
     required VoidCallback onTap,
   }) {
+    final Color activeColor = ColorConstants.accent;
+    final Color inactiveColor = Colors.grey.shade600;
+    final Color itemColor = isActive ? activeColor : inactiveColor;
+
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? ColorConstants.accent : Colors.grey.shade600, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? ColorConstants.accent : Colors.grey.shade600,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (svgAsset != null)
+              SvgPicture.asset(
+                svgAsset,
+                width: 22,
+                height: 22,
+                colorFilter: ColorFilter.mode(
+                  itemColor,
+                  BlendMode.srcIn,
+                ),
+              )
+            else if (icon != null)
+              Icon(icon, color: itemColor, size: 22),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: itemColor,
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

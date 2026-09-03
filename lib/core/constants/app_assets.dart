@@ -31,4 +31,9 @@ class AssetConstants {
   static const String smudge_icon = 'assets/icons/smudge_icon.svg';
   static const String blur_icon = 'assets/icons/blur_icon.svg';
   static const String eyedropper = 'assets/icons/eyedropper.svg';
+  static const String heart = 'assets/icons/heart.svg';
+  static const String circle = 'assets/icons/circle.svg';
+  static const String square = 'assets/icons/square.svg';
+  static const String triangle = 'assets/icons/triangle.svg';
+  static const String line_icon = 'assets/icons/line_icon.svg';
 }

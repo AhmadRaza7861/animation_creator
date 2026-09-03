@@ -98,6 +98,7 @@ class EditorController extends ChangeNotifier {
   bool _isTextToolSelected = false;
   String _currentSubMenu = 'none';
   String _selectedSubTool = 'pen';
+  String _selectedShape = 'heart';
   bool _showRulerMenu = false;
   bool _showLayerPanel = false;
   Offset? _layersPanelPosition;
@@ -153,6 +154,7 @@ class EditorController extends ChangeNotifier {
   bool get isTextToolSelected => _isTextToolSelected;
   String get currentSubMenu => _currentSubMenu;
   String get selectedSubTool => _selectedSubTool;
+  String get selectedShape => _selectedShape;
   bool get showRulerMenu => _showRulerMenu;
   bool get showLayerPanel => _showLayerPanel;
   Offset? get layersPanelPosition => _layersPanelPosition;
@@ -179,6 +181,35 @@ class EditorController extends ChangeNotifier {
 
   set selectedSubTool(String val) {
     _selectedSubTool = val;
+    notifyListeners();
+  }
+
+  set selectedShape(String val) {
+    _selectedShape = val;
+    notifyListeners();
+  }
+
+  void selectShape(String shape) {
+    _selectedShape = shape;
+    switch (shape) {
+      case 'line':
+        drawingController.setPaintContent(SimpleLine());
+        break;
+      case 'circle':
+        drawingController.setPaintContent(Circle());
+        break;
+      case 'square':
+        drawingController.setPaintContent(Rectangle());
+        break;
+      case 'triangle':
+        drawingController.setPaintContent(Triangle());
+        break;
+      case 'heart':
+      default:
+        drawingController.setPaintContent(Heart());
+        break;
+    }
+    drawingController.setStyle(strokeWidth: _globalStrokeWidth);
     notifyListeners();
   }
 
@@ -1214,6 +1245,27 @@ class EditorController extends ChangeNotifier {
           B: triangle.B - bounds.topLeft,
           C: triangle.C - bounds.topLeft,
           paint: triangle.paint,
+        );
+
+        _activeSticker = ActiveShapeSticker(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          content: localContent,
+          offset: bounds.center,
+          size: bounds.size,
+        );
+        updateSnapshot();
+        notifyListeners();
+        return true;
+      } else if (content is Heart && content.startPoint != null && content.endPoint != null) {
+        final path = content.getPath();
+        final bounds = path.getBounds().inflate(content.paint.strokeWidth / 2);
+
+        if (bounds.isEmpty) return false;
+
+        final localContent = Heart.data(
+          startPoint: content.startPoint! - bounds.topLeft,
+          endPoint: content.endPoint! - bounds.topLeft,
+          paint: content.paint,
         );
 
         _activeSticker = ActiveShapeSticker(
