@@ -73,16 +73,26 @@ class TimelinePanel extends ConsumerWidget {
       if (action == 'copy') {
         controller.copyFrame(index);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Frame copied to clipboard')),
+          const SnackBar(
+            content: Text('Frame copied to clipboard'),
+            duration: Duration(milliseconds: 1200),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       } else if (action == 'paste') {
         if (controller.hasClipboardFrame) {
           controller.pasteFrame(index);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No frame in clipboard')),
+            const SnackBar(
+              content: Text('No frame in clipboard'),
+              duration: Duration(milliseconds: 1200),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
+      } else if (action == 'duplicate') {
+        controller.duplicateFrame(index);
       } else if (action == 'left') {
         controller.addFrameAt(index, isRight: false);
       } else if (action == 'right') {
@@ -92,7 +102,11 @@ class TimelinePanel extends ConsumerWidget {
           controller.deleteFrame(index);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cannot delete the last frame')),
+            const SnackBar(
+              content: Text('Cannot delete the last frame'),
+              duration: Duration(milliseconds: 1200),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       }

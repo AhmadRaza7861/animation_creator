@@ -852,10 +852,68 @@ class EditorController extends ChangeNotifier {
 
   void pasteFrame(int index) async {
     if (_clipboardFrame == null) return;
-    final pasted = await _createControllerFromData(_clipboardFrame!);
-    _canvases.insert(index + 1, pasted);
-    _thumbnails.insert(index + 1, null);
-    _currentIndex = index + 1;
+    if (index < 0 || index >= _canvases.length) return;
+
+    final targetController = _canvases[index];
+    final layersData = _clipboardFrame!['layers'] as List<dynamic>? ?? [];
+
+    final List<LayerData> copiedLayers = [];
+    for (final lData in layersData) {
+      final lMap = lData as Map<String, dynamic>;
+      final historyData = lMap['history'] as List<dynamic>? ?? [];
+      final List<PaintContent> history = [];
+      for (final hData in historyData) {
+        final hMap = hData as Map<String, dynamic>;
+        final content = decodePaintContent(hMap['type'] as String, hMap);
+        if (content != null) {
+          await _rehydrateContent(content, hMap);
+          history.add(content);
+        }
+      }
+      if (history.isNotEmpty) {
+        copiedLayers.add(
+          LayerData(
+            id: 'layer_${DateTime.now().millisecondsSinceEpoch}_${copiedLayers.length}',
+            name: lMap['name'] as String? ?? 'Pasted Layer',
+            isVisible: lMap['isVisible'] as bool? ?? true,
+            isLocked: false,
+            opacity: (lMap['opacity'] as num?)?.toDouble() ?? 1.0,
+            blendMode: BlendMode.values[(lMap['blendMode'] as int?) ?? 0],
+            history: history,
+            currentIndex: history.length,
+          ),
+        );
+      }
+    }
+
+    if (copiedLayers.isEmpty) return;
+
+    if (targetController.layers.isEmpty) {
+      targetController.layers.add(LayerData(id: 'layer_0', name: 'Background'));
+    }
+    targetController.activeLayer.value ??= targetController.layers.first;
+
+    final bool isTargetEmpty = targetController.layers.every((l) => l.history.isEmpty || l.currentIndex == 0);
+
+    if (isTargetEmpty) {
+      targetController.layers.clear();
+      targetController.layers.addAll(copiedLayers);
+      targetController.activeLayer.value = targetController.layers.first;
+    } else {
+      if (copiedLayers.length == 1) {
+        targetController.activeLayer.value!.isLocked = false;
+        targetController.addContents(copiedLayers.first.history);
+      } else {
+        for (final cl in copiedLayers.reversed) {
+          targetController.layers.insert(0, cl);
+        }
+        targetController.activeLayer.value = targetController.layers.first;
+      }
+    }
+
+    targetController.forceRefreshLayers();
+    targetController.updateSnapshot(includeBackground: false);
+    _currentIndex = index;
     notifyListeners();
   }
 
