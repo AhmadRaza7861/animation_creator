@@ -87,6 +87,7 @@ class CanvasArea extends ConsumerWidget {
           children: [
             DrawingBoard(
               transformationController: transformationController,
+              alignment: Alignment.center,
               controller: controller.drawingController,
               isGridEnabled: controller.isGridEnabled,
               gridOpacity: controller.gridOpacity,
@@ -134,8 +135,8 @@ class CanvasArea extends ConsumerWidget {
                   final bg = controller.globalBackground;
 
                   return Container(
-                    width: config.size?.width ?? c.maxWidth,
-                    height: config.size?.height ?? c.maxHeight,
+                    width: c.maxWidth,
+                    height: c.maxHeight,
                     color: bg.pattern == 'blueprint'
                         ? const Color(0xFF1E3D59)
                         : (bg.pattern == 'graph' ? const Color(0xFFF1F8F6) : bg.color),

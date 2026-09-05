@@ -759,15 +759,27 @@ class _CanvasSelectorState extends State<CanvasSelector> {
 
     return Container(
       color: bgColor,
-      child: bg.image != null
-          ? Opacity(
-              opacity: bg.imageOpacity,
-              child: RawImage(
-                image: bg.image,
-                fit: BoxFit.cover,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (bg.image != null)
+            Positioned.fill(
+              child: Opacity(
+                opacity: bg.imageOpacity,
+                child: RawImage(
+                  image: bg.image,
+                  fit: BoxFit.cover,
+                ),
               ),
-            )
-          : null,
+            ),
+          if (bg.pattern != null && bg.pattern != 'none')
+            Positioned.fill(
+              child: CustomPaint(
+                painter: PreviewPatternPainter(bg.pattern!),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

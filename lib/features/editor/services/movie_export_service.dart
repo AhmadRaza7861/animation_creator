@@ -8,6 +8,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../presentation/controllers/editor_controller.dart';
+import '../../projects/presentation/widgets/preview_pattern_painter.dart';
 
 class ExportOptions {
   final String movieName;
@@ -41,6 +42,22 @@ class MovieExportService {
 
     onProgress(0.05, 'Preparing frames...');
 
+    // Preload background image if imagePath exists and image is null
+    CanvasBackground effectiveBg = globalBackground;
+    if (effectiveBg.image == null && effectiveBg.imagePath != null) {
+      try {
+        final file = File(effectiveBg.imagePath!);
+        if (await file.exists()) {
+          final bytes = await file.readAsBytes();
+          final codec = await ui.instantiateImageCodec(bytes);
+          final frame = await codec.getNextFrame();
+          effectiveBg = effectiveBg.copyWith(image: frame.image);
+        }
+      } catch (e) {
+        debugPrint('Failed to decode export background image: $e');
+      }
+    }
+
     // 1. Create temporary directory for frame images
     final tempDir = await getTemporaryDirectory();
     final framesDir = Directory('${tempDir.path}/export_frames_${DateTime.now().millisecondsSinceEpoch}');
@@ -67,7 +84,7 @@ class MovieExportService {
         final Uint8List pngBytes = await _renderCanvasToPng(
           controller: canvasController,
           targetSize: targetSize,
-          background: globalBackground,
+          background: effectiveBg,
           transparentBackground: options.transparentBackground,
           includeWatermark: options.includeWatermark,
         );
@@ -117,6 +134,7 @@ class MovieExportService {
           '-i', inputPattern,
           '-c:v', 'libx264',
           '-pix_fmt', 'yuv420p',
+          '-preset', 'ultrafast',
           '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2',
           outputFilePath,
         ];
@@ -134,7 +152,6 @@ class MovieExportService {
             final failLogs = await session.getAllLogsAsString();
             debugPrint('FFmpeg primary attempt failed logs: $failLogs');
             
-            // If primary GIF encoding with palettegen fails, retry with simple GIF filter
             if (isGif) {
               debugPrint('Retrying GIF export with standard filter...');
               final fallbackArgs = [
@@ -213,7 +230,10 @@ class MovieExportService {
 
     // 1. Draw Background
     if (!transparentBackground) {
-      final Paint bgPaint = Paint()..color = background.color;
+      final Color bgColor = background.pattern == 'blueprint'
+          ? const Color(0xFF1E3D59)
+          : (background.pattern == 'graph' ? const Color(0xFFF1F8F6) : background.color);
+      final Paint bgPaint = Paint()..color = bgColor;
       canvas.drawRect(Offset.zero & sourceSize, bgPaint);
 
       if (background.image != null) {
@@ -222,6 +242,11 @@ class MovieExportService {
         final Rect src = Rect.fromLTWH(0, 0, background.image!.width.toDouble(), background.image!.height.toDouble());
         final Rect dst = Offset.zero & sourceSize;
         canvas.drawImageRect(background.image!, src, dst, imgPaint);
+      }
+
+      if (background.pattern != null && background.pattern != 'none') {
+        final painter = PreviewPatternPainter(background.pattern!);
+        painter.paint(canvas, sourceSize);
       }
     }
 

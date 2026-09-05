@@ -319,7 +319,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         }
       } else {
         canvasesData.add({
-          'size': {'width': _canvasWidth.toDouble(), 'height': _canvasHeight.toDouble()},
+          'size': null,
           'backgroundColor': _backgroundColor.value,
           'strokeWidth': 10.0,
           'strokeColor': Colors.black.value,

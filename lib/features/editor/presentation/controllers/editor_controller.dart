@@ -419,9 +419,9 @@ class EditorController extends ChangeNotifier {
       final bgMap = data.state['globalBackground'] as Map<String, dynamic>?;
       if (bgMap != null) {
         _globalBackground = _globalBackground.copyWith(
-          color: Color(bgMap['color'] as int),
+          color: Color(bgMap['color'] as int? ?? Colors.white.value),
           imagePath: bgMap['imagePath'] as String?,
-          imageOpacity: bgMap['imageOpacity'] as double,
+          imageOpacity: (bgMap['imageOpacity'] as num?)?.toDouble() ?? 1.0,
           pattern: bgMap['pattern'] as String?,
           clearImage: bgMap['imagePath'] == null,
           clearPattern: bgMap['pattern'] == null,
