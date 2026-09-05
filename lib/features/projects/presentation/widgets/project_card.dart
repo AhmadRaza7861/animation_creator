@@ -23,7 +23,8 @@ class ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final String timeAgo = _formatTimeAgo(project.lastModified);
     final int fps = project.fps ?? 12;
-    final int frames = project.frameCount ?? 0;
+    final int rawFrames = project.frameCount ?? 0;
+    final int frames = rawFrames <= 0 ? 1 : rawFrames;
 
     // Calculate duration
     final double durationSec = fps > 0 ? (frames / fps) : 0;
@@ -59,7 +60,7 @@ class ProjectCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Top Canvas Artwork Preview (Solid Background, Never Transparent)
+              // 1. Top Canvas Artwork Preview (Pure Solid White Background)
               Expanded(
                 child: Container(
                   decoration: const BoxDecoration(
@@ -74,7 +75,7 @@ class ProjectCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Base Canvas with Artwork
+                      // Base Canvas with Artwork or Clean Placeholder
                       _buildCanvasArtwork(),
 
                       // Top Left: FPS Badge
@@ -84,7 +85,7 @@ class ProjectCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.92),
+                            color: Colors.white.withValues(alpha: 0.94),
                             borderRadius: BorderRadius.circular(7),
                             border: Border.all(
                               color: const Color(0x1A000000),
@@ -355,53 +356,38 @@ class ProjectCard extends StatelessWidget {
 
   Widget _buildPlaceholder() {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFFFFFBF5),
-            Color(0xFFFFF2E2),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      color: Colors.white,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFFF7F8FA),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFFFFDEC0),
-                  width: 1.2,
+                  color: const Color(0xFFE5E8EF),
+                  width: 1.0,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: ColorConstants.primary.withValues(alpha: 0.12),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: const Center(
                 child: Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 20,
-                  color: ColorConstants.primary,
+                  Icons.edit_note_rounded,
+                  size: 24,
+                  color: Color(0xFF8E97A6),
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 7),
             const Text(
-              'Canvas Ready',
+              'Blank Canvas',
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFFC78434),
+                color: Color(0xFF8E97A6),
+                letterSpacing: 0.2,
               ),
             ),
           ],
@@ -411,10 +397,13 @@ class ProjectCard extends StatelessWidget {
   }
 
   String _formatDuration(double durationSec) {
-    if (durationSec <= 0) return '0:00';
+    if (durationSec <= 0) return '0:01';
     final int totalSeconds = durationSec.round();
     final int minutes = totalSeconds ~/ 60;
     final int seconds = totalSeconds % 60;
+    if (minutes == 0 && seconds == 0) {
+      return '0:01';
+    }
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 

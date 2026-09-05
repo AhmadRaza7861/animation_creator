@@ -137,7 +137,9 @@ class ProjectRepository {
           lastModified: DateTime.now(),
           thumbnailPath: thumbnailPath ?? oldMeta.thumbnailPath,
           fps: state['fps'] as int? ?? oldMeta.fps,
-          frameCount: (state['canvases'] as List?)?.length ?? oldMeta.frameCount,
+          frameCount: ((state['canvases'] as List?)?.length ?? 0) > 0
+              ? (state['canvases'] as List).length
+              : (oldMeta.frameCount ?? 1),
         );
       } else {
         meta = ProjectMeta(
@@ -147,7 +149,9 @@ class ProjectRepository {
           lastModified: DateTime.now(),
           thumbnailPath: thumbnailPath,
           fps: state['fps'] as int? ?? 12,
-          frameCount: (state['canvases'] as List?)?.length ?? 0,
+          frameCount: ((state['canvases'] as List?)?.length ?? 0) > 0
+              ? (state['canvases'] as List).length
+              : 1,
         );
       }
 

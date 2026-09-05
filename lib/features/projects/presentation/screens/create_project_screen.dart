@@ -317,6 +317,26 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
             'activeLayerId': 'layer_0',
           });
         }
+      } else {
+        canvasesData.add({
+          'size': {'width': _canvasWidth.toDouble(), 'height': _canvasHeight.toDouble()},
+          'backgroundColor': _backgroundColor.value,
+          'strokeWidth': 10.0,
+          'strokeColor': Colors.black.value,
+          'layers': [
+            {
+              'id': 'layer_0',
+              'name': 'Layer 1',
+              'isVisible': true,
+              'isLocked': false,
+              'opacity': 1.0,
+              'blendMode': BlendMode.srcOver.index,
+              'currentIndex': 0,
+              'history': [],
+            }
+          ],
+          'activeLayerId': 'layer_0',
+        });
       }
 
       final Map<String, dynamic> state = {
