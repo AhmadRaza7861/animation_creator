@@ -261,25 +261,30 @@ class MovieExportService {
   }
 
   static void _drawWatermark(Canvas canvas, Size canvasSize) {
-    const String text = 'FlipaClip';
-    const double fontSize = 16.0;
+    const String text = 'Clipax';
+    const double fontSize = 15.0;
 
     final TextPainter textPainter = TextPainter(
       text: const TextSpan(
-        text: text,
-        style: TextStyle(
-          color: Colors.white70,
-          fontSize: fontSize,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'Roboto',
-          shadows: [
-            Shadow(
-              color: Colors.black45,
-              offset: Offset(1, 1),
-              blurRadius: 3,
+        children: [
+          TextSpan(
+            text: text,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: fontSize,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
-          ],
-        ),
+          ),
+          TextSpan(
+            text: ' •',
+            style: TextStyle(
+              color: Color(0xFFFF9318),
+              fontSize: fontSize,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
       textDirection: TextDirection.ltr,
     );
@@ -289,18 +294,18 @@ class MovieExportService {
     final double margin = 16.0;
     final Offset position = Offset(margin, canvasSize.height - textPainter.height - margin);
 
-    // Draw subtle translucent badge behind watermark
+    // Draw dark rounded pill badge behind watermark
     final RRect bgRRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(
-        position.dx - 6,
-        position.dy - 3,
-        textPainter.width + 12,
-        textPainter.height + 6,
+        position.dx - 8,
+        position.dy - 4,
+        textPainter.width + 16,
+        textPainter.height + 8,
       ),
-      const Radius.circular(8),
+      const Radius.circular(10),
     );
 
-    final Paint bgPaint = Paint()..color = Colors.black.withValues(alpha: 0.25);
+    final Paint bgPaint = Paint()..color = const Color(0xFF1E1B24).withValues(alpha: 0.65);
     canvas.drawRRect(bgRRect, bgPaint);
 
     textPainter.paint(canvas, position);
@@ -310,7 +315,7 @@ class MovieExportService {
     Directory? exportDir;
     try {
       final appDocs = await getApplicationDocumentsDirectory();
-      final localMovies = Directory('${appDocs.path}/Movies/FlipaClip');
+      final localMovies = Directory('${appDocs.path}/Movies/Clipax');
       if (!await localMovies.exists()) {
         await localMovies.create(recursive: true);
       }
@@ -321,7 +326,7 @@ class MovieExportService {
 
     if (exportDir == null || !await exportDir.exists()) {
       final tempDir = await getTemporaryDirectory();
-      final localMovies = Directory('${tempDir.path}/Movies/FlipaClip');
+      final localMovies = Directory('${tempDir.path}/Movies/Clipax');
       if (!await localMovies.exists()) {
         await localMovies.create(recursive: true);
       }

@@ -45,6 +45,7 @@ dependencies:
   material_color_utilities: ^0.13.0
   fluttertoast: ^10.0.0
   share_plus: ^13.3.0
+  gal: ^2.3.3
 
 
 dev_dependencies:

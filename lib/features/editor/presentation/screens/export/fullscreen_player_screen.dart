@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gal/gal.dart';
 import 'package:video_player/video_player.dart';
 
 class FullscreenPlayerScreen extends StatefulWidget {
@@ -25,6 +26,8 @@ class _FullscreenPlayerScreenState extends State<FullscreenPlayerScreen> {
   bool _isInitialized = false;
   bool _showControls = true;
   Timer? _hideControlsTimer;
+  bool _isSaving = false;
+  bool _isSaved = false;
 
   // GIF playback fallback state
   bool _isGif = false;
@@ -42,6 +45,54 @@ class _FullscreenPlayerScreenState extends State<FullscreenPlayerScreen> {
     }
 
     _startHideControlsTimer();
+  }
+
+  Future<void> _saveToGallery() async {
+    if (_isSaving) return;
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      if (_isGif) {
+        await Gal.putImage(widget.filePath, album: 'Clipax');
+      } else {
+        await Gal.putVideo(widget.filePath, album: 'Clipax');
+      }
+
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _isSaved = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF2A2533),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            content: const Text(
+              'Saved to Gallery in "Clipax" album!',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            content: Text('Failed to save: $e'),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _initVideoPlayer() async {
@@ -167,28 +218,94 @@ class _FullscreenPlayerScreenState extends State<FullscreenPlayerScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Top Bar: Close Button
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white24),
-                                ),
-                                child: const Icon(
-                                  Icons.close_rounded,
-                                  color: Colors.white,
-                                  size: 22,
+                        // Top Bar: Close Button & Clipax Brand
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white24),
+                                  ),
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
                                 ),
                               ),
-                            ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text(
+                                      'Clipax',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFFF9318),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      widget.format.toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _saveToGallery,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: _isSaved ? Colors.green.withValues(alpha: 0.8) : Colors.black54,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white24),
+                                  ),
+                                  child: _isSaving
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(10.0),
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Icon(
+                                          _isSaved ? Icons.check_rounded : Icons.download_rounded,
+                                          color: Colors.white,
+                                          size: 22,
+                                        ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
 
@@ -276,12 +393,13 @@ class _FullscreenPlayerScreenState extends State<FullscreenPlayerScreen> {
                               if (!_isGif && _videoController != null && totalDuration.inMilliseconds > 0)
                                 SliderTheme(
                                   data: SliderTheme.of(context).copyWith(
-                                    activeTrackColor: Colors.white,
-                                    inactiveTrackColor: Colors.white30,
-                                    thumbColor: Colors.white,
+                                    activeTrackColor: const Color(0xFFFF9318),
+                                    inactiveTrackColor: Colors.white24,
+                                    thumbColor: const Color(0xFFFF9318),
                                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                                    trackHeight: 3.0,
+                                    overlayColor: const Color(0xFFFF9318).withValues(alpha: 0.2),
+                                    trackHeight: 3.5,
                                   ),
                                   child: Slider(
                                     value: currentPos.inMilliseconds.clamp(0, totalDuration.inMilliseconds).toDouble(),
