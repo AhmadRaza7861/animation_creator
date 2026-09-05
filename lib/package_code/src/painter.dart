@@ -149,7 +149,7 @@ class _PainterState extends State<Painter> {
       return;
     }
 
-    if (widget.drawingController.startPoint == pue.localPosition) {
+    if (!widget.drawingController.isDrawingValidContent || widget.drawingController.startPoint == pue.localPosition) {
       widget.drawingController.drawing(pue.localPosition);
     }
 

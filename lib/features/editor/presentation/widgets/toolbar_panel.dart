@@ -19,10 +19,7 @@ import 'sticker_widgets/text_sticker_widget.dart';
 class ToolbarPanel extends ConsumerStatefulWidget {
   final String? projectId;
 
-  const ToolbarPanel({
-    super.key,
-    required this.projectId,
-  });
+  const ToolbarPanel({super.key, required this.projectId});
 
   @override
   ConsumerState<ToolbarPanel> createState() => _ToolbarPanelState();
@@ -41,33 +38,15 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
   Future<ui.Image> _getFileImage(String path) async {
     final Completer<ImageInfo> completer = Completer<ImageInfo>();
     final FileImage img = FileImage(File(path));
-    img.resolve(ImageConfiguration.empty).addListener(
-      ImageStreamListener((ImageInfo info, _) {
-        completer.complete(info);
-      }),
-    );
+    img
+        .resolve(ImageConfiguration.empty)
+        .addListener(
+          ImageStreamListener((ImageInfo info, _) {
+            completer.complete(info);
+          }),
+        );
     final ImageInfo imageInfo = await completer.future;
     return imageInfo.image;
-  }
-
-  Future<ui.Image> _getImage(String path) async {
-    final Completer<ImageInfo> completer = Completer<ImageInfo>();
-    final NetworkImage img = NetworkImage(path);
-    img.resolve(ImageConfiguration.empty).addListener(
-      ImageStreamListener((ImageInfo info, _) {
-        completer.complete(info);
-      }),
-    );
-    final ImageInfo imageInfo = await completer.future;
-    return imageInfo.image;
-  }
-
-  Future<ui.Image> _getAssetImage(String assetPath) async {
-    final ByteData data = await rootBundle.load(assetPath);
-    final Uint8List bytes = data.buffer.asUint8List();
-    final ui.Codec codec = await ui.instantiateImageCodec(bytes);
-    final ui.FrameInfo fi = await codec.getNextFrame();
-    return fi.image;
   }
 
   void _showExportBottomSheet(WidgetRef ref) {
@@ -82,14 +61,25 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.image_rounded, color: Colors.blue),
+                leading: SvgPicture.asset(
+                  AssetConstants.export_icon,
+                  width: 24,
+                  height: 24,
+                  colorFilter: const ColorFilter.mode(
+                    ColorConstants.accent,
+                    BlendMode.srcIn,
+                  ),
+                ),
                 title: const Text('Export Current Frame'),
                 onTap: () async {
                   Navigator.pop(context);
                   if (controller.activeSticker != null) {
                     controller.stampActiveSticker();
                   }
-                  final Uint8List? data = (await controller.drawingController.getImageData())?.buffer.asUint8List();
+                  final Uint8List? data =
+                      (await controller.drawingController.getImageData())
+                          ?.buffer
+                          .asUint8List();
                   if (data == null) return;
                   if (mounted) {
                     showDialog<void>(
@@ -127,7 +117,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                               ),
                               padding: const EdgeInsets.all(20.0),
                               child: SelectableText(
-                                const JsonEncoder.withIndent('  ').convert(controller.drawingController.getJsonList()),
+                                const JsonEncoder.withIndent('  ').convert(
+                                  controller.drawingController.getJsonList(),
+                                ),
                               ),
                             ),
                           ),
@@ -172,9 +164,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
           const SizedBox(width: 16),
           _bottomToolbarCategoryItem(
             label: 'Export',
-            icon: Icons.ios_share_rounded,
+            svgAsset: AssetConstants.export_icon,
             onTap: () => _showExportBottomSheet(ref),
-            color: ColorConstants.accent,
+            color: ColorConstants.text_color,
           ),
           Container(
             height: 36,
@@ -192,93 +184,118 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Brush',
                     svgAsset: AssetConstants.brush_icon,
-                    color: controller.activeCategory == 'Brush' ? ColorConstants.accent : null,
+                    color: controller.activeCategory == 'Brush'
+                        ? ColorConstants.accent
+                        : null,
                     onTap: () {
                       controller.activeCategory = 'Brush';
                       controller.drawingController.activeBrushPresetId = null;
-                      controller.drawingController.setPaintContent(FreehandLine());
-                      controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                      controller.drawingController.setPaintContent(
+                        FreehandLine(),
+                      );
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Erase',
+                    svgAsset: AssetConstants.erase_icon,
+                    color: controller.activeCategory == 'Erase'
+                        ? ColorConstants.accent
+                        : null,
+                    onTap: () {
+                      controller.drawingController.setPaintContent(Eraser());
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                      controller.activeCategory = 'Erase';
                     },
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Paint',
                     svgAsset: AssetConstants.paint_icon,
-                    color: controller.activeCategory == 'Paint' ? ColorConstants.accent : null,
+                    color: controller.activeCategory == 'Paint'
+                        ? ColorConstants.accent
+                        : null,
                     onTap: () {
-                      controller.drawingController.setPaintContent(FillContent());
-                      controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                      controller.drawingController.setPaintContent(
+                        FillContent(),
+                      );
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
                       controller.activeCategory = 'Paint';
                     },
                   ),
+
+                  _bottomToolbarCategoryItem(
+                    label: 'Lasso',
+                    svgAsset: AssetConstants.lesso_icon,
+                    color: controller.activeCategory == 'Lasso'
+                        ? ColorConstants.accent
+                        : null,
+                    onTap: () {
+                      controller.drawingController.setPaintContent(Lasso());
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                      controller.activeCategory = 'Lasso';
+                    },
+                  ),
+
                   _bottomToolbarCategoryItem(
                     label: 'Eyedropper',
                     svgAsset: AssetConstants.eyedropper,
-                    color: controller.activeCategory == 'Eyedropper' ? ColorConstants.accent : null,
+                    color: controller.activeCategory == 'Eyedropper'
+                        ? ColorConstants.accent
+                        : null,
                     onTap: () {
-                      controller.drawingController.setPaintContent(Eyedropper());
+                      controller.drawingController.setPaintContent(
+                        Eyedropper(),
+                      );
                       controller.activeCategory = 'Eyedropper';
-                    },
-                  ),
-                  _bottomToolbarCategoryItem(
-                    label: 'Blur',
-                    svgAsset: AssetConstants.blur_icon,
-                    color: controller.activeCategory == 'Blur' ? ColorConstants.accent : null,
-                    onTap: () {
-                      controller.drawingController.setPaintContent(BlurContent());
-                      controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
-                      controller.activeCategory = 'Blur';
-                    },
-                  ),
-                  _bottomToolbarCategoryItem(
-                    label: 'Smudge',
-                    svgAsset: AssetConstants.smudge_icon,
-                    color: controller.activeCategory == 'Smudge' ? ColorConstants.accent : null,
-                    onTap: () {
-                      controller.drawingController.setPaintContent(SmudgeContent());
-                      controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
-                      controller.activeCategory = 'Smudge';
-                    },
-                  ),
-                  _bottomToolbarCategoryItem(
-                    label: 'Shapes',
-                    svgAsset: AssetConstants.shapes_icon,
-                    color: controller.activeCategory == 'Shapes' ? ColorConstants.accent : null,
-                    onTap: () {
-                      controller.currentSubMenu = 'shapes';
-                      controller.activeCategory = 'Shapes';
-                      controller.selectShape(controller.selectedShape);
                     },
                   ),
                   _bottomToolbarCategoryItem(
                     label: 'Assets',
                     svgAsset: AssetConstants.assets_icon,
-                    color: controller.activeCategory == 'Assets' ? ColorConstants.accent : null,
+                    color: controller.activeCategory == 'Assets'
+                        ? ColorConstants.accent
+                        : null,
                     onTap: () async {
-                      final ImageSource? source = await showModalBottomSheet<ImageSource>(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return SafeArea(
-                            child: Wrap(
-                              children: <Widget>[
-                                ListTile(
-                                  leading: const Icon(Icons.photo_library),
-                                  title: const Text('Photo Gallery'),
-                                  onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+                      final ImageSource? source =
+                          await showModalBottomSheet<ImageSource>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return SafeArea(
+                                child: Wrap(
+                                  children: <Widget>[
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library),
+                                      title: const Text('Photo Gallery'),
+                                      onTap: () => Navigator.of(
+                                        context,
+                                      ).pop(ImageSource.gallery),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_camera),
+                                      title: const Text('Camera'),
+                                      onTap: () => Navigator.of(
+                                        context,
+                                      ).pop(ImageSource.camera),
+                                    ),
+                                  ],
                                 ),
-                                ListTile(
-                                  leading: const Icon(Icons.photo_camera),
-                                  title: const Text('Camera'),
-                                  onTap: () => Navigator.of(context).pop(ImageSource.camera),
-                                ),
-                              ],
-                            ),
+                              );
+                            },
                           );
-                        },
-                      );
 
                       if (source == null) return;
                       try {
-                        final XFile? file = await _picker.pickImage(source: source);
+                        final XFile? file = await _picker.pickImage(
+                          source: source,
+                        );
                         if (file != null) {
                           final ui.Image image = await _getFileImage(file.path);
                           controller.drawingController.setPaintContent(
@@ -290,41 +307,29 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       }
                     },
                   ),
-                  _bottomToolbarCategoryItem(
-                    label: 'Erase',
-                    svgAsset: AssetConstants.erase_icon,
-                    color: controller.activeCategory == 'Erase' ? ColorConstants.accent : null,
-                    onTap: () {
-                      controller.drawingController.setPaintContent(Eraser());
-                      controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
-                      controller.activeCategory = 'Erase';
-                    },
-                  ),
-                  _bottomToolbarCategoryItem(
-                    label: 'Lasso',
-                    svgAsset: AssetConstants.lesso_icon,
-                    color: controller.activeCategory == 'Lasso' ? ColorConstants.accent : null,
-                    onTap: () {
-                      controller.drawingController.setPaintContent(Lasso());
-                      controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
-                      controller.activeCategory = 'Lasso';
-                    },
-                  ),
+
+
                   _bottomToolbarCategoryItem(
                     label: 'Text',
                     svgAsset: AssetConstants.text_icon,
-                    color: controller.isTextToolSelected ? ColorConstants.accent : null,
+                    color: controller.isTextToolSelected
+                        ? ColorConstants.accent
+                        : null,
                     onTap: () {
                       if (controller.drawingController.isCurrentLayerLocked) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Current layer is locked.')),
+                          const SnackBar(
+                            content: Text('Current layer is locked.'),
+                          ),
                         );
                         return;
                       }
-                      controller.isTextToolSelected = !controller.isTextToolSelected;
+                      controller.isTextToolSelected =
+                          !controller.isTextToolSelected;
                       if (controller.isTextToolSelected) {
                         controller.activeCategory = 'Text';
-                        if (controller.activeSticker != null && controller.activeSticker is! ActiveTextSticker) {
+                        if (controller.activeSticker != null &&
+                            controller.activeSticker is! ActiveTextSticker) {
                           controller.stampActiveSticker();
                         }
                       } else {
@@ -333,13 +338,58 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     },
                   ),
                   _bottomToolbarCategoryItem(
-                    label: 'Ruler',
-                    svgAsset: AssetConstants.ruler_icon,
-                    color: controller.showRulerMenu ? ColorConstants.accent : null,
+                    label: 'Shapes',
+                    svgAsset: AssetConstants.shapes_icon,
+                    color: controller.activeCategory == 'Shapes'
+                        ? ColorConstants.accent
+                        : null,
                     onTap: () {
-                      controller.showRulerMenu = !controller.showRulerMenu;
+                      controller.currentSubMenu = 'shapes';
+                      controller.activeCategory = 'Shapes';
+                      controller.selectShape(controller.selectedShape);
                     },
                   ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Blur',
+                    svgAsset: AssetConstants.blur_icon,
+                    color: controller.activeCategory == 'Blur'
+                        ? ColorConstants.accent
+                        : null,
+                    onTap: () {
+                      controller.drawingController.setPaintContent(
+                        BlurContent(),
+                      );
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                      controller.activeCategory = 'Blur';
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Smudge',
+                    svgAsset: AssetConstants.smudge_icon,
+                    color: controller.activeCategory == 'Smudge'
+                        ? ColorConstants.accent
+                        : null,
+                    onTap: () {
+                      controller.drawingController.setPaintContent(
+                        SmudgeContent(),
+                      );
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                      controller.activeCategory = 'Smudge';
+                    },
+                  ),
+
+                  // _bottomToolbarCategoryItem(
+                  //   label: 'Ruler',
+                  //   svgAsset: AssetConstants.ruler_icon,
+                  //   color: controller.showRulerMenu ? ColorConstants.accent : null,
+                  //   onTap: () {
+                  //     controller.showRulerMenu = !controller.showRulerMenu;
+                  //   },
+                  // ),
                   const SizedBox(width: 16),
                 ],
               ),
@@ -377,10 +427,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 svgAsset,
                 width: 24,
                 height: 24,
-                colorFilter: ColorFilter.mode(
-                  displayColor,
-                  BlendMode.srcIn,
-                ),
+                colorFilter: ColorFilter.mode(displayColor, BlendMode.srcIn),
               )
             else if (icon != null)
               Icon(icon, color: displayColor, size: 24),
@@ -389,8 +436,10 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
               label,
               style: TextStyle(
                 color: displayColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                fontWeight: label == "Export"
+                    ? FontWeight.w700
+                    : FontWeight.w400,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -422,7 +471,11 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 color: Colors.grey.shade200,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.black87),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 16,
+                color: Colors.black87,
+              ),
             ),
           ),
           Expanded(
@@ -436,8 +489,13 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   onTap: () {
                     controller.selectedSubTool = 'brush';
                     controller.drawingController.setPaintContent(SmoothLine());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
-                    BrushPresetPanel.show(context, controller.drawingController);
+                    controller.drawingController.setStyle(
+                      strokeWidth: controller.globalStrokeWidth,
+                    );
+                    BrushPresetPanel.show(
+                      context,
+                      controller.drawingController,
+                    );
                   },
                 ),
                 _bottomSubToolItem(
@@ -446,8 +504,12 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   isActive: controller.selectedSubTool == 'pen',
                   onTap: () {
                     controller.selectedSubTool = 'pen';
-                    controller.drawingController.setPaintContent(FreehandLine());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                    controller.drawingController.setPaintContent(
+                      FreehandLine(),
+                    );
+                    controller.drawingController.setStyle(
+                      strokeWidth: controller.globalStrokeWidth,
+                    );
                   },
                 ),
                 _bottomSubToolItem(
@@ -456,8 +518,12 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   isActive: controller.selectedSubTool == 'pencil',
                   onTap: () {
                     controller.selectedSubTool = 'pencil';
-                    controller.drawingController.setPaintContent(FreehandLine());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                    controller.drawingController.setPaintContent(
+                      FreehandLine(),
+                    );
+                    controller.drawingController.setStyle(
+                      strokeWidth: controller.globalStrokeWidth,
+                    );
                   },
                 ),
                 _bottomSubToolItem(
@@ -467,7 +533,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   onTap: () {
                     controller.selectedSubTool = 'line';
                     controller.drawingController.setPaintContent(SimpleLine());
-                    controller.drawingController.setStyle(strokeWidth: controller.globalStrokeWidth);
+                    controller.drawingController.setStyle(
+                      strokeWidth: controller.globalStrokeWidth,
+                    );
                   },
                 ),
               ],
@@ -499,7 +567,11 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 color: Colors.grey.shade200,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.black87),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 16,
+                color: Colors.black87,
+              ),
             ),
           ),
           Expanded(
@@ -571,7 +643,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? activeColor.withValues(alpha: 0.12) : Colors.transparent,
+          color: isActive
+              ? activeColor.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -583,10 +657,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 svgAsset,
                 width: 22,
                 height: 22,
-                colorFilter: ColorFilter.mode(
-                  itemColor,
-                  BlendMode.srcIn,
-                ),
+                colorFilter: ColorFilter.mode(itemColor, BlendMode.srcIn),
               )
             else if (icon != null)
               Icon(icon, color: itemColor, size: 22),
@@ -605,7 +676,10 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     );
   }
 
-  Widget _buildTextStickerToolbar(ActiveTextSticker sticker, EditorController controller) {
+  Widget _buildTextStickerToolbar(
+    ActiveTextSticker sticker,
+    EditorController controller,
+  ) {
     return Container(
       height: 72,
       decoration: BoxDecoration(
@@ -667,7 +741,10 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     );
   }
 
-  void _editTextStickerContent(ActiveTextSticker sticker, EditorController controller) {
+  void _editTextStickerContent(
+    ActiveTextSticker sticker,
+    EditorController controller,
+  ) {
     String text = sticker.text;
     showDialog(
       context: context,
@@ -690,7 +767,6 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 if (text.isNotEmpty) {
                   sticker.text = text;
                   controller.updateSnapshot();
-                  controller.notifyListeners();
                 }
               },
               child: const Text('Save'),
@@ -701,7 +777,10 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     );
   }
 
-  void _showFontSelectionSheet(ActiveTextSticker sticker, EditorController controller) {
+  void _showFontSelectionSheet(
+    ActiveTextSticker sticker,
+    EditorController controller,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -722,7 +801,10 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       children: [
                         const Text(
                           'Fonts',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const Spacer(),
                         IconButton(
@@ -739,7 +821,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       itemBuilder: (context, index) {
                         final preset = fontPresets[index];
                         final isSelected = sticker.fontFamily == preset.name;
-                        
+
                         return ListTile(
                           title: Text(
                             preset.name,
@@ -749,13 +831,15 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                             ),
                           ),
                           trailing: isSelected
-                              ? const Icon(Icons.check_circle, color: ColorConstants.accent)
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: ColorConstants.accent,
+                                )
                               : null,
                           onTap: () {
                             sticker.fontFamily = preset.name;
                             setModalState(() {});
                             controller.updateSnapshot();
-                            controller.notifyListeners();
                           },
                         );
                       },
@@ -770,7 +854,10 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     );
   }
 
-  void _showSizeOpacitySheet(ActiveTextSticker sticker, EditorController controller) {
+  void _showSizeOpacitySheet(
+    ActiveTextSticker sticker,
+    EditorController controller,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -789,7 +876,10 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     children: [
                       const Text(
                         'Text Style & Size',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -804,14 +894,19 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     children: [
                       const Icon(Icons.format_size_rounded, color: Colors.grey),
                       const SizedBox(width: 12),
-                      const Text('Size', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Size',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       Expanded(
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             trackHeight: 3,
                             activeTrackColor: ColorConstants.accent,
                             thumbColor: ColorConstants.accent,
-                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 6,
+                            ),
                           ),
                           child: Slider(
                             value: sticker.fontSize.clamp(10.0, 100.0),
@@ -821,12 +916,14 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                               sticker.fontSize = val;
                               setModalState(() {});
                               controller.updateSnapshot();
-                              controller.notifyListeners();
                             },
                           ),
                         ),
                       ),
-                      Text('${sticker.fontSize.round()}px', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        '${sticker.fontSize.round()}px',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -834,14 +931,19 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     children: [
                       const Icon(Icons.opacity_rounded, color: Colors.grey),
                       const SizedBox(width: 12),
-                      const Text('Opacity', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Opacity',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       Expanded(
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             trackHeight: 3,
                             activeTrackColor: ColorConstants.accent,
                             thumbColor: ColorConstants.accent,
-                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 6,
+                            ),
                           ),
                           child: Slider(
                             value: sticker.opacity.clamp(0.0, 1.0),
@@ -849,15 +951,19 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                             max: 1.0,
                             onChanged: (val) {
                               sticker.opacity = val;
-                              sticker.color = sticker.color.withOpacity(val);
+                              sticker.color = sticker.color.withValues(
+                                alpha: val,
+                              );
                               setModalState(() {});
                               controller.updateSnapshot();
-                              controller.notifyListeners();
                             },
                           ),
                         ),
                       ),
-                      Text('${(sticker.opacity * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        '${(sticker.opacity * 100).round()}%',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -867,14 +973,24 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Format', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                            const Text(
+                              'Format',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Colors.grey,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
+                              ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -885,9 +1001,11 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                                       sticker.isBold = !sticker.isBold;
                                       setModalState(() {});
                                       controller.updateSnapshot();
-                                      controller.notifyListeners();
                                     },
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                   _styleToggleButton(
                                     label: 'I',
@@ -896,20 +1014,25 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                                       sticker.isItalic = !sticker.isItalic;
                                       setModalState(() {});
                                       controller.updateSnapshot();
-                                      controller.notifyListeners();
                                     },
-                                    style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 16),
+                                    style: const TextStyle(
+                                      fontStyle: FontStyle.italic,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                   _styleToggleButton(
                                     label: 'U',
                                     isActive: sticker.isUnderline,
                                     onTap: () {
-                                      sticker.isUnderline = !sticker.isUnderline;
+                                      sticker.isUnderline =
+                                          !sticker.isUnderline;
                                       setModalState(() {});
                                       controller.updateSnapshot();
-                                      controller.notifyListeners();
                                     },
-                                    style: const TextStyle(decoration: TextDecoration.underline, fontSize: 16),
+                                    style: const TextStyle(
+                                      decoration: TextDecoration.underline,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -921,45 +1044,55 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Alignment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                            const Text(
+                              'Alignment',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Colors.grey,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
+                              ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   _alignmentButton(
                                     icon: Icons.format_align_left_rounded,
-                                    isActive: sticker.textAlign == TextAlign.left,
+                                    isActive:
+                                        sticker.textAlign == TextAlign.left,
                                     onTap: () {
                                       sticker.textAlign = TextAlign.left;
                                       setModalState(() {});
                                       controller.updateSnapshot();
-                                      controller.notifyListeners();
                                     },
                                   ),
                                   _alignmentButton(
                                     icon: Icons.format_align_center_rounded,
-                                    isActive: sticker.textAlign == TextAlign.center,
+                                    isActive:
+                                        sticker.textAlign == TextAlign.center,
                                     onTap: () {
                                       sticker.textAlign = TextAlign.center;
                                       setModalState(() {});
                                       controller.updateSnapshot();
-                                      controller.notifyListeners();
                                     },
                                   ),
                                   _alignmentButton(
                                     icon: Icons.format_align_right_rounded,
-                                    isActive: sticker.textAlign == TextAlign.right,
+                                    isActive:
+                                        sticker.textAlign == TextAlign.right,
                                     onTap: () {
                                       sticker.textAlign = TextAlign.right;
                                       setModalState(() {});
                                       controller.updateSnapshot();
-                                      controller.notifyListeners();
                                     },
                                   ),
                                 ],

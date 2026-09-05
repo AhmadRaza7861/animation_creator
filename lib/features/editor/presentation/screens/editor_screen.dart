@@ -926,14 +926,36 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     return GestureDetector(
                       onTap: () => _openColorPicker(activeColor, controller),
                       child: Container(
-                        width: 24,
-                        height: 24,
-                        margin: const EdgeInsets.only(left: 8),
-                        decoration: BoxDecoration(
-                          color: activeColor.withValues(alpha: 1.0),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+                        width: 30,
+                        height: 30,
+                        margin: const EdgeInsets.only(left: 4),
+                        alignment: Alignment.center,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SvgPicture.asset(
+                              AssetConstants.color_picker_icon,
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.contain,
+                            ),
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: activeColor.withValues(alpha: 1.0),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 1.5),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 1.5,
+                                    offset: Offset(0, 0.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -969,37 +991,38 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.black.withOpacity(0.05)),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            //  border: Border.all(color: Colors.black.withOpacity(0.05)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  width: 14,
-                                  height: 14,
-                                  alignment: Alignment.center,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white,
-                                  ),
-                                  child: Container(
-                                    width: (controller.globalStrokeWidth * 0.4).clamp(2.0, 12.0),
-                                    height: (controller.globalStrokeWidth * 0.4).clamp(2.0, 12.0),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: config.color,
-                                    ),
-                                  ),
-                                ),
+                                // Container(
+                                //   width: 14,
+                                //   height: 14,
+                                //   alignment: Alignment.center,
+                                //   decoration: const BoxDecoration(
+                                //     shape: BoxShape.circle,
+                                //     color: Colors.white,
+                                //   ),
+                                //   child: Container(
+                                //     width: (controller.globalStrokeWidth * 0.4).clamp(2.0, 12.0),
+                                //     height: (controller.globalStrokeWidth * 0.4).clamp(2.0, 12.0),
+                                //     decoration: BoxDecoration(
+                                //       shape: BoxShape.circle,
+                                //       color: config.color,
+                                //     ),
+                                //   ),
+                                // ),
+                                SvgPicture.asset(AssetConstants.stock_icon),
                                 const SizedBox(width: 6),
                                 Text(
                                   '${controller.globalStrokeWidth.round()}px',
                                   style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: ColorConstants.darkText,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ],

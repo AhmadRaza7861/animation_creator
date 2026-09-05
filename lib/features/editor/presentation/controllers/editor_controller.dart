@@ -12,6 +12,7 @@ import '../../../../package_code/src/paint_contents/layer_data.dart';
 import '../../../../package_code/src/paint_contents/paint_content_decoder.dart';
 import '../../../../package_code/src/paint_contents/simple_line.dart';
 import '../../../../package_code/src/paint_contents/smooth_line.dart';
+import '../../../../package_code/src/ruler/ruler_config.dart';
 import '../../../projects/data/project_repository.dart';
 import '../widgets/sticker_widgets/text_sticker_widget.dart';
 import '../widgets/sticker_widgets/shape_sticker_widget.dart';
@@ -59,6 +60,12 @@ class EditorController extends ChangeNotifier {
     required this.repository,
     this.projectId,
   }) {
+    _globalStrokeWidth = 10.0;
+    _colorOpacity = 1.0;
+    GlobalToolState.instance.setStyle(
+      strokeWidth: 10.0,
+      color: Colors.black,
+    );
     _addNewCanvas(initial: true);
     if (projectId != null) {
       loadProjectData();
@@ -113,7 +120,7 @@ class EditorController extends ChangeNotifier {
   int _undoneStickerHistoryIndex = -1;
 
   bool _isUndoingActiveStickerPlacement = false;
-  double _globalStrokeWidth = 4.0;
+  double _globalStrokeWidth = 10.0;
   String _activeCategory = 'Brush';
   double _colorOpacity = 1.0;
 
@@ -193,6 +200,8 @@ class EditorController extends ChangeNotifier {
     if (_activeSticker != null) {
       stampActiveSticker();
     }
+    drawingController.rulerConfig.value =
+        drawingController.rulerConfig.value.copyWith(type: RulerType.none);
     _selectedShape = shape;
     switch (shape) {
       case 'line':
@@ -242,12 +251,17 @@ class EditorController extends ChangeNotifier {
       _undoneStickerHistory.clear();
       _undoneStickerHistoryIndex = -1;
     }
+    updateSnapshot();
     notifyListeners();
   }
 
   set activeCategory(String value) {
     if (_activeCategory != value && _activeSticker != null) {
       stampActiveSticker();
+    }
+    if (_activeCategory != value && value != 'Brush') {
+      drawingController.rulerConfig.value =
+          drawingController.rulerConfig.value.copyWith(type: RulerType.none);
     }
     _activeCategory = value;
     notifyListeners();
@@ -418,7 +432,36 @@ class EditorController extends ChangeNotifier {
       } else {
         _currentIndex = 0;
         _activeSticker = null;
-        _globalStrokeWidth = _canvases.first.drawConfig.value.strokeWidth;
+        if (data.state.containsKey('strokeWidth')) {
+          _globalStrokeWidth = (data.state['strokeWidth'] as num).toDouble();
+        } else {
+          _globalStrokeWidth = _canvases.first.drawConfig.value.strokeWidth;
+        }
+
+        if (data.state.containsKey('colorOpacity')) {
+          _colorOpacity = (data.state['colorOpacity'] as num).toDouble();
+        } else {
+          _colorOpacity = 1.0;
+        }
+
+        Color restoredColor = Colors.black;
+        if (data.state.containsKey('strokeColor')) {
+          restoredColor = Color(data.state['strokeColor'] as int);
+        } else {
+          restoredColor = _canvases.first.drawConfig.value.color;
+        }
+
+        GlobalToolState.instance.setStyle(
+          strokeWidth: _globalStrokeWidth,
+          color: restoredColor,
+        );
+        for (var controller in _canvases) {
+          controller.drawConfig.value = controller.drawConfig.value.copyWith(
+            strokeWidth: _globalStrokeWidth,
+            color: restoredColor,
+          );
+        }
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           for (var controller in _canvases) {
             controller.forceRefreshLayers();
@@ -449,6 +492,9 @@ class EditorController extends ChangeNotifier {
       },
       'aspectRatio': _aspectRatio,
       'fps': _fps,
+      'strokeWidth': _globalStrokeWidth,
+      'strokeColor': drawingController.drawConfig.value.color.value,
+      'colorOpacity': _colorOpacity,
       'templateFolder': _templateFolder,
       'templateExtension': _templateExtension,
       'templateMode': _templateMode,
@@ -464,6 +510,8 @@ class EditorController extends ChangeNotifier {
       canvasesData.add({
         'size': {'width': size.width, 'height': size.height},
         'backgroundColor': controller.backgroundColor.value,
+        'strokeWidth': controller.drawConfig.value.strokeWidth,
+        'strokeColor': controller.drawConfig.value.color.value,
         'layers': await controller.getLayersConfig(),
         'activeLayerId': controller.activeLayer.value?.id,
       });
@@ -491,6 +539,13 @@ class EditorController extends ChangeNotifier {
   Future<DrawingController> _createControllerFromData(Map<String, dynamic> cMap) async {
     final controller = DrawingController();
     controller.backgroundColor = Color(cMap['backgroundColor'] as int);
+
+    if (cMap['strokeWidth'] != null || cMap['strokeColor'] != null) {
+      controller.drawConfig.value = controller.drawConfig.value.copyWith(
+        strokeWidth: cMap['strokeWidth'] != null ? (cMap['strokeWidth'] as num).toDouble() : null,
+        color: cMap['strokeColor'] != null ? Color(cMap['strokeColor'] as int) : null,
+      );
+    }
 
     if (cMap['size'] != null) {
       final sMap = cMap['size'] as Map<String, dynamic>;
@@ -544,15 +599,7 @@ class EditorController extends ChangeNotifier {
       controller.activeLayer.value = controller.layers.first;
     }
 
-    controller.drawConfig.addListener(_onDrawConfigChanged);
-    controller.interceptDraw = _createInterceptDraw(controller);
-    controller.realTimeSnapshot.addListener(() {
-      final idx = _canvases.indexOf(controller);
-      if (idx != -1) {
-        _thumbnails[idx] = controller.realTimeSnapshot.value;
-        notifyListeners();
-      }
-    });
+    _setupCanvasController(controller);
 
     return controller;
   }
@@ -623,15 +670,14 @@ class EditorController extends ChangeNotifier {
     }
   }
 
-  void _addNewCanvas({bool initial = false, int? atIndex}) {
-    final controller = DrawingController();
-    controller.drawConfig.value = controller.drawConfig.value.copyWith(
-      strokeWidth: _globalStrokeWidth,
-      size: drawingControllerSize,
-    );
-
+  void _setupCanvasController(DrawingController controller) {
     controller.drawConfig.addListener(_onDrawConfigChanged);
     controller.interceptDraw = _createInterceptDraw(controller);
+    controller.activeOverlayPainter = (canvas, size) {
+      if (_activeSticker != null && _canvases.indexOf(controller) == _currentIndex) {
+        _drawActiveSticker(canvas, size, _activeSticker!);
+      }
+    };
     controller.realTimeSnapshot.addListener(() {
       final idx = _canvases.indexOf(controller);
       if (idx != -1) {
@@ -639,6 +685,16 @@ class EditorController extends ChangeNotifier {
         notifyListeners();
       }
     });
+  }
+
+  void _addNewCanvas({bool initial = false, int? atIndex}) {
+    final controller = DrawingController();
+    controller.drawConfig.value = controller.drawConfig.value.copyWith(
+      strokeWidth: _globalStrokeWidth,
+      size: drawingControllerSize,
+    );
+
+    _setupCanvasController(controller);
 
     if (initial) {
       _canvases.add(controller);
@@ -719,15 +775,7 @@ class EditorController extends ChangeNotifier {
             strokeWidth: _globalStrokeWidth,
             size: drawingControllerSize,
           );
-          newCanvas.drawConfig.addListener(_onDrawConfigChanged);
-          newCanvas.interceptDraw = _createInterceptDraw(newCanvas);
-          newCanvas.realTimeSnapshot.addListener(() {
-            final idx = _canvases.indexOf(newCanvas);
-            if (idx != -1) {
-              _thumbnails[idx] = newCanvas.realTimeSnapshot.value;
-              notifyListeners();
-            }
-          });
+          _setupCanvasController(newCanvas);
 
           newCanvas.addContent(imageContent);
           _canvases.add(newCanvas);
@@ -851,15 +899,8 @@ class EditorController extends ChangeNotifier {
       duplicated.activeLayer.value = duplicated.layers.first;
     }
 
-    duplicated.drawConfig.addListener(_onDrawConfigChanged);
-    duplicated.interceptDraw = _createInterceptDraw(duplicated);
-    duplicated.realTimeSnapshot.addListener(() {
-      final idx = _canvases.indexOf(duplicated);
-      if (idx != -1) {
-        _thumbnails[idx] = duplicated.realTimeSnapshot.value;
-        notifyListeners();
-      }
-    });
+    _setupCanvasController(duplicated);
+    duplicated.updateSnapshot(includeBackground: false);
 
     _canvases.insert(index + 1, duplicated);
     _thumbnails.insert(index + 1, null);
@@ -955,7 +996,71 @@ class EditorController extends ChangeNotifier {
   }
 
   void updateSnapshot() {
-    drawingController.updateSnapshot(includeBackground: false);
+    final sticker = _activeSticker;
+    if (sticker != null) {
+      drawingController.updateSnapshot(
+        includeBackground: false,
+        additionalDraw: (canvas, size) {
+          _drawActiveSticker(canvas, size, sticker);
+        },
+      );
+    } else {
+      drawingController.updateSnapshot(includeBackground: false);
+    }
+    notifyListeners();
+  }
+
+  void refresh() {
+    notifyListeners();
+  }
+
+  void _drawActiveSticker(Canvas canvas, Size size, Object sticker) {
+    if (sticker is ActiveTextSticker) {
+      final Paint paint = drawingController.drawConfig.value.paint.copyWith()..color = sticker.color;
+      final textContent = TextContent.data(
+        offset: sticker.offset,
+        text: sticker.text,
+        scale: sticker.scale,
+        rotation: sticker.rotation,
+        fontSize: sticker.fontSize,
+        isBold: sticker.isBold,
+        isItalic: sticker.isItalic,
+        isUnderline: sticker.isUnderline,
+        textAlign: sticker.textAlign,
+        opacity: sticker.opacity,
+        fontFamily: sticker.fontFamily,
+        paint: paint,
+      );
+      textContent.draw(canvas, size, false);
+    } else if (sticker is ActiveShapeSticker) {
+      final shapeContent = ShapeStickerContent.data(
+        child: sticker.content,
+        offset: sticker.offset,
+        scale: sticker.scale,
+        rotation: sticker.rotation,
+        size: sticker.size,
+        paint: sticker.content.paint,
+      );
+      shapeContent.draw(canvas, size, false);
+    } else if (sticker is ActiveStraightLineSticker) {
+      final PaintContent lineContent;
+      if (sticker.type == 'SimpleLine') {
+        lineContent = SimpleLine.data(
+          startPoint: sticker.startPoint,
+          endPoint: sticker.endPoint,
+          paint: sticker.paint,
+        );
+      } else {
+        lineContent = StraightLine.data(
+          startPoint: sticker.startPoint,
+          endPoint: sticker.endPoint,
+          paint: sticker.paint,
+        );
+      }
+      lineContent.draw(canvas, size, false);
+    } else if (sticker is ActiveFreehandLineSticker) {
+      sticker.content.draw(canvas, size, false);
+    }
   }
 
   // Active Sticker Placement Undo / Redo
@@ -1242,13 +1347,18 @@ class EditorController extends ChangeNotifier {
     if (_activeSticker != null) {
       stampActiveSticker();
     }
-    _activeSticker = ActiveTextSticker(
+    drawingController.rulerConfig.value =
+        drawingController.rulerConfig.value.copyWith(type: RulerType.none);
+    final newSticker = ActiveTextSticker(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: text,
       color: drawingController.drawConfig.value.paint.color,
       fontSize: 24,
       offset: position,
     );
+    _activeSticker = newSticker;
+    _initActiveStickerHistory(newSticker);
+    updateSnapshot();
     notifyListeners();
   }
 

@@ -36,4 +36,7 @@ class AssetConstants {
   static const String square = 'assets/icons/square.svg';
   static const String triangle = 'assets/icons/triangle.svg';
   static const String line_icon = 'assets/icons/line_icon.svg';
+  static const String color_picker_icon = 'assets/icons/color_picker_icon.svg';
+  static const String export_icon = 'assets/icons/export_icon.svg';
+  static const String stock_icon = 'assets/icons/stock_icon.svg';
 }

@@ -187,6 +187,7 @@ class CanvasArea extends ConsumerWidget {
                               (activeSticker).offset = offset;
                               (activeSticker).scale = scale;
                               (activeSticker).rotation = rotation;
+                              controller.updateSnapshot();
                             },
                             onUpdateEnd: () => controller.recordActiveStickerState(),
                             onDelete: () {
@@ -208,7 +209,9 @@ class CanvasArea extends ConsumerWidget {
                               }
                               return raw;
                             },
-                            onUpdate: () {},
+                            onUpdate: () {
+                              controller.updateSnapshot();
+                            },
                             onUpdateEnd: () => controller.recordActiveStickerState(),
                             onDelete: () {
                               controller.activeSticker = null;
@@ -227,6 +230,7 @@ class CanvasArea extends ConsumerWidget {
                               (activeSticker).offset = offset;
                               (activeSticker).scale = scale;
                               (activeSticker).rotation = rotation;
+                              controller.updateSnapshot();
                             },
                             onUpdateEnd: () => controller.recordActiveStickerState(),
                             onDelete: () {
@@ -251,6 +255,7 @@ class CanvasArea extends ConsumerWidget {
                             onUpdate: (start, end) {
                               (activeSticker).startPoint = start;
                               (activeSticker).endPoint = end;
+                              controller.updateSnapshot();
                             },
                             onUpdateEnd: () => controller.recordActiveStickerState(),
                             onDelete: () {

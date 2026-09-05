@@ -8,6 +8,7 @@ import 'helper/safe_value_notifier.dart';
 import 'paint_contents/eraser.dart';
 import 'paint_contents/paint_content.dart';
 import 'paint_contents/simple_line.dart';
+import 'paint_contents/smooth_line.dart';
 import 'paint_contents/fill.dart';
 import 'paint_contents/layer_data.dart';
 import 'paint_extension/ex_paint.dart';
@@ -33,7 +34,7 @@ class DrawConfig {
     this.fingerCount = 0,
     this.size,
     this.blendMode = BlendMode.srcOver,
-    this.color = Colors.red,
+    this.color = Colors.black,
     this.colorFilter,
     this.filterQuality = FilterQuality.high,
     this.imageFilter,
@@ -43,7 +44,7 @@ class DrawConfig {
     this.shader,
     this.strokeCap = StrokeCap.round,
     this.strokeJoin = StrokeJoin.round,
-    this.strokeWidth = 4,
+    this.strokeWidth = 10,
     this.strength = 0.5,
     this.style = PaintingStyle.stroke,
   });
@@ -54,7 +55,7 @@ class DrawConfig {
     this.fingerCount = 0,
     this.size,
     this.blendMode = BlendMode.srcOver,
-    this.color = Colors.red,
+    this.color = Colors.black,
     this.colorFilter,
     this.filterQuality = FilterQuality.high,
     this.imageFilter,
@@ -64,7 +65,7 @@ class DrawConfig {
     this.shader,
     this.strokeCap = StrokeCap.round,
     this.strokeJoin = StrokeJoin.round,
-    this.strokeWidth = 4,
+    this.strokeWidth = 10,
     this.strength = 0.5,
     this.style = PaintingStyle.stroke,
   });
@@ -238,7 +239,7 @@ class GlobalToolState extends ChangeNotifier {
   late PaintContent paintContent;
 
   double lastEraserWidth = 20.0;
-  double lastBrushWidth = 4.0;
+  double lastBrushWidth = 10.0;
   String? activeBrushPresetId;
   String? activeTipLabel;
 
@@ -285,6 +286,10 @@ class GlobalToolState extends ChangeNotifier {
 
   void setPaintContent(PaintContent content) {
     Type newType = content.runtimeType;
+
+    if (content is! FreehandLine && content is! SmoothLine && content is! SimpleLine) {
+      rulerConfig.value = rulerConfig.value.copyWith(type: RulerType.none);
+    }
 
     toolConfig.value = toolConfig.value.copyWith(
       contentType: newType,
@@ -483,6 +488,11 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Whether valid content has been drawn (for distinguishing click from drawing)
   bool _isDrawingValidContent = false;
+  bool get isDrawingValidContent => _isDrawingValidContent;
+
+  /// 实时覆盖层绘制钩子（用于未栅格化的贴纸、文本、形状等）
+  /// Real-time overlay painter hook (e.g. for active stickers / text / shapes)
+  void Function(Canvas canvas, Size size)? activeOverlayPainter;
 
   /// 获取当前步骤索引
   ///
@@ -520,7 +530,11 @@ class DrawingController extends ChangeNotifier {
 
   /// Set drawing board size
   void setBoardSize(Size? size) {
+    final Size? oldSize = drawConfig.value.size;
     drawConfig.value = drawConfig.value.copyWith(size: size);
+    if (size != null && !size.isEmpty && (oldSize != size || realTimeSnapshot.value == null)) {
+      updateSnapshot();
+    }
   }
 
   /// Explicitly clear and nullify the drawing board size, forcing LayoutConstraints to regenerate metrics.
@@ -661,6 +675,7 @@ class DrawingController extends ChangeNotifier {
     layer.currentIndex += contents.length;
     cachedImage = null;
     _refreshDeep();
+    updateSnapshot();
     notifyListeners();
   }
 
@@ -683,6 +698,7 @@ class DrawingController extends ChangeNotifier {
     layer.currentIndex = layer.history.length;
     cachedImage = null;
     _refreshDeep();
+    updateSnapshot();
     notifyListeners();
   }
 
@@ -970,12 +986,22 @@ class DrawingController extends ChangeNotifier {
   /// Update real-time snapshot
   /// [additionalDraw] if provided, will be called after drawing history and real-time content
   bool _isUpdatingSnapshot = false;
+  bool _hasPendingSnapshotUpdate = false;
+  void Function(Canvas, Size)? _pendingAdditionalDraw;
+  bool _pendingIncludeBackground = false;
+
   void updateSnapshot({
     void Function(Canvas canvas, Size size)? additionalDraw,
-    bool includeBackground = true,
-  })
-  {
-    if (_isUpdatingSnapshot) return;
+    bool includeBackground = false,
+  }) {
+    final drawOverlay = additionalDraw ?? activeOverlayPainter;
+
+    if (_isUpdatingSnapshot) {
+      _hasPendingSnapshotUpdate = true;
+      _pendingAdditionalDraw = drawOverlay;
+      _pendingIncludeBackground = includeBackground;
+      return;
+    }
 
     final Size? size = drawConfig.value.size;
     if (size == null || size.isEmpty) return;
@@ -1019,20 +1045,22 @@ class DrawingController extends ChangeNotifier {
         layer.history[j].draw(canvas, size, false);
       }
 
-      // If this is the active layer and we are erasing, apply it here
-      if (layer == activeLayer && eraserContent != null) {
-        eraserContent?.draw(canvas, size, false);
+      // If this is the active layer, apply any active drawing or eraser
+      if (layer == activeLayer) {
+        if (drawingContent != null) {
+          drawingContent?.draw(canvas, size, false);
+        }
+        if (eraserContent != null) {
+          eraserContent?.draw(canvas, size, false);
+        }
       }
       
       canvas.restore();
     }
 
-    // We no longer draw the active `drawingContent` here,
-    // so the thumbnail will only display committed drawings.
-
-    // Active sticker (passed from main.dart via callback)
-    if (additionalDraw != null) {
-      additionalDraw(canvas, size);
+    // Active sticker or additional overlay
+    if (drawOverlay != null) {
+      drawOverlay(canvas, size);
     }
 
     canvas.restore();
@@ -1041,8 +1069,22 @@ class DrawingController extends ChangeNotifier {
     picture.toImage(renderSize.width.toInt(), renderSize.height.toInt()).then((img) {
       realTimeSnapshot.value = img;
       _isUpdatingSnapshot = false;
+      if (_hasPendingSnapshotUpdate) {
+        _hasPendingSnapshotUpdate = false;
+        final pendingDraw = _pendingAdditionalDraw;
+        final pendingBg = _pendingIncludeBackground;
+        _pendingAdditionalDraw = null;
+        updateSnapshot(additionalDraw: pendingDraw, includeBackground: pendingBg);
+      }
     }).catchError((e) {
       _isUpdatingSnapshot = false;
+      if (_hasPendingSnapshotUpdate) {
+        _hasPendingSnapshotUpdate = false;
+        final pendingDraw = _pendingAdditionalDraw;
+        final pendingBg = _pendingIncludeBackground;
+        _pendingAdditionalDraw = null;
+        updateSnapshot(additionalDraw: pendingDraw, includeBackground: pendingBg);
+      }
     });
   }
 
