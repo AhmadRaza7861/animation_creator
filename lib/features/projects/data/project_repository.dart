@@ -11,7 +11,36 @@ class ProjectRepository {
   final Uuid _uuid = const Uuid();
 
   Future<Directory> _getProjectsDirectory() async {
-    final root = await getApplicationDocumentsDirectory();
+    Directory? root;
+    try {
+      root = await getApplicationDocumentsDirectory();
+    } catch (e) {
+      debugPrint('path_provider getApplicationDocumentsDirectory error: $e');
+      try {
+        root = await getApplicationSupportDirectory();
+      } catch (e2) {
+        debugPrint('path_provider getApplicationSupportDirectory error: $e2');
+      }
+    }
+
+    if (root == null) {
+      if (Platform.isAndroid) {
+        final fallbackDir = Directory('/data/user/0/com.example.dummy/app_flutter');
+        if (await fallbackDir.exists()) {
+          root = fallbackDir;
+        } else {
+          final fallbackDataDir = Directory('/data/data/com.example.dummy/app_flutter');
+          if (await fallbackDataDir.exists()) {
+            root = fallbackDataDir;
+          } else {
+            root = Directory.systemTemp;
+          }
+        }
+      } else {
+        root = Directory.systemTemp;
+      }
+    }
+
     final dir = Directory('${root.path}/$_projectsDirName');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
@@ -29,10 +58,10 @@ class ProjectRepository {
   }
 
   Future<List<ProjectMeta>> listProjects() async {
-    final dir = await _getProjectsDirectory();
     final List<ProjectMeta> projects = [];
 
     try {
+      final dir = await _getProjectsDirectory();
       final entities = dir.listSync();
       for (final entity in entities) {
         if (entity is Directory) {

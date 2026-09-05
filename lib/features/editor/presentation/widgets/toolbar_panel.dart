@@ -30,6 +30,13 @@ class ToolbarPanel extends ConsumerStatefulWidget {
 
 class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
   final ImagePicker _picker = ImagePicker();
+  final ScrollController _toolbarScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _toolbarScrollController.dispose();
+    super.dispose();
+  }
 
   Future<ui.Image> _getFileImage(String path) async {
     final Completer<ImageInfo> completer = Completer<ImageInfo>();
@@ -174,6 +181,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
           ),
           Expanded(
             child: SingleChildScrollView(
+              key: const PageStorageKey('bottom_toolbar_categories_scroll'),
+              controller: _toolbarScrollController,
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [

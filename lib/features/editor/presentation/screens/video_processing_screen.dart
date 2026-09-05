@@ -39,7 +39,12 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
         _statusMessage = 'Extracting frames...';
       });
 
-      final directory = await getApplicationDocumentsDirectory();
+      Directory? directory;
+      try {
+        directory = await getApplicationDocumentsDirectory();
+      } catch (e) {
+        directory = Directory.systemTemp;
+      }
       final targetDir = Directory('${directory.path}/video_frames_${DateTime.now().millisecondsSinceEpoch}');
       if (!await targetDir.exists()) {
         await targetDir.create(recursive: true);

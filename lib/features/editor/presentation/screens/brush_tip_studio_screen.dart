@@ -284,6 +284,13 @@ class BrushTipStudioScreen extends StatefulWidget {
 }
 
 class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
+  static double _lastGridScrollOffset = 0.0;
+  static double _lastCategoryScrollOffset = 0.0;
+  static TipCategory _lastCategory = TipCategory.all;
+
+  late final ScrollController _tipGridScrollController;
+  late final ScrollController _tipCategoryScrollController;
+
   late BrushTipKind _kind;
   late double _size;
   late double _angle;
@@ -348,6 +355,76 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
     } else {
       _selectedItem = _matchItem();
     }
+
+    _category = _lastCategory;
+
+    _tipGridScrollController = ScrollController(
+      initialScrollOffset: _lastGridScrollOffset,
+    );
+    _tipCategoryScrollController = ScrollController(
+      initialScrollOffset: _lastCategoryScrollOffset,
+    );
+
+    _tipGridScrollController.addListener(() {
+      if (_tipGridScrollController.hasClients) {
+        _lastGridScrollOffset = _tipGridScrollController.offset;
+      }
+    });
+
+    _tipCategoryScrollController.addListener(() {
+      if (_tipCategoryScrollController.hasClients) {
+        _lastCategoryScrollOffset = _tipCategoryScrollController.offset;
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scrollToSelectedItemOrSavedPosition();
+    });
+  }
+
+  void _scrollToSelectedItemOrSavedPosition() {
+    if (!_tipGridScrollController.hasClients) return;
+
+    if (_lastGridScrollOffset > 0) {
+      final double maxScroll = _tipGridScrollController.position.maxScrollExtent;
+      _tipGridScrollController.jumpTo(_lastGridScrollOffset.clamp(0.0, maxScroll));
+      return;
+    }
+
+    if (_selectedItem != null) {
+      final List<TipItem> items = _category == TipCategory.all
+          ? kAllTipItems
+          : kAllTipItems.where((TipItem t) => _categoryOf(t) == _category).toList();
+      final int index = items.indexOf(_selectedItem!);
+      if (index >= 0) {
+        final double screenWidth = MediaQuery.of(context).size.width;
+        final double availableWidth = screenWidth - 52.0;
+        final int crossAxisCount = (availableWidth / 68.0).ceil().clamp(1, 8);
+        final int rowIndex = index ~/ crossAxisCount;
+        const double rowHeight = 68.0 + 8.0;
+        final double targetOffset = (rowIndex * rowHeight - 20.0).clamp(
+          0.0,
+          _tipGridScrollController.position.maxScrollExtent,
+        );
+        _tipGridScrollController.jumpTo(targetOffset);
+        _lastGridScrollOffset = targetOffset;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_tipGridScrollController.hasClients) {
+      _lastGridScrollOffset = _tipGridScrollController.offset;
+    }
+    if (_tipCategoryScrollController.hasClients) {
+      _lastCategoryScrollOffset = _tipCategoryScrollController.offset;
+    }
+    _lastCategory = _category;
+    _tipGridScrollController.dispose();
+    _tipCategoryScrollController.dispose();
+    super.dispose();
   }
 
   TipItem? _matchItem() {
@@ -372,9 +449,19 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       _scratchpadStrokes.clear();
       _currentDrawingStroke = null;
     });
+    if (_tipGridScrollController.hasClients) {
+      _lastGridScrollOffset = _tipGridScrollController.offset;
+    }
   }
 
   void _applyAndClose() {
+    if (_tipGridScrollController.hasClients) {
+      _lastGridScrollOffset = _tipGridScrollController.offset;
+    }
+    if (_tipCategoryScrollController.hasClients) {
+      _lastCategoryScrollOffset = _tipCategoryScrollController.offset;
+    }
+    _lastCategory = _category;
     if (_stampKey != null) {
       widget.drawingController.setPaintContent(
         ImageTipBrush(
@@ -716,6 +803,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       height: 44,
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListView.separated(
+        controller: _tipCategoryScrollController,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: TipCategory.values.length,
@@ -730,6 +818,11 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
             onSelected: (_) {
               setState(() {
                 _category = cat;
+                _lastCategory = cat;
+              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || !_tipGridScrollController.hasClients) return;
+                _scrollToSelectedItemOrSavedPosition();
               });
             },
             selectedColor: accent,
@@ -770,6 +863,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: GridView.builder(
+          controller: _tipGridScrollController,
           padding: const EdgeInsets.all(10),
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 68,

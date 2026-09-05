@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 
-class CanvasSelector extends StatelessWidget {
+class CanvasSelector extends StatefulWidget {
   final List<ui.Image?> thumbnails;
   final int currentIndex;
   final Function(int) onSelect;
@@ -31,12 +31,64 @@ class CanvasSelector extends StatelessWidget {
   });
 
   @override
+  State<CanvasSelector> createState() => _CanvasSelectorState();
+}
+
+class _CanvasSelectorState extends State<CanvasSelector> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollToCurrentIndex(animate: false);
+  }
+
+  @override
+  void didUpdateWidget(covariant CanvasSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _scrollToCurrentIndex(animate: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToCurrentIndex({bool animate = false}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
+      const double itemWidth = 68.0;
+      final double targetOffset = widget.currentIndex * itemWidth;
+      final double currentOffset = _scrollController.offset;
+      final double maxScroll = _scrollController.position.maxScrollExtent;
+      final double viewport = _scrollController.position.viewportDimension;
+
+      if (targetOffset < currentOffset || (targetOffset + itemWidth) > (currentOffset + viewport)) {
+        final double centeredOffset = (targetOffset - (viewport / 2) + (itemWidth / 2)).clamp(0.0, maxScroll);
+        if (animate) {
+          _scrollController.animateTo(
+            centeredOffset,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+          );
+        } else {
+          _scrollController.jumpTo(centeredOffset);
+        }
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       height: 80,
       padding: const EdgeInsets.symmetric(vertical: 0),
       decoration: BoxDecoration(
-        color:ColorConstants.border_color,
+        color: ColorConstants.border_color,
         border: Border(top: BorderSide(color: ColorConstants.border_color_2, width: 1)),
       ),
       child: Row(
@@ -48,7 +100,7 @@ class CanvasSelector extends StatelessWidget {
               color: Colors.transparent,
               child: IconButton(
                 icon: const Icon(Icons.layers_rounded, size: 26, color: ColorConstants.darkText),
-                onPressed: onOpenFrames,
+                onPressed: widget.onOpenFrames,
                 tooltip: 'Layers',
               ),
             ),
@@ -60,7 +112,7 @@ class CanvasSelector extends StatelessWidget {
               color: Colors.transparent,
               child: IconButton(
                 icon: const Icon(Icons.video_library_rounded, size: 24, color: ColorConstants.darkText),
-                onPressed: onImportVideo,
+                onPressed: widget.onImportVideo,
                 tooltip: 'Import Video',
               ),
             ),
@@ -72,7 +124,7 @@ class CanvasSelector extends StatelessWidget {
               color: Colors.transparent,
               child: IconButton(
                 icon: const Icon(Icons.play_arrow_rounded, size: 28, color: ColorConstants.darkText),
-                onPressed: onPlay,
+                onPressed: widget.onPlay,
                 tooltip: 'Play Animation',
               ),
             ),
@@ -80,6 +132,8 @@ class CanvasSelector extends StatelessWidget {
           // Reorderable Frame Thumbnails list
           Expanded(
             child: ReorderableListView.builder(
+              key: const PageStorageKey('timeline_canvas_selector_scroll'),
+              scrollController: _scrollController,
               scrollDirection: Axis.horizontal,
               buildDefaultDragHandles: false,
               proxyDecorator:
@@ -87,11 +141,11 @@ class CanvasSelector extends StatelessWidget {
                     return Material(color: Colors.transparent, child: child);
                   },
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              itemCount: thumbnails.length,
-              onReorder: onReorder,
+              itemCount: widget.thumbnails.length,
+              onReorder: widget.onReorder,
               itemBuilder: (context, index) {
                 return ReorderableDelayedDragStartListener(
-                  key: canvasKeys[index],
+                  key: widget.canvasKeys[index],
                   index: index,
                   child: _buildThumbnailItem(context, index),
                 );
@@ -110,7 +164,7 @@ class CanvasSelector extends StatelessWidget {
 
   Widget _buildDashedAddButton() {
     return GestureDetector(
-      onTap: onAdd,
+      onTap: widget.onAdd,
       child: CustomPaint(
         painter: DashedBorderPainter(
           color: Colors.grey.shade400,
@@ -133,10 +187,10 @@ class CanvasSelector extends StatelessWidget {
   }
 
   Widget _buildThumbnailItem(BuildContext context, int index) {
-    final isSelected = index == currentIndex;
+    final isSelected = index == widget.currentIndex;
 
     return GestureDetector(
-      onTap: () => onSelect(index),
+      onTap: () => widget.onSelect(index),
       onLongPress: () => _showFrameActionsSheet(context, index),
       child: Stack(
         clipBehavior: Clip.none,
@@ -169,8 +223,8 @@ class CanvasSelector extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   const CheckerboardBackground(),
-                  if (thumbnails[index] != null)
-                    RawImage(image: thumbnails[index], fit: BoxFit.contain)
+                  if (widget.thumbnails[index] != null)
+                    RawImage(image: widget.thumbnails[index], fit: BoxFit.contain)
                   else
                     const Center(
                       child: Icon(
@@ -223,7 +277,7 @@ class CanvasSelector extends StatelessWidget {
   }
 
   void _showFrameActionsSheet(BuildContext context, int index) {
-    final bool isOnlyFrame = thumbnails.length <= 1;
+    final bool isOnlyFrame = widget.thumbnails.length <= 1;
 
     showModalBottomSheet<void>(
       context: context,
@@ -281,7 +335,7 @@ class CanvasSelector extends StatelessWidget {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: index == currentIndex
+                              color: index == widget.currentIndex
                                   ? ColorConstants.primary
                                   : Colors.grey.shade300,
                               width: 1.5,
@@ -293,9 +347,9 @@ class CanvasSelector extends StatelessWidget {
                               fit: StackFit.expand,
                               children: [
                                 const CheckerboardBackground(),
-                                if (thumbnails[index] != null)
+                                if (widget.thumbnails[index] != null)
                                   RawImage(
-                                    image: thumbnails[index],
+                                    image: widget.thumbnails[index],
                                     fit: BoxFit.contain,
                                   )
                                 else
@@ -325,7 +379,7 @@ class CanvasSelector extends StatelessWidget {
                                       color: ColorConstants.darkText,
                                     ),
                                   ),
-                                  if (index == currentIndex) ...[
+                                  if (index == widget.currentIndex) ...[
                                     const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
@@ -350,7 +404,7 @@ class CanvasSelector extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${thumbnails.length} total frames in animation',
+                                '${widget.thumbnails.length} total frames in animation',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: ColorConstants.mediumText,
@@ -396,7 +450,7 @@ class CanvasSelector extends StatelessWidget {
                           subtitle: 'To clipboard',
                           onTap: () {
                             Navigator.pop(sheetContext);
-                            onFrameAction('copy', index);
+                            widget.onFrameAction('copy', index);
                           },
                         ),
                       ),
@@ -410,7 +464,7 @@ class CanvasSelector extends StatelessWidget {
                           subtitle: 'From copy',
                           onTap: () {
                             Navigator.pop(sheetContext);
-                            onFrameAction('paste', index);
+                            widget.onFrameAction('paste', index);
                           },
                         ),
                       ),
@@ -424,7 +478,7 @@ class CanvasSelector extends StatelessWidget {
                           subtitle: 'Clone frame',
                           onTap: () {
                             Navigator.pop(sheetContext);
-                            onFrameAction('duplicate', index);
+                            widget.onFrameAction('duplicate', index);
                           },
                         ),
                       ),
@@ -459,7 +513,7 @@ class CanvasSelector extends StatelessWidget {
                           subtitle: 'Insert blank before',
                           onTap: () {
                             Navigator.pop(sheetContext);
-                            onFrameAction('left', index);
+                            widget.onFrameAction('left', index);
                           },
                         ),
                       ),
@@ -473,7 +527,7 @@ class CanvasSelector extends StatelessWidget {
                           subtitle: 'Insert blank after',
                           onTap: () {
                             Navigator.pop(sheetContext);
-                            onFrameAction('right', index);
+                            widget.onFrameAction('right', index);
                           },
                         ),
                       ),
@@ -489,7 +543,7 @@ class CanvasSelector extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                       onTap: () {
                         Navigator.pop(sheetContext);
-                        onFrameAction('delete', index);
+                        widget.onFrameAction('delete', index);
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

@@ -45,6 +45,13 @@ class BrushStudioScreen extends StatefulWidget {
 }
 
 class _BrushStudioScreenState extends State<BrushStudioScreen> {
+  static double _lastGridScrollOffset = 0.0;
+  static double _lastCategoryScrollOffset = 0.0;
+  static String _lastCategory = 'All';
+
+  late final ScrollController _gridScrollController;
+  late final ScrollController _categoryScrollController;
+
   late List<BrushPreset> _allPresets;
   BrushPreset? _selectedPreset;
   String _selectedCategory = 'All';
@@ -81,10 +88,72 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
         orElse: () => null,
       );
     }
+    _selectedCategory = _lastCategory;
+
+    _gridScrollController = ScrollController(
+      initialScrollOffset: _lastGridScrollOffset,
+    );
+    _categoryScrollController = ScrollController(
+      initialScrollOffset: _lastCategoryScrollOffset,
+    );
+
+    _gridScrollController.addListener(() {
+      if (_gridScrollController.hasClients) {
+        _lastGridScrollOffset = _gridScrollController.offset;
+      }
+    });
+
+    _categoryScrollController.addListener(() {
+      if (_categoryScrollController.hasClients) {
+        _lastCategoryScrollOffset = _categoryScrollController.offset;
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scrollToSelectedPresetOrSavedPosition();
+    });
+  }
+
+  void _scrollToSelectedPresetOrSavedPosition() {
+    if (!_gridScrollController.hasClients) return;
+
+    if (_lastGridScrollOffset > 0) {
+      final double maxScroll = _gridScrollController.position.maxScrollExtent;
+      _gridScrollController.jumpTo(_lastGridScrollOffset.clamp(0.0, maxScroll));
+      return;
+    }
+
+    if (_selectedPreset != null) {
+      final presets = _filteredPresets;
+      final int index = presets.indexWhere((p) => p.id == _selectedPreset!.id);
+      if (index >= 0) {
+        final double screenWidth = MediaQuery.of(context).size.width;
+        final double availableWidth = screenWidth - 32.0;
+        final int crossAxisCount = (availableWidth / 180.0).ceil().clamp(1, 4);
+        final int rowIndex = index ~/ crossAxisCount;
+        const double rowHeight = 132.0 + 12.0;
+        final double targetOffset = (rowIndex * rowHeight - 40.0).clamp(
+          0.0,
+          _gridScrollController.position.maxScrollExtent,
+        );
+        _gridScrollController.jumpTo(targetOffset);
+        _lastGridScrollOffset = targetOffset;
+      }
+    }
   }
 
   @override
   void dispose() {
+    if (_gridScrollController.hasClients) {
+      _lastGridScrollOffset = _gridScrollController.offset;
+    }
+    if (_categoryScrollController.hasClients) {
+      _lastCategoryScrollOffset = _categoryScrollController.offset;
+    }
+    _lastCategory = _selectedCategory;
+    _gridScrollController.dispose();
+    _categoryScrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -266,9 +335,19 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       _scratchpadStrokes.clear();
       _currentDrawingStroke = null;
     });
+    if (_gridScrollController.hasClients) {
+      _lastGridScrollOffset = _gridScrollController.offset;
+    }
   }
 
   void _applyAndClose() {
+    if (_gridScrollController.hasClients) {
+      _lastGridScrollOffset = _gridScrollController.offset;
+    }
+    if (_categoryScrollController.hasClients) {
+      _lastCategoryScrollOffset = _categoryScrollController.offset;
+    }
+    _lastCategory = _selectedCategory;
     if (_selectedPreset != null) {
       widget.editorController.activeCategory = 'Brush';
       widget.drawingController.activeBrushPresetId = _selectedPreset!.id;
@@ -646,6 +725,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
           height: 44,
           margin: const EdgeInsets.symmetric(vertical: 6),
           child: ListView.separated(
+            controller: _categoryScrollController,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: _categories.length,
@@ -660,6 +740,16 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                 onSelected: (_) {
                   setState(() {
                     _selectedCategory = cat;
+                    _lastCategory = cat;
+                  });
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted || !_gridScrollController.hasClients) return;
+                    if (_selectedPreset != null && _filteredPresets.any((p) => p.id == _selectedPreset!.id)) {
+                      _scrollToSelectedPresetOrSavedPosition();
+                    } else {
+                      _gridScrollController.jumpTo(0.0);
+                      _lastGridScrollOffset = 0.0;
+                    }
                   });
                 },
                 selectedColor: accent,
@@ -718,6 +808,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
     }
 
     return GridView.builder(
+      controller: _gridScrollController,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 180,

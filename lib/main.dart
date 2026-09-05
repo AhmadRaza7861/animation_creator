@@ -8,6 +8,8 @@ import 'features/projects/data/project_repository.dart';
 import 'features/splash/presentation/screens/splash_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
     if (kReleaseMode) {
