@@ -308,7 +308,7 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
 
                     // FORMAT SEGMENT TOGGLE
                     const Text(
@@ -352,7 +352,7 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
 
                     // DETAILS Section Header
                     const Text(
@@ -423,86 +423,93 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                         ],
                       ),
                     ),
-
-                    const SizedBox(height: 32),
-
-                    // MAKE MOVIE Primary Button
-                    Container(
-                      width: double.infinity,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            ColorConstants.primary,
-                            ColorConstants.primaryDark,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(27),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ColorConstants.primary.withValues(alpha: 0.35),
-                            blurRadius: 14,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(27),
-                          onTap: _onMakeMoviePressed,
-                          child: const Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.movie_creation_outlined, color: Colors.white, size: 22),
-                                SizedBox(width: 8),
-                                Text(
-                                  'MAKE MOVIE',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.0,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
 
-            // Bottom Information Pill (FPS / TOTAL DURATION / TOTAL FRAMES)
+            // Pinned Bottom Action Section (Always in front & visible without scrolling)
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A2533),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+              padding: const EdgeInsets.fromLTRB(20.0, 6.0, 20.0, 16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // MAKE MOVIE Primary Button
+                  Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          ColorConstants.primary,
+                          ColorConstants.primaryDark,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(26),
+                      boxShadow: [
+                        BoxShadow(
+                          color: ColorConstants.primary.withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildInfoColumn(value: '$fps', label: 'FPS'),
-                    Container(height: 28, width: 1, color: Colors.white12),
-                    _buildInfoColumn(value: formattedDuration, label: 'DURATION'),
-                    Container(height: 28, width: 1, color: Colors.white12),
-                    _buildInfoColumn(value: '$totalFrames', label: 'TOTAL FRAMES'),
-                  ],
-                ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(26),
+                        onTap: _onMakeMoviePressed,
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.movie_creation_outlined, color: Colors.white, size: 22),
+                              SizedBox(width: 8),
+                              Text(
+                                'MAKE MOVIE',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Bottom Information Pill (FPS / TOTAL DURATION / TOTAL FRAMES)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2A2533),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildInfoColumn(value: '$fps', label: 'FPS'),
+                        Container(height: 26, width: 1, color: Colors.white12),
+                        _buildInfoColumn(value: formattedDuration, label: 'DURATION'),
+                        Container(height: 26, width: 1, color: Colors.white12),
+                        _buildInfoColumn(value: '$totalFrames', label: 'TOTAL FRAMES'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

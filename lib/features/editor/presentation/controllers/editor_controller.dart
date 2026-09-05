@@ -14,6 +14,7 @@ import '../../../../package_code/src/paint_contents/simple_line.dart';
 import '../../../../package_code/src/paint_contents/smooth_line.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
 import '../../../projects/data/project_repository.dart';
+import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 import '../widgets/sticker_widgets/text_sticker_widget.dart';
 import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
@@ -538,8 +539,8 @@ class EditorController extends ChangeNotifier {
     }
     state['canvases'] = canvasesData;
 
-    List<int>? thumbBytes;
-    if (_canvases.isNotEmpty) {
+    List<int>? thumbBytes = await _generateSolidThumbnailBytes();
+    if (thumbBytes == null && _canvases.isNotEmpty) {
       final snapshotImg = _canvases.first.realTimeSnapshot.value;
       if (snapshotImg != null) {
         final byteData = await snapshotImg.toByteData(format: ui.ImageByteFormat.png);
@@ -554,6 +555,86 @@ class EditorController extends ChangeNotifier {
       state: state,
       thumbnailBytes: thumbBytes,
     );
+  }
+
+  Future<Uint8List?> _generateSolidThumbnailBytes() async {
+    if (_canvases.isEmpty) return null;
+    try {
+      final controller = _canvases.first;
+      final Size canvasSize = controller.drawConfig.value.size ?? const Size(1920, 1080);
+      if (canvasSize.width <= 0 || canvasSize.height <= 0) return null;
+
+      const double maxThumbDim = 512.0;
+      final double scale = maxThumbDim / (canvasSize.longestSide > 0 ? canvasSize.longestSide : 512.0);
+      final Size renderSize = Size(
+        (canvasSize.width * scale).roundToDouble().clamp(1.0, 2048.0),
+        (canvasSize.height * scale).roundToDouble().clamp(1.0, 2048.0),
+      );
+
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, Offset.zero & renderSize);
+      canvas.scale(scale);
+
+      // 1. Solid background (Guaranteed non-transparent)
+      final Color bgColor = _globalBackground.pattern == 'blueprint'
+          ? const Color(0xFF0F4C81)
+          : (_globalBackground.pattern == 'graph' ? const Color(0xFFF1F8F6) : _globalBackground.color);
+
+      canvas.drawRect(Offset.zero & canvasSize, Paint()..color = bgColor);
+
+      // Background image if any
+      if (_globalBackground.image != null) {
+        final Paint imgPaint = Paint()
+          ..color = Colors.white.withValues(alpha: _globalBackground.imageOpacity.clamp(0.0, 1.0));
+        final Rect src = Rect.fromLTWH(
+          0,
+          0,
+          _globalBackground.image!.width.toDouble(),
+          _globalBackground.image!.height.toDouble(),
+        );
+        final Rect dst = Offset.zero & canvasSize;
+        canvas.drawImageRect(_globalBackground.image!, src, dst, imgPaint);
+      }
+
+      // Background pattern if any
+      if (_globalBackground.pattern != null && _globalBackground.pattern != 'none') {
+        final painter = PreviewPatternPainter(_globalBackground.pattern!);
+        painter.paint(canvas, canvasSize);
+      }
+
+      // 2. Draw canvas layer history
+      canvas.saveLayer(Offset.zero & canvasSize, Paint());
+      for (int i = controller.layers.length - 1; i >= 0; i--) {
+        final layer = controller.layers[i];
+        if (!layer.isVisible) continue;
+
+        canvas.saveLayer(
+          Offset.zero & canvasSize,
+          Paint()
+            ..blendMode = layer.blendMode
+            ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
+        );
+
+        final int count = layer.currentIndex.clamp(0, layer.history.length);
+        for (int j = 0; j < count; j++) {
+          layer.history[j].draw(canvas, canvasSize, false);
+        }
+
+        canvas.restore();
+      }
+      canvas.restore();
+
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image img = await picture.toImage(
+        renderSize.width.toInt(),
+        renderSize.height.toInt(),
+      );
+      final ByteData? byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Error generating solid thumbnail bytes: $e');
+      return null;
+    }
   }
 
   Future<DrawingController> _createControllerFromData(Map<String, dynamic> cMap) async {

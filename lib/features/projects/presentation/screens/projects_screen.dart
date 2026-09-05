@@ -677,9 +677,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       itemCount: projectsList.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+        childAspectRatio: 0.78,
       ),
       itemBuilder: (context, index) {
         final project = projectsList[index];
