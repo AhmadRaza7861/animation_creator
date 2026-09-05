@@ -190,6 +190,9 @@ class EditorController extends ChangeNotifier {
   }
 
   void selectShape(String shape) {
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
     _selectedShape = shape;
     switch (shape) {
       case 'line':
@@ -243,6 +246,9 @@ class EditorController extends ChangeNotifier {
   }
 
   set activeCategory(String value) {
+    if (_activeCategory != value && _activeSticker != null) {
+      stampActiveSticker();
+    }
     _activeCategory = value;
     notifyListeners();
   }
@@ -429,6 +435,9 @@ class EditorController extends ChangeNotifier {
   }
 
   Future<void> saveProject() async {
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
     if (_canvases.isEmpty || projectId == null) return;
 
     final Map<String, dynamic> state = {
@@ -636,12 +645,14 @@ class EditorController extends ChangeNotifier {
       _thumbnails.add(null);
       _currentIndex = 0;
     } else {
+      if (_activeSticker != null) {
+        stampActiveSticker();
+      }
       final targetIndex = atIndex ?? (_currentIndex + 1);
       _canvases.insert(targetIndex, controller);
       _thumbnails.insert(targetIndex, null);
       _currentIndex = targetIndex;
     }
-    _activeSticker = null;
     notifyListeners();
   }
 
@@ -655,8 +666,10 @@ class EditorController extends ChangeNotifier {
   // Frame manipulation methods
   void selectCanvas(int index) {
     if (index >= 0 && index < _canvases.length) {
+      if (_activeSticker != null) {
+        stampActiveSticker();
+      }
       _currentIndex = index;
-      _activeSticker = null;
       notifyListeners();
     }
   }
@@ -672,6 +685,9 @@ class EditorController extends ChangeNotifier {
 
   Future<void> importVideoFrames(List<String> framePaths) async {
     if (framePaths.isEmpty) return;
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
 
     final int targetStartIndex = _currentIndex.clamp(0, _canvases.isNotEmpty ? _canvases.length - 1 : 0);
 
@@ -725,12 +741,19 @@ class EditorController extends ChangeNotifier {
     if (_canvases.isNotEmpty) {
       _currentIndex = targetStartIndex.clamp(0, _canvases.length - 1);
     }
-    _activeSticker = null;
     notifyListeners();
   }
 
   void deleteFrame(int index) {
     if (_canvases.length <= 1) return;
+    if (_activeSticker != null) {
+      if (index != _currentIndex) {
+        stampActiveSticker();
+      } else {
+        _activeSticker = null;
+        _clearActiveStickerHistory();
+      }
+    }
     final controller = _canvases.removeAt(index);
     controller.drawConfig.removeListener(_onDrawConfigChanged);
     controller.dispose();
@@ -739,11 +762,13 @@ class EditorController extends ChangeNotifier {
     if (_currentIndex >= _canvases.length) {
       _currentIndex = _canvases.length - 1;
     }
-    _activeSticker = null;
     notifyListeners();
   }
 
   void reorderFrames(int oldIndex, int newIndex) {
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
     if (oldIndex < newIndex) newIndex -= 1;
     if (oldIndex == newIndex) return;
 
@@ -764,6 +789,9 @@ class EditorController extends ChangeNotifier {
   }
 
   void applyFramesOrder(List<int> order, int activeIndex) {
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
     if (order.length != _canvases.length) return;
     final List<DrawingController> newCanvases = [];
     final List<ui.Image?> newThumbs = [];
@@ -780,6 +808,9 @@ class EditorController extends ChangeNotifier {
   }
 
   void duplicateFrame(int index) async {
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
     final source = _canvases[index];
     final duplicated = DrawingController();
     duplicated.backgroundColor = source.backgroundColor;
@@ -837,6 +868,9 @@ class EditorController extends ChangeNotifier {
   }
 
   void copyFrame(int index) async {
+    if (_activeSticker != null && index == _currentIndex) {
+      stampActiveSticker();
+    }
     final source = _canvases[index];
     final size = source.drawConfig.value.size ?? Size.zero;
     _clipboardFrame = {
@@ -853,6 +887,9 @@ class EditorController extends ChangeNotifier {
   void pasteFrame(int index) async {
     if (_clipboardFrame == null) return;
     if (index < 0 || index >= _canvases.length) return;
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
 
     final targetController = _canvases[index];
     final layersData = _clipboardFrame!['layers'] as List<dynamic>? ?? [];
@@ -1153,6 +1190,7 @@ class EditorController extends ChangeNotifier {
         paint: paint,
       );
       _activeSticker = null;
+      _clearActiveStickerHistory();
       drawingController.addContent(textContent);
     } else if (_activeSticker is ActiveShapeSticker) {
       final sticker = _activeSticker as ActiveShapeSticker;
@@ -1165,6 +1203,7 @@ class EditorController extends ChangeNotifier {
         paint: sticker.content.paint,
       );
       _activeSticker = null;
+      _clearActiveStickerHistory();
       drawingController.addContent(shapeContent);
     } else if (_activeSticker is ActiveStraightLineSticker) {
       final sticker = _activeSticker as ActiveStraightLineSticker;
@@ -1183,17 +1222,26 @@ class EditorController extends ChangeNotifier {
         );
       }
       _activeSticker = null;
+      _clearActiveStickerHistory();
       drawingController.addContent(lineContent);
     } else if (_activeSticker is ActiveFreehandLineSticker) {
       final sticker = _activeSticker as ActiveFreehandLineSticker;
       _activeSticker = null;
+      _clearActiveStickerHistory();
       drawingController.addContent(sticker.content);
+    } else {
+      _activeSticker = null;
+      _clearActiveStickerHistory();
     }
+    updateSnapshot();
     notifyListeners();
   }
 
   void addTextSticker(String text, Offset position) {
     if (drawingController.isCurrentLayerLocked) return;
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
     _activeSticker = ActiveTextSticker(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: text,
@@ -1207,6 +1255,9 @@ class EditorController extends ChangeNotifier {
   bool Function(PaintContent) _createInterceptDraw(DrawingController controller) {
     return (content) {
       if (controller.isCurrentLayerLocked) return false;
+      if (_activeSticker != null) {
+        stampActiveSticker();
+      }
       if (!_enableStickers && content is! Lasso && content is! ShapeStickerContent) {
         return false;
       }

@@ -24,6 +24,9 @@ import '../widgets/timeline_panel.dart';
 import '../widgets/toolbar_panel.dart';
 import '../widgets/layer_panel.dart';
 import '../widgets/sticker_widgets/text_sticker_widget.dart';
+import '../widgets/sticker_widgets/shape_sticker_widget.dart';
+import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
+import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/custom_switch.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
@@ -87,11 +90,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 final textSticker = controller.activeSticker as ActiveTextSticker;
                 textSticker.color = newColor.withValues(alpha: newOpacity);
                 textSticker.opacity = newOpacity;
+              } else if (controller.activeSticker is ActiveShapeSticker) {
+                final shapeSticker = controller.activeSticker as ActiveShapeSticker;
+                shapeSticker.content.paint.color = newColor.withValues(alpha: newOpacity);
+              } else if (controller.activeSticker is ActiveStraightLineSticker) {
+                final lineSticker = controller.activeSticker as ActiveStraightLineSticker;
+                lineSticker.paint.color = newColor.withValues(alpha: newOpacity);
+              } else if (controller.activeSticker is ActiveFreehandLineSticker) {
+                final freehandSticker = controller.activeSticker as ActiveFreehandLineSticker;
+                freehandSticker.content.paint.color = newColor.withValues(alpha: newOpacity);
               }
             });
             controller.drawingController.setStyle(
               color: newColor.withValues(alpha: newOpacity),
             );
+            controller.updateSnapshot();
           },
         ),
       ),
@@ -884,13 +897,32 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 ValueListenableBuilder<DrawConfig>(
                   valueListenable: controller.drawingController.drawConfig,
                   builder: (context, config, child) {
-                    final showColor = config.contentType != Eraser &&
+                    final bool isTextActive = controller.activeSticker is ActiveTextSticker ||
+                        controller.isTextToolSelected ||
+                        controller.activeCategory == 'Text';
+
+                    final bool hasActiveSticker = controller.activeSticker != null;
+
+                    final showColor = isTextActive ||
+                        hasActiveSticker ||
+                        (config.contentType != Eraser &&
                         config.contentType != Lasso &&
                         config.contentType != BlurContent &&
-                        config.contentType != SmudgeContent;
+                        config.contentType != SmudgeContent);
+
                     if (!showColor) return const SizedBox.shrink();
 
-                    final activeColor = config.color;
+                    Color activeColor = config.color;
+                    if (controller.activeSticker is ActiveTextSticker) {
+                      activeColor = (controller.activeSticker as ActiveTextSticker).color;
+                    } else if (controller.activeSticker is ActiveShapeSticker) {
+                      activeColor = (controller.activeSticker as ActiveShapeSticker).content.paint.color;
+                    } else if (controller.activeSticker is ActiveStraightLineSticker) {
+                      activeColor = (controller.activeSticker as ActiveStraightLineSticker).paint.color;
+                    } else if (controller.activeSticker is ActiveFreehandLineSticker) {
+                      activeColor = (controller.activeSticker as ActiveFreehandLineSticker).content.paint.color;
+                    }
+
                     return GestureDetector(
                       onTap: () => _openColorPicker(activeColor, controller),
                       child: Container(
@@ -898,7 +930,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         height: 24,
                         margin: const EdgeInsets.only(left: 8),
                         decoration: BoxDecoration(
-                          color: activeColor,
+                          color: activeColor.withValues(alpha: 1.0),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                           boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],

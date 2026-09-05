@@ -86,6 +86,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 title: const Text('Export Current Frame'),
                 onTap: () async {
                   Navigator.pop(context);
+                  if (controller.activeSticker != null) {
+                    controller.stampActiveSticker();
+                  }
                   final Uint8List? data = (await controller.drawingController.getImageData())?.buffer.asUint8List();
                   if (data == null) return;
                   if (mounted) {
@@ -321,7 +324,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       controller.isTextToolSelected = !controller.isTextToolSelected;
                       if (controller.isTextToolSelected) {
                         controller.activeCategory = 'Text';
-                        controller.activeSticker = null;
+                        if (controller.activeSticker != null && controller.activeSticker is! ActiveTextSticker) {
+                          controller.stampActiveSticker();
+                        }
                       } else {
                         controller.activeCategory = 'Brush';
                       }
