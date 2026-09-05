@@ -42,13 +42,14 @@ class CanvasBackground {
     double? imageOpacity,
     String? pattern,
     bool clearImage = false,
+    bool clearPattern = false,
   }) {
     return CanvasBackground(
       color: color ?? this.color,
       image: clearImage ? null : (image ?? this.image),
       imagePath: clearImage ? null : (imagePath ?? this.imagePath),
       imageOpacity: imageOpacity ?? this.imageOpacity,
-      pattern: clearImage ? null : (pattern ?? this.pattern),
+      pattern: clearPattern ? null : (pattern ?? this.pattern),
     );
   }
 }
@@ -422,6 +423,8 @@ class EditorController extends ChangeNotifier {
           imagePath: bgMap['imagePath'] as String?,
           imageOpacity: bgMap['imageOpacity'] as double,
           pattern: bgMap['pattern'] as String?,
+          clearImage: bgMap['imagePath'] == null,
+          clearPattern: bgMap['pattern'] == null,
         );
         if (_globalBackground.imagePath != null) {
           try {
@@ -577,7 +580,7 @@ class EditorController extends ChangeNotifier {
 
       // 1. Solid background (Guaranteed non-transparent)
       final Color bgColor = _globalBackground.pattern == 'blueprint'
-          ? const Color(0xFF0F4C81)
+          ? const Color(0xFF1E3D59)
           : (_globalBackground.pattern == 'graph' ? const Color(0xFFF1F8F6) : _globalBackground.color);
 
       canvas.drawRect(Offset.zero & canvasSize, Paint()..color = bgColor);

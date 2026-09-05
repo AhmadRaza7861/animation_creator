@@ -370,6 +370,43 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         } catch (e) {
           debugPrint('Failed to load initial template preview bytes: $e');
         }
+      } else if ((_backgroundPattern != null && _backgroundPattern != 'none') || _backgroundColor != Colors.white || _backgroundImagePath != null) {
+        try {
+          final ui.PictureRecorder recorder = ui.PictureRecorder();
+          const double thumbW = 512.0;
+          final double thumbH = (512.0 / (aspectRatio > 0 ? aspectRatio : 1.0)).clamp(256.0, 1024.0);
+          final Size size = Size(thumbW, thumbH);
+          final Canvas canvas = Canvas(recorder, Offset.zero & size);
+
+          final Color bgColor = _backgroundPattern == 'blueprint'
+              ? const Color(0xFF1E3D59)
+              : (_backgroundPattern == 'graph' ? const Color(0xFFF1F8F6) : _backgroundColor);
+
+          canvas.drawRect(Offset.zero & size, Paint()..color = bgColor);
+
+          if (_backgroundImagePath != null) {
+            try {
+              final bytes = await File(_backgroundImagePath!).readAsBytes();
+              final codec = await ui.instantiateImageCodec(bytes);
+              final frame = await codec.getNextFrame();
+              final Rect src = Rect.fromLTWH(0, 0, frame.image.width.toDouble(), frame.image.height.toDouble());
+              final Rect dst = Offset.zero & size;
+              canvas.drawImageRect(frame.image, src, dst, Paint());
+            } catch (_) {}
+          }
+
+          if (_backgroundPattern != null && _backgroundPattern != 'none') {
+            final painter = PreviewPatternPainter(_backgroundPattern!);
+            painter.paint(canvas, size);
+          }
+
+          final picture = recorder.endRecording();
+          final img = await picture.toImage(thumbW.toInt(), thumbH.toInt());
+          final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+          initialThumbnailBytes = byteData?.buffer.asUint8List();
+        } catch (e) {
+          debugPrint('Failed to generate initial background preset thumbnail: $e');
+        }
       }
 
       final projectId = await widget.repository.saveProject(

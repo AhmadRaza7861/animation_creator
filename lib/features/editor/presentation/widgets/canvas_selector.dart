@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../controllers/editor_controller.dart';
+import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 
 class CanvasSelector extends StatefulWidget {
   final List<ui.Image?> thumbnails;
@@ -14,6 +16,7 @@ class CanvasSelector extends StatefulWidget {
   final void Function(String action, int index) onFrameAction;
   final List<Key> canvasKeys;
   final void Function(int oldIndex, int newIndex) onReorder;
+  final CanvasBackground? globalBackground;
 
   const CanvasSelector({
     super.key,
@@ -28,6 +31,7 @@ class CanvasSelector extends StatefulWidget {
     required this.onFrameAction,
     required this.canvasKeys,
     required this.onReorder,
+    this.globalBackground,
   });
 
   @override
@@ -222,7 +226,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  const CheckerboardBackground(),
+                  _buildThumbnailBackground(),
                   if (widget.thumbnails[index] != null)
                     RawImage(image: widget.thumbnails[index], fit: BoxFit.contain)
                   else
@@ -346,7 +350,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                const CheckerboardBackground(),
+                                _buildThumbnailBackground(),
                                 if (widget.thumbnails[index] != null)
                                   RawImage(
                                     image: widget.thumbnails[index],
@@ -739,6 +743,38 @@ class _CanvasSelectorState extends State<CanvasSelector> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildThumbnailBackground() {
+    final bg = widget.globalBackground;
+    if (bg == null) {
+      return const CheckerboardBackground();
+    }
+
+    final Color bgColor = bg.pattern == 'blueprint'
+        ? const Color(0xFF1E3D59)
+        : (bg.pattern == 'graph' ? const Color(0xFFF1F8F6) : bg.color);
+
+    return Container(
+      color: bgColor,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (bg.image != null)
+            Opacity(
+              opacity: bg.imageOpacity,
+              child: RawImage(
+                image: bg.image,
+                fit: BoxFit.cover,
+              ),
+            ),
+          if (bg.pattern != null && bg.pattern != 'none')
+            CustomPaint(
+              painter: PreviewPatternPainter(bg.pattern!),
+            ),
+        ],
       ),
     );
   }
