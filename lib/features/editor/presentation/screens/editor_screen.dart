@@ -198,181 +198,181 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         },
                       ),
                       const Divider(height: 1),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.indigoAccent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.dashboard_customize_rounded, color: Colors.indigoAccent, size: 22),
-                        ),
-                        title: const Text('Frames Viewer', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${currentController.canvases.length} frames', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
-                        onTap: () async {
-                          Navigator.pop(context);
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FramesReorderScreen(
-                                thumbnails: currentController.thumbnails,
-                                currentIndex: currentController.currentIndex,
-                              ),
-                            ),
-                          );
-                          if (result != null && result is Map<String, dynamic>) {
-                            final order = (result['order'] as List<dynamic>?)?.cast<int>();
-                            final active = result['active'] as int? ?? 0;
-                            if (order != null) {
-                              currentController.applyFramesOrder(order, active);
-                            }
-                          }
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.deepOrangeAccent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.video_library_rounded, color: Colors.deepOrangeAccent, size: 22),
-                        ),
-                        title: const Text('Import Video', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text('Trim and extract video frames into canvas', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
-                        onTap: () async {
-                          Navigator.pop(context);
-                          final ImagePicker picker = ImagePicker();
-                          final XFile? file = await picker.pickVideo(source: ImageSource.gallery);
-                          if (file == null) return;
-
-                          final trimmedFrames = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => VideoTrimmingScreen(videoFile: File(file.path)),
-                            ),
-                          );
-
-                          if (trimmedFrames != null && trimmedFrames is List<String>) {
-                            await currentController.importVideoFrames(trimmedFrames);
-                          }
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.deepPurpleAccent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.aspect_ratio_rounded, color: Colors.deepPurpleAccent, size: 22),
-                        ),
-                        title: const Text('Canvas Size', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(canvasSizeLabel, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
-                        onTap: () async {
-                          Navigator.pop(context);
-                          int initW = 1280;
-                          int initH = 720;
-                          String initName = 'Landscape (16:9)';
-                          if ((ratio - 1.0).abs() < 0.05) {
-                            initW = 1000;
-                            initH = 1000;
-                            initName = 'Square (1:1)';
-                          } else if ((ratio - 9.0 / 16.0).abs() < 0.05) {
-                            initW = 720;
-                            initH = 1280;
-                            initName = 'Portrait (9:16)';
-                          } else if ((ratio - 4.0 / 3.0).abs() < 0.05) {
-                            initW = 1024;
-                            initH = 768;
-                            initName = 'Standard (4:3)';
-                          }
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CanvasSizeScreen(
-                                initialWidth: initW,
-                                initialHeight: initH,
-                                initialName: initName,
-                              ),
-                            ),
-                          );
-                          if (result != null && result is Map<String, dynamic>) {
-                            final double? newRatio = result['aspectRatio'] as double?;
-                            if (newRatio != null) {
-                              currentController.aspectRatio = newRatio;
-                            }
-                          }
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.speed_rounded, color: Colors.teal, size: 22),
-                        ),
-                        title: const Text('Frames per second', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${currentController.fps} FPS', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
-                        onTap: () async {
-                          Navigator.pop(context);
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FpsScreen(initialFps: currentController.fps),
-                            ),
-                          );
-                          if (result != null && result is int) {
-                            currentController.fps = result;
-                          }
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.blueAccent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.wallpaper_rounded, color: Colors.blueAccent, size: 22),
-                        ),
-                        title: const Text('Background', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(bgLabel, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
-                        onTap: () async {
-                          Navigator.pop(context);
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => BackgroundPresetsScreen(
-                                initialPattern: currentController.globalBackground.pattern,
-                              ),
-                            ),
-                          );
-                          if (result != null && result is Map<String, dynamic>) {
-                            final String? pattern = result['pattern'] as String?;
-                            currentController.globalBackground = currentController.globalBackground.copyWith(
-                              pattern: pattern,
-                            );
-                          }
-                        },
-                      ),
-                      const Divider(height: 1),
+                      // ListTile(
+                      //   contentPadding: EdgeInsets.zero,
+                      //   leading: Container(
+                      //     padding: const EdgeInsets.all(8),
+                      //     decoration: BoxDecoration(
+                      //       color: Colors.indigoAccent.withValues(alpha: 0.12),
+                      //       borderRadius: BorderRadius.circular(10),
+                      //     ),
+                      //     child: const Icon(Icons.dashboard_customize_rounded, color: Colors.indigoAccent, size: 22),
+                      //   ),
+                      //   title: const Text('Frames Viewer', style: TextStyle(fontWeight: FontWeight.w600)),
+                      //   subtitle: Text('${currentController.canvases.length} frames', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      //   trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                      //   onTap: () async {
+                      //     Navigator.pop(context);
+                      //     final result = await Navigator.push(
+                      //       context,
+                      //       MaterialPageRoute(
+                      //         builder: (context) => FramesReorderScreen(
+                      //           thumbnails: currentController.thumbnails,
+                      //           currentIndex: currentController.currentIndex,
+                      //         ),
+                      //       ),
+                      //     );
+                      //     if (result != null && result is Map<String, dynamic>) {
+                      //       final order = (result['order'] as List<dynamic>?)?.cast<int>();
+                      //       final active = result['active'] as int? ?? 0;
+                      //       if (order != null) {
+                      //         currentController.applyFramesOrder(order, active);
+                      //       }
+                      //     }
+                      //   },
+                      // ),
+                      // const Divider(height: 1),
+                      // ListTile(
+                      //   contentPadding: EdgeInsets.zero,
+                      //   leading: Container(
+                      //     padding: const EdgeInsets.all(8),
+                      //     decoration: BoxDecoration(
+                      //       color: Colors.deepOrangeAccent.withValues(alpha: 0.12),
+                      //       borderRadius: BorderRadius.circular(10),
+                      //     ),
+                      //     child: const Icon(Icons.video_library_rounded, color: Colors.deepOrangeAccent, size: 22),
+                      //   ),
+                      //   title: const Text('Import Video', style: TextStyle(fontWeight: FontWeight.w600)),
+                      //   subtitle: const Text('Trim and extract video frames into canvas', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      //   trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                      //   onTap: () async {
+                      //     Navigator.pop(context);
+                      //     final ImagePicker picker = ImagePicker();
+                      //     final XFile? file = await picker.pickVideo(source: ImageSource.gallery);
+                      //     if (file == null) return;
+                      //
+                      //     final trimmedFrames = await Navigator.push(
+                      //       context,
+                      //       MaterialPageRoute(
+                      //         builder: (context) => VideoTrimmingScreen(videoFile: File(file.path)),
+                      //       ),
+                      //     );
+                      //
+                      //     if (trimmedFrames != null && trimmedFrames is List<String>) {
+                      //       await currentController.importVideoFrames(trimmedFrames);
+                      //     }
+                      //   },
+                      // ),
+                      // const Divider(height: 1),
+                      // ListTile(
+                      //   contentPadding: EdgeInsets.zero,
+                      //   leading: Container(
+                      //     padding: const EdgeInsets.all(8),
+                      //     decoration: BoxDecoration(
+                      //       color: Colors.deepPurpleAccent.withValues(alpha: 0.12),
+                      //       borderRadius: BorderRadius.circular(10),
+                      //     ),
+                      //     child: const Icon(Icons.aspect_ratio_rounded, color: Colors.deepPurpleAccent, size: 22),
+                      //   ),
+                      //   title: const Text('Canvas Size', style: TextStyle(fontWeight: FontWeight.w600)),
+                      //   subtitle: Text(canvasSizeLabel, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      //   trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                      //   onTap: () async {
+                      //     Navigator.pop(context);
+                      //     int initW = 1280;
+                      //     int initH = 720;
+                      //     String initName = 'Landscape (16:9)';
+                      //     if ((ratio - 1.0).abs() < 0.05) {
+                      //       initW = 1000;
+                      //       initH = 1000;
+                      //       initName = 'Square (1:1)';
+                      //     } else if ((ratio - 9.0 / 16.0).abs() < 0.05) {
+                      //       initW = 720;
+                      //       initH = 1280;
+                      //       initName = 'Portrait (9:16)';
+                      //     } else if ((ratio - 4.0 / 3.0).abs() < 0.05) {
+                      //       initW = 1024;
+                      //       initH = 768;
+                      //       initName = 'Standard (4:3)';
+                      //     }
+                      //     final result = await Navigator.push(
+                      //       context,
+                      //       MaterialPageRoute(
+                      //         builder: (context) => CanvasSizeScreen(
+                      //           initialWidth: initW,
+                      //           initialHeight: initH,
+                      //           initialName: initName,
+                      //         ),
+                      //       ),
+                      //     );
+                      //     if (result != null && result is Map<String, dynamic>) {
+                      //       final double? newRatio = result['aspectRatio'] as double?;
+                      //       if (newRatio != null) {
+                      //         currentController.aspectRatio = newRatio;
+                      //       }
+                      //     }
+                      //   },
+                      // ),
+                      // const Divider(height: 1),
+                      // ListTile(
+                      //   contentPadding: EdgeInsets.zero,
+                      //   leading: Container(
+                      //     padding: const EdgeInsets.all(8),
+                      //     decoration: BoxDecoration(
+                      //       color: Colors.teal.withValues(alpha: 0.12),
+                      //       borderRadius: BorderRadius.circular(10),
+                      //     ),
+                      //     child: const Icon(Icons.speed_rounded, color: Colors.teal, size: 22),
+                      //   ),
+                      //   title: const Text('Frames per second', style: TextStyle(fontWeight: FontWeight.w600)),
+                      //   subtitle: Text('${currentController.fps} FPS', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      //   trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                      //   onTap: () async {
+                      //     Navigator.pop(context);
+                      //     final result = await Navigator.push(
+                      //       context,
+                      //       MaterialPageRoute(
+                      //         builder: (context) => FpsScreen(initialFps: currentController.fps),
+                      //       ),
+                      //     );
+                      //     if (result != null && result is int) {
+                      //       currentController.fps = result;
+                      //     }
+                      //   },
+                      // ),
+                      // const Divider(height: 1),
+                      // ListTile(
+                      //   contentPadding: EdgeInsets.zero,
+                      //   leading: Container(
+                      //     padding: const EdgeInsets.all(8),
+                      //     decoration: BoxDecoration(
+                      //       color: Colors.blueAccent.withValues(alpha: 0.12),
+                      //       borderRadius: BorderRadius.circular(10),
+                      //     ),
+                      //     child: const Icon(Icons.wallpaper_rounded, color: Colors.blueAccent, size: 22),
+                      //   ),
+                      //   title: const Text('Background', style: TextStyle(fontWeight: FontWeight.w600)),
+                      //   subtitle: Text(bgLabel, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      //   trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                      //   onTap: () async {
+                      //     Navigator.pop(context);
+                      //     final result = await Navigator.push(
+                      //       context,
+                      //       MaterialPageRoute(
+                      //         builder: (context) => BackgroundPresetsScreen(
+                      //           initialPattern: currentController.globalBackground.pattern,
+                      //         ),
+                      //       ),
+                      //     );
+                      //     if (result != null && result is Map<String, dynamic>) {
+                      //       final String? pattern = result['pattern'] as String?;
+                      //       currentController.globalBackground = currentController.globalBackground.copyWith(
+                      //         pattern: pattern,
+                      //       );
+                      //     }
+                      //   },
+                      // ),
+                    //  const Divider(height: 1),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: Container(
