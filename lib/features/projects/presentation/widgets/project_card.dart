@@ -341,10 +341,12 @@ class ProjectCard extends StatelessWidget {
       final thumbFile = File(project.thumbnailPath!);
       return Container(
         color: Colors.white,
-        child: Image.file(
-          thumbFile,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+        child: Center(
+          child: Image.file(
+            thumbFile,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+          ),
         ),
       );
     }

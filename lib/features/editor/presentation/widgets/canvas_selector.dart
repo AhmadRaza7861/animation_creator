@@ -750,7 +750,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
   Widget _buildThumbnailBackground() {
     final bg = widget.globalBackground;
     if (bg == null) {
-      return const CheckerboardBackground();
+      return Container(color: Colors.white);
     }
 
     final Color bgColor = bg.pattern == 'blueprint'
@@ -759,23 +759,15 @@ class _CanvasSelectorState extends State<CanvasSelector> {
 
     return Container(
       color: bgColor,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (bg.image != null)
-            Opacity(
+      child: bg.image != null
+          ? Opacity(
               opacity: bg.imageOpacity,
               child: RawImage(
                 image: bg.image,
                 fit: BoxFit.cover,
               ),
-            ),
-          if (bg.pattern != null && bg.pattern != 'none')
-            CustomPaint(
-              painter: PreviewPatternPainter(bg.pattern!),
-            ),
-        ],
-      ),
+            )
+          : null,
     );
   }
 }
