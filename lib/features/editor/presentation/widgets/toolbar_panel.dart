@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -14,6 +12,7 @@ import '../../../../../core/constants/app_assets.dart';
 import '../../../../../core/widgets/font_presets.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
+import '../screens/export/make_movie_screen.dart';
 import 'sticker_widgets/text_sticker_widget.dart';
 
 class ToolbarPanel extends ConsumerStatefulWidget {
@@ -51,88 +50,21 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
 
   void _showExportBottomSheet(WidgetRef ref) {
     final controller = ref.read(editorControllerProvider(widget.projectId));
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    if (controller.activeSticker != null) {
+      controller.stampActiveSticker();
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MakeMovieScreen(
+          canvases: controller.canvases,
+          globalBackground: controller.globalBackground,
+          initialMovieName: controller.projectName,
+          initialFormat: controller.exportType,
+          fps: controller.fps,
+          projectAspectRatio: controller.aspectRatio,
+        ),
       ),
-      builder: (context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: SvgPicture.asset(
-                  AssetConstants.export_icon,
-                  width: 24,
-                  height: 24,
-                  colorFilter: const ColorFilter.mode(
-                    ColorConstants.accent,
-                    BlendMode.srcIn,
-                  ),
-                ),
-                title: const Text('Export Current Frame'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  if (controller.activeSticker != null) {
-                    controller.stampActiveSticker();
-                  }
-                  final Uint8List? data =
-                      (await controller.drawingController.getImageData())
-                          ?.buffer
-                          .asUint8List();
-                  if (data == null) return;
-                  if (mounted) {
-                    showDialog<void>(
-                      context: this.context,
-                      builder: (BuildContext c) {
-                        return Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => Navigator.pop(c),
-                            child: Image.memory(data),
-                          ),
-                        );
-                      },
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.code_rounded, color: Colors.green),
-                title: const Text('View Canvas JSON'),
-                onTap: () {
-                  Navigator.pop(context);
-                  showDialog<void>(
-                    context: this.context,
-                    builder: (BuildContext c) {
-                      return Center(
-                        child: Material(
-                          color: Colors.white,
-                          child: InkWell(
-                            onTap: () => Navigator.pop(c),
-                            child: Container(
-                              constraints: const BoxConstraints(
-                                maxWidth: 500,
-                                maxHeight: 800,
-                              ),
-                              padding: const EdgeInsets.all(20.0),
-                              child: SelectableText(
-                                const JsonEncoder.withIndent('  ').convert(
-                                  controller.drawingController.getJsonList(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 

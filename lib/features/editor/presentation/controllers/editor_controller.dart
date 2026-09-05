@@ -85,6 +85,8 @@ class EditorController extends ChangeNotifier {
   int? _templateFrameCount;
   List<String> _templateFrameAssets = [];
   int _fps = 9;
+  String _projectName = 'Movie Name';
+  String _exportType = 'Mp4';
   String? _savedJsonData;
   bool _enableStickers = true;
 
@@ -145,7 +147,19 @@ class EditorController extends ChangeNotifier {
   int? get templateFrameCount => _templateFrameCount;
   List<String> get templateFrameAssets => _templateFrameAssets;
   int get fps => _fps;
+  String get projectName => _projectName;
+  String get exportType => _exportType;
   bool get enableStickers => _enableStickers;
+
+  set projectName(String val) {
+    _projectName = val;
+    notifyListeners();
+  }
+
+  set exportType(String val) {
+    _exportType = val;
+    notifyListeners();
+  }
 
   bool get isOnionEnabled => _isOnionEnabled;
   bool get onionColorMode => _onionColorMode;
@@ -376,6 +390,10 @@ class EditorController extends ChangeNotifier {
 
     final data = await repository.loadProject(projectId!);
     if (data != null && data.state['canvases'] != null) {
+      _projectName = data.meta.title;
+      if (data.state.containsKey('exportType')) {
+        _exportType = data.state['exportType'] as String? ?? 'Mp4';
+      }
       if (data.state.containsKey('aspectRatio')) {
         _aspectRatio = data.state['aspectRatio'] as double?;
       }
@@ -492,6 +510,8 @@ class EditorController extends ChangeNotifier {
       },
       'aspectRatio': _aspectRatio,
       'fps': _fps,
+      'projectName': _projectName,
+      'exportType': _exportType,
       'strokeWidth': _globalStrokeWidth,
       'strokeColor': drawingController.drawConfig.value.color.value,
       'colorOpacity': _colorOpacity,
@@ -582,7 +602,7 @@ class EditorController extends ChangeNotifier {
           opacity: (lMap['opacity'] as num).toDouble(),
           blendMode: BlendMode.values[lMap['blendMode'] as int],
           history: history,
-          currentIndex: lMap['currentIndex'] as int,
+          currentIndex: (lMap['currentIndex'] as int? ?? history.length).clamp(0, history.length),
         ),
       );
     }

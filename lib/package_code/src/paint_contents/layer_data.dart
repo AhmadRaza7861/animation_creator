@@ -13,8 +13,13 @@ class LayerData {
     this.opacity = 1.0,
     this.blendMode = BlendMode.srcOver,
     List<PaintContent>? history,
-    this.currentIndex = 0,
-  }) : history = history ?? <PaintContent>[];
+    int currentIndex = 0,
+  })  : history = history ?? <PaintContent>[],
+        currentIndex = (currentIndex < 0)
+            ? 0
+            : (currentIndex > (history?.length ?? 0)
+                ? (history?.length ?? 0)
+                : currentIndex);
 
   final String id;
   String name;
@@ -36,6 +41,8 @@ class LayerData {
     List<PaintContent>? history,
     int? currentIndex,
   }) {
+    final List<PaintContent> newHistory = history ?? List.from(this.history);
+    final int newIndex = currentIndex ?? this.currentIndex;
     return LayerData(
       id: id ?? this.id,
       name: name ?? this.name,
@@ -43,8 +50,8 @@ class LayerData {
       isLocked: isLocked ?? this.isLocked,
       opacity: opacity ?? this.opacity,
       blendMode: blendMode ?? this.blendMode,
-      history: history ?? List.from(this.history),
-      currentIndex: currentIndex ?? this.currentIndex,
+      history: newHistory,
+      currentIndex: newIndex.clamp(0, newHistory.length),
     );
   }
 }

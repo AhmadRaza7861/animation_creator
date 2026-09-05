@@ -800,7 +800,8 @@ class DrawingController extends ChangeNotifier {
           ..color = Colors.white.withValues(alpha: layer.opacity),
       );
 
-      for (int j = 0; j < layer.currentIndex; j++) {
+      final int count = layer.currentIndex.clamp(0, layer.history.length);
+      for (int j = 0; j < count; j++) {
         layer.history[j].draw(canvas, size, true);
       }
 
@@ -951,7 +952,8 @@ class DrawingController extends ChangeNotifier {
           ..color = Colors.white.withValues(alpha: layer.opacity),
       );
 
-      for (int j = 0; j < layer.currentIndex; j++) {
+      final int count = layer.currentIndex.clamp(0, layer.history.length);
+      for (int j = 0; j < count; j++) {
         layer.history[j].draw(canvas, size, false);
       }
 
@@ -1041,7 +1043,8 @@ class DrawingController extends ChangeNotifier {
           ..color = Colors.white.withValues(alpha: layer.opacity)
       );
       
-      for (int j = 0; j < layer.currentIndex; j++) {
+      final int count = layer.currentIndex.clamp(0, layer.history.length);
+      for (int j = 0; j < count; j++) {
         layer.history[j].draw(canvas, size, false);
       }
 

@@ -270,7 +270,8 @@ class _UpPainter extends CustomPainter {
               ..color = Colors.white.withValues(alpha: layer.opacity),
           );
 
-          for (int j = 0; j < layer.currentIndex; j++) {
+          final int count = layer.currentIndex.clamp(0, layer.history.length);
+          for (int j = 0; j < count; j++) {
             layer.history[j].draw(canvas, size, false);
           }
 
@@ -291,7 +292,8 @@ class _UpPainter extends CustomPainter {
               ..color = Colors.white.withValues(alpha: layer.opacity),
           );
 
-          for (int j = 0; j < layer.currentIndex; j++) {
+          final int count = layer.currentIndex.clamp(0, layer.history.length);
+          for (int j = 0; j < count; j++) {
             layer.history[j].draw(canvas, size, false);
           }
 
@@ -394,7 +396,8 @@ class _DeepPainter extends CustomPainter {
           ..blendMode = layer.blendMode
           ..color = Colors.white.withOpacity(layer.opacity),
       );
-      for (int j = 0; j < layer.currentIndex; j++) {
+      final int count = layer.currentIndex.clamp(0, layer.history.length);
+      for (int j = 0; j < count; j++) {
         layer.history[j].draw(canvas, size, true);
       }
       canvas.restore();
@@ -480,7 +483,8 @@ class _DeepPainter extends CustomPainter {
           ..color = Colors.white.withValues(alpha: layer.opacity)
       );
       
-      for (int j = 0; j < layer.currentIndex; j++) {
+      final int count = layer.currentIndex.clamp(0, layer.history.length);
+      for (int j = 0; j < count; j++) {
         layer.history[j].draw(canvas, size, true);
         layer.history[j].draw(tempCanvas, size, true);
       }
