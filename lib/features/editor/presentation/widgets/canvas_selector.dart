@@ -311,12 +311,12 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                   // Drag Handle
                   Center(
                     child: Container(
-                      width: 36,
-                      height: 4,
+                      width: 40,
+                      height: 4.5,
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
@@ -325,28 +325,48 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFFFFBF7), Color(0xFFF7F5F2)],
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFFFE8D6), width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
                         // Thumbnail Preview
                         Container(
-                          width: 48,
-                          height: 48,
+                          width: 52,
+                          height: 52,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: index == widget.currentIndex
                                   ? ColorConstants.primary
                                   : Colors.grey.shade300,
-                              width: 1.5,
+                              width: index == widget.currentIndex ? 2.0 : 1.0,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: index == widget.currentIndex
+                                    ? ColorConstants.primary.withValues(alpha: 0.25)
+                                    : Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
@@ -368,7 +388,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,8 +398,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                                   Text(
                                     'Frame ${index + 1}',
                                     style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16.5,
+                                      fontWeight: FontWeight.w800,
                                       color: ColorConstants.darkText,
                                     ),
                                   ),
@@ -387,30 +407,41 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                                     const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 7,
-                                        vertical: 2,
+                                        horizontal: 8,
+                                        vertical: 2.5,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: ColorConstants.primary.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFFFF9318), Color(0xFFFFA726)],
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: ColorConstants.primary.withValues(alpha: 0.3),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1.5),
+                                          ),
+                                        ],
                                       ),
                                       child: const Text(
-                                        'Active',
+                                        'ACTIVE',
                                         style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: ColorConstants.primary,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                          color: Colors.white,
                                         ),
                                       ),
                                     ),
                                   ],
                                 ],
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
                               Text(
                                 '${widget.thumbnails.length} total frames in animation',
                                 style: const TextStyle(
                                   fontSize: 12,
+                                  fontWeight: FontWeight.w500,
                                   color: ColorConstants.mediumText,
                                 ),
                               ),
@@ -423,15 +454,15 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                             borderRadius: BorderRadius.circular(20),
                             onTap: () => Navigator.pop(sheetContext),
                             child: Container(
-                              padding: const EdgeInsets.all(6),
+                              padding: const EdgeInsets.all(7),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
+                                color: Colors.black.withValues(alpha: 0.05),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
                                 Icons.close_rounded,
-                                size: 16,
-                                color: Colors.black54,
+                                size: 18,
+                                color: ColorConstants.darkText,
                               ),
                             ),
                           ),
@@ -448,8 +479,6 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildQuickActionTile(
                           icon: Icons.copy_rounded,
-                          iconColor: const Color(0xFF2563EB),
-                          bgColor: const Color(0xFFEFF6FF),
                           title: 'Copy',
                           subtitle: 'To clipboard',
                           onTap: () {
@@ -462,8 +491,6 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildQuickActionTile(
                           icon: Icons.paste_rounded,
-                          iconColor: const Color(0xFF7C3AED),
-                          bgColor: const Color(0xFFF5F3FF),
                           title: 'Paste',
                           subtitle: 'From copy',
                           onTap: () {
@@ -476,10 +503,9 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildQuickActionTile(
                           icon: Icons.control_point_duplicate_rounded,
-                          iconColor: const Color(0xFF0D9488),
-                          bgColor: const Color(0xFFF0FDF4),
                           title: 'Duplicate',
                           subtitle: 'Clone frame',
+                          isPrimary: true,
                           onTap: () {
                             Navigator.pop(sheetContext);
                             widget.onFrameAction('duplicate', index);
@@ -489,21 +515,31 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
 
-                  // Section Title
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4, bottom: 8),
-                    child: Text(
-                      'TIMELINE INSERTION',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                        color: ColorConstants.mediumText,
+                  // Section Title with decorative line
+                  Row(
+                    children: [
+                      const Text(
+                        'TIMELINE INSERTION',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: ColorConstants.mediumText,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 1,
+                          color: Colors.grey.shade200,
+                        ),
+                      ),
+                    ],
                   ),
+
+                  const SizedBox(height: 10),
 
                   // Add Left & Add Right Row
                   Row(
@@ -511,8 +547,6 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildListActionTile(
                           icon: Icons.arrow_back_rounded,
-                          iconColor: const Color(0xFFD97706),
-                          bgColor: const Color(0xFFFFFBEB),
                           title: 'Add Left',
                           subtitle: 'Insert blank before',
                           onTap: () {
@@ -525,8 +559,6 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildListActionTile(
                           icon: Icons.arrow_forward_rounded,
-                          iconColor: ColorConstants.accent,
-                          bgColor: const Color(0xFFFFF7ED),
                           title: 'Add Right',
                           subtitle: 'Insert blank after',
                           onTap: () {
@@ -544,32 +576,54 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () {
-                        Navigator.pop(sheetContext);
-                        widget.onFrameAction('delete', index);
-                      },
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: isOnlyFrame
+                          ? null
+                          : () {
+                              Navigator.pop(sheetContext);
+                              widget.onFrameAction('delete', index);
+                            },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                         decoration: BoxDecoration(
-                          color: isOnlyFrame ? Colors.grey.shade100 : const Color(0xFFFEF2F2),
-                          borderRadius: BorderRadius.circular(14),
+                          gradient: isOnlyFrame
+                              ? null
+                              : const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFFFFF5F5), Color(0xFFFEE8E8)],
+                                ),
+                          color: isOnlyFrame ? Colors.grey.shade100 : null,
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isOnlyFrame ? Colors.grey.shade200 : const Color(0xFFFEE2E2),
+                            color: isOnlyFrame ? Colors.grey.shade200 : const Color(0xFFFECACA),
+                            width: 1.2,
                           ),
+                          boxShadow: isOnlyFrame
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                         ),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
                                 color: isOnlyFrame ? Colors.grey.shade200 : const Color(0xFFFEE2E2),
-                                shape: BoxShape.circle,
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(
-                                Icons.delete_outline_rounded,
-                                size: 18,
-                                color: isOnlyFrame ? Colors.grey : const Color(0xFFEF4444),
+                              child: Center(
+                                child: Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 19,
+                                  color: isOnlyFrame ? Colors.grey : const Color(0xFFEF4444),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -581,16 +635,18 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                                     'Delete Frame ${index + 1}',
                                     style: TextStyle(
                                       fontSize: 14,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w800,
                                       color: isOnlyFrame ? Colors.grey : const Color(0xFFDC2626),
                                     ),
                                   ),
+                                  const SizedBox(height: 1.5),
                                   Text(
                                     isOnlyFrame
                                         ? 'Cannot delete the only remaining frame'
                                         : 'Remove this frame from the animation',
                                     style: TextStyle(
                                       fontSize: 11,
+                                      fontWeight: FontWeight.w500,
                                       color: isOnlyFrame
                                           ? Colors.grey.shade500
                                           : const Color(0xFF991B1B).withValues(alpha: 0.7),
@@ -615,57 +671,94 @@ class _CanvasSelectorState extends State<CanvasSelector> {
 
   Widget _buildQuickActionTile({
     required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    bool isPrimary = false,
   }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: iconColor.withValues(alpha: 0.15)),
+            gradient: isPrimary
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFF9318), Color(0xFFFFA726)],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Colors.white, Color(0xFFFFF9F3)],
+                  ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isPrimary
+                  ? const Color(0xFFFF8500)
+                  : const Color(0xFFFFEBD8),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isPrimary
+                    ? ColorConstants.primary.withValues(alpha: 0.32)
+                    : ColorConstants.primary.withValues(alpha: 0.08),
+                blurRadius: isPrimary ? 10 : 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: iconColor.withValues(alpha: 0.12),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: isPrimary
+                      ? Colors.white.withValues(alpha: 0.22)
+                      : const Color(0xFFFFF1E4),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isPrimary
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: ColorConstants.primary.withValues(alpha: 0.12),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1.5),
+                          ),
+                        ],
                 ),
-                child: Icon(icon, size: 20, color: iconColor),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: isPrimary ? Colors.white : ColorConstants.primary,
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: ColorConstants.darkText,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: isPrimary ? Colors.white : ColorConstants.darkText,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: ColorConstants.mediumText,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
+                  color: isPrimary
+                      ? Colors.white.withValues(alpha: 0.9)
+                      : ColorConstants.mediumText,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -679,8 +772,6 @@ class _CanvasSelectorState extends State<CanvasSelector> {
 
   Widget _buildListActionTile({
     required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
@@ -691,30 +782,44 @@ class _CanvasSelectorState extends State<CanvasSelector> {
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           decoration: BoxDecoration(
-            color: bgColor,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.white, Color(0xFFFFFBF7)],
+            ),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: iconColor.withValues(alpha: 0.18)),
+            border: Border.all(color: const Color(0xFFFFEBD8), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: ColorConstants.primary.withValues(alpha: 0.06),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(7),
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color(0xFFFFF1E4),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: iconColor.withValues(alpha: 0.12),
+                      color: ColorConstants.primary.withValues(alpha: 0.12),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
                   ],
                 ),
-                child: Icon(icon, size: 16, color: iconColor),
+                child: Center(
+                  child: Icon(icon, size: 16, color: ColorConstants.primary),
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -723,15 +828,16 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
                         color: ColorConstants.darkText,
                       ),
                     ),
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 9.5,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
                         color: ColorConstants.mediumText,
                       ),
                       maxLines: 1,
