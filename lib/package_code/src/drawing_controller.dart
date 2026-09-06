@@ -765,9 +765,9 @@ class DrawingController extends ChangeNotifier {
     // Wrap in MirrorContent if mirroring
     if (rulerConfig.value.type == RulerType.mirror && newContent != null && newContent is! Eyedropper) {
       if (newContent == eraserContent) {
-        eraserContent = MirrorContent(newContent, rulerConfig.value.center.dx);
+        eraserContent = MirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
       } else {
-        drawingContent = MirrorContent(newContent, rulerConfig.value.center.dx);
+        drawingContent = MirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
       }
     }
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:dummy/core/constants/app_assets.dart';
 import 'package:flutter/material.dart';
@@ -1978,7 +1979,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   isSelected: rulerConfig.type == RulerType.mirror,
                   onTap: () {
                     final newType = rulerConfig.type == RulerType.mirror ? RulerType.none : RulerType.mirror;
-                    controller.drawingController.rulerConfig.value = rulerConfig.copyWith(type: newType);
+                    final double defaultAngle = (rulerConfig.type == RulerType.none || rulerConfig.angle == 0.0) && newType == RulerType.mirror
+                        ? (pi / 2)
+                        : rulerConfig.angle;
+                    controller.drawingController.rulerConfig.value = rulerConfig.copyWith(
+                      type: newType,
+                      angle: defaultAngle,
+                      scale: rulerConfig.scale <= 0 ? 140.0 : rulerConfig.scale,
+                    );
                     if (newType == RulerType.none) {
                       setState(() {
                         _isRulerMenuExpanded = false;

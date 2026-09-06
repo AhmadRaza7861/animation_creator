@@ -242,32 +242,68 @@ class RulerOverlay extends StatelessWidget {
 
     // ---------------- MIRROR / SYMMETRY RULER HANDLES ----------------
     else if (config.type == RulerType.mirror) {
-      // Center slide knob (Unified in App Primary Color, no redundant text badge)
+      final double dx = cos(config.angle);
+      final double dy = sin(config.angle);
+      final Offset p1 = config.center + Offset(dx, dy) * config.scale;
+      final Offset p2 = config.center - Offset(dx, dy) * config.scale;
+
+      // Center move knob with degree readout
+      final double deg = (((config.angle * 180 / pi) % 360 + 360) % 360);
       handles.add(
         _buildKnob(
-          position: Offset(config.center.dx, config.center.dy),
+          position: config.center,
           type: _KnobType.mirrorCenter,
+          badgeText: '${deg.round()}°',
+          badgeOffset: const Offset(0, -30),
           onDrag: (d) {
             _update(
               config,
               config.copyWith(
-                center: Offset(config.center.dx + d.delta.dx, config.center.dy),
+                center: config.center + d.delta,
               ),
             );
           },
         ),
       );
 
-      // Top slide grip
+      // Pivot knob P1 (Top point)
       handles.add(
         _buildKnob(
-          position: Offset(config.center.dx, config.center.dy - 140),
-          type: _KnobType.mirrorGrip,
+          position: p1,
+          type: _KnobType.pivot,
           onDrag: (d) {
+            final newP1 = p1 + d.delta;
+            final newCenter = (newP1 + p2) / 2;
+            final newAngle = atan2(newP1.dy - p2.dy, newP1.dx - p2.dx);
+            final newScale = (newP1 - p2).distance / 2;
             _update(
               config,
               config.copyWith(
-                center: Offset(config.center.dx + d.delta.dx, config.center.dy),
+                center: newCenter,
+                angle: newAngle,
+                scale: max(30, newScale),
+              ),
+            );
+          },
+        ),
+      );
+
+      // Pivot knob P2 (Bottom point)
+      handles.add(
+        _buildKnob(
+          position: p2,
+          type: _KnobType.pivot,
+          onDrag: (d) {
+            final newP2 = p2 + d.delta;
+            final newCenter = (p1 + newP2) / 2;
+            final newAngle = atan2(p1.dy - newP2.dy, p1.dx - newP2.dx);
+            final newScale = (p1 - newP2).distance / 2;
+            _update(
+              config,
+              config.copyWith(
+                center: newCenter,
+                angle: newAngle,
+                scale: max(30, newScale),
               ),
             );
           },
@@ -896,15 +932,18 @@ class RulerPainter extends CustomPainter {
   // 4. MIRROR / SYMMETRY RULER (App Theme Primary)
   // ==========================================
   void _paintMirrorRuler(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.translate(config.center.dx, config.center.dy);
+    canvas.rotate(config.angle);
+
     const double lineExtent = 4000.0;
-    final double x = config.center.dx;
 
     // 1. Soft glowing background band matching App Theme Primary
     final Paint glowPaint = Paint()
       ..color = ColorConstants.primary.withValues(alpha: 0.09)
       ..strokeWidth = 14.0
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(x, -lineExtent), Offset(x, lineExtent), glowPaint);
+    canvas.drawLine(const Offset(-lineExtent, 0), const Offset(lineExtent, 0), glowPaint);
 
     // 2. Dashed Symmetry Axis Line in Primary Color
     final Paint mirrorStroke = Paint()
@@ -914,8 +953,8 @@ class RulerPainter extends CustomPainter {
 
     _drawDashedLine(
       canvas,
-      Offset(x, -lineExtent),
-      Offset(x, lineExtent),
+      const Offset(-lineExtent, 0),
+      const Offset(lineExtent, 0),
       mirrorStroke,
       dashLength: 8.0,
       gapLength: 4.0,
@@ -927,22 +966,24 @@ class RulerPainter extends CustomPainter {
       ..strokeWidth = 1.4
       ..style = PaintingStyle.stroke;
 
-    for (double y = config.center.dy - 500; y <= config.center.dy + 500; y += 100) {
-      if ((y - config.center.dy).abs() < 40) continue; // skip center knob area
-      // Left chevron (<)
-      final Path leftPath = Path()
-        ..moveTo(x - 12, y - 6)
-        ..lineTo(x - 6, y)
-        ..lineTo(x - 12, y + 6);
-      canvas.drawPath(leftPath, chevronPaint);
+    for (double d = -500; d <= 500; d += 100) {
+      if (d.abs() < 40) continue; // skip center knob area
+      // Upper chevron
+      final Path topPath = Path()
+        ..moveTo(d - 6, -12)
+        ..lineTo(d, -6)
+        ..lineTo(d + 6, -12);
+      canvas.drawPath(topPath, chevronPaint);
 
-      // Right chevron (>)
-      final Path rightPath = Path()
-        ..moveTo(x + 12, y - 6)
-        ..lineTo(x + 6, y)
-        ..lineTo(x + 12, y + 6);
-      canvas.drawPath(rightPath, chevronPaint);
+      // Lower chevron
+      final Path bottomPath = Path()
+        ..moveTo(d - 6, 12)
+        ..lineTo(d, 6)
+        ..lineTo(d + 6, 12);
+      canvas.drawPath(bottomPath, chevronPaint);
     }
+
+    canvas.restore();
   }
 
   // ==========================================
