@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/widgets/font_presets.dart';
 
 class ActiveTextSticker {
@@ -106,7 +107,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
     );
   }
 
-  // Corner resize node (Figma/Apple Freeform style circular handle)
+  // Corner resize node (Figma/Apple Freeform style circular handle with App Primary Theme)
   Widget _buildCornerHandle({
     required GestureDragStartCallback onPanStart,
     required GestureDragUpdateCallback onPanUpdate,
@@ -131,7 +132,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF6366F1), width: 2.2),
+              border: Border.all(color: ColorConstants.primary, width: 2.2),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.25),
@@ -171,7 +172,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: const Color(0xFF6366F1), width: 1.8),
+              border: Border.all(color: ColorConstants.primary, width: 1.8),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.2),
@@ -211,7 +212,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: const Color(0xFF6366F1), width: 1.8),
+              border: Border.all(color: ColorConstants.primary, width: 1.8),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.2),
@@ -250,10 +251,10 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF6366F1), width: 2.0),
+                  border: Border.all(color: ColorConstants.primary, width: 2.0),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                      color: ColorConstants.primary.withValues(alpha: 0.3),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
                     ),
@@ -262,13 +263,13 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                 child: const Icon(
                   Icons.rotate_right_rounded,
                   size: 15,
-                  color: Color(0xFF6366F1),
+                  color: ColorConstants.primary,
                 ),
               ),
               Container(
                 width: 1.5,
                 height: 10,
-                color: const Color(0xFF6366F1),
+                color: ColorConstants.primary,
               ),
             ],
           ),
@@ -435,8 +436,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
       child: FractionalTranslation(
         translation: const Offset(-0.5, -0.5),
         child: Transform(
-          transform: Matrix4.identity()
-            ..scale(_scale, _scale, 1.0)
+          transform: Matrix4.diagonal3Values(_scale, _scale, 1.0)
             ..rotateZ(_rotation),
           alignment: Alignment.center,
           child: SizedBox(
@@ -446,7 +446,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // 1. Center Content Box (snug border + gesture)
+                // 1. Center Content Box (snug border + gesture in App Theme Primary)
                 Positioned(
                   left: contentLeft,
                   top: contentTop,
@@ -476,12 +476,12 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
-                          color: const Color(0xFF6366F1),
+                          color: ColorConstants.primary,
                           width: 1.5 / (_scale == 0 ? 1 : _scale),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                            color: ColorConstants.primary.withValues(alpha: 0.12),
                             blurRadius: 4,
                             spreadRadius: 0.5,
                           ),

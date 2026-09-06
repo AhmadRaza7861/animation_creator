@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+import '../../../../../core/constants/app_colors.dart';
 
 class ActiveStraightLineSticker {
   ActiveStraightLineSticker({
@@ -231,19 +232,19 @@ class _StraightLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Brand accent guide line
+    // 1. App theme primary accent guide line
     final Paint linePaint = Paint()
-      ..color = const Color(0xFF5C52E5)
+      ..color = ColorConstants.primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawLine(startPoint, endPoint, linePaint);
 
-    // 2. White node with brand border
+    // 2. White node with primary brand border
     final Paint fillPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
     final Paint borderPaint = Paint()
-      ..color = const Color(0xFF5C52E5)
+      ..color = ColorConstants.primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
 

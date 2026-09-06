@@ -213,15 +213,23 @@ class RulerConfig {
     double a2 = atan2(localNow.dy, localNow.dx);
 
     double diff = a2 - a1;
-    while (diff > pi) diff -= 2 * pi;
-    while (diff < -pi) diff += 2 * pi;
+    while (diff > pi) {
+      diff -= 2 * pi;
+    }
+    while (diff < -pi) {
+      diff += 2 * pi;
+    }
 
     final List<MapEntry<double, Offset>> sweptCorners = [];
     for (final c in cornersLocal) {
       double aC = atan2(c.dy, c.dx);
       double dC = aC - a1;
-      while (dC > pi) dC -= 2 * pi;
-      while (dC < -pi) dC += 2 * pi;
+      while (dC > pi) {
+        dC -= 2 * pi;
+      }
+      while (dC < -pi) {
+        dC += 2 * pi;
+      }
 
       if (diff > 0) {
         if (dC > 1e-4 && dC < diff - 1e-4) sweptCorners.add(MapEntry(dC, c));

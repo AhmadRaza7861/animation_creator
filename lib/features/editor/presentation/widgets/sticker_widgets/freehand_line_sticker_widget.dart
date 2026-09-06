@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+import '../../../../../core/constants/app_colors.dart';
 import '../../../../../package_code/src/paint_contents/paint_content.dart';
 import '../../../../../package_code/src/paint_contents/simple_line.dart';
 import '../../../../../package_code/src/paint_contents/smooth_line.dart';
@@ -168,7 +169,7 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFF5C52E5), width: 2.5),
+          border: Border.all(color: ColorConstants.primary, width: 2.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.2),

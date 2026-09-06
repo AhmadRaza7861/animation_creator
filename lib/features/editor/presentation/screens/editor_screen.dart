@@ -1821,7 +1821,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
             border: Border.all(color: Colors.grey.shade200, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 16,
                 spreadRadius: 1,
                 offset: const Offset(0, 4),
@@ -2094,7 +2094,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
         width: 46,
         padding: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? ColorConstants.accent.withOpacity(0.08) : Colors.transparent,
+          color: isSelected ? ColorConstants.accent.withValues(alpha: 0.08) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
