@@ -189,103 +189,107 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 child: _currentTab == 0 ? _buildHomeTab() : _buildProjectsTab(),
               ),
       ),
-      bottomNavigationBar: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          BottomAppBar(
-            height: 72,
+      floatingActionButton: SizedBox(
+        width: 58,
+        height: 58,
+        child: FloatingActionButton(
+          onPressed: _createNewProject,
+          backgroundColor: ColorConstants.primary,
+          elevation: 6,
+          shape: const CircleBorder(),
+          child: const Icon(
+            Icons.add,
             color: Colors.white,
-            elevation: 16,
-            padding: EdgeInsets.zero,
-            surfaceTintColor: Colors.white,
-            child: Container(
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: Color(0xFFF1F2F6),
-                    width: 1.5,
+            size: 32,
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        height: 72,
+        color: Colors.white,
+        elevation: 16,
+        padding: EdgeInsets.zero,
+        surfaceTintColor: Colors.white,
+        child: Container(
+          decoration: const BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: Color(0xFFF1F2F6),
+                width: 1.5,
+              ),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 40.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Home Tab
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  setState(() {
+                    _currentTab = 0;
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.home,
+                        color: _currentTab == 0 ? ColorConstants.primary : const Color(0xFFBEB9C5),
+                        size: 26,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        StringConstants.homeTab,
+                        style: TextStyle(
+                          color: _currentTab == 0 ? ColorConstants.primary : const Color(0xFFBEB9C5),
+                          fontSize: 11,
+                          fontWeight: _currentTab == 0 ? FontWeight.w800 : FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 40.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Home Tab
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _currentTab = 0;
-                      });
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.home,
-                          color: _currentTab == 0 ? ColorConstants.primary : const Color(0xFFBEB9C5),
-                          size: 26,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          StringConstants.homeTab,
-                          style: TextStyle(
-                            color: _currentTab == 0 ? ColorConstants.primary : const Color(0xFFBEB9C5),
-                            fontSize: 11,
-                            fontWeight: _currentTab == 0 ? FontWeight.w800 : FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 48), // Spacer to leave gap for FAB
-                  // Projects Tab
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _currentTab = 1;
-                      });
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.folder_open,
+              const SizedBox(width: 48), // Spacer to leave gap for FAB
+              // Projects Tab
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  setState(() {
+                    _currentTab = 1;
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.folder_open,
+                        color: _currentTab == 1 ? ColorConstants.primary : const Color(0xFFBEB9C5),
+                        size: 26,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        StringConstants.projectsTab,
+                        style: TextStyle(
                           color: _currentTab == 1 ? ColorConstants.primary : const Color(0xFFBEB9C5),
-                          size: 26,
+                          fontSize: 11,
+                          fontWeight: _currentTab == 1 ? FontWeight.w800 : FontWeight.w500,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          StringConstants.projectsTab,
-                          style: TextStyle(
-                            color: _currentTab == 1 ? ColorConstants.primary : const Color(0xFFBEB9C5),
-                            fontSize: 11,
-                            fontWeight: _currentTab == 1 ? FontWeight.w800 : FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-          Positioned(
-            top: -28,
-            child: FloatingActionButton(
-              onPressed: _createNewProject,
-              backgroundColor: ColorConstants.primary,
-              elevation: 6,
-              shape: const CircleBorder(),
-              child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -347,7 +351,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: ColorConstants.primary.withOpacity(0.08),
+                      color: ColorConstants.primary.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     )
@@ -623,7 +627,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 40.0),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.4),
+          color: Colors.white.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Center(
