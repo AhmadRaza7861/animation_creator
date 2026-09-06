@@ -163,14 +163,18 @@ class _FreehandLineStickerWidgetState extends State<FreehandLineStickerWidget> {
   Widget _buildHandleIcon() {
     return Center(
       child: Container(
-        width: 16,
-        height: 16,
+        width: 14,
+        height: 14,
         decoration: BoxDecoration(
-          color: Colors.blue,
+          color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 4),
+          border: Border.all(color: const Color(0xFF5C52E5), width: 2.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
           ],
         ),
       ),

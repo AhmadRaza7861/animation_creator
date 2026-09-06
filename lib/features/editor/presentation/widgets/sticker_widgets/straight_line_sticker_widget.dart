@@ -231,27 +231,26 @@ class _StraightLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Solid blue line
+    // 1. Brand accent guide line
     final Paint linePaint = Paint()
-      ..color = Colors.blue
+      ..color = const Color(0xFF5C52E5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawLine(startPoint, endPoint, linePaint);
 
-    // 2. Solid blue circle endpoints
-    final Paint solidBlue = Paint()
-      ..color = Colors.blue
+    // 2. White node with brand border
+    final Paint fillPaint = Paint()
+      ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(startPoint, 8, solidBlue);
-    canvas.drawCircle(endPoint, 8, solidBlue);
-
-    // 3. Highlight/Border for visibility
-    final Paint outlinePaint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
+    final Paint borderPaint = Paint()
+      ..color = const Color(0xFF5C52E5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawCircle(startPoint, 8, outlinePaint);
-    canvas.drawCircle(endPoint, 8, outlinePaint);
+      ..strokeWidth = 2.5;
+
+    canvas.drawCircle(startPoint, 7, fillPaint);
+    canvas.drawCircle(startPoint, 7, borderPaint);
+    canvas.drawCircle(endPoint, 7, fillPaint);
+    canvas.drawCircle(endPoint, 7, borderPaint);
   }
 
   @override

@@ -23,8 +23,9 @@ class FontPreset {
     bool forceItalic = false,
     bool forceUnderline = false,
   }) {
+    final effectiveColor = color.withOpacity(opacity);
     return TextStyle(
-      color: color.withOpacity(opacity),
+      color: effectiveColor,
       fontSize: fontSize,
       fontFamily: fontFamily,
       fontWeight: forceBold
@@ -34,6 +35,7 @@ class FontPreset {
           ? FontStyle.italic
           : (fontStyle != FontStyle.normal ? fontStyle : FontStyle.normal),
       decoration: forceUnderline ? TextDecoration.underline : TextDecoration.none,
+      decorationColor: effectiveColor,
       letterSpacing: letterSpacing,
     );
   }

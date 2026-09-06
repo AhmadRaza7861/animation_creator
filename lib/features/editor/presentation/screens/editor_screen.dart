@@ -859,6 +859,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
   }
 
 
+  Future<void> _handleBack(BuildContext context, EditorController controller) async {
+    await controller.saveProject();
+    if (context.mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(editorControllerProvider(widget.projectId));
@@ -872,28 +879,29 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
       );
     }
 
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: SafeArea(
-          child: Container(
-            height: kToolbarHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration:  BoxDecoration(
-              color: ColorConstants.border_color,
-           //   border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA), width: 0.5)),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText),
-                  onPressed: () async {
-                    await controller.saveProject();
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
-                  },
-                ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBack(context, controller);
+      },
+      child: Scaffold(
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+          child: SafeArea(
+            child: Container(
+              height: kToolbarHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration:  BoxDecoration(
+                color: ColorConstants.border_color,
+             //   border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA), width: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText),
+                    onPressed: () => _handleBack(context, controller),
+                  ),
                 ValueListenableBuilder<DrawConfig>(
                   valueListenable: controller.drawingController.drawConfig,
                   builder: (context, config, child) {
@@ -1487,8 +1495,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildRightVerticalPanel(EditorController controller) {
     return AnimatedBuilder(
