@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dummy/core/constants/app_colors.dart';
 import 'customThems/app_bar_theme.dart';
 import 'customThems/custom_bottom_sheet_theme.dart';
 import 'customThems/custom_radio.dart';
@@ -13,33 +14,43 @@ import 'customThems/text_theme.dart';
 class AppTheme {
   AppTheme._();
   static ThemeData lightTheme = ThemeData(
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      useMaterial3: true,
-      scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+    splashColor: Colors.transparent,
+    highlightColor: Colors.transparent,
+    useMaterial3: true,
+    scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+    brightness: Brightness.light,
+    primaryColor: ColorConstants.primary,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: ColorConstants.primary,
+      primary: ColorConstants.primary,
       brightness: Brightness.light,
-      primaryColor: Colors.white,
+    ),
     primarySwatch: Colors.orange,
-      dialogTheme: CustomDialogTheme.lightDialogTheme,
-      elevatedButtonTheme: CustomElevatedButtonTheme.lightElevatedButtonTheme,
-      textTheme: CustomTextTheme.lightTextTheme,
-      inputDecorationTheme: CustomTextFieldTheme.lightTextFieldTheme,
-      fontFamily: "Roboto",
-      radioTheme: CustomRadioTheme.lightRadioTheme,
-      appBarTheme: CustomAppBarTheme.lightAppBarTheme,
-      sliderTheme: CustomSliderTheme.lightSliderTheme,
-      switchTheme: CustomSwitchTheme.lightSwitchTheme,
-    textSelectionTheme:CustomTextSelectionTheme.lightTextSelectionTheme,
+    dialogTheme: CustomDialogTheme.lightDialogTheme,
+    elevatedButtonTheme: CustomElevatedButtonTheme.lightElevatedButtonTheme,
+    textTheme: CustomTextTheme.lightTextTheme,
+    inputDecorationTheme: CustomTextFieldTheme.lightTextFieldTheme,
+    fontFamily: "Roboto",
+    radioTheme: CustomRadioTheme.lightRadioTheme,
+    appBarTheme: CustomAppBarTheme.lightAppBarTheme,
+    sliderTheme: CustomSliderTheme.lightSliderTheme,
+    switchTheme: CustomSwitchTheme.lightSwitchTheme,
+    textSelectionTheme: CustomTextSelectionTheme.lightTextSelectionTheme,
     bottomSheetTheme: CustomBottomSheetTheme.lightBottomSheetTheme,
   );
+
   static ThemeData darkTheme = ThemeData(
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
     useMaterial3: true,
-  //  scaffoldBackgroundColor: const Color(0xFF161924),
     brightness: Brightness.dark,
     dialogTheme: CustomDialogTheme.darkDialogTheme,
-    primaryColor: const Color(0xFF121717),
+    primaryColor: ColorConstants.primary,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: ColorConstants.primary,
+      primary: ColorConstants.primary,
+      brightness: Brightness.dark,
+    ),
     elevatedButtonTheme: CustomElevatedButtonTheme.darkElevatedButtonTheme,
     textTheme: CustomTextTheme.darkTextTheme,
     inputDecorationTheme: CustomTextFieldTheme.darkTextFieldTheme,
@@ -47,8 +58,8 @@ class AppTheme {
     radioTheme: CustomRadioTheme.darkRadioTheme,
     appBarTheme: CustomAppBarTheme.darkAppBarTheme,
     switchTheme: CustomSwitchTheme.darkSwitchTheme,
-    sliderTheme:  CustomSliderTheme.darkSliderTheme,
-    textSelectionTheme:CustomTextSelectionTheme.darkTextSelectionTheme,
+    sliderTheme: CustomSliderTheme.darkSliderTheme,
+    textSelectionTheme: CustomTextSelectionTheme.darkTextSelectionTheme,
     bottomSheetTheme: CustomBottomSheetTheme.darkBottomSheetTheme,
   );
 }

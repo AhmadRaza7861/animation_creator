@@ -1006,7 +1006,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
           ),
           Expanded(
             child: SliderTheme(
-              data: SliderThemeData(
+              data: SliderTheme.of(context).copyWith(
                 trackHeight: 3,
                 activeTrackColor: accent,
                 inactiveTrackColor: const Color(0xFFE5E7EB),

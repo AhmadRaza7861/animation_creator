@@ -258,10 +258,10 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 20,
-                    activeTrackColor: ColorConstants.accent.withOpacity(0.5),
+                    activeTrackColor: ColorConstants.accent.withValues(alpha: 0.5),
                     inactiveTrackColor: Colors.grey[200],
                     thumbColor: ColorConstants.accent,
-                    overlayColor: ColorConstants.accent.withOpacity(0.2),
+                    overlayColor: ColorConstants.accent.withValues(alpha: 0.2),
                   ),
                   child: RangeSlider(
                     values: RangeValues(_startValue, _endValue),

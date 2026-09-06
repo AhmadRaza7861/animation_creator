@@ -1,78 +1,95 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:dummy/core/constants/app_colors.dart';
 
 class CustomSliderTheme {
   CustomSliderTheme._(); // Private constructor to prevent instantiation
 
   static const lightSliderTheme = SliderThemeData(
-    // activeTrackColor: Color(0xFF866ABE),
-    // Track color when slider is active
-    inactiveTrackColor:Colors.white,
-    // // Track color when slider is inactive
-    thumbColor: Color(0xFF866ABE),
-    // Thumb color
-    overlayColor: Colors.transparent,
-    // // Overlay color when thumb is pressed
+    activeTrackColor: ColorConstants.primary,
+    inactiveTrackColor: Color(0xFFE2E8F0),
+    disabledActiveTrackColor: Color(0x66FF9318),
+    disabledInactiveTrackColor: Color(0x66E2E8F0),
+    thumbColor: ColorConstants.primary,
+    disabledThumbColor: Color(0x66FF9318),
+    overlayColor: Color(0x1FFF9318),
     trackHeight: 4.0,
-    // Custom track height
     thumbShape: CustomRoundSliderThumbShape(
-        iconSize: 12,
-        iconColor: Colors.transparent,
-        enabledThumbRadius: 8,
-        elevation: 3),
-    // Thumb shape
-    //  overlayShape: RoundSliderOverlayShape(overlayRadius: 20.0),
-    // // Overlay shape
-    trackShape:
-    GradientRectSliderTrackShape(colors:[Color(0xFF866ABE),Color(0xFF866ABE)]),
-    // // Tick mark shape
+      iconSize: 0,
+      iconColor: Colors.transparent,
+      enabledThumbRadius: 8.5,
+      elevation: 2.5,
+      pressedElevation: 4.5,
+      borderColor: Colors.white,
+    ),
+    overlayShape: RoundSliderOverlayShape(overlayRadius: 18.0),
+    trackShape: GradientRectSliderTrackShape(
+      colors: [ColorConstants.primary, Color(0xFFFFA726)],
+    ),
     activeTickMarkColor: Colors.transparent,
-    // Active tick mark color
-     inactiveTickMarkColor: Colors.transparent,
-     // Inactive tick mark color
-     valueIndicatorColor: Colors.transparent,
-    // // Value indicator color
-    // valueIndicatorTextStyle:
-    //     TextStyle(color: Colors.white), // Value indicator text style
+    inactiveTickMarkColor: Colors.transparent,
+    valueIndicatorColor: ColorConstants.primary,
+    valueIndicatorTextStyle: TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w600,
+      fontSize: 12,
+    ),
+    valueIndicatorShape: RectangularSliderValueIndicatorShape(),
+    showValueIndicator: ShowValueIndicator.onDrag,
+    rangeThumbShape: RoundRangeSliderThumbShape(
+      enabledThumbRadius: 8.0,
+      elevation: 2.5,
+      pressedElevation: 4.5,
+    ),
+    rangeTrackShape: RoundedRectRangeSliderTrackShape(),
+    rangeValueIndicatorShape: RectangularRangeSliderValueIndicatorShape(),
   );
 
   static const darkSliderTheme = SliderThemeData(
-  // activeTrackColor: Color(0xFF866ABE),
-  // Track color when slider is active
-  inactiveTrackColor:Colors.white,
-  // // Track color when slider is inactive
-  thumbColor: Color(0xFF866ABE),
-  // Thumb color
-  overlayColor: Colors.transparent,
-  // // Overlay color when thumb is pressed
-  trackHeight: 4.0,
-  // Custom track height
-  thumbShape: CustomRoundSliderThumbShape(
-  iconSize: 12,
-  iconColor: Colors.transparent,
-  enabledThumbRadius: 8,
-  elevation: 3),
-  // Thumb shape
-  //  overlayShape: RoundSliderOverlayShape(overlayRadius: 20.0),
-  // // Overlay shape
-  trackShape:
-  GradientRectSliderTrackShape(colors:[Color(0xFF866ABE),Color(0xFF866ABE)]),
-  // // Tick mark shape
-  activeTickMarkColor: Colors.transparent,
-  // Active tick mark color
-  inactiveTickMarkColor: Colors.transparent,
-  // Inactive tick mark color
-  valueIndicatorColor: Colors.transparent,
-// // Value indicator color
-// valueIndicatorTextStyle:
-//     TextStyle(color: Colors.white), // Value indicator text style
-
-  );}
+    activeTrackColor: ColorConstants.primary,
+    inactiveTrackColor: Color(0xFF374151),
+    disabledActiveTrackColor: Color(0x66FF9318),
+    disabledInactiveTrackColor: Color(0x66374151),
+    thumbColor: ColorConstants.primary,
+    disabledThumbColor: Color(0x66FF9318),
+    overlayColor: Color(0x29FF9318),
+    trackHeight: 4.0,
+    thumbShape: CustomRoundSliderThumbShape(
+      iconSize: 0,
+      iconColor: Colors.transparent,
+      enabledThumbRadius: 8.5,
+      elevation: 2.5,
+      pressedElevation: 4.5,
+      borderColor: Colors.white,
+    ),
+    overlayShape: RoundSliderOverlayShape(overlayRadius: 18.0),
+    trackShape: GradientRectSliderTrackShape(
+      colors: [ColorConstants.primary, Color(0xFFFFA726)],
+    ),
+    activeTickMarkColor: Colors.transparent,
+    inactiveTickMarkColor: Colors.transparent,
+    valueIndicatorColor: ColorConstants.primary,
+    valueIndicatorTextStyle: TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w600,
+      fontSize: 12,
+    ),
+    valueIndicatorShape: RectangularSliderValueIndicatorShape(),
+    showValueIndicator: ShowValueIndicator.onDrag,
+    rangeThumbShape: RoundRangeSliderThumbShape(
+      enabledThumbRadius: 8.0,
+      elevation: 2.5,
+      pressedElevation: 4.5,
+    ),
+    rangeTrackShape: RoundedRectRangeSliderTrackShape(),
+    rangeValueIndicatorShape: RectangularRangeSliderValueIndicatorShape(),
+  );
+}
 
 class GradientRectSliderTrackShape extends SliderTrackShape
     with BaseSliderTrackShape {
   const GradientRectSliderTrackShape({
-    required this.colors,
+    this.colors = const [ColorConstants.primary, Color(0xFFFFA726)],
     this.darkenInactive = true,
   });
 
@@ -91,15 +108,21 @@ class GradientRectSliderTrackShape extends SliderTrackShape
     bool isDiscrete = false,
     bool isEnabled = false,
     Offset? secondaryOffset,
-    double additionalActiveTrackHeight = 2,
+    double additionalActiveTrackHeight = 1.0,
   }) {
-    assert(sliderTheme.disabledActiveTrackColor != null);
-    assert(sliderTheme.disabledInactiveTrackColor != null);
-    assert(sliderTheme.activeTrackColor != null);
-    assert(sliderTheme.inactiveTrackColor != null);
-    assert(sliderTheme.thumbShape != null);
-    assert(sliderTheme.trackHeight != null && sliderTheme.trackHeight! > 0);
-    final gradient = LinearGradient(colors: colors);
+    final Color activeColor =
+        sliderTheme.activeTrackColor ?? ColorConstants.primary;
+    final Color inactiveColor =
+        sliderTheme.inactiveTrackColor ?? const Color(0xFFE2E8F0);
+    final Color disabledActiveColor = sliderTheme.disabledActiveTrackColor ??
+        activeColor.withValues(alpha: 0.4);
+    final Color disabledInactiveColor = sliderTheme.disabledInactiveTrackColor ??
+        inactiveColor.withValues(alpha: 0.4);
+
+    final List<Color> activeColors =
+        colors.isNotEmpty ? colors : [activeColor, activeColor];
+    final gradient = LinearGradient(colors: activeColors);
+
     final Rect trackRect = getPreferredRect(
       parentBox: parentBox,
       offset: offset,
@@ -119,21 +142,26 @@ class GradientRectSliderTrackShape extends SliderTrackShape
           : trackRect.bottom,
     );
 
-    // Assign the track segment paints, which are leading: active and
-    // trailing: inactive.
     final ColorTween activeTrackColorTween = ColorTween(
-        begin: sliderTheme.disabledActiveTrackColor,
-        end: sliderTheme.activeTrackColor);
+      begin: disabledActiveColor,
+      end: activeColor,
+    );
     final ColorTween inactiveTrackColorTween = darkenInactive
         ? ColorTween(
-            begin: sliderTheme.disabledInactiveTrackColor,
-            end: sliderTheme.inactiveTrackColor)
+            begin: disabledInactiveColor,
+            end: inactiveColor,
+          )
         : activeTrackColorTween;
+
     final Paint activePaint = Paint()
-      ..shader = gradient.createShader(activeGradientRect)
-      ..color = activeTrackColorTween.evaluate(enableAnimation)!;
+      ..shader = (activeColors.length > 1)
+          ? gradient.createShader(activeGradientRect)
+          : null
+      ..color = activeTrackColorTween.evaluate(enableAnimation) ?? activeColor;
     final Paint inactivePaint = Paint()
-      ..color = inactiveTrackColorTween.evaluate(enableAnimation)!;
+      ..color =
+          inactiveTrackColorTween.evaluate(enableAnimation) ?? inactiveColor;
+
     final Paint leftTrackPaint;
     final Paint rightTrackPaint;
     switch (textDirection) {
@@ -148,8 +176,10 @@ class GradientRectSliderTrackShape extends SliderTrackShape
     }
 
     final Radius trackRadius = Radius.circular(trackRect.height / 2);
-    final Radius activeTrackRadius = Radius.circular(trackRect.height / 2 + 1);
+    final Radius activeTrackRadius =
+        Radius.circular((trackRect.height + additionalActiveTrackHeight) / 2);
 
+    // Left track segment
     context.canvas.drawRRect(
       RRect.fromLTRBAndCorners(
         trackRect.left,
@@ -166,9 +196,17 @@ class GradientRectSliderTrackShape extends SliderTrackShape
         bottomLeft: (textDirection == TextDirection.ltr)
             ? activeTrackRadius
             : trackRadius,
+        topRight: (textDirection == TextDirection.ltr)
+            ? Radius.zero
+            : activeTrackRadius,
+        bottomRight: (textDirection == TextDirection.ltr)
+            ? Radius.zero
+            : activeTrackRadius,
       ),
       leftTrackPaint,
     );
+
+    // Right track segment
     context.canvas.drawRRect(
       RRect.fromLTRBAndCorners(
         thumbCenter.dx,
@@ -185,6 +223,12 @@ class GradientRectSliderTrackShape extends SliderTrackShape
         bottomRight: (textDirection == TextDirection.rtl)
             ? activeTrackRadius
             : trackRadius,
+        topLeft: (textDirection == TextDirection.rtl)
+            ? Radius.zero
+            : trackRadius,
+        bottomLeft: (textDirection == TextDirection.rtl)
+            ? Radius.zero
+            : trackRadius,
       ),
       rightTrackPaint,
     );
@@ -198,7 +242,7 @@ class GradientRectSliderTrackShape extends SliderTrackShape
     bool isEnabled = false,
     bool isDiscrete = false,
   }) {
-    final double trackHeight = sliderTheme.trackHeight ?? 2.0;
+    final double trackHeight = sliderTheme.trackHeight ?? 4.0;
     final double trackWidth = parentBox.size.width;
     final double trackTop =
         offset.dy + (parentBox.size.height - trackHeight) / 2;
@@ -207,59 +251,43 @@ class GradientRectSliderTrackShape extends SliderTrackShape
 }
 
 class CustomRoundSliderThumbShape extends SliderComponentShape {
-  /// Create a slider thumb that draws a circle.
-  const CustomRoundSliderThumbShape(
-      {this.enabledThumbRadius = 10.0,
-      this.disabledThumbRadius,
-      this.elevation = 1.0,
-      this.pressedElevation = 6.0,
-      this.borderColor = Colors.white,
-      this.iconSize = 14,
-      this.iconData = Icons.code_sharp,
-      this.iconColor = Colors.white});
+  /// Create a slider thumb that draws a circle with an outer border and subtle shadow.
+  const CustomRoundSliderThumbShape({
+    this.enabledThumbRadius = 8.5,
+    this.disabledThumbRadius,
+    this.elevation = 2.0,
+    this.pressedElevation = 4.5,
+    this.borderColor = Colors.white,
+    this.iconSize = 0,
+    this.iconData = Icons.circle,
+    this.iconColor = Colors.transparent,
+  });
 
   /// The preferred borderColor of the thumb.
-  ///
-  /// If it is not provided, then the Material Design default white is used.
   final Color borderColor;
   final Color iconColor;
   final IconData iconData;
   final double iconSize;
 
   /// The preferred radius of the round thumb shape when the slider is enabled.
-  ///
-  /// If it is not provided, then the Material Design default of 10 is used.
   final double enabledThumbRadius;
 
   /// The preferred radius of the round thumb shape when the slider is disabled.
-  ///
-  /// If no disabledRadius is provided, then it is equal to the
-  /// [enabledThumbRadius]
   final double? disabledThumbRadius;
 
   double get _disabledThumbRadius => disabledThumbRadius ?? enabledThumbRadius;
 
   /// The resting elevation adds shadow to the unpressed thumb.
-  ///
-  /// The default is 1.
-  ///
-  /// Use 0 for no shadow. The higher the value, the larger the shadow. For
-  /// example, a value of 12 will create a very large shadow.
-  ///
   final double elevation;
 
   /// The pressed elevation adds shadow to the pressed thumb.
-  ///
-  /// The default is 6.
-  ///
-  /// Use 0 for no shadow. The higher the value, the larger the shadow. For
-  /// example, a value of 12 will create a very large shadow.
   final double pressedElevation;
 
   @override
   Size getPreferredSize(bool isEnabled, bool isDiscrete) {
     return Size.fromRadius(
-        isEnabled ? enabledThumbRadius : _disabledThumbRadius);
+      isEnabled ? enabledThumbRadius : _disabledThumbRadius,
+    );
   }
 
   @override
@@ -277,41 +305,21 @@ class CustomRoundSliderThumbShape extends SliderComponentShape {
     required double textScaleFactor,
     required Size sizeWithOverflow,
   }) {
-    assert(sliderTheme.disabledThumbColor != null);
-    assert(sliderTheme.thumbColor != null);
-
     final Canvas canvas = context.canvas;
     final Tween<double> radiusTween = Tween<double>(
       begin: _disabledThumbRadius,
       end: enabledThumbRadius,
     );
+    final Color thumbColor =
+        sliderTheme.thumbColor ?? ColorConstants.primary;
+    final Color disabledThumbColor = sliderTheme.disabledThumbColor ??
+        thumbColor.withValues(alpha: 0.4);
     final ColorTween colorTween = ColorTween(
-      begin: sliderTheme.disabledThumbColor,
-      end: sliderTheme.thumbColor,
+      begin: disabledThumbColor,
+      end: thumbColor,
     );
-    final TextSpan span = TextSpan(
-        style: TextStyle(
-          fontSize: iconSize,
-          fontFamily: iconData.fontFamily,
 
-          color: iconColor,
-          package: iconData.fontPackage,
-          fontFamilyFallback: iconData.fontFamilyFallback,
-
-          height: 1.0,
-          // Makes sure the font's body is vertically centered within the iconSize x iconSize square.
-          leadingDistribution: TextLeadingDistribution.even,
-        ),
-        text: String.fromCharCode(iconData.codePoint));
-    final TextPainter tp = TextPainter(
-        text: span,
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.ltr);
-    tp.layout();
-    final Offset textCenter =
-        Offset(center.dx - (tp.width / 2), center.dy - (tp.height / 2));
-
-    final Color color = colorTween.evaluate(enableAnimation)!;
+    final Color color = colorTween.evaluate(enableAnimation) ?? thumbColor;
     final double radius = radiusTween.evaluate(enableAnimation);
 
     final Tween<double> elevationTween = Tween<double>(
@@ -323,29 +331,56 @@ class CustomRoundSliderThumbShape extends SliderComponentShape {
         elevationTween.evaluate(activationAnimation);
     final Path path = Path()
       ..addArc(
-          Rect.fromCenter(
-              center: center, width: 2 * radius, height: 2 * radius),
-          0,
-          pi * 2);
+        Rect.fromCenter(
+          center: center,
+          width: 2 * radius,
+          height: 2 * radius,
+        ),
+        0,
+        pi * 2,
+      );
 
-    bool paintShadows = true;
-    assert(() {
-      if (debugDisableShadows) {
-        paintShadows = false;
-      }
-      return true;
-    }());
-
-    if (paintShadows) {
-      canvas.drawShadow(path, Colors.black, evaluatedElevation, true);
+    if (evaluatedElevation > 0) {
+      canvas.drawShadow(
+        path,
+        Colors.black.withValues(alpha: 0.3),
+        evaluatedElevation,
+        true,
+      );
     }
+
+    // Outer border (white ring)
     canvas.drawCircle(center, radius, Paint()..color = borderColor);
 
+    // Inner primary circle
     canvas.drawCircle(
       center,
-      radius * 0.8,
+      radius * 0.72,
       Paint()..color = color,
     );
-    tp.paint(canvas, textCenter);
+
+    if (iconSize > 0 && iconColor != Colors.transparent) {
+      final TextSpan span = TextSpan(
+        style: TextStyle(
+          fontSize: iconSize,
+          fontFamily: iconData.fontFamily,
+          color: iconColor,
+          package: iconData.fontPackage,
+          fontFamilyFallback: iconData.fontFamilyFallback,
+          height: 1.0,
+          leadingDistribution: TextLeadingDistribution.even,
+        ),
+        text: String.fromCharCode(iconData.codePoint),
+      );
+      final TextPainter tp = TextPainter(
+        text: span,
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      );
+      tp.layout();
+      final Offset textCenter =
+          Offset(center.dx - (tp.width / 2), center.dy - (tp.height / 2));
+      tp.paint(canvas, textCenter);
+    }
   }
 }

@@ -635,7 +635,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               ),
               Expanded(
                 child: SliderTheme(
-                  data: SliderThemeData(
+                  data: SliderTheme.of(context).copyWith(
                     activeTrackColor: accent,
                     inactiveTrackColor: const Color(0xFFE5E7EB),
                     thumbColor: accent,

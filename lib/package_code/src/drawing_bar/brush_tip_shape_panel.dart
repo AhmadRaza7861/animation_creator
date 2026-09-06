@@ -616,11 +616,11 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
         ),
         Expanded(
           child: SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 2,
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 2.5,
               activeTrackColor: _accent,
               inactiveTrackColor: const Color(0xFFE5E5E5),
-              thumbColor: _text,
+              thumbColor: _accent,
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
             ),

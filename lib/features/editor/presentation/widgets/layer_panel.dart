@@ -324,15 +324,15 @@ class _LayerPanelState extends State<LayerPanel> {
               const SizedBox(width: 8),
               Expanded(
                 child: SliderTheme(
-                  data: SliderThemeData(
-                    trackHeight: 2,
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 2.5,
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
                   ),
                   child: Slider(
                     value: layer.opacity,
                     activeColor: ColorConstants.accent,
-                    inactiveColor: ColorConstants.accent.withOpacity(0.2),
+                    inactiveColor: ColorConstants.accent.withValues(alpha: 0.2),
                     onChanged: (v) => _changeOpacity(layer, v),
                   ),
                 ),

@@ -679,10 +679,11 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
         // Slider on top
         SliderTheme(
           data: SliderThemeData(
+            trackShape: const RectangularSliderTrackShape(),
             activeTrackColor: Colors.transparent,
             inactiveTrackColor: Colors.transparent,
             thumbColor: Colors.white,
-            overlayColor: ColorConstants.primary.withOpacity(0.12),
+            overlayColor: ColorConstants.primary.withValues(alpha: 0.12),
             trackHeight: 8,
             thumbShape: const RoundSliderThumbShape(
               enabledThumbRadius: 7,
