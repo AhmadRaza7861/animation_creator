@@ -631,163 +631,163 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              // const SizedBox(height: 20),
+              //
+              // // 4. Export Type Selector
+              //  Text(
+              //   StringConstants.export_type,
+              //   style: TextStyle(
+              //     color: ColorConstants.text_color,
+              //     fontWeight: FontWeight.w500,
+              //     fontSize: 18,
+              //   ),
+              // ),
+              // const SizedBox(height: 10),
+              // Container(
+              //   height: 52,
+              //   decoration: BoxDecoration(
+              //     color: Colors.white,
+              //     borderRadius: BorderRadius.circular(21),
+              //     border: Border.all(
+              //       color: ColorConstants.border_color
+              //     ),
+              //     boxShadow: [
+              //       BoxShadow(
+              //         color: ColorConstants.shodow.withValues(alpha: 0.05),
+              //         blurRadius: 13,
+              //         spreadRadius: 0,
+              //         offset: Offset(2, 2)
+              //       )
+              //     ]
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       // Mp4
+              //       Expanded(
+              //         child: GestureDetector(
+              //           onTap: () {
+              //             setState(() {
+              //               _exportType = 'Mp4';
+              //             });
+              //           },
+              //           child: Container(
+              //             decoration: BoxDecoration(
+              //               color: _exportType == 'Mp4' ? ColorConstants.selected_type : Colors.transparent,
+              //               borderRadius: BorderRadius.only(topLeft: Radius.circular(21),bottomLeft:Radius.circular(21)),
+              //               // boxShadow: _exportType == 'Mp4'
+              //               //     ? [
+              //               //         BoxShadow(
+              //               //           color: Colors.black.withOpacity(0.04),
+              //               //           blurRadius: 4,
+              //               //           offset: const Offset(0, 2),
+              //               //         )
+              //               //       ]
+              //               //     : null,
+              //             ),
+              //             alignment: Alignment.center,
+              //             child: Text(
+              //               StringConstants.mp4,
+              //               style: TextStyle(
+              //                 fontSize: 16,
+              //                 fontWeight: FontWeight.w400,
+              //                 color: _exportType == 'Mp4' ? ColorConstants.text_color : ColorConstants.text_color,
+              //               ),
+              //             ),
+              //           ),
+              //         ),
+              //       ),
+              //       // GIF
+              //       Expanded(
+              //         child: GestureDetector(
+              //           onTap: () {
+              //             setState(() {
+              //               _exportType = 'GIF';
+              //             });
+              //           },
+              //           child: Container(
+              //             decoration: BoxDecoration(
+              //               color: _exportType == 'GIF' ?ColorConstants.selected_type : Colors.transparent,
+              //               borderRadius: BorderRadius.only(topRight: Radius.circular(21),bottomRight:Radius.circular(21)),
+              //               // boxShadow: _exportType == 'GIF'
+              //               //     ? [
+              //               //         BoxShadow(
+              //               //           color: Colors.black.withOpacity(0.04),
+              //               //           blurRadius: 4,
+              //               //           offset: const Offset(0, 2),
+              //               //         )
+              //               //       ]
+              //               //     : null,
+              //             ),
+              //             alignment: Alignment.center,
+              //             child: Text(
+              //               StringConstants.gif,
+              //               style: TextStyle(
+              //                 fontSize: 16,
+              //                 fontWeight: FontWeight.w400,
+              //                 color: _exportType == 'GIF' ? ColorConstants.text_color : ColorConstants.text_color,
+              //               ),
+              //             ),
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
 
-              // 4. Export Type Selector
-               Text(
-                StringConstants.export_type,
-                style: TextStyle(
-                  color: ColorConstants.text_color,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(21),
-                  border: Border.all(
-                    color: ColorConstants.border_color
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ColorConstants.shodow.withValues(alpha: 0.05),
-                      blurRadius: 13,
-                      spreadRadius: 0,
-                      offset: Offset(2, 2)
-                    )
-                  ]
-                ),
-                child: Row(
-                  children: [
-                    // Mp4
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _exportType = 'Mp4';
-                          });
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: _exportType == 'Mp4' ? ColorConstants.selected_type : Colors.transparent,
-                            borderRadius: BorderRadius.only(topLeft: Radius.circular(21),bottomLeft:Radius.circular(21)),
-                            // boxShadow: _exportType == 'Mp4'
-                            //     ? [
-                            //         BoxShadow(
-                            //           color: Colors.black.withOpacity(0.04),
-                            //           blurRadius: 4,
-                            //           offset: const Offset(0, 2),
-                            //         )
-                            //       ]
-                            //     : null,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            StringConstants.mp4,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: _exportType == 'Mp4' ? ColorConstants.text_color : ColorConstants.text_color,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // GIF
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _exportType = 'GIF';
-                          });
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: _exportType == 'GIF' ?ColorConstants.selected_type : Colors.transparent,
-                            borderRadius: BorderRadius.only(topRight: Radius.circular(21),bottomRight:Radius.circular(21)),
-                            // boxShadow: _exportType == 'GIF'
-                            //     ? [
-                            //         BoxShadow(
-                            //           color: Colors.black.withOpacity(0.04),
-                            //           blurRadius: 4,
-                            //           offset: const Offset(0, 2),
-                            //         )
-                            //       ]
-                            //     : null,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            StringConstants.gif,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: _exportType == 'GIF' ? ColorConstants.text_color : ColorConstants.text_color,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              // 4.5 Sticker Mode Selector
-               Text(
-                StringConstants.add_as_sticker,
-                style: TextStyle(
-                  color: ColorConstants.text_color,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7F8FA),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            StringConstants.enable_sticker_mode,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: ColorConstants.darkText,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            StringConstants.add_shapes_lines,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF8E8895),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    CustomSwitch(
-                      value: _enableStickers,
-                      onChanged: (bool value) {
-                        setState(() {
-                          _enableStickers = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              // const SizedBox(height: 20),
+              // // 4.5 Sticker Mode Selector
+              //  Text(
+              //   StringConstants.add_as_sticker,
+              //   style: TextStyle(
+              //     color: ColorConstants.text_color,
+              //     fontWeight: FontWeight.w500,
+              //     fontSize: 18,
+              //   ),
+              // ),
+              // const SizedBox(height: 10),
+              // Container(
+              //   decoration: BoxDecoration(
+              //     color: const Color(0xFFF7F8FA),
+              //     borderRadius: BorderRadius.circular(16),
+              //   ),
+              //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              //   child: Row(
+              //     children: [
+              //       const Expanded(
+              //         child: Column(
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             Text(
+              //               StringConstants.enable_sticker_mode,
+              //               style: TextStyle(
+              //                 fontSize: 15,
+              //                 fontWeight: FontWeight.bold,
+              //                 color: ColorConstants.darkText,
+              //               ),
+              //             ),
+              //             SizedBox(height: 4),
+              //             Text(
+              //               StringConstants.add_shapes_lines,
+              //               style: TextStyle(
+              //                 fontSize: 12,
+              //                 color: Color(0xFF8E8895),
+              //               ),
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //       SizedBox(width: 4),
+              //       CustomSwitch(
+              //         value: _enableStickers,
+              //         onChanged: (bool value) {
+              //           setState(() {
+              //             _enableStickers = value;
+              //           });
+              //         },
+              //       ),
+              //     ],
+              //   ),
+              // ),
               const SizedBox(height: 20),
 
               // 5. Background Section

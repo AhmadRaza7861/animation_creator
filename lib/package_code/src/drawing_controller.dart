@@ -769,6 +769,12 @@ class DrawingController extends ChangeNotifier {
       } else {
         drawingContent = MirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
       }
+    } else if (rulerConfig.value.type == RulerType.quadMirror && newContent != null && newContent is! Eyedropper) {
+      if (newContent == eraserContent) {
+        eraserContent = QuadMirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
+      } else {
+        drawingContent = QuadMirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
+      }
     }
   }
 

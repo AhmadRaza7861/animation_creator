@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-enum RulerType { none, line, circle, box, mirror }
+enum RulerType { none, line, circle, box, mirror, quadMirror }
 
 /// 画板尺子指导线配置
 /// Ruler configuration for guidelines
@@ -52,7 +52,7 @@ class RulerConfig {
   /// 将输入坐标吸附到当前有效的尺子轨迹上
   /// Project input coordinates onto the active ruler trace
   Offset projectPoint(Offset p, Offset? startPoint) {
-    if (type == RulerType.none || type == RulerType.mirror) return p;
+    if (type == RulerType.none || type == RulerType.mirror || type == RulerType.quadMirror) return p;
 
     if (type == RulerType.line) {
       // Infinite line passing through `center` at `angle`

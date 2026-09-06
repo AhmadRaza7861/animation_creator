@@ -74,7 +74,11 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
     case 'EmptyContent':
       return EmptyContent.fromJson(data);
     case 'Mirror':
+    case 'MirrorContent':
       return MirrorContent.fromJson(data);
+    case 'QuadMirror':
+    case 'QuadMirrorContent':
+      return QuadMirrorContent.fromJson(data);
     case 'Pentagon':
       return Pentagon.fromJson(data);
     case 'Heart':

@@ -1449,7 +1449,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     left: _rulerBarPosition!.dx.clamp(
                       8.0,
                       MediaQuery.of(context).size.width -
-                          (_isRulerBarCollapsed ? 130.0 : 330.0) -
+                          (_isRulerBarCollapsed ? 130.0 : 380.0) -
                           8.0,
                     ),
                     top: _rulerBarPosition!.dy.clamp(
@@ -1838,7 +1838,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 onPanUpdate: (details) {
                   setState(() {
                     final double screenW = MediaQuery.of(context).size.width;
-                    final double barW = _isRulerBarCollapsed ? 130.0 : 330.0;
+                    final double barW = _isRulerBarCollapsed ? 130.0 : 380.0;
                     final double barH = 48.0;
                     final double defaultX = (screenW - barW) / 2;
                     final double stackH = MediaQuery.of(context).size.height -
@@ -1972,7 +1972,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   },
                 ),
                 const SizedBox(width: 3),
-                // 5. MIRR
+                // 5. MIRR (2-Way Mirror)
                 _buildHorizontalRulerItem(
                   label: 'MIRR',
                   assetPath: AssetConstants.ruler_mirer,
@@ -1985,6 +1985,25 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     controller.drawingController.rulerConfig.value = rulerConfig.copyWith(
                       type: newType,
                       angle: defaultAngle,
+                      scale: rulerConfig.scale <= 0 ? 140.0 : rulerConfig.scale,
+                    );
+                    if (newType == RulerType.none) {
+                      setState(() {
+                        _isRulerMenuExpanded = false;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 3),
+                // 6. 4-MIRR (4-Way Quadrant Symmetry)
+                _buildHorizontalRulerItem(
+                  label: '4-MIRR',
+                  icon: Icons.grid_view_rounded,
+                  isSelected: rulerConfig.type == RulerType.quadMirror,
+                  onTap: () {
+                    final newType = rulerConfig.type == RulerType.quadMirror ? RulerType.none : RulerType.quadMirror;
+                    controller.drawingController.rulerConfig.value = rulerConfig.copyWith(
+                      type: newType,
                       scale: rulerConfig.scale <= 0 ? 140.0 : rulerConfig.scale,
                     );
                     if (newType == RulerType.none) {
@@ -2032,6 +2051,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
   Widget _buildRulerActiveMiniIndicator(RulerConfig config) {
     String label = 'RULER';
     String? asset;
+    IconData? icon;
     switch (config.type) {
       case RulerType.line:
         label = 'LINE';
@@ -2048,6 +2068,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
       case RulerType.mirror:
         label = 'MIRR';
         asset = AssetConstants.ruler_mirer;
+        break;
+      case RulerType.quadMirror:
+        label = '4-MIRR';
+        icon = Icons.grid_view_rounded;
         break;
       case RulerType.none:
         label = 'NONE';
@@ -2072,6 +2096,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 ColorConstants.accent,
                 BlendMode.srcIn,
               ),
+            ),
+            const SizedBox(width: 4),
+          ] else if (icon != null) ...[
+            Icon(
+              icon,
+              size: 14,
+              color: ColorConstants.accent,
             ),
             const SizedBox(width: 4),
           ],

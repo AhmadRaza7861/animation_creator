@@ -311,6 +311,52 @@ class RulerOverlay extends StatelessWidget {
       );
     }
 
+    // ---------------- 4-WAY QUADRANT MIRROR HANDLES ----------------
+    else if (config.type == RulerType.quadMirror) {
+      final double dx = cos(config.angle);
+      final double dy = sin(config.angle);
+      final Offset p1 = config.center + Offset(dx, dy) * config.scale;
+
+      // Center move knob with degree readout
+      final double deg = (((config.angle * 180 / pi) % 360 + 360) % 360);
+      handles.add(
+        _buildKnob(
+          position: config.center,
+          type: _KnobType.mirrorCenter,
+          badgeText: '4-MIRR ${deg.round()}°',
+          badgeOffset: const Offset(0, -30),
+          onDrag: (d) {
+            _update(
+              config,
+              config.copyWith(
+                center: config.center + d.delta,
+              ),
+            );
+          },
+        ),
+      );
+
+      // Pivot knob P1 (Rotation / Arm Length)
+      handles.add(
+        _buildKnob(
+          position: p1,
+          type: _KnobType.pivot,
+          onDrag: (d) {
+            final newP1 = p1 + d.delta;
+            final newAngle = atan2(newP1.dy - config.center.dy, newP1.dx - config.center.dx);
+            final newScale = (newP1 - config.center).distance;
+            _update(
+              config,
+              config.copyWith(
+                angle: newAngle,
+                scale: max(30, newScale),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
     return handles;
   }
 
@@ -595,6 +641,9 @@ class RulerPainter extends CustomPainter {
         break;
       case RulerType.mirror:
         _paintMirrorRuler(canvas, size);
+        break;
+      case RulerType.quadMirror:
+        _paintQuadMirrorRuler(canvas, size);
         break;
       case RulerType.none:
         break;
@@ -981,6 +1030,90 @@ class RulerPainter extends CustomPainter {
         ..lineTo(d, 6)
         ..lineTo(d + 6, 12);
       canvas.drawPath(bottomPath, chevronPaint);
+    }
+
+    canvas.restore();
+  }
+
+  // ==========================================
+  // 5. 4-WAY QUADRANT MIRROR RULER
+  // ==========================================
+  void _paintQuadMirrorRuler(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.translate(config.center.dx, config.center.dy);
+    canvas.rotate(config.angle);
+
+    const double lineExtent = 4000.0;
+
+    // 1. Soft glowing background cross bands
+    final Paint glowPaint = Paint()
+      ..color = ColorConstants.primary.withValues(alpha: 0.09)
+      ..strokeWidth = 12.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(const Offset(-lineExtent, 0), const Offset(lineExtent, 0), glowPaint);
+    canvas.drawLine(const Offset(0, -lineExtent), const Offset(0, lineExtent), glowPaint);
+
+    // 2. Dashed Symmetry Cross Lines in Primary Color
+    final Paint mirrorStroke = Paint()
+      ..color = ColorConstants.primary.withValues(alpha: 0.95)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    _drawDashedLine(
+      canvas,
+      const Offset(-lineExtent, 0),
+      const Offset(lineExtent, 0),
+      mirrorStroke,
+      dashLength: 8.0,
+      gapLength: 4.0,
+    );
+    _drawDashedLine(
+      canvas,
+      const Offset(0, -lineExtent),
+      const Offset(0, lineExtent),
+      mirrorStroke,
+      dashLength: 8.0,
+      gapLength: 4.0,
+    );
+
+    // 3. Center protractor ring
+    final Paint ringPaint = Paint()
+      ..color = ColorConstants.primary.withValues(alpha: 0.25)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(Offset.zero, 36.0, ringPaint);
+
+    // 4. Symmetrical reflection chevrons along all 4 arms
+    final Paint chevronPaint = Paint()
+      ..color = ColorConstants.primary.withValues(alpha: 0.6)
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
+
+    for (double d = -500; d <= 500; d += 100) {
+      if (d.abs() < 50) continue; // skip center knob area
+      // Horizontal arm chevrons
+      final Path topH = Path()
+        ..moveTo(d - 6, -10)
+        ..lineTo(d, -5)
+        ..lineTo(d + 6, -10);
+      canvas.drawPath(topH, chevronPaint);
+      final Path botH = Path()
+        ..moveTo(d - 6, 10)
+        ..lineTo(d, 5)
+        ..lineTo(d + 6, 10);
+      canvas.drawPath(botH, chevronPaint);
+
+      // Vertical arm chevrons
+      final Path leftV = Path()
+        ..moveTo(-10, d - 6)
+        ..lineTo(-5, d)
+        ..lineTo(-10, d + 6);
+      canvas.drawPath(leftV, chevronPaint);
+      final Path rightV = Path()
+        ..moveTo(10, d - 6)
+        ..lineTo(5, d)
+        ..lineTo(10, d + 6);
+      canvas.drawPath(rightV, chevronPaint);
     }
 
     canvas.restore();
