@@ -34,24 +34,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   String _projectSearchQuery = '';
   final TextEditingController _projectSearchController = TextEditingController();
 
-  // Animation ticker for tutorial cards live frames
-  int _animFrameTick = 0;
-  Timer? _previewTicker;
-
   @override
   void initState() {
     super.initState();
     _loadData();
-    _previewTicker = Timer.periodic(const Duration(milliseconds: 140), (t) {
-      if (mounted) {
-        setState(() => _animFrameTick++);
-      }
-    });
   }
 
   @override
   void dispose() {
-    _previewTicker?.cancel();
     _projectSearchController.dispose();
     super.dispose();
   }
@@ -836,11 +826,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   Widget _buildFeaturedTutorialCard(TemplateModel template) {
     final canvases = (template.projectState?['canvases'] as List?) ?? [];
-    Map<String, dynamic>? currentCanvas;
-    if (canvases.isNotEmpty) {
-      final frameIdx = _animFrameTick % canvases.length;
-      currentCanvas = canvases[frameIdx] as Map<String, dynamic>?;
-    }
 
     return GestureDetector(
       onTap: () => _openTutorial(template),
@@ -874,20 +859,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (currentCanvas != null)
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
-                      child: CustomPaint(
-                        painter: TutorialVectorPainter(
-                          canvasData: currentCanvas,
-                          showGrid: false,
-                        ),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+                    child: TutorialLivePreview(
+                      canvases: canvases,
+                      placeholder: const Center(
+                        child: Icon(Icons.motion_photos_on_rounded, color: ColorConstants.primary, size: 36),
                       ),
-                    )
-                  else
-                    const Center(
-                      child: Icon(Icons.motion_photos_on_rounded, color: ColorConstants.primary, size: 36),
                     ),
+                  ),
 
                   // Frame count pill
                   Positioned(

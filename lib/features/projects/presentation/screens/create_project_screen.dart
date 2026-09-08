@@ -10,7 +10,6 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/primary_button.dart';
-import '../../../../core/widgets/custom_switch.dart';
 import '../../data/project_repository.dart';
 import '../../../templates/domain/template_model.dart';
 import '../widgets/preview_pattern_painter.dart';
@@ -187,8 +186,13 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final XFile? pickedFile = await _imagePicker.pickImage(source: source);
-      if (pickedFile != null) {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 90,
+      );
+      if (pickedFile != null && mounted) {
         setState(() {
           _backgroundImagePath = pickedFile.path;
           _backgroundPattern = null;
@@ -196,6 +200,14 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
       }
     } catch (e) {
       debugPrint('Failed to pick background image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick background image: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 

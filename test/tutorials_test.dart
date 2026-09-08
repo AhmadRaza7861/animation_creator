@@ -9,6 +9,7 @@ void main() {
   group('Tutorials Catalog Tests', () {
     test('Tutorial definitions contain valid categories and difficulty mappings', () {
       expect(TutorialsData.definitions.isNotEmpty, isTrue);
+      expect(TutorialsData.definitions.length, 42);
 
       // Verify no duplicate IDs exist
       final ids = TutorialsData.definitions.map((t) => t.id).toSet();
@@ -28,24 +29,34 @@ void main() {
       expect(beginnerLessons.any((t) => t.name == 'Bouncing Ball'), isTrue);
       expect(beginnerLessons.any((t) => t.name == 'Pendulum Swing'), isTrue);
       expect(beginnerLessons.any((t) => t.name == 'Shape Morphing'), isTrue);
+      expect(beginnerLessons.any((t) => t.name == 'Eye Blink & Expression'), isTrue);
+      expect(beginnerLessons.any((t) => t.name == 'Water Drop & Splash'), isTrue);
 
-      // Verify Animation Basics, The 12 Principles, and Master Practice categories exist
+      // Verify all 5 categories exist and are populated
       final basics = TutorialsData.definitions
           .where((t) => t.category == TutorialsData.categoryAnimationBasics)
           .toList();
       final principles = TutorialsData.definitions
           .where((t) => t.category == TutorialsData.categoryThe12Principles)
           .toList();
+      final character = TutorialsData.definitions
+          .where((t) => t.category == TutorialsData.categoryCharacterAndLocomotion)
+          .toList();
+      final vfx = TutorialsData.definitions
+          .where((t) => t.category == TutorialsData.categoryVFXAndElements)
+          .toList();
       final master = TutorialsData.definitions
           .where((t) => t.category == TutorialsData.categoryMasterPractice)
           .toList();
 
-      expect(basics.length, greaterThanOrEqualTo(8));
-      expect(principles.length, greaterThanOrEqualTo(10));
-      expect(master.length, greaterThanOrEqualTo(4));
+      expect(basics.length, 12);
+      expect(principles.length, 10);
+      expect(character.length, 6);
+      expect(vfx.length, 7);
+      expect(master.length, 7);
     });
 
-    test('TutorialProjectBuilder generates unique, valid vector project data for all 22 lessons', () {
+    test('TutorialProjectBuilder generates unique, valid vector project data for all 42 lessons', () {
       final generatedTitles = <String>{};
 
       for (final def in TutorialsData.definitions) {

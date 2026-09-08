@@ -31,12 +31,14 @@ class TutorialDefinition {
 class TutorialsData {
   static const String categoryAnimationBasics = 'Animation Basics';
   static const String categoryThe12Principles = 'The 12 Principles';
+  static const String categoryCharacterAndLocomotion = 'Character & Motion';
+  static const String categoryVFXAndElements = 'VFX & Elements';
   static const String categoryMasterPractice = 'Master Practice';
 
   static const List<TutorialDefinition> definitions = [
-    // ==========================================
-    // 1. ANIMATION BASICS (Simple, 12-16 frames)
-    // ==========================================
+    // =========================================================================
+    // 1. ANIMATION BASICS (Fundamentals & Drawing Foundation)
+    // =========================================================================
     TutorialDefinition(
       id: 'bouncing_ball',
       name: 'Bouncing Ball',
@@ -119,10 +121,50 @@ class TutorialsData {
       frameCount: 16,
       estimatedMinutes: 6,
     ),
+    TutorialDefinition(
+      id: 'eye_blink',
+      name: 'Eye Blink & Expression',
+      subtitle: 'Natural eyelid arc, lash compression, and brow dip',
+      category: categoryAnimationBasics,
+      difficulty: TutorialDifficulty.beginner,
+      isPro: false,
+      frameCount: 12,
+      estimatedMinutes: 5,
+    ),
+    TutorialDefinition(
+      id: 'mouth_shapes',
+      name: 'Mouth Shapes & Lip Sync',
+      subtitle: 'Phonemes (A, O, M, E, Smile) speaking cadence guide',
+      category: categoryAnimationBasics,
+      difficulty: TutorialDifficulty.beginner,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 6,
+    ),
+    TutorialDefinition(
+      id: 'hand_wave',
+      name: 'Hand Wave & Gesture',
+      subtitle: 'Wrist rotation, finger spread, and rhythmic hand wave',
+      category: categoryAnimationBasics,
+      difficulty: TutorialDifficulty.beginner,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 6,
+    ),
+    TutorialDefinition(
+      id: 'hair_in_wind',
+      name: 'Hair in the Wind',
+      subtitle: 'S-curve overlapping wave dynamics on flowing hair',
+      category: categoryAnimationBasics,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 7,
+    ),
 
-    // ==========================================
-    // 2. THE 12 PRINCIPLES (Classical Animation)
-    // ==========================================
+    // =========================================================================
+    // 2. THE 12 PRINCIPLES (Disney & Classical Animation Rules)
+    // =========================================================================
     TutorialDefinition(
       id: 'squash_and_stretch',
       name: 'Squash & Stretch',
@@ -224,9 +266,147 @@ class TutorialsData {
       estimatedMinutes: 7,
     ),
 
-    // ==========================================
-    // 3. MASTER PRACTICE (Advanced Techniques)
-    // ==========================================
+    // =========================================================================
+    // 3. CHARACTER & LOCOMOTION (Walks, Runs, Jumps & Poses)
+    // =========================================================================
+    TutorialDefinition(
+      id: 'walk_cycle',
+      name: 'Classic Walk Cycle',
+      subtitle: '8-position contact, down, pass & up bipedal walk loop',
+      category: categoryCharacterAndLocomotion,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 9,
+    ),
+    TutorialDefinition(
+      id: 'run_cycle',
+      name: 'Dynamic Run Cycle',
+      subtitle: 'High-speed sprint with airborne flight phase and forward lean',
+      category: categoryCharacterAndLocomotion,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 12,
+      estimatedMinutes: 8,
+    ),
+    TutorialDefinition(
+      id: 'character_jump',
+      name: 'Jump & Impact Landing',
+      subtitle: 'Deep crouch, explosive launch, apex hang & squash landing',
+      category: categoryCharacterAndLocomotion,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 18,
+      estimatedMinutes: 9,
+    ),
+    TutorialDefinition(
+      id: 'sneak_walk',
+      name: 'Sneak & Tip-Toe',
+      subtitle: 'High-knee stealth lift, delicate footfall & comic pacing',
+      category: categoryCharacterAndLocomotion,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 8,
+    ),
+    TutorialDefinition(
+      id: 'ball_with_legs',
+      name: 'Ball with Legs',
+      subtitle: 'Combines squash/stretch body mass with step mechanics',
+      category: categoryCharacterAndLocomotion,
+      difficulty: TutorialDifficulty.beginner,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 6,
+    ),
+    TutorialDefinition(
+      id: 'head_turn_3d',
+      name: '3/4 Head Turn',
+      subtitle: 'Cross-axis volumetric rotation preserving facial symmetry',
+      category: categoryCharacterAndLocomotion,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 8,
+    ),
+
+    // =========================================================================
+    // 4. VFX & ELEMENTS (Fluids, Fire, Electricity & Particles)
+    // =========================================================================
+    TutorialDefinition(
+      id: 'water_splash',
+      name: 'Water Drop & Splash',
+      subtitle: 'Droplet impact, crown splash rim and expanding ripple rings',
+      category: categoryVFXAndElements,
+      difficulty: TutorialDifficulty.beginner,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 6,
+    ),
+    TutorialDefinition(
+      id: 'explosion_puff',
+      name: 'Explosion & Smoke Puff',
+      subtitle: 'High-energy blast burst, mushrooming clouds & smoke drift',
+      category: categoryVFXAndElements,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 7,
+    ),
+    TutorialDefinition(
+      id: 'lightning_strike',
+      name: 'Lightning Bolt & Zap',
+      subtitle: 'Electric leader zap, flash bloom & crackle dissipation',
+      category: categoryVFXAndElements,
+      difficulty: TutorialDifficulty.beginner,
+      isPro: false,
+      frameCount: 12,
+      estimatedMinutes: 5,
+    ),
+    TutorialDefinition(
+      id: 'balloon_pop',
+      name: 'Balloon Float & Pop',
+      subtitle: 'Buoyant aerial float, needle contact & rubber burst pop',
+      category: categoryVFXAndElements,
+      difficulty: TutorialDifficulty.beginner,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 6,
+    ),
+    TutorialDefinition(
+      id: 'falling_leaf',
+      name: 'Fluttering Autumn Leaf',
+      subtitle: 'Chaotic air-resistance drift with tumbling perspective flips',
+      category: categoryVFXAndElements,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 20,
+      estimatedMinutes: 8,
+    ),
+    TutorialDefinition(
+      id: 'magic_sparkle',
+      name: 'Magic Starburst & Twinkle',
+      subtitle: '4-point star bloom, lens flare rays & shimmering sparkles',
+      category: categoryVFXAndElements,
+      difficulty: TutorialDifficulty.beginner,
+      isPro: false,
+      frameCount: 12,
+      estimatedMinutes: 5,
+    ),
+    TutorialDefinition(
+      id: 'liquid_flourish',
+      name: 'Liquid Flourish Splash',
+      subtitle: 'Organic fluid ribbon curling into trailing droplet beads',
+      category: categoryVFXAndElements,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 7,
+    ),
+
+    // =========================================================================
+    // 5. MASTER PRACTICE (Cinematics, Complex Physics & Sequencing)
+    // =========================================================================
     TutorialDefinition(
       id: 'keys_and_inbetweens',
       name: 'Keys & Inbetweens',
@@ -266,6 +446,36 @@ class TutorialsData {
       isPro: false,
       frameCount: 24,
       estimatedMinutes: 8,
+    ),
+    TutorialDefinition(
+      id: 'sword_slash',
+      name: 'Sword Slash & Trail',
+      subtitle: 'Kinetic blade swing with sweeping crescent speed-arc trail',
+      category: categoryMasterPractice,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 14,
+      estimatedMinutes: 8,
+    ),
+    TutorialDefinition(
+      id: 'bird_flight',
+      name: 'Bird Flight & Wing Flap',
+      subtitle: 'Folded upstroke, powerful downward push & gliding air catch',
+      category: categoryMasterPractice,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 9,
+    ),
+    TutorialDefinition(
+      id: 'camera_parallax',
+      name: '3D Depth Parallax',
+      subtitle: 'Multi-plane foreground, midground & mountains depth scrolling',
+      category: categoryMasterPractice,
+      difficulty: TutorialDifficulty.intermediate,
+      isPro: false,
+      frameCount: 16,
+      estimatedMinutes: 9,
     ),
   ];
 

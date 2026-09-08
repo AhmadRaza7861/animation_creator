@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
@@ -1669,11 +1670,1640 @@ class TutorialProjectBuilder {
     return _wrapProjectState(title: 'Damped Decay', fps: 12, canvases: canvases);
   }
 
+
   // =========================================================================
-  // Master project state router for all tutorial definitions
+  // 23. EYE BLINK & EXPRESSION (12 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildEyeBlinkProject() {
+    const int frameCount = 12;
+    const Offset eyeCenter = Offset(180, 100);
+    const double eyeRx = 42.0;
+    const double eyeRy = 26.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildCircleContent(
+        center: eyeCenter,
+        radius: eyeRx,
+        isEllipse: true,
+        rx: eyeRx,
+        ry: eyeRy,
+        color: const Color(0xFFCBD5E1),
+        strokeWidth: 1.5,
+      ));
+      guide.add(buildStraightLineContent(
+        p1: const Offset(130, 62),
+        p2: const Offset(230, 62),
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 1.5,
+      ));
+
+      double browY = 62.0;
+      if (i >= 4 && i <= 6) browY += 4.0;
+      anim.add(buildSmoothLineContent(
+        points: [
+          Offset(136, browY + 3),
+          Offset(180, browY - 3),
+          Offset(224, browY + 2),
+        ],
+        color: const Color(0xFF334155),
+        strokeWidth: 4.5,
+      ));
+
+      if (i == 5) {
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(eyeCenter.dx - eyeRx, eyeCenter.dy + 4),
+            Offset(eyeCenter.dx, eyeCenter.dy + 7),
+            Offset(eyeCenter.dx + eyeRx, eyeCenter.dy + 4),
+          ],
+          color: const Color(0xFF0F172A),
+          strokeWidth: 4.0,
+        ));
+        anim.add(buildStraightLineContent(
+          p1: Offset(eyeCenter.dx - 15, eyeCenter.dy + 6),
+          p2: Offset(eyeCenter.dx - 22, eyeCenter.dy + 15),
+          color: const Color(0xFF0F172A),
+          strokeWidth: 2.5,
+        ));
+        anim.add(buildStraightLineContent(
+          p1: Offset(eyeCenter.dx + 15, eyeCenter.dy + 6),
+          p2: Offset(eyeCenter.dx + 22, eyeCenter.dy + 15),
+          color: const Color(0xFF0F172A),
+          strokeWidth: 2.5,
+        ));
+      } else if (i == 4 || i == 6) {
+        final double midY = i == 4 ? eyeCenter.dy + 3 : eyeCenter.dy - 3;
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(eyeCenter.dx - eyeRx, eyeCenter.dy),
+            Offset(eyeCenter.dx, eyeCenter.dy + eyeRy),
+            Offset(eyeCenter.dx + eyeRx, eyeCenter.dy),
+          ],
+          color: const Color(0xFF0F172A),
+          strokeWidth: 3.5,
+        ));
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(eyeCenter.dx - eyeRx, eyeCenter.dy),
+            Offset(eyeCenter.dx, midY),
+            Offset(eyeCenter.dx + eyeRx, eyeCenter.dy),
+          ],
+          color: const Color(0xFF0F172A),
+          strokeWidth: 4.0,
+        ));
+        anim.add(buildCircleContent(
+          center: Offset(eyeCenter.dx, eyeCenter.dy + 4),
+          radius: 12.0,
+          color: const Color(0xFF3B82F6),
+          strokeWidth: 3.5,
+        ));
+      } else {
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(eyeCenter.dx - eyeRx, eyeCenter.dy),
+            Offset(eyeCenter.dx, eyeCenter.dy - eyeRy),
+            Offset(eyeCenter.dx + eyeRx, eyeCenter.dy),
+          ],
+          color: const Color(0xFF0F172A),
+          strokeWidth: 4.0,
+        ));
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(eyeCenter.dx - eyeRx, eyeCenter.dy),
+            Offset(eyeCenter.dx, eyeCenter.dy + eyeRy),
+            Offset(eyeCenter.dx + eyeRx, eyeCenter.dy),
+          ],
+          color: const Color(0xFF0F172A),
+          strokeWidth: 3.0,
+        ));
+        anim.add(buildCircleContent(
+          center: eyeCenter,
+          radius: 15.0,
+          color: const Color(0xFF2563EB),
+          strokeWidth: 3.5,
+        ));
+        anim.add(buildCircleContent(
+          center: eyeCenter,
+          radius: 6.0,
+          color: const Color(0xFF0F172A),
+          strokeWidth: 2.0,
+          style: PaintingStyle.fill,
+        ));
+        anim.add(buildCircleContent(
+          center: Offset(eyeCenter.dx - 4, eyeCenter.dy - 4),
+          radius: 3.0,
+          color: const Color(0xFFFFFFFF),
+          strokeWidth: 2.0,
+          style: PaintingStyle.fill,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Eye Blink & Expression', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 24. MOUTH SHAPES & LIP SYNC (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildMouthShapesProject() {
+    const int frameCount = 16;
+    const Offset headCenter = Offset(180, 95);
+    const Offset mouthCenter = Offset(180, 130);
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildCircleContent(
+        center: headCenter,
+        radius: 65,
+        color: const Color(0xFFE2E8F0),
+        strokeWidth: 1.5,
+      ));
+      guide.add(buildStraightLineContent(
+        p1: const Offset(140, 130),
+        p2: const Offset(220, 130),
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 1.5,
+      ));
+
+      // Eyes on character
+      anim.add(buildCircleContent(
+        center: const Offset(160, 85),
+        radius: 6,
+        color: const Color(0xFF1E293B),
+        strokeWidth: 2,
+        style: PaintingStyle.fill,
+      ));
+      anim.add(buildCircleContent(
+        center: const Offset(200, 85),
+        radius: 6,
+        color: const Color(0xFF1E293B),
+        strokeWidth: 2,
+        style: PaintingStyle.fill,
+      ));
+      anim.add(buildCircleContent(
+        center: headCenter,
+        radius: 62,
+        color: const Color(0xFF334155),
+        strokeWidth: 3.5,
+      ));
+
+      // 5 Phoneme Mouth stages: 0..2 Rest, 3..5 "A" vowel, 6..8 "O" round, 9..11 "M" closed, 12..15 "E" & Smile
+      if (i >= 3 && i <= 5) {
+        // "A" open vowel
+        anim.add(buildCircleContent(
+          center: mouthCenter,
+          radius: 18,
+          isEllipse: true,
+          rx: 16,
+          ry: 18,
+          color: const Color(0xFFEF4444),
+          strokeWidth: 4.0,
+        ));
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(mouthCenter.dx - 10, mouthCenter.dy + 8),
+            Offset(mouthCenter.dx, mouthCenter.dy + 12),
+            Offset(mouthCenter.dx + 10, mouthCenter.dy + 8),
+          ],
+          color: const Color(0xFFF87171),
+          strokeWidth: 3.0,
+        ));
+      } else if (i >= 6 && i <= 8) {
+        // "O" round circle
+        anim.add(buildCircleContent(
+          center: mouthCenter,
+          radius: 13,
+          color: const Color(0xFFEF4444),
+          strokeWidth: 4.0,
+        ));
+      } else if (i >= 9 && i <= 11) {
+        // "M" closed flat lips
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(mouthCenter.dx - 22, mouthCenter.dy),
+            Offset(mouthCenter.dx, mouthCenter.dy + 2),
+            Offset(mouthCenter.dx + 22, mouthCenter.dy),
+          ],
+          color: const Color(0xFFEF4444),
+          strokeWidth: 4.0,
+        ));
+      } else if (i >= 12 && i <= 15) {
+        // "E" / Wide Smile
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(mouthCenter.dx - 25, mouthCenter.dy - 4),
+            Offset(mouthCenter.dx, mouthCenter.dy + 14),
+            Offset(mouthCenter.dx + 25, mouthCenter.dy - 4),
+          ],
+          color: const Color(0xFFEF4444),
+          strokeWidth: 4.0,
+        ));
+        anim.add(buildStraightLineContent(
+          p1: Offset(mouthCenter.dx - 24, mouthCenter.dy - 3),
+          p2: Offset(mouthCenter.dx + 24, mouthCenter.dy - 3),
+          color: const Color(0xFFEF4444),
+          strokeWidth: 3.0,
+        ));
+      } else {
+        // Neutral Rest
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(mouthCenter.dx - 16, mouthCenter.dy),
+            Offset(mouthCenter.dx, mouthCenter.dy + 2),
+            Offset(mouthCenter.dx + 16, mouthCenter.dy),
+          ],
+          color: const Color(0xFFEF4444),
+          strokeWidth: 3.5,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Mouth Shapes & Lip Sync', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 25. HAND WAVE & GESTURE (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildHandWaveProject() {
+    const int frameCount = 16;
+    const Offset wrist = Offset(180, 160);
+    const double palmLength = 45.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      final double waveAngle = 0.38 * math.sin(2 * math.pi * i / frameCount);
+
+      guide.add(buildCircleContent(
+        center: wrist,
+        radius: 6,
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 1.5,
+      ));
+      guide.add(buildStraightLineContent(
+        p1: const Offset(180, 160),
+        p2: const Offset(180, 195),
+        color: const Color(0xFFCBD5E1),
+        strokeWidth: 3.0,
+      ));
+
+      // Palm center & rotation
+      final double palmX = wrist.dx + palmLength * math.sin(waveAngle);
+      final double palmY = wrist.dy - palmLength * math.cos(waveAngle);
+      final Offset palmCenter = Offset(palmX, palmY);
+
+      // Arm
+      anim.add(buildStraightLineContent(
+        p1: const Offset(180, 195),
+        p2: wrist,
+        color: const Color(0xFF1E293B),
+        strokeWidth: 4.5,
+      ));
+
+      // Palm
+      anim.add(buildStraightLineContent(
+        p1: wrist,
+        p2: palmCenter,
+        color: const Color(0xFFF97316),
+        strokeWidth: 6.0,
+      ));
+
+      // 4 Fingers with follow-through delay
+      for (int f = -2; f <= 2; f++) {
+        if (f == 0) continue;
+        final double fSpread = f * 0.12;
+        final double fingerDelay = waveAngle + fSpread + 0.15 * math.sin(2 * math.pi * i / frameCount - 0.3);
+        final double fLen = 32.0 - (f.abs() * 3.0);
+        final Offset fTip = Offset(
+          palmCenter.dx + fLen * math.sin(fingerDelay),
+          palmCenter.dy - fLen * math.cos(fingerDelay),
+        );
+        anim.add(buildStraightLineContent(
+          p1: palmCenter,
+          p2: fTip,
+          color: const Color(0xFFF97316),
+          strokeWidth: 3.5,
+        ));
+      }
+
+      // Thumb
+      final double thumbAngle = waveAngle - 0.55;
+      final Offset thumbTip = Offset(
+        wrist.dx + 22 * math.sin(thumbAngle),
+        wrist.dy - 22 * math.cos(thumbAngle),
+      );
+      anim.add(buildStraightLineContent(
+        p1: wrist,
+        p2: thumbTip,
+        color: const Color(0xFFF97316),
+        strokeWidth: 3.5,
+      ));
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Hand Wave & Gesture', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 26. HAIR IN THE WIND (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildHairInWindProject() {
+    const int frameCount = 16;
+    const Offset headCenter = Offset(110, 100);
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      // Wind guide vectors
+      guide.add(buildStraightLineContent(
+        p1: const Offset(40, 50),
+        p2: const Offset(320, 50),
+        color: const Color(0xFFBAE6FD),
+        strokeWidth: 1.5,
+      ));
+      guide.add(buildStraightLineContent(
+        p1: const Offset(40, 150),
+        p2: const Offset(320, 150),
+        color: const Color(0xFFBAE6FD),
+        strokeWidth: 1.5,
+      ));
+
+      // Head silhouette
+      anim.add(buildCircleContent(
+        center: headCenter,
+        radius: 34,
+        color: const Color(0xFF334155),
+        strokeWidth: 3.5,
+      ));
+      // Face profile nose & chin
+      anim.add(buildSmoothLineContent(
+        points: [
+          Offset(headCenter.dx + 18, headCenter.dy - 12),
+          Offset(headCenter.dx + 38, headCenter.dy),
+          Offset(headCenter.dx + 22, headCenter.dy + 14),
+          Offset(headCenter.dx + 28, headCenter.dy + 24),
+          Offset(headCenter.dx + 10, headCenter.dy + 34),
+        ],
+        color: const Color(0xFF334155),
+        strokeWidth: 3.5,
+      ));
+
+      // 3 flowing hair strands with overlapping S-wave delay
+      final List<double> baseY = [75.0, 98.0, 120.0];
+      final List<Color> hairColors = [
+        const Color(0xFF8B5CF6),
+        const Color(0xFFA855F7),
+        const Color(0xFF7C3AED),
+      ];
+
+      for (int s = 0; s < 3; s++) {
+        final List<Offset> strandPoints = [];
+        final double phase = (2 * math.pi * i / frameCount) - (s * 0.6);
+        for (double x = 110; x <= 310; x += 18) {
+          final double dist = (x - 110) / 200.0;
+          final double wave = math.sin(phase - (dist * 2.8 * math.pi)) * (16.0 + dist * 18.0);
+          strandPoints.add(Offset(x, baseY[s] + wave));
+        }
+        anim.add(buildSmoothLineContent(
+          points: strandPoints,
+          color: hairColors[s],
+          strokeWidth: 4.0 - (s * 0.5),
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Hair in the Wind', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 27. CLASSIC WALK CYCLE (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildWalkCycleProject() {
+    const int frameCount = 16;
+    const double floorY = 165.0;
+    const double bodyX = 180.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildStraightLineContent(
+        p1: const Offset(30, floorY),
+        p2: const Offset(330, floorY),
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 2.5,
+      ));
+
+      // Torso bob (2 cycles per 16 frames)
+      final double bob = math.sin(4 * math.pi * i / frameCount) * 5.0;
+      final double hipY = 108.0 + bob;
+      final Offset hip = Offset(bodyX, hipY);
+      final Offset head = Offset(bodyX + 2, hipY - 46);
+
+      // Head
+      anim.add(buildCircleContent(
+        center: head,
+        radius: 15,
+        color: const Color(0xFF1E293B),
+        strokeWidth: 3.5,
+      ));
+      // Spine / Torso
+      anim.add(buildStraightLineContent(
+        p1: head,
+        p2: hip,
+        color: const Color(0xFF1E293B),
+        strokeWidth: 4.5,
+      ));
+
+      // Leg 1 (Front - Primary Orange) & Leg 2 (Back - Slate)
+      final double stepPhase = 2 * math.pi * i / frameCount;
+
+      for (int leg = 0; leg < 2; leg++) {
+        final double p = stepPhase + (leg * math.pi);
+        final double footX = bodyX + 36 * math.sin(p);
+        final double lift = math.cos(p) > 0 ? (math.cos(p) * 22.0) : 0.0;
+        final double footY = floorY - lift;
+        final Offset foot = Offset(footX, footY);
+
+        final Offset knee = Offset(
+          (hip.dx + foot.dx) / 2 + 10,
+          (hip.dy + foot.dy) / 2 - 4,
+        );
+
+        final Color legColor = leg == 0 ? const Color(0xFFEA580C) : const Color(0xFF64748B);
+
+        anim.add(buildSmoothLineContent(
+          points: [hip, knee, foot],
+          color: legColor,
+          strokeWidth: leg == 0 ? 4.5 : 3.5,
+        ));
+        // Foot base
+        anim.add(buildStraightLineContent(
+          p1: foot,
+          p2: Offset(foot.dx + 12, foot.dy),
+          color: legColor,
+          strokeWidth: 4.0,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Classic Walk Cycle', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 28. DYNAMIC RUN CYCLE (12 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildRunCycleProject() {
+    const int frameCount = 12;
+    const double floorY = 165.0;
+    const double bodyX = 175.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildStraightLineContent(
+        p1: const Offset(30, floorY),
+        p2: const Offset(330, floorY),
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 2.0,
+      ));
+
+      // Vigorous vertical oscillation & flight phases
+      final double bob = math.sin(4 * math.pi * i / frameCount) * 12.0;
+      final double hipY = 100.0 + bob;
+      final Offset hip = Offset(bodyX, hipY);
+      // Forward body lean angle (25 degrees forward)
+      final Offset head = Offset(bodyX + 22, hipY - 42);
+
+      // Speed trailing motion guides
+      guide.add(buildStraightLineContent(
+        p1: Offset(head.dx - 40, head.dy),
+        p2: Offset(head.dx - 15, head.dy),
+        color: const Color(0xFFFDBA74),
+        strokeWidth: 2.0,
+      ));
+
+      anim.add(buildCircleContent(
+        center: head,
+        radius: 14,
+        color: const Color(0xFF0F172A),
+        strokeWidth: 3.5,
+      ));
+      anim.add(buildStraightLineContent(
+        p1: head,
+        p2: hip,
+        color: const Color(0xFF0F172A),
+        strokeWidth: 4.5,
+      ));
+
+      final double runPhase = 2 * math.pi * i / frameCount;
+
+      for (int leg = 0; leg < 2; leg++) {
+        final double p = runPhase + (leg * math.pi);
+        final double footX = bodyX + 54 * math.sin(p);
+        final double lift = (math.cos(p) + 0.3).clamp(0.0, 1.3) * 36.0;
+        final double footY = floorY - lift;
+        final Offset foot = Offset(footX, footY);
+
+        final Offset knee = Offset(
+          (hip.dx + foot.dx) / 2 + 18,
+          (hip.dy + foot.dy) / 2 - 12,
+        );
+
+        final Color legColor = leg == 0 ? const Color(0xFFDC2626) : const Color(0xFF475569);
+
+        anim.add(buildSmoothLineContent(
+          points: [hip, knee, foot],
+          color: legColor,
+          strokeWidth: leg == 0 ? 5.0 : 3.8,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Dynamic Run Cycle', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 29. JUMP & IMPACT LANDING (18 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildCharacterJumpProject() {
+    const int frameCount = 18;
+    const double floorY = 165.0;
+    const double bodyX = 180.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    // Jump height stages:
+    // 0..2: Standing idle (120)
+    // 3..5: Deep crouch anticipation (145)
+    // 6..7: Launch stretch (90)
+    // 8..11: Apex hang float (45)
+    // 12..14: Descent stretch (95 -> 135)
+    // 15..16: Impact squash (150)
+    // 17: Settle recovery (120)
+    final List<double> heights = [
+      120.0, 120.0, 120.0,
+      138.0, 145.0, 142.0,
+      95.0, 65.0,
+      45.0, 42.0, 45.0, 55.0,
+      85.0, 120.0, 140.0,
+      152.0, 145.0,
+      120.0,
+    ];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildStraightLineContent(
+        p1: const Offset(40, floorY),
+        p2: const Offset(320, floorY),
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 2.5,
+      ));
+
+      // Parabolic jump trajectory curve guide
+      final List<Offset> arc = [];
+      for (double t = 0; t <= 1.0; t += 0.05) {
+        final double ax = 100 + t * 160;
+        final double ay = floorY - 4 * (165 - 42) * t * (1 - t);
+        arc.add(Offset(ax, ay));
+      }
+      guide.add(buildSmoothLineContent(
+        points: arc,
+        color: const Color(0xFF38BDF8),
+        strokeWidth: 1.5,
+      ));
+
+      final double currentY = heights[i];
+      final bool isSquash = i >= 3 && i <= 5 || i >= 15 && i <= 16;
+      final bool isStretch = (i >= 6 && i <= 7) || (i >= 12 && i <= 14);
+
+      if (isSquash) {
+        // Squashed character mass
+        anim.add(buildCircleContent(
+          center: Offset(bodyX, currentY),
+          radius: 20,
+          isEllipse: true,
+          rx: 28,
+          ry: 14,
+          color: const Color(0xFF10B981),
+          strokeWidth: 4.5,
+        ));
+        // Ground impact dust lines
+        if (i >= 15) {
+          anim.add(buildStraightLineContent(
+            p1: Offset(bodyX - 35, floorY - 2),
+            p2: Offset(bodyX - 48, floorY - 6),
+            color: const Color(0xFF34D399),
+            strokeWidth: 2.5,
+          ));
+          anim.add(buildStraightLineContent(
+            p1: Offset(bodyX + 35, floorY - 2),
+            p2: Offset(bodyX + 48, floorY - 6),
+            color: const Color(0xFF34D399),
+            strokeWidth: 2.5,
+          ));
+        }
+      } else if (isStretch) {
+        // Stretched elongated body
+        anim.add(buildCircleContent(
+          center: Offset(bodyX, currentY),
+          radius: 20,
+          isEllipse: true,
+          rx: 13,
+          ry: 30,
+          color: const Color(0xFF10B981),
+          strokeWidth: 4.5,
+        ));
+      } else {
+        // Normal sphere character at apex or rest
+        anim.add(buildCircleContent(
+          center: Offset(bodyX, currentY),
+          radius: 20,
+          color: const Color(0xFF10B981),
+          strokeWidth: 4.5,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Jump & Impact Landing', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 30. SNEAK & TIP-TOE (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildSneakWalkProject() {
+    const int frameCount = 16;
+    const double floorY = 165.0;
+    const double bodyX = 180.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildStraightLineContent(
+        p1: const Offset(30, floorY),
+        p2: const Offset(330, floorY),
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 2.5,
+      ));
+
+      // Low crouching stealth body posture
+      const double hipY = 120.0;
+      const Offset hip = Offset(bodyX - 10, hipY);
+      const Offset head = Offset(bodyX + 16, hipY - 32);
+
+      anim.add(buildCircleContent(
+        center: head,
+        radius: 14,
+        color: const Color(0xFF1E1B4B),
+        strokeWidth: 3.5,
+      ));
+      anim.add(buildSmoothLineContent(
+        points: [head, const Offset(bodyX, hipY - 14), hip],
+        color: const Color(0xFF1E1B4B),
+        strokeWidth: 4.5,
+      ));
+
+      // High knee exaggeration stepping
+      final double stepPhase = 2 * math.pi * i / frameCount;
+      final double highLift = (math.sin(stepPhase) > 0) ? (math.sin(stepPhase) * 38.0) : 0.0;
+      final double footX = bodyX + 32 * math.cos(stepPhase);
+      final double footY = floorY - highLift;
+
+      final Offset knee = Offset(bodyX + 18, (hip.dy + footY) / 2 - 14);
+
+      anim.add(buildSmoothLineContent(
+        points: [hip, knee, Offset(footX, footY)],
+        color: const Color(0xFF6366F1),
+        strokeWidth: 4.5,
+      ));
+      // Delicate tip-toe touch
+      anim.add(buildCircleContent(
+        center: Offset(footX + 4, footY),
+        radius: 3.5,
+        color: const Color(0xFF4338CA),
+        strokeWidth: 2,
+        style: PaintingStyle.fill,
+      ));
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Sneak & Tip-Toe', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 31. BALL WITH LEGS (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildBallWithLegsProject() {
+    const int frameCount = 16;
+    const double floorY = 165.0;
+    const double centerX = 180.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildStraightLineContent(
+        p1: const Offset(30, floorY),
+        p2: const Offset(330, floorY),
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 2.0,
+      ));
+
+      // Bouncing ball mass with step bounce
+      final double bounce = math.sin(4 * math.pi * i / frameCount) * 8.0;
+      final Offset ballCenter = Offset(centerX, 105.0 + bounce);
+
+      // Body ball
+      anim.add(buildCircleContent(
+        center: ballCenter,
+        radius: 26,
+        color: const Color(0xFFEC4899),
+        strokeWidth: 4.0,
+      ));
+      // Cute eyes
+      anim.add(buildCircleContent(
+        center: Offset(ballCenter.dx + 8, ballCenter.dy - 6),
+        radius: 4,
+        color: const Color(0xFF831843),
+        strokeWidth: 2,
+        style: PaintingStyle.fill,
+      ));
+
+      // 2 cartoon legs
+      final double phase = 2 * math.pi * i / frameCount;
+      for (int l = 0; l < 2; l++) {
+        final double p = phase + (l * math.pi);
+        final double footX = centerX + (l == 0 ? -12 : 12) + 24 * math.sin(p);
+        final double footLift = math.cos(p) > 0 ? (math.cos(p) * 20.0) : 0.0;
+        final Offset hipJoint = Offset(centerX + (l == 0 ? -12 : 12), ballCenter.dy + 24);
+        final Offset foot = Offset(footX, floorY - footLift);
+
+        anim.add(buildSmoothLineContent(
+          points: [hipJoint, Offset((hipJoint.dx + foot.dx) / 2 + 6, (hipJoint.dy + foot.dy) / 2), foot],
+          color: const Color(0xFFBE185D),
+          strokeWidth: 4.0,
+        ));
+        // Foot oval shoe
+        anim.add(buildCircleContent(
+          center: Offset(foot.dx + 4, foot.dy),
+          radius: 6,
+          isEllipse: true,
+          rx: 8,
+          ry: 4,
+          color: const Color(0xFF9D174D),
+          strokeWidth: 2.5,
+          style: PaintingStyle.fill,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Ball with Legs', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 32. 3/4 HEAD TURN (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildHeadTurn3DProject() {
+    const int frameCount = 16;
+    const Offset center = Offset(180, 100);
+    const double rx = 48.0;
+    const double ry = 58.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      // 3D rotation angle theta from -55 deg to +55 deg
+      final double theta = math.sin(2 * math.pi * i / frameCount) * 0.95;
+
+      guide.add(buildCircleContent(
+        center: center,
+        radius: rx,
+        isEllipse: true,
+        rx: rx,
+        ry: ry,
+        color: const Color(0xFFE2E8F0),
+        strokeWidth: 1.5,
+      ));
+
+      // Head silhouette oval
+      anim.add(buildCircleContent(
+        center: center,
+        radius: rx,
+        isEllipse: true,
+        rx: rx,
+        ry: ry,
+        color: const Color(0xFF0F172A),
+        strokeWidth: 4.0,
+      ));
+
+      // 3D Curving Center Facial Guide Line
+      final double curveX = center.dx + rx * math.sin(theta);
+      final List<Offset> centerLine = [];
+      for (double y = center.dy - ry; y <= center.dy + ry; y += 10) {
+        final double normY = (y - center.dy) / ry;
+        final double widthAtY = math.sqrt((1 - normY * normY).clamp(0.0, 1.0));
+        centerLine.add(Offset(center.dx + (rx * math.sin(theta) * widthAtY), y));
+      }
+      anim.add(buildSmoothLineContent(
+        points: centerLine,
+        color: const Color(0xFF0284C7),
+        strokeWidth: 2.0,
+      ));
+
+      // Nose & Eyes shifting with 3D projection
+      final double eyeY = center.dy - 6;
+      final double eyeSpacing = 22.0 * math.cos(theta);
+      final Offset leftEye = Offset(curveX - eyeSpacing, eyeY);
+      final Offset rightEye = Offset(curveX + eyeSpacing, eyeY);
+
+      if ((leftEye.dx - center.dx).abs() < rx - 4) {
+        anim.add(buildCircleContent(
+          center: leftEye,
+          radius: 5,
+          color: const Color(0xFF0F172A),
+          strokeWidth: 2,
+          style: PaintingStyle.fill,
+        ));
+      }
+      if ((rightEye.dx - center.dx).abs() < rx - 4) {
+        anim.add(buildCircleContent(
+          center: rightEye,
+          radius: 5,
+          color: const Color(0xFF0F172A),
+          strokeWidth: 2,
+          style: PaintingStyle.fill,
+        ));
+      }
+
+      // Nose
+      final Offset noseTip = Offset(curveX + 12 * math.sin(theta), center.dy + 12);
+      anim.add(buildSmoothLineContent(
+        points: [Offset(curveX, center.dy + 2), noseTip, Offset(curveX, center.dy + 16)],
+        color: const Color(0xFF0F172A),
+        strokeWidth: 3.0,
+      ));
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: '3/4 Head Turn', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 33. WATER DROP & SPLASH (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildWaterSplashProject() {
+    const int frameCount = 16;
+    const double surfaceY = 145.0;
+    const double splashX = 180.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildStraightLineContent(
+        p1: const Offset(30, surfaceY),
+        p2: const Offset(330, surfaceY),
+        color: const Color(0xFF7DD3FC),
+        strokeWidth: 2.0,
+      ));
+
+      if (i <= 3) {
+        // Falling droplet
+        final double dropY = 25.0 + (i * 38.0);
+        anim.add(buildCircleContent(
+          center: Offset(splashX, dropY),
+          radius: 12,
+          isEllipse: true,
+          rx: 8,
+          ry: 16,
+          color: const Color(0xFF0284C7),
+          strokeWidth: 3.5,
+        ));
+      } else if (i >= 4 && i <= 8) {
+        // Crown splash explosion
+        final double splashRadius = (i - 3) * 14.0;
+        final double spikeHeight = (i - 3) * 12.0;
+
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(splashX - splashRadius, surfaceY),
+            Offset(splashX - splashRadius + 6, surfaceY - spikeHeight),
+            Offset(splashX, surfaceY - (spikeHeight * 0.5)),
+            Offset(splashX + splashRadius - 6, surfaceY - spikeHeight),
+            Offset(splashX + splashRadius, surfaceY),
+          ],
+          color: const Color(0xFF0284C7),
+          strokeWidth: 4.0,
+        ));
+        // Center rising droplet bead
+        if (i >= 6) {
+          anim.add(buildCircleContent(
+            center: Offset(splashX, surfaceY - spikeHeight - 8),
+            radius: 5,
+            color: const Color(0xFF0284C7),
+            strokeWidth: 2,
+            style: PaintingStyle.fill,
+          ));
+        }
+      } else {
+        // Expanding circular ripple rings
+        final double r1 = (i - 8) * 18.0;
+        final double r2 = (i - 8) * 11.0;
+        anim.add(buildCircleContent(
+          center: const Offset(splashX, surfaceY),
+          radius: r1,
+          isEllipse: true,
+          rx: r1,
+          ry: r1 * 0.3,
+          color: const Color(0xFF38BDF8),
+          strokeWidth: 3.0,
+        ));
+        if (r2 > 4) {
+          anim.add(buildCircleContent(
+            center: const Offset(splashX, surfaceY),
+            radius: r2,
+            isEllipse: true,
+            rx: r2,
+            ry: r2 * 0.3,
+            color: const Color(0xFF7DD3FC),
+            strokeWidth: 2.0,
+          ));
+        }
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Water Drop & Splash', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 34. EXPLOSION & SMOKE PUFF (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildExplosionPuffProject() {
+    const int frameCount = 16;
+    const Offset center = Offset(180, 105);
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildCircleContent(
+        center: center,
+        radius: 65,
+        color: const Color(0xFFFEF08A),
+        strokeWidth: 1.5,
+      ));
+
+      if (i <= 2) {
+        // Bright initial blast spike
+        final double r = 12.0 + i * 16.0;
+        anim.add(buildCircleContent(
+          center: center,
+          radius: r,
+          color: const Color(0xFFFACC15),
+          strokeWidth: 4.5,
+        ));
+      } else if (i <= 8) {
+        // Billowing smoke cloud lobes
+        final int lobes = 7;
+        final double growth = (i - 2) * 8.5;
+        for (int l = 0; l < lobes; l++) {
+          final double angle = (2 * math.pi * l / lobes);
+          final Offset lobeCenter = Offset(
+            center.dx + (growth * 0.8) * math.cos(angle),
+            center.dy + (growth * 0.8) * math.sin(angle),
+          );
+          anim.add(buildCircleContent(
+            center: lobeCenter,
+            radius: 12.0 + (i * 2.5),
+            color: const Color(0xFFF97316),
+            strokeWidth: 3.5,
+          ));
+        }
+      } else {
+        // Dissipating floating smoke particles
+        final int particles = 8;
+        final double drift = (i - 8) * 12.0;
+        for (int p = 0; p < particles; p++) {
+          final double angle = (2 * math.pi * p / particles);
+          final Offset pCenter = Offset(
+            center.dx + (45 + drift) * math.cos(angle),
+            center.dy - drift * 0.5 + (35 + drift) * math.sin(angle),
+          );
+          anim.add(buildCircleContent(
+            center: pCenter,
+            radius: (14.0 - (i - 8) * 1.5).clamp(2.0, 14.0),
+            color: const Color(0xFF94A3B8),
+            strokeWidth: 2.5,
+          ));
+        }
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Explosion & Smoke Puff', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 35. LIGHTNING BOLT & ZAP (12 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildLightningStrikeProject() {
+    const int frameCount = 12;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    final List<Offset> mainBolt = [
+      const Offset(180, 20),
+      const Offset(165, 55),
+      const Offset(195, 85),
+      const Offset(170, 125),
+      const Offset(190, 150),
+      const Offset(180, 185),
+    ];
+
+    final List<Offset> branchBolt = [
+      const Offset(165, 55),
+      const Offset(135, 80),
+      const Offset(145, 110),
+    ];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildStraightLineContent(
+        p1: const Offset(40, 185),
+        p2: const Offset(320, 185),
+        color: const Color(0xFF64748B),
+        strokeWidth: 2.0,
+      ));
+
+      if (i == 0 || i == 1) {
+        // Step leader faint trace
+        anim.add(buildSmoothLineContent(
+          points: mainBolt.sublist(0, 3 + i),
+          color: const Color(0xFF93C5FD),
+          strokeWidth: 2.5,
+        ));
+      } else if (i >= 2 && i <= 5) {
+        // Blinding main flash & thick bolt
+        anim.add(buildSmoothLineContent(
+          points: mainBolt,
+          color: const Color(0xFF3B82F6),
+          strokeWidth: 6.0,
+        ));
+        anim.add(buildSmoothLineContent(
+          points: mainBolt,
+          color: const Color(0xFFFFFFFF),
+          strokeWidth: 2.5,
+        ));
+        anim.add(buildSmoothLineContent(
+          points: branchBolt,
+          color: const Color(0xFF60A5FA),
+          strokeWidth: 3.5,
+        ));
+        // Ground impact flash
+        anim.add(buildCircleContent(
+          center: const Offset(180, 185),
+          radius: 18,
+          color: const Color(0xFF60A5FA),
+          strokeWidth: 3.0,
+        ));
+      } else if (i >= 6 && i <= 8) {
+        // Residual crackle
+        anim.add(buildSmoothLineContent(
+          points: mainBolt,
+          color: const Color(0xFF818CF8),
+          strokeWidth: 3.0,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Lightning Bolt & Zap', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 36. BALLOON FLOAT & POP (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildBalloonPopProject() {
+    const int frameCount = 16;
+    const Offset balloonCenter = Offset(195, 90);
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildCircleContent(
+        center: balloonCenter,
+        radius: 36,
+        color: const Color(0xFFFECDD3),
+        strokeWidth: 1.5,
+      ));
+
+      if (i <= 6) {
+        // Floating balloon and needle approaching
+        final double sway = math.sin(2 * math.pi * i / 7) * 4.0;
+        final Offset bPos = Offset(balloonCenter.dx + sway, balloonCenter.dy);
+        final double needleX = 40.0 + (i * 18.0);
+
+        // Needle
+        anim.add(buildStraightLineContent(
+          p1: Offset(needleX, 90),
+          p2: Offset(needleX + 26, 90),
+          color: const Color(0xFF475569),
+          strokeWidth: 3.0,
+        ));
+        // Balloon
+        anim.add(buildCircleContent(
+          center: bPos,
+          radius: 34,
+          isEllipse: true,
+          rx: 28,
+          ry: 36,
+          color: const Color(0xFFF43F5E),
+          strokeWidth: 4.0,
+        ));
+        // String
+        anim.add(buildSmoothLineContent(
+          points: [
+            Offset(bPos.dx, bPos.dy + 36),
+            Offset(bPos.dx - 8, bPos.dy + 60),
+            Offset(bPos.dx + 4, bPos.dy + 85),
+          ],
+          color: const Color(0xFF94A3B8),
+          strokeWidth: 2.0,
+        ));
+      } else if (i >= 7 && i <= 10) {
+        // POP! Elastic rupture flying fragments
+        final double burst = (i - 6) * 14.0;
+        final int frags = 6;
+        for (int f = 0; f < frags; f++) {
+          final double angle = 2 * math.pi * f / frags;
+          final Offset fragPos = Offset(
+            balloonCenter.dx + burst * math.cos(angle),
+            balloonCenter.dy + burst * math.sin(angle),
+          );
+          anim.add(buildSmoothLineContent(
+            points: [
+              fragPos,
+              Offset(fragPos.dx + 8 * math.cos(angle + 1), fragPos.dy + 8 * math.sin(angle + 1)),
+            ],
+            color: const Color(0xFFF43F5E),
+            strokeWidth: 4.0,
+          ));
+        }
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Balloon Float & Pop', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 37. FLUTTERING AUTUMN LEAF (20 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildFallingLeafProject() {
+    const int frameCount = 20;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      // S-curve drift trajectory
+      final double progress = i / (frameCount - 1);
+      final double leafY = 30.0 + (progress * 135.0);
+      final double leafX = 180.0 + 75.0 * math.sin(2 * math.pi * i / 10.0);
+      final double tilt = math.cos(2 * math.pi * i / 10.0) * 0.85;
+
+      // Trajectory path guide
+      final List<Offset> pathGuide = [];
+      for (int t = 0; t < frameCount; t++) {
+        final double py = 30.0 + (t / (frameCount - 1) * 135.0);
+        final double px = 180.0 + 75.0 * math.sin(2 * math.pi * t / 10.0);
+        pathGuide.add(Offset(px, py));
+      }
+      guide.add(buildSmoothLineContent(
+        points: pathGuide,
+        color: const Color(0xFFFED7AA),
+        strokeWidth: 1.5,
+      ));
+
+      // Leaf body rotating & tilting
+      final Offset leafCenter = Offset(leafX, leafY);
+      final double lx1 = leafCenter.dx + 22 * math.sin(tilt);
+      final double ly1 = leafCenter.dy - 22 * math.cos(tilt);
+      final double lx2 = leafCenter.dx - 22 * math.sin(tilt);
+      final double ly2 = leafCenter.dy + 22 * math.cos(tilt);
+
+      anim.add(buildStraightLineContent(
+        p1: Offset(lx1, ly1),
+        p2: Offset(lx2, ly2),
+        color: const Color(0xFFD97706),
+        strokeWidth: 3.5,
+      ));
+      anim.add(buildCircleContent(
+        center: leafCenter,
+        radius: 14,
+        isEllipse: true,
+        rx: 16 * (tilt.abs() + 0.3),
+        ry: 8,
+        color: const Color(0xFFF59E0B),
+        strokeWidth: 3.5,
+      ));
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Fluttering Autumn Leaf', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 38. MAGIC STARBURST & TWINKLE (12 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildMagicSparkleProject() {
+    const int frameCount = 12;
+    const Offset center = Offset(180, 100);
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildCircleContent(
+        center: center,
+        radius: 45,
+        color: const Color(0xFFDDD6FE),
+        strokeWidth: 1.5,
+      ));
+
+      // Expanding 4-point diamond star
+      final double scale = math.sin(math.pi * i / (frameCount - 1));
+      final double rayLen = 12.0 + scale * 48.0;
+
+      // Vertical & Horizontal rays
+      anim.add(buildStraightLineContent(
+        p1: Offset(center.dx, center.dy - rayLen),
+        p2: Offset(center.dx, center.dy + rayLen),
+        color: const Color(0xFF8B5CF6),
+        strokeWidth: 4.0,
+      ));
+      anim.add(buildStraightLineContent(
+        p1: Offset(center.dx - rayLen, center.dy),
+        p2: Offset(center.dx + rayLen, center.dy),
+        color: const Color(0xFF8B5CF6),
+        strokeWidth: 4.0,
+      ));
+
+      // 4 diagonal secondary sparkles
+      final double diag = rayLen * 0.5;
+      anim.add(buildStraightLineContent(
+        p1: Offset(center.dx - diag, center.dy - diag),
+        p2: Offset(center.dx + diag, center.dy + diag),
+        color: const Color(0xFFA78BFA),
+        strokeWidth: 2.5,
+      ));
+      anim.add(buildStraightLineContent(
+        p1: Offset(center.dx - diag, center.dy + diag),
+        p2: Offset(center.dx + diag, center.dy - diag),
+        color: const Color(0xFFA78BFA),
+        strokeWidth: 2.5,
+      ));
+
+      // Central core glow
+      anim.add(buildCircleContent(
+        center: center,
+        radius: 6.0 + scale * 6.0,
+        color: const Color(0xFFC4B5FD),
+        strokeWidth: 2,
+        style: PaintingStyle.fill,
+      ));
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Magic Starburst & Twinkle', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 39. LIQUID FLOURISH SPLASH (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildLiquidFlourishProject() {
+    const int frameCount = 16;
+    const Offset center = Offset(180, 100);
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      guide.add(buildCircleContent(
+        center: center,
+        radius: 55,
+        color: const Color(0xFFCCFBF1),
+        strokeWidth: 1.5,
+      ));
+
+      // Dynamic spiral fluid flourish
+      final double progress = i / (frameCount - 1);
+      final List<Offset> splashCurve = [];
+      for (double a = 0; a <= progress * 2.2 * math.pi; a += 0.2) {
+        final double r = 18.0 + a * 16.0;
+        splashCurve.add(Offset(
+          center.dx + r * math.cos(a),
+          center.dy + r * math.sin(a),
+        ));
+      }
+
+      if (splashCurve.length >= 2) {
+        anim.add(buildSmoothLineContent(
+          points: splashCurve,
+          color: const Color(0xFF0D9488),
+          strokeWidth: 4.5,
+        ));
+      }
+
+      // Trailing droplet beads
+      if (splashCurve.isNotEmpty) {
+        anim.add(buildCircleContent(
+          center: splashCurve.last,
+          radius: 6,
+          color: const Color(0xFF14B8A6),
+          strokeWidth: 2,
+          style: PaintingStyle.fill,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Liquid Flourish Splash', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 40. SWORD SLASH & TRAIL (14 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildSwordSlashProject() {
+    const int frameCount = 14;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      // Crescent slash arc guide
+      final List<Offset> arcGuide = [];
+      for (double a = -0.8; a <= 1.8; a += 0.1) {
+        arcGuide.add(Offset(180 + 110 * math.cos(a), 110 + 75 * math.sin(a)));
+      }
+      guide.add(buildSmoothLineContent(
+        points: arcGuide,
+        color: const Color(0xFFFDE68A),
+        strokeWidth: 1.5,
+      ));
+
+      if (i <= 3) {
+        // Windup ready stance
+        anim.add(buildStraightLineContent(
+          p1: const Offset(90, 140),
+          p2: const Offset(130, 60),
+          color: const Color(0xFF3B82F6),
+          strokeWidth: 4.5,
+        ));
+      } else if (i >= 4 && i <= 8) {
+        // Lightning fast crescent speed-arc slash
+        final List<Offset> slashBlade = [];
+        for (double a = -0.4; a <= 1.6; a += 0.15) {
+          slashBlade.add(Offset(180 + 115 * math.cos(a), 105 + 75 * math.sin(a)));
+        }
+        anim.add(buildSmoothLineContent(
+          points: slashBlade,
+          color: const Color(0xFFF59E0B),
+          strokeWidth: 6.0,
+        ));
+        anim.add(buildSmoothLineContent(
+          points: slashBlade,
+          color: const Color(0xFFFFFFFF),
+          strokeWidth: 2.5,
+        ));
+      } else {
+        // Follow through sword resting
+        anim.add(buildStraightLineContent(
+          p1: const Offset(230, 80),
+          p2: const Offset(280, 160),
+          color: const Color(0xFF3B82F6),
+          strokeWidth: 4.5,
+        ));
+      }
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Sword Slash & Trail', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 41. BIRD FLIGHT & WING FLAP (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildBirdFlightProject() {
+    const int frameCount = 16;
+    const double bodyX = 180.0;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      final double flightBob = math.sin(2 * math.pi * i / frameCount) * 10.0;
+      final Offset birdCenter = Offset(bodyX, 100.0 + flightBob);
+
+      guide.add(buildCircleContent(
+        center: birdCenter,
+        radius: 40,
+        color: const Color(0xFFE2E8F0),
+        strokeWidth: 1.5,
+      ));
+
+      // Bird body
+      anim.add(buildCircleContent(
+        center: birdCenter,
+        radius: 16,
+        isEllipse: true,
+        rx: 24,
+        ry: 12,
+        color: const Color(0xFF0F172A),
+        strokeWidth: 4.0,
+      ));
+      // Beak
+      anim.add(buildStraightLineContent(
+        p1: Offset(birdCenter.dx + 22, birdCenter.dy - 2),
+        p2: Offset(birdCenter.dx + 34, birdCenter.dy + 2),
+        color: const Color(0xFFF97316),
+        strokeWidth: 3.5,
+      ));
+
+      // Articulated wings (Upstroke F0..7, Downstroke F8..15)
+      final double wingAngle = math.sin(2 * math.pi * i / frameCount) * 0.9;
+      final double tipY = birdCenter.dy - 38 * math.sin(wingAngle + math.pi / 2);
+
+      // Left & Right Wings
+      anim.add(buildSmoothLineContent(
+        points: [
+          Offset(birdCenter.dx - 6, birdCenter.dy),
+          Offset(birdCenter.dx - 18, birdCenter.dy + (tipY - birdCenter.dy) * 0.6),
+          Offset(birdCenter.dx - 45, tipY),
+        ],
+        color: const Color(0xFF2563EB),
+        strokeWidth: 4.5,
+      ));
+      anim.add(buildSmoothLineContent(
+        points: [
+          Offset(birdCenter.dx + 6, birdCenter.dy),
+          Offset(birdCenter.dx + 18, birdCenter.dy + (tipY - birdCenter.dy) * 0.6),
+          Offset(birdCenter.dx + 45, tipY),
+        ],
+        color: const Color(0xFF3B82F6),
+        strokeWidth: 4.5,
+      ));
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: 'Bird Flight & Wing Flap', fps: 12, canvases: canvases);
+  }
+
+  // =========================================================================
+  // 42. 3D DEPTH PARALLAX (16 frames)
+  // =========================================================================
+  static Map<String, dynamic> buildCameraParallaxProject() {
+    const int frameCount = 16;
+
+    final List<Map<String, dynamic>> canvases = [];
+
+    for (int i = 0; i < frameCount; i++) {
+      final List<Map<String, dynamic>> guide = [];
+      final List<Map<String, dynamic>> anim = [];
+
+      // Camera viewframe border guide
+      guide.add(buildRectangleContent(
+        p1: const Offset(20, 20),
+        p2: const Offset(340, 180),
+        color: const Color(0xFF94A3B8),
+        strokeWidth: 2.0,
+      ));
+
+      // 1. Distant Mountain Range (Slow: dx = i * 2.5)
+      final double bgShift = (i * 2.5) % 80.0;
+      anim.add(buildSmoothLineContent(
+        points: [
+          Offset(20, 120),
+          Offset(90 - bgShift, 70),
+          Offset(180 - bgShift, 110),
+          Offset(270 - bgShift, 60),
+          Offset(340, 120),
+        ],
+        color: const Color(0xFF93C5FD),
+        strokeWidth: 3.0,
+      ));
+
+      // 2. Midground Rolling Hills (Medium: dx = i * 6.0)
+      final double mgShift = (i * 6.0) % 120.0;
+      anim.add(buildSmoothLineContent(
+        points: [
+          Offset(20, 145),
+          Offset(110 - mgShift, 120),
+          Offset(220 - mgShift, 140),
+          Offset(340, 135),
+        ],
+        color: const Color(0xFF34D399),
+        strokeWidth: 4.0,
+      ));
+
+      // 3. Foreground Fence Post (Fast: dx = i * 14.0)
+      final double fgX = (340 - (i * 18.0)) % 320 + 20;
+      anim.add(buildStraightLineContent(
+        p1: Offset(fgX, 120),
+        p2: Offset(fgX, 180),
+        color: const Color(0xFF78350F),
+        strokeWidth: 6.0,
+      ));
+
+      canvases.add(_wrapCanvas(guideHistory: guide, animHistory: anim));
+    }
+
+    return _wrapProjectState(title: '3D Depth Parallax', fps: 12, canvases: canvases);
+  }
+
+
+  // =========================================================================
+  // Master project state router for all tutorial definitions (42 Lessons)
   // =========================================================================
   static Map<String, dynamic> buildProjectForTutorial(String tutorialId, String title, int frameCount) {
     switch (tutorialId) {
+      // 1. Animation Basics
       case 'bouncing_ball':
         return buildBouncingBallProject();
       case 'pendulum_swing':
@@ -1690,6 +3320,16 @@ class TutorialProjectBuilder {
         return buildArcsThrownBallProject();
       case 'fire_flicker':
         return buildFireFlickerProject();
+      case 'eye_blink':
+        return buildEyeBlinkProject();
+      case 'mouth_shapes':
+        return buildMouthShapesProject();
+      case 'hand_wave':
+        return buildHandWaveProject();
+      case 'hair_in_wind':
+        return buildHairInWindProject();
+
+      // 2. The 12 Principles
       case 'squash_and_stretch':
         return buildSquashAndStretchProject();
       case 'anticipation':
@@ -1710,6 +3350,38 @@ class TutorialProjectBuilder {
         return buildSolidDrawingProject();
       case 'appeal':
         return buildCharacterAppealProject();
+
+      // 3. Character & Locomotion
+      case 'walk_cycle':
+        return buildWalkCycleProject();
+      case 'run_cycle':
+        return buildRunCycleProject();
+      case 'character_jump':
+        return buildCharacterJumpProject();
+      case 'sneak_walk':
+        return buildSneakWalkProject();
+      case 'ball_with_legs':
+        return buildBallWithLegsProject();
+      case 'head_turn_3d':
+        return buildHeadTurn3DProject();
+
+      // 4. VFX & Elements
+      case 'water_splash':
+        return buildWaterSplashProject();
+      case 'explosion_puff':
+        return buildExplosionPuffProject();
+      case 'lightning_strike':
+        return buildLightningStrikeProject();
+      case 'balloon_pop':
+        return buildBalloonPopProject();
+      case 'falling_leaf':
+        return buildFallingLeafProject();
+      case 'magic_sparkle':
+        return buildMagicSparkleProject();
+      case 'liquid_flourish':
+        return buildLiquidFlourishProject();
+
+      // 5. Master Practice
       case 'keys_and_inbetweens':
         return buildKeysAndInbetweensProject();
       case 'arm_whip':
@@ -1718,6 +3390,13 @@ class TutorialProjectBuilder {
         return buildPushHeavyVsLightProject();
       case 'pendulum_losing_energy':
         return buildDampedDecayProject();
+      case 'sword_slash':
+        return buildSwordSlashProject();
+      case 'bird_flight':
+        return buildBirdFlightProject();
+      case 'camera_parallax':
+        return buildCameraParallaxProject();
+
       default:
         return buildBouncingBallProject();
     }
@@ -1822,5 +3501,84 @@ class TutorialVectorPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant TutorialVectorPainter oldDelegate) {
+    return oldDelegate.canvasData != canvasData || oldDelegate.showGrid != showGrid;
+  }
 }
+
+/// Self-contained, isolated widget that loops through animation frames smoothly
+/// without triggering parent widget rebuilds or interrupting scroll physics.
+class TutorialLivePreview extends StatefulWidget {
+  final List<dynamic>? canvases;
+  final Widget? placeholder;
+  final Duration frameInterval;
+
+  const TutorialLivePreview({
+    super.key,
+    required this.canvases,
+    this.placeholder,
+    this.frameInterval = const Duration(milliseconds: 140),
+  });
+
+  @override
+  State<TutorialLivePreview> createState() => _TutorialLivePreviewState();
+}
+
+class _TutorialLivePreviewState extends State<TutorialLivePreview> {
+  int _currentFrame = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    final count = widget.canvases?.length ?? 0;
+    if (count > 1) {
+      _timer = Timer.periodic(widget.frameInterval, (_) {
+        if (mounted) {
+          setState(() {
+            _currentFrame = (_currentFrame + 1) % count;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TutorialLivePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.canvases != widget.canvases) {
+      _currentFrame = 0;
+      _startTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canvases = widget.canvases;
+    if (canvases == null || canvases.isEmpty) {
+      return widget.placeholder ?? const SizedBox.shrink();
+    }
+    final currentCanvas = canvases[_currentFrame % canvases.length] as Map<String, dynamic>?;
+
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: TutorialVectorPainter(
+          canvasData: currentCanvas,
+          showGrid: false,
+        ),
+      ),
+    );
+  }
+}
+

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,17 +36,16 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
   }
 
   Future<ui.Image> _getFileImage(String path) async {
-    final Completer<ImageInfo> completer = Completer<ImageInfo>();
-    final FileImage img = FileImage(File(path));
-    img
-        .resolve(ImageConfiguration.empty)
-        .addListener(
-          ImageStreamListener((ImageInfo info, _) {
-            completer.complete(info);
-          }),
-        );
-    final ImageInfo imageInfo = await completer.future;
-    return imageInfo.image;
+    final Completer<ui.Image> completer = Completer<ui.Image>();
+    final File file = File(path);
+    if (!await file.exists()) {
+      throw Exception('Image file does not exist at $path');
+    }
+    final Uint8List bytes = await file.readAsBytes();
+    ui.decodeImageFromList(bytes, (ui.Image img) {
+      completer.complete(img);
+    });
+    return completer.future;
   }
 
   void _showExportBottomSheet(WidgetRef ref) {
@@ -227,6 +227,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       try {
                         final XFile? file = await _picker.pickImage(
                           source: source,
+                          maxWidth: 1920,
+                          maxHeight: 1920,
+                          imageQuality: 90,
                         );
                         if (file != null) {
                           final ui.Image image = await _getFileImage(file.path);
@@ -236,6 +239,14 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         }
                       } catch (e) {
                         debugPrint('Error picking sticker image: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Could not pick image: $e'),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
                       }
                     },
                   ),

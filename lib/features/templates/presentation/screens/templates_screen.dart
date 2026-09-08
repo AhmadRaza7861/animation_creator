@@ -29,38 +29,28 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
   TutorialDifficulty? _selectedDifficulty; // null = All, beginner, intermediate
 
   final ScrollController _scrollController = ScrollController();
-  bool _showBackToTop = false;
-
-  // Live preview timer for card thumbnails
-  int _animFrameTick = 0;
-  Timer? _previewTicker;
+  final ValueNotifier<bool> _showBackToTop = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
     _loadTemplates();
     _scrollController.addListener(_onScroll);
-    _previewTicker = Timer.periodic(const Duration(milliseconds: 140), (t) {
-      if (mounted) {
-        setState(() => _animFrameTick++);
-      }
-    });
   }
 
   @override
   void dispose() {
-    _previewTicker?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _showBackToTop.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.offset > 250 && !_showBackToTop) {
-      setState(() => _showBackToTop = true);
-    } else if (_scrollController.offset <= 250 && _showBackToTop) {
-      setState(() => _showBackToTop = false);
+    final shouldShow = _scrollController.hasClients && _scrollController.offset > 250;
+    if (_showBackToTop.value != shouldShow) {
+      _showBackToTop.value = shouldShow;
     }
   }
 
@@ -235,21 +225,31 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             physics: const BouncingScrollPhysics(),
                             child: Row(
                               children: [
-                                _buildCategoryTab('All', label: '✨ All Lessons (${_allTemplates.length})'),
+                                _buildCategoryTab('All', label: '✨ All (${_allTemplates.length})'),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryAnimationBasics,
-                                  label: '🟢 Fundamentals (8)',
+                                  label: '🟢 Fundamentals (${_allTemplates.where((t) => t.category == TutorialsData.categoryAnimationBasics).length})',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryThe12Principles,
-                                  label: '🎬 12 Principles (12)',
+                                  label: '🎬 12 Principles (${_allTemplates.where((t) => t.category == TutorialsData.categoryThe12Principles).length})',
+                                ),
+                                const SizedBox(width: 8),
+                                _buildCategoryTab(
+                                  TutorialsData.categoryCharacterAndLocomotion,
+                                  label: '🏃 Character & Motion (${_allTemplates.where((t) => t.category == TutorialsData.categoryCharacterAndLocomotion).length})',
+                                ),
+                                const SizedBox(width: 8),
+                                _buildCategoryTab(
+                                  TutorialsData.categoryVFXAndElements,
+                                  label: '💥 VFX & Elements (${_allTemplates.where((t) => t.category == TutorialsData.categoryVFXAndElements).length})',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryMasterPractice,
-                                  label: '🏆 Master Practice (2)',
+                                  label: '🏆 Master Practice (${_allTemplates.where((t) => t.category == TutorialsData.categoryMasterPractice).length})',
                                 ),
                               ],
                             ),
@@ -334,36 +334,37 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             return _buildAcademyGridCard(template);
                           },
                           childCount: filteredTemplates.length,
+                          addAutomaticKeepAlives: true,
+                          addRepaintBoundaries: true,
                         ),
                       ),
                     ),
                 ],
               ),
       ),
-      floatingActionButton: _showBackToTop
-          ? FloatingActionButton.small(
-              onPressed: _scrollToTop,
-              backgroundColor: Colors.white,
-              elevation: 4,
-              shape: const CircleBorder(),
-              child: const Icon(
-                Icons.keyboard_arrow_up_rounded,
-                color: ColorConstants.primary,
-                size: 24,
-              ),
-            )
-          : null,
+      floatingActionButton: ValueListenableBuilder<bool>(
+        valueListenable: _showBackToTop,
+        builder: (context, show, child) {
+          if (!show) return const SizedBox.shrink();
+          return FloatingActionButton.small(
+            onPressed: _scrollToTop,
+            backgroundColor: Colors.white,
+            elevation: 4,
+            shape: const CircleBorder(),
+            child: const Icon(
+              Icons.keyboard_arrow_up_rounded,
+              color: ColorConstants.primary,
+              size: 24,
+            ),
+          );
+        },
+      ),
     );
   }
 
   // Featured Spotlight Lesson Card
   Widget _buildFeaturedSpotlightCard(TemplateModel template) {
     final canvases = (template.projectState?['canvases'] as List?) ?? [];
-    Map<String, dynamic>? currentCanvas;
-    if (canvases.isNotEmpty) {
-      final frameIdx = _animFrameTick % canvases.length;
-      currentCanvas = canvases[frameIdx] as Map<String, dynamic>?;
-    }
 
     return GestureDetector(
       onTap: () => _openDetail(template),
@@ -497,17 +498,12 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (currentCanvas != null)
-                      CustomPaint(
-                        painter: TutorialVectorPainter(
-                          canvasData: currentCanvas,
-                          showGrid: false,
-                        ),
-                      )
-                    else
-                      const Center(
+                    TutorialLivePreview(
+                      canvases: canvases,
+                      placeholder: const Center(
                         child: Icon(Icons.motion_photos_on_rounded, color: ColorConstants.primary, size: 36),
                       ),
+                    ),
                     Positioned(
                       bottom: 4,
                       right: 4,
@@ -540,11 +536,6 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
   // Modern Academy Grid Card (2-Column)
   Widget _buildAcademyGridCard(TemplateModel template) {
     final canvases = (template.projectState?['canvases'] as List?) ?? [];
-    Map<String, dynamic>? currentCanvas;
-    if (canvases.isNotEmpty) {
-      final frameIdx = _animFrameTick % canvases.length;
-      currentCanvas = canvases[frameIdx] as Map<String, dynamic>?;
-    }
 
     return GestureDetector(
       onTap: () => _openDetail(template),
@@ -578,20 +569,15 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (currentCanvas != null)
-                      ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-                        child: CustomPaint(
-                          painter: TutorialVectorPainter(
-                            canvasData: currentCanvas,
-                            showGrid: false,
-                          ),
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                      child: TutorialLivePreview(
+                        canvases: canvases,
+                        placeholder: const Center(
+                          child: Icon(Icons.motion_photos_on_rounded, color: ColorConstants.primary, size: 32),
                         ),
-                      )
-                    else
-                      const Center(
-                        child: Icon(Icons.motion_photos_on_rounded, color: ColorConstants.primary, size: 32),
                       ),
+                    ),
 
                     // Top-Left Frame Count
                     Positioned(

@@ -82,6 +82,16 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     _startAnimationLoop();
   }
 
+  void _cycleSpeed() {
+    if (_playbackSpeed == 1.0) {
+      _setSpeed(2.0);
+    } else if (_playbackSpeed == 2.0) {
+      _setSpeed(0.5);
+    } else {
+      _setSpeed(1.0);
+    }
+  }
+
   Future<void> _startLesson() async {
     if (_isCreating) return;
     setState(() => _isCreating = true);
@@ -238,6 +248,8 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         ),
         title: Text(
           widget.template.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: ColorConstants.darkText,
             fontWeight: FontWeight.w900,
@@ -350,63 +362,68 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
               ),
             ),
 
-            // Top-Left: Category Tag
+            // Top Bar: Category Tag & Mode Badge
             Positioned(
-              top: 14,
-              left: 14,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: ColorConstants.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  widget.template.category.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w900,
-                    color: ColorConstants.primary,
-                    letterSpacing: 0.5,
+              top: 12,
+              left: 12,
+              right: 12,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ColorConstants.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.template.category.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: ColorConstants.primary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _selectedMode == TemplateMode.drawAccordingTemplate
+                          ? const Color(0xFF1E1B24)
+                          : ColorConstants.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _selectedMode == TemplateMode.drawAccordingTemplate
+                          ? '✏️ STENCIL GUIDE'
+                          : '🎨 EDITABLE ART',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // Top-Right: Mode Badge
+            // Bottom Playback Floating Control Bar (FittedBox to prevent any overflow on large numbers)
             Positioned(
-              top: 14,
-              right: 14,
+              bottom: 10,
+              left: 10,
+              right: 10,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
-                  color: _selectedMode == TemplateMode.drawAccordingTemplate
-                      ? const Color(0xFF1E1B24)
-                      : ColorConstants.primary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _selectedMode == TemplateMode.drawAccordingTemplate
-                      ? '✏️ STENCIL GUIDE'
-                      : '🎨 EDITABLE ART',
-                  style: const TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-            ),
-
-            // Bottom Playback Floating Control Bar
-            Positioned(
-              bottom: 12,
-              left: 14,
-              right: 14,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.94),
+                  color: Colors.white.withValues(alpha: 0.96),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
@@ -417,88 +434,122 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                     ),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    // Step Back Button
-                    IconButton(
-                      icon: const Icon(Icons.skip_previous_rounded, size: 20, color: ColorConstants.darkText),
-                      onPressed: _stepBackward,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 8),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Transport Buttons: Step Back, Play/Pause, Step Forward
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Step Back Button
+                          IconButton(
+                            icon: const Icon(Icons.skip_previous_rounded, size: 20, color: ColorConstants.darkText),
+                            onPressed: _stepBackward,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                            splashRadius: 16,
+                          ),
+                          const SizedBox(width: 2),
 
-                    // Play/Pause Button
-                    GestureDetector(
-                      onTap: _togglePlayPause,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: ColorConstants.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: ColorConstants.primary.withValues(alpha: 0.3),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Step Forward Button
-                    IconButton(
-                      icon: const Icon(Icons.skip_next_rounded, size: 20, color: ColorConstants.darkText),
-                      onPressed: _stepForward,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Frame Indicator Text
-                    Text(
-                      'Frame ${_currentFrameIndex + 1}/${widget.template.frameCount}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: ColorConstants.darkText,
-                      ),
-                    ),
-                    const Spacer(),
-
-                    // Playback Speed Chips (0.5x, 1x, 2x)
-                    Row(
-                      children: [0.5, 1.0, 2.0].map((speed) {
-                        final bool isCurrent = _playbackSpeed == speed;
-                        return GestureDetector(
-                          onTap: () => _setSpeed(speed),
-                          child: Container(
-                            margin: const EdgeInsets.only(left: 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: isCurrent ? ColorConstants.primary : const Color(0xFFF1F3F7),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '${speed}x',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: isCurrent ? Colors.white : ColorConstants.mediumText,
+                          // Play/Pause Button
+                          GestureDetector(
+                            onTap: _togglePlayPause,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: ColorConstants.primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: ColorConstants.primary.withValues(alpha: 0.3),
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 16,
                               ),
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
+                          const SizedBox(width: 2),
+
+                          // Step Forward Button
+                          IconButton(
+                            icon: const Icon(Icons.skip_next_rounded, size: 20, color: ColorConstants.darkText),
+                            onPressed: _stepForward,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                            splashRadius: 16,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Frame Indicator Pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Frame ${_currentFrameIndex + 1}/${widget.template.frameCount}',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            color: ColorConstants.darkText,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Playback Speed Toggle Pill (0.5x / 1.0x / 2.0x)
+                      GestureDetector(
+                        onTap: _cycleSpeed,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _playbackSpeed != 1.0
+                                ? ColorConstants.primary
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _playbackSpeed != 1.0
+                                  ? ColorConstants.primary
+                                  : const Color(0xFFE2E8F0),
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.speed_rounded,
+                                size: 13,
+                                color: _playbackSpeed != 1.0 ? Colors.white : ColorConstants.darkText,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${_playbackSpeed}x',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: _playbackSpeed != 1.0 ? Colors.white : ColorConstants.darkText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -532,12 +583,16 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
             children: [
               _buildDifficultyBadge(widget.template.difficulty),
               const SizedBox(width: 8),
-              Text(
-                '${widget.template.frameCount} Frames • 12 FPS',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: ColorConstants.mediumText,
+              Flexible(
+                child: Text(
+                  '${widget.template.frameCount} Frames • 12 FPS',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: ColorConstants.mediumText,
+                  ),
                 ),
               ),
             ],
@@ -568,15 +623,19 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
           children: [
             const Icon(Icons.movie_creation_outlined, size: 18, color: ColorConstants.primary),
             const SizedBox(width: 6),
-            const Text(
-              'Film Strip Breakdown',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: ColorConstants.darkText,
+            const Flexible(
+              child: Text(
+                'Film Strip Breakdown',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: ColorConstants.darkText,
+                ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             Text(
               'Tap frame to inspect',
               style: TextStyle(
