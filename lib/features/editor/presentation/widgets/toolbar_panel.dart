@@ -199,25 +199,102 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       final ImageSource? source =
                           await showModalBottomSheet<ImageSource>(
                             context: context,
+                            backgroundColor: Colors.transparent,
                             builder: (BuildContext context) {
-                              return SafeArea(
-                                child: Wrap(
-                                  children: <Widget>[
-                                    ListTile(
-                                      leading: const Icon(Icons.photo_library),
-                                      title: const Text('Photo Gallery'),
-                                      onTap: () => Navigator.of(
-                                        context,
-                                      ).pop(ImageSource.gallery),
-                                    ),
-                                    ListTile(
-                                      leading: const Icon(Icons.photo_camera),
-                                      title: const Text('Camera'),
-                                      onTap: () => Navigator.of(
-                                        context,
-                                      ).pop(ImageSource.camera),
+                              return Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Color(0x1A0F172A),
+                                      blurRadius: 20,
+                                      offset: Offset(0, -4),
                                     ),
                                   ],
+                                ),
+                                child: SafeArea(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Center(
+                                          child: Container(
+                                            width: 38,
+                                            height: 4,
+                                            margin: const EdgeInsets.only(bottom: 16),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFE2E8F0),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        const Text(
+                                          'Import Image Sticker',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 14),
+                                        ListTile(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14),
+                                            side: const BorderSide(color: Color(0xFFE2E8F0)),
+                                          ),
+                                          tileColor: const Color(0xFFF8FAFC),
+                                          leading: Container(
+                                            width: 38,
+                                            height: 38,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEFF6FF),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB), size: 20),
+                                          ),
+                                          title: const Text(
+                                            'Photo Gallery',
+                                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
+                                          ),
+                                          subtitle: const Text(
+                                            'Choose an image from your device',
+                                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                          ),
+                                          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                          onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        ListTile(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14),
+                                            side: const BorderSide(color: Color(0xFFE2E8F0)),
+                                          ),
+                                          tileColor: const Color(0xFFF8FAFC),
+                                          leading: Container(
+                                            width: 38,
+                                            height: 38,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFF7ED),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: const Icon(Icons.photo_camera_rounded, color: Color(0xFFEA580C), size: 20),
+                                          ),
+                                          title: const Text(
+                                            'Camera',
+                                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
+                                          ),
+                                          subtitle: const Text(
+                                            'Take a new photo now',
+                                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                          ),
+                                          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                          onTap: () => Navigator.of(context).pop(ImageSource.camera),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               );
                             },
