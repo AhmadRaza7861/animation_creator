@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../projects/data/project_repository.dart';
-import '../../../editor/presentation/screens/editor_screen.dart';
 import '../../data/tutorials_data.dart';
 import '../../data/tutorial_project_builder.dart';
 import '../../domain/template_model.dart';
@@ -41,7 +40,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
     super.initState();
     _loadTemplates();
     _scrollController.addListener(_onScroll);
-    _previewTicker = Timer.periodic(const Duration(milliseconds: 130), (t) {
+    _previewTicker = Timer.periodic(const Duration(milliseconds: 140), (t) {
       if (mounted) {
         setState(() => _animFrameTick++);
       }
@@ -112,78 +111,37 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
     }).toList();
   }
 
-  Future<void> _quickStartTutorial(TemplateModel template) async {
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (c) => PopScope(
-          canPop: false,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            content: Row(
-              children: [
-                const CircularProgressIndicator(color: ColorConstants.primary),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Text(
-                    'Loading ${template.name}...',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: ColorConstants.darkText),
-                  ),
-                ),
-              ],
-            ),
-          ),
+
+  void _openDetail(TemplateModel template) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TemplateDetailScreen(
+          repository: widget.repository,
+          template: template,
         ),
-      );
-
-      final stateToSave = template.projectState ??
-          TutorialProjectBuilder.buildProjectForTutorial(template.id, template.name, template.frameCount);
-
-      final newProjectId = await widget.repository.saveProject(
-        title: template.name,
-        state: stateToSave,
-      );
-
-      if (mounted) {
-        Navigator.pop(context); // Dismiss loading dialog
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditorScreen(projectId: newProjectId),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error quick starting tutorial: $e');
-      if (mounted) Navigator.pop(context);
-    }
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final filteredTemplates = _getFilteredTemplates();
-    final featuredTemplate = _allTemplates.isNotEmpty ? _allTemplates.first : null;
+    final featuredTemplate = _allTemplates.isNotEmpty
+        ? _allTemplates.firstWhere((t) => t.id == 'bouncing_ball', orElse: () => _allTemplates.first)
+        : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFC),
+      backgroundColor: const Color(0xFFF8F9FC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAFAFC),
+        backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFFF4F5F8),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: ColorConstants.border_color),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 16),
@@ -195,37 +153,37 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                style: const TextStyle(color: ColorConstants.darkText, fontSize: 16, fontWeight: FontWeight.w600),
+                style: const TextStyle(color: ColorConstants.darkText, fontSize: 15, fontWeight: FontWeight.w600),
                 decoration: const InputDecoration(
-                  hintText: 'Search lessons (e.g., ball, wave, timing)...',
-                  hintStyle: TextStyle(color: ColorConstants.subTextColor, fontSize: 14),
+                  hintText: 'Search 22 lessons (ball, wave, timing)...',
+                  hintStyle: TextStyle(color: ColorConstants.mediumText, fontSize: 13.5),
                   border: InputBorder.none,
                 ),
                 onChanged: (v) => setState(() => _searchQuery = v.trim()),
               )
-            : const Text(
-                'Tutorials',
-                style: TextStyle(
-                  color: ColorConstants.darkText,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.school_rounded, color: ColorConstants.primary, size: 22),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Animation Academy',
+                    style: TextStyle(
+                      color: ColorConstants.darkText,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
               ),
         centerTitle: true,
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(0xFFF4F5F8),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: ColorConstants.border_color),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: IconButton(
               icon: Icon(
@@ -255,12 +213,12 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                 controller: _scrollController,
                 physics: const BouncingScrollPhysics(),
                 slivers: [
-                  // 1. Featured Lesson Card (Clean Warm App Theme)
+                  // 1. Featured Spotlight Lesson Card
                   if (!_isSearching && featuredTemplate != null)
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-                        child: _buildFeaturedCard(featuredTemplate),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                        child: _buildFeaturedSpotlightCard(featuredTemplate),
                       ),
                     ),
 
@@ -277,21 +235,21 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             physics: const BouncingScrollPhysics(),
                             child: Row(
                               children: [
-                                _buildCategoryTab('All', label: 'All Lessons'),
+                                _buildCategoryTab('All', label: '✨ All Lessons (${_allTemplates.length})'),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryAnimationBasics,
-                                  label: 'Fundamentals',
+                                  label: '🟢 Fundamentals (8)',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryThe12Principles,
-                                  label: '12 Principles',
+                                  label: '🎬 12 Principles (12)',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryMasterPractice,
-                                  label: 'Master Practice',
+                                  label: '🏆 Master Practice (2)',
                                 ),
                               ],
                             ),
@@ -303,7 +261,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             children: [
                               _buildDifficultyFilter(null, 'All Levels'),
                               const SizedBox(width: 6),
-                              _buildDifficultyFilter(TutorialDifficulty.beginner, '🟢 Beginner (Few frames)'),
+                              _buildDifficultyFilter(TutorialDifficulty.beginner, '🟢 Beginner'),
                               const SizedBox(width: 6),
                               _buildDifficultyFilter(TutorialDifficulty.intermediate, '🟠 Medium'),
                             ],
@@ -315,15 +273,15 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '${filteredTemplates.length} Lessons Available',
+                                '${filteredTemplates.length} Tutorials Available',
                                 style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
                                   color: ColorConstants.darkText,
                                 ),
                               ),
                               Text(
-                                'Tap to practice',
+                                'Tap to practice & inspect',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -332,13 +290,13 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                         ],
                       ),
                     ),
                   ),
 
-                  // 3. Lesson Cards (Clean 2-Column Grid or List)
+                  // 3. Lesson Cards Grid
                   if (filteredTemplates.isEmpty)
                     SliverFillRemaining(
                       hasScrollBody: false,
@@ -346,14 +304,14 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.palette_outlined, size: 48, color: Colors.grey.shade400),
+                            Icon(Icons.search_off_rounded, size: 54, color: Colors.grey.shade300),
                             const SizedBox(height: 12),
                             Text(
                               'No lessons match "$_searchQuery"',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: ColorConstants.subTextColor,
+                                fontWeight: FontWeight.w600,
+                                color: ColorConstants.mediumText,
                               ),
                             ),
                           ],
@@ -363,11 +321,17 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                   else
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
-                      sliver: SliverList(
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: 0.78,
+                        ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
                             final template = filteredTemplates[index];
-                            return _buildCleanLessonCard(template);
+                            return _buildAcademyGridCard(template);
                           },
                           childCount: filteredTemplates.length,
                         ),
@@ -380,7 +344,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
           ? FloatingActionButton.small(
               onPressed: _scrollToTop,
               backgroundColor: Colors.white,
-              elevation: 3,
+              elevation: 4,
               shape: const CircleBorder(),
               child: const Icon(
                 Icons.keyboard_arrow_up_rounded,
@@ -392,272 +356,165 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
     );
   }
 
-  // Clean Featured Lesson Card in App Theme
-  Widget _buildFeaturedCard(TemplateModel template) {
-    final frameIndex = _animFrameTick % template.frameCount;
-    final liveCanvas = template.getCanvasForFrame(frameIndex);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: ColorConstants.primary.withValues(alpha: 0.25),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: ColorConstants.primary.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: ColorConstants.primaryLight,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'FEATURED LESSON',
-                    style: TextStyle(
-                      color: ColorConstants.primaryDark,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  template.name,
-                  style: const TextStyle(
-                    color: ColorConstants.darkText,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  template.description,
-                  style: const TextStyle(
-                    color: ColorConstants.subTextColor,
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () => _quickStartTutorial(template),
-                      icon: const Icon(Icons.edit_rounded, size: 14, color: Colors.white),
-                      label: const Text(
-                        'Start Lesson',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Colors.white,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: ColorConstants.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${template.frameCount} frames',
-                      style: const TextStyle(
-                        color: ColorConstants.mediumText,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          // Clean Pure Solid White Canvas Preview
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFEEF0F5), width: 1.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(13),
-              child: CustomPaint(
-                painter: TutorialVectorPainter(
-                  canvasData: liveCanvas,
-                  showGrid: false,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryTab(String category, {required String label}) {
-    final bool isSelected = _selectedCategory == category;
+  // Featured Spotlight Lesson Card
+  Widget _buildFeaturedSpotlightCard(TemplateModel template) {
+    final canvases = (template.projectState?['canvases'] as List?) ?? [];
+    Map<String, dynamic>? currentCanvas;
+    if (canvases.isNotEmpty) {
+      final frameIdx = _animFrameTick % canvases.length;
+      currentCanvas = canvases[frameIdx] as Map<String, dynamic>?;
+    }
 
     return GestureDetector(
-      onTap: () => setState(() => _selectedCategory = category),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      onTap: () => _openDetail(template),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? ColorConstants.primary : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? ColorConstants.primary : ColorConstants.border_color,
-            width: 1.0,
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFFFFF7ED),
+              Color(0xFFFFFFFF),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          boxShadow: isSelected
-              ? [
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: ColorConstants.primary.withValues(alpha: 0.35),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ColorConstants.primary.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Left Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: ColorConstants.primary,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      '⭐ SPOTLIGHT LESSON',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    template.name,
+                    style: const TextStyle(
+                      color: ColorConstants.darkText,
+                      fontSize: 17.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    template.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: ColorConstants.mediumText,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: ColorConstants.primary,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: ColorConstants.primary.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Start Lesson',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // Right Live Preview Box
+            Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFEEF0F5), width: 1.0),
+                boxShadow: [
                   BoxShadow(
-                    color: ColorConstants.primary.withValues(alpha: 0.25),
-                    blurRadius: 6,
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
-                ]
-              : [],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : ColorConstants.darkText,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDifficultyFilter(TutorialDifficulty? difficulty, String label) {
-    final bool isSelected = _selectedDifficulty == difficulty;
-
-    return GestureDetector(
-      onTap: () => setState(() => _selectedDifficulty = difficulty),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isSelected ? ColorConstants.primaryLight : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(
-            color: isSelected ? ColorConstants.primary : const Color(0xFFE5E7EB),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? ColorConstants.primaryDark : ColorConstants.subTextColor,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Clean, simple and attractive card in app theme with solid white preview
-  Widget _buildCleanLessonCard(TemplateModel template) {
-    final frameIndex = _animFrameTick % template.frameCount;
-    final currentCanvas = template.getCanvasForFrame(frameIndex);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEEF0F5), width: 1.0),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1B1D28).withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TemplateDetailScreen(
-                  repository: widget.repository,
-                  template: template,
-                ),
+                ],
               ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                // 1. Clean Solid White Live Vector Preview (No Grid Presets)
-                Stack(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Container(
-                      width: 90,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE8EAF0), width: 1.0),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(11),
-                        child: CustomPaint(
-                          painter: TutorialVectorPainter(
-                            canvasData: currentCanvas,
-                            showGrid: false,
-                          ),
+                    if (currentCanvas != null)
+                      CustomPaint(
+                        painter: TutorialVectorPainter(
+                          canvasData: currentCanvas,
+                          showGrid: false,
                         ),
+                      )
+                    else
+                      const Center(
+                        child: Icon(Icons.motion_photos_on_rounded, color: ColorConstants.primary, size: 36),
                       ),
-                    ),
-                    // Frame count badge on bottom right
                     Positioned(
-                      bottom: 3,
-                      right: 3,
+                      bottom: 4,
+                      right: 4,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xD91E1B24),
+                          color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: Text(
@@ -672,83 +529,248 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(width: 14),
-
-                // 2. Lesson Title, Category, and Description
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          _buildDifficultyTag(template.difficulty),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              template.category,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: ColorConstants.subTextColor,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        template.name,
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.bold,
-                          color: ColorConstants.darkText,
-                          letterSpacing: -0.2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        template.description,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: ColorConstants.subTextColor,
-                          height: 1.25,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // 3. Draw Action Button (Orange Theme)
-                ElevatedButton.icon(
-                  onPressed: () => _quickStartTutorial(template),
-                  icon: const Icon(Icons.edit_rounded, size: 13, color: Colors.white),
-                  label: const Text(
-                    'Draw',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11.5,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ColorConstants.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    minimumSize: const Size(0, 32),
-                  ),
-                ),
-              ],
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Modern Academy Grid Card (2-Column)
+  Widget _buildAcademyGridCard(TemplateModel template) {
+    final canvases = (template.projectState?['canvases'] as List?) ?? [];
+    Map<String, dynamic>? currentCanvas;
+    if (canvases.isNotEmpty) {
+      final frameIdx = _animFrameTick % canvases.length;
+      currentCanvas = canvases[frameIdx] as Map<String, dynamic>?;
+    }
+
+    return GestureDetector(
+      onTap: () => _openDetail(template),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFEEF0F5), width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1B1D28).withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Preview Canvas Box
+            Expanded(
+              flex: 5,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFAFBFD),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(17)),
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFF1F3F7), width: 1.0),
+                  ),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (currentCanvas != null)
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                        child: CustomPaint(
+                          painter: TutorialVectorPainter(
+                            canvasData: currentCanvas,
+                            showGrid: false,
+                          ),
+                        ),
+                      )
+                    else
+                      const Center(
+                        child: Icon(Icons.motion_photos_on_rounded, color: ColorConstants.primary, size: 32),
+                      ),
+
+                    // Top-Left Frame Count
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${template.frameCount} frames',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Top-Right Difficulty Badge
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _buildDifficultyTag(template.difficulty),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Bottom Info & Quick Action
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          template.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: ColorConstants.darkText,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          template.description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: ColorConstants.mediumText,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.timer_outlined, size: 12, color: ColorConstants.primary),
+                        const SizedBox(width: 3),
+                        Text(
+                          '~${template.estimatedMinutes}m',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: ColorConstants.primary,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: ColorConstants.primary.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Draw',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: ColorConstants.primary,
+                                ),
+                              ),
+                              SizedBox(width: 2),
+                              Icon(Icons.arrow_forward_rounded, size: 10, color: ColorConstants.primary),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryTab(String categoryKey, {required String label}) {
+    final bool isSelected = _selectedCategory == categoryKey;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedCategory = categoryKey;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? ColorConstants.primary : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? ColorConstants.primary : const Color(0xFFE2E8F0),
+            width: 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: ColorConstants.primary.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : ColorConstants.darkText,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            fontSize: 12.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDifficultyFilter(TutorialDifficulty? difficulty, String label) {
+    final bool isSelected = _selectedDifficulty == difficulty;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedDifficulty = difficulty;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF1E1B24) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF1E1B24) : const Color(0xFFE2E8F0),
+            width: 1.0,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : ColorConstants.mediumText,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            fontSize: 11,
           ),
         ),
       ),
@@ -779,7 +801,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(5),
@@ -788,8 +810,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
         label,
         style: TextStyle(
           color: text,
-          fontSize: 9.5,
-          fontWeight: FontWeight.bold,
+          fontSize: 8.5,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

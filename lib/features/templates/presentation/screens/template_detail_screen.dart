@@ -25,7 +25,8 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
   int _currentFrameIndex = 0;
   Timer? _animationTimer;
   bool _isPlaying = true;
-  TemplateMode _selectedMode = TemplateMode.useTemplate;
+  double _playbackSpeed = 1.0; // 0.5x, 1.0x, 2.0x
+  TemplateMode _selectedMode = TemplateMode.drawAccordingTemplate;
   bool _isCreating = false;
 
   @override
@@ -43,7 +44,9 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
   void _startAnimationLoop() {
     _animationTimer?.cancel();
     if (widget.template.frameCount <= 1) return;
-    _animationTimer = Timer.periodic(const Duration(milliseconds: 140), (timer) {
+
+    final int intervalMs = (140 / _playbackSpeed).round().clamp(40, 500);
+    _animationTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
       if (mounted && _isPlaying) {
         setState(() {
           _currentFrameIndex = (_currentFrameIndex + 1) % widget.template.frameCount;
@@ -58,6 +61,27 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     });
   }
 
+  void _stepForward() {
+    setState(() {
+      _isPlaying = false;
+      _currentFrameIndex = (_currentFrameIndex + 1) % widget.template.frameCount;
+    });
+  }
+
+  void _stepBackward() {
+    setState(() {
+      _isPlaying = false;
+      _currentFrameIndex = (_currentFrameIndex - 1 + widget.template.frameCount) % widget.template.frameCount;
+    });
+  }
+
+  void _setSpeed(double speed) {
+    setState(() {
+      _playbackSpeed = speed;
+    });
+    _startAnimationLoop();
+  }
+
   Future<void> _startLesson() async {
     if (_isCreating) return;
     setState(() => _isCreating = true);
@@ -68,15 +92,17 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         barrierDismissible: false,
         builder: (c) => PopScope(
           canPop: false,
-          child: const AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+          child: AlertDialog(
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(18))),
             content: Row(
               children: [
-                CircularProgressIndicator(color: ColorConstants.primary),
-                SizedBox(width: 20),
-                Text(
-                  'Starting Lesson...',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
+                const CircularProgressIndicator(color: ColorConstants.primary),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    'Opening ${widget.template.name}...',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
+                  ),
                 ),
               ],
             ),
@@ -97,7 +123,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
 
       if (_selectedMode == TemplateMode.drawAccordingTemplate) {
         // Guided Stencil Mode:
-        // - layer_0: Stencil Guide (the lesson artwork at 0.28 opacity, locked)
+        // - layer_0: Stencil Guide (the lesson artwork at 0.28 opacity, locked, isGuide)
         // - layer_1: Fresh Active Drawing Layer ('Your Drawing', unlocked, active)
         final canvasesList = (baseState['canvases'] as List<dynamic>?) ?? [];
         final updatedCanvases = [];
@@ -113,7 +139,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
             lMap['name'] = 'Stencil Guide';
             lMap['opacity'] = 0.28;
             lMap['isLocked'] = true;
-            lMap['isGuide'] = true; // Editor-only guide stencil, excluded from playback & export
+            lMap['isGuide'] = true; // Excluded from export
             updatedLayers.add(lMap);
           }
 
@@ -131,7 +157,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
           });
 
           cMap['layers'] = updatedLayers;
-          cMap['activeLayerId'] = 'layer_1'; // Focus user on their new drawing layer!
+          cMap['activeLayerId'] = 'layer_1';
           updatedCanvases.add(cMap);
         }
 
@@ -170,7 +196,6 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     }
   }
 
-  /// Transforms the canvas data to preview stencil mode when selected
   Map<String, dynamic>? _getDisplayCanvas(Map<String, dynamic>? rawCanvas) {
     if (rawCanvas == null) return null;
     if (_selectedMode == TemplateMode.useTemplate) return rawCanvas;
@@ -181,7 +206,6 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
 
     for (final l in layers) {
       final lMap = Map<String, dynamic>.from(l as Map<String, dynamic>);
-      // Dim drawing to onion-skin stencil in preview
       lMap['opacity'] = 0.32;
       updatedLayers.add(lMap);
     }
@@ -195,17 +219,16 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     final activeCanvas = _getDisplayCanvas(rawCanvas);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFC),
+      backgroundColor: const Color(0xFFF8F9FC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAFAFC),
+        backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFFF4F5F8),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: ColorConstants.border_color),
           ),
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 16),
@@ -217,451 +240,600 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
           widget.template.name,
           style: const TextStyle(
             color: ColorConstants.darkText,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
             fontSize: 18,
+            letterSpacing: -0.3,
           ),
         ),
         centerTitle: true,
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: ColorConstants.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.timer_outlined, size: 13, color: ColorConstants.primary),
+                const SizedBox(width: 4),
+                Text(
+                  '~${widget.template.estimatedMinutes}m',
+                  style: const TextStyle(
+                    color: ColorConstants.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Interactive Studio Playback Stage
+              _buildStudioPlaybackStage(activeCanvas),
+              const SizedBox(height: 16),
+
+              // 2. Overview / Principle Description Card
+              _buildLessonOverviewCard(),
+              const SizedBox(height: 16),
+
+              // 3. Film-Strip Frame Scrubber
+              _buildFrameScrubberStrip(),
+              const SizedBox(height: 18),
+
+              // 4. Learning Mode Selector (Guided Stencil vs Full Template)
+              _buildLearningModeSelector(),
+              const SizedBox(height: 24),
+
+              // 5. Start Action Button
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: PrimaryButton(
+                  text: _selectedMode == TemplateMode.drawAccordingTemplate
+                      ? 'Start Guided Practice in Studio 🚀'
+                      : 'Load Complete Artwork in Studio 🎨',
+                  icon: Icons.draw_rounded,
+                  height: 54,
+                  borderRadius: 16,
+                  onPressed: _startLesson,
+                  isLoading: _isCreating,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 1. Interactive Studio Playback Stage
+  Widget _buildStudioPlaybackStage(Map<String, dynamic>? activeCanvas) {
+    return Container(
+      width: double.infinity,
+      height: 250,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFEEF0F5),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1B1D28).withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(23),
+        child: Stack(
+          children: [
+            // Clean Vector Canvas Preview
+            Positioned.fill(
+              child: CustomPaint(
+                painter: TutorialVectorPainter(
+                  canvasData: activeCanvas,
+                  showGrid: false,
+                ),
+              ),
+            ),
+
+            // Top-Left: Category Tag
+            Positioned(
+              top: 14,
+              left: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: ColorConstants.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  widget.template.category.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                    color: ColorConstants.primary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+
+            // Top-Right: Mode Badge
+            Positioned(
+              top: 14,
+              right: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _selectedMode == TemplateMode.drawAccordingTemplate
+                      ? const Color(0xFF1E1B24)
+                      : ColorConstants.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _selectedMode == TemplateMode.drawAccordingTemplate
+                      ? '✏️ STENCIL GUIDE'
+                      : '🎨 EDITABLE ART',
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ),
+
+            // Bottom Playback Floating Control Bar
+            Positioned(
+              bottom: 12,
+              left: 14,
+              right: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Step Back Button
+                    IconButton(
+                      icon: const Icon(Icons.skip_previous_rounded, size: 20, color: ColorConstants.darkText),
+                      onPressed: _stepBackward,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Play/Pause Button
+                    GestureDetector(
+                      onTap: _togglePlayPause,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: ColorConstants.primary,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: ColorConstants.primary.withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Step Forward Button
+                    IconButton(
+                      icon: const Icon(Icons.skip_next_rounded, size: 20, color: ColorConstants.darkText),
+                      onPressed: _stepForward,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Frame Indicator Text
+                    Text(
+                      'Frame ${_currentFrameIndex + 1}/${widget.template.frameCount}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: ColorConstants.darkText,
+                      ),
+                    ),
+                    const Spacer(),
+
+                    // Playback Speed Chips (0.5x, 1x, 2x)
+                    Row(
+                      children: [0.5, 1.0, 2.0].map((speed) {
+                        final bool isCurrent = _playbackSpeed == speed;
+                        return GestureDetector(
+                          onTap: () => _setSpeed(speed),
+                          child: Container(
+                            margin: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isCurrent ? ColorConstants.primary : const Color(0xFFF1F3F7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${speed}x',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isCurrent ? Colors.white : ColorConstants.mediumText,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 2. Overview & Principle Card
+  Widget _buildLessonOverviewCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEEF0F5), width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1B1D28).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _buildDifficultyBadge(widget.template.difficulty),
+              const SizedBox(width: 8),
+              Text(
+                '${widget.template.frameCount} Frames • 12 FPS',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: ColorConstants.mediumText,
+                ),
+              ),
+            ],
+          ),
+          if (widget.template.description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              widget.template.description,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: ColorConstants.darkText,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // 3. Film-Strip Frame Scrubber
+  Widget _buildFrameScrubberStrip() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.movie_creation_outlined, size: 18, color: ColorConstants.primary),
+            const SizedBox(width: 6),
+            const Text(
+              'Film Strip Breakdown',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: ColorConstants.darkText,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              'Tap frame to inspect',
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Colors.grey.shade500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 72,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: widget.template.frameCount,
+            itemBuilder: (context, index) {
+              final isCurrent = index == _currentFrameIndex;
+              final rawFrameCanvas = widget.template.getCanvasForFrame(index);
+              final frameCanvas = _getDisplayCanvas(rawFrameCanvas);
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _currentFrameIndex = index;
+                    _isPlaying = false;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 68,
+                  height: 68,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isCurrent ? ColorConstants.primary : const Color(0xFFE2E8F0),
+                      width: isCurrent ? 2.2 : 1.0,
+                    ),
+                    boxShadow: isCurrent
+                        ? [
+                            BoxShadow(
+                              color: ColorConstants.primary.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: TutorialVectorPainter(
+                              canvasData: frameCanvas,
+                              showGrid: false,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 3,
+                          left: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: isCurrent ? ColorConstants.primary : Colors.black.withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '#${index + 1}',
+                              style: const TextStyle(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 4. Learning Mode Selector
+  Widget _buildLearningModeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Choose Practice Mode',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: ColorConstants.darkText,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            // Guided Stencil Mode (Recommended)
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedMode = TemplateMode.drawAccordingTemplate;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _selectedMode == TemplateMode.drawAccordingTemplate
+                        ? ColorConstants.primary.withValues(alpha: 0.06)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _selectedMode == TemplateMode.drawAccordingTemplate
+                          ? ColorConstants.primary
+                          : const Color(0xFFE2E8F0),
+                      width: _selectedMode == TemplateMode.drawAccordingTemplate ? 2.0 : 1.0,
+                    ),
+                    boxShadow: _selectedMode == TemplateMode.drawAccordingTemplate
+                        ? [
+                            BoxShadow(
+                              color: ColorConstants.primary.withValues(alpha: 0.12),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : [],
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
                         children: [
-                          // 1. Clean Solid White Canvas Preview Stage (No Grid Presets)
-                          Container(
-                            width: double.infinity,
-                            height: (constraints.maxHeight * 0.32).clamp(170.0, 240.0),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFFEEF0F5),
-                                width: 1.0,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(19),
-                              child: Stack(
-                                children: [
-                                  // Clean Vector Frame Painter
-                                  Positioned.fill(
-                                    child: CustomPaint(
-                                      painter: TutorialVectorPainter(
-                                        canvasData: activeCanvas,
-                                        showGrid: false,
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Play/Pause and Frame badge
-                                  Positioned(
-                                    bottom: 12,
-                                    left: 12,
-                                    child: GestureDetector(
-                                      onTap: _togglePlayPause,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.94),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.06),
-                                              blurRadius: 4,
-                                            )
-                                          ],
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                              size: 16,
-                                              color: ColorConstants.primary,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'Frame ${_currentFrameIndex + 1}/${widget.template.frameCount}',
-                                              style: const TextStyle(
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.bold,
-                                                color: ColorConstants.darkText,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Top Right: Mode Badge & Category
-                                  Positioned(
-                                    top: 12,
-                                    right: 12,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (_selectedMode == TemplateMode.drawAccordingTemplate)
-                                          Container(
-                                            margin: const EdgeInsets.only(right: 6),
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF1E1B24),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: const Text(
-                                              '✏️ STENCIL MODE',
-                                              style: TextStyle(
-                                                fontSize: 9.5,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.white,
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                          ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: ColorConstants.primaryLight,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            widget.template.category,
-                                            style: const TextStyle(
-                                              fontSize: 10.5,
-                                              fontWeight: FontWeight.bold,
-                                              color: ColorConstants.primaryDark,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          Icon(
+                            Icons.edit_note_rounded,
+                            size: 20,
+                            color: _selectedMode == TemplateMode.drawAccordingTemplate
+                                ? ColorConstants.primary
+                                : ColorConstants.mediumText,
                           ),
-                          const SizedBox(height: 14),
-
-                          // 2. Overview / Principle Description
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFEEF0F5)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    _buildDifficultyBadge(widget.template.difficulty),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${widget.template.frameCount} Frames • 12 FPS',
-                                      style: const TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: ColorConstants.subTextColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (widget.template.description.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    widget.template.description,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w400,
-                                      color: ColorConstants.darkText,
-                                      height: 1.35,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          // 3. Frame scrubber strip
-                          const Text(
-                            'Lesson Frames',
+                          const SizedBox(width: 6),
+                          Text(
+                            'Guided Stencil',
                             style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.bold,
-                              color: ColorConstants.darkText,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: _selectedMode == TemplateMode.drawAccordingTemplate
+                                  ? ColorConstants.primary
+                                  : ColorConstants.darkText,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 62,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: widget.template.frameCount,
-                              itemBuilder: (context, index) {
-                                final isCurrent = index == _currentFrameIndex;
-                                final rawFrameCanvas = widget.template.getCanvasForFrame(index);
-                                final frameCanvas = _getDisplayCanvas(rawFrameCanvas);
-
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _currentFrameIndex = index;
-                                      _isPlaying = false;
-                                    });
-                                  },
-                                  child: Container(
-                                    width: 62,
-                                    height: 62,
-                                    margin: const EdgeInsets.only(right: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isCurrent ? ColorConstants.primary : const Color(0xFFE2E8F0),
-                                        width: isCurrent ? 2.0 : 1.0,
-                                      ),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Stack(
-                                        children: [
-                                          Positioned.fill(
-                                            child: CustomPaint(
-                                              painter: TutorialVectorPainter(
-                                                canvasData: frameCanvas,
-                                                showGrid: false,
-                                              ),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 2,
-                                            left: 4,
-                                            child: Text(
-                                              '#${index + 1}',
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                                color: isCurrent ? ColorConstants.primary : ColorConstants.subTextColor,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          // 4. Learning Mode Selection
-                          const Text(
-                            'Learning Mode',
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.bold,
-                              color: ColorConstants.darkText,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              // Use Template Option
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedMode = TemplateMode.useTemplate;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-                                    decoration: BoxDecoration(
-                                      color: _selectedMode == TemplateMode.useTemplate
-                                          ? ColorConstants.primaryLight.withValues(alpha: 0.4)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: _selectedMode == TemplateMode.useTemplate
-                                            ? ColorConstants.primary
-                                            : const Color(0xFFE2E8F0),
-                                        width: _selectedMode == TemplateMode.useTemplate ? 1.8 : 1.0,
-                                      ),
-                                      boxShadow: _selectedMode == TemplateMode.useTemplate
-                                          ? [
-                                              BoxShadow(
-                                                color: ColorConstants.primary.withValues(alpha: 0.12),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 2),
-                                              )
-                                            ]
-                                          : [],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.layers_rounded,
-                                              size: 16,
-                                              color: _selectedMode == TemplateMode.useTemplate
-                                                  ? ColorConstants.primary
-                                                  : ColorConstants.subTextColor,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'Full Template',
-                                              style: TextStyle(
-                                                fontSize: 12.5,
-                                                fontWeight: FontWeight.bold,
-                                                color: _selectedMode == TemplateMode.useTemplate
-                                                    ? ColorConstants.primary
-                                                    : ColorConstants.darkText,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 3),
-                                        const Text(
-                                          'Editable complete art frames',
-                                          style: TextStyle(
-                                            fontSize: 10.5,
-                                            color: ColorConstants.subTextColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-
-                              // Guided Stencil Option
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedMode = TemplateMode.drawAccordingTemplate;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-                                    decoration: BoxDecoration(
-                                      color: _selectedMode == TemplateMode.drawAccordingTemplate
-                                          ? ColorConstants.primaryLight.withValues(alpha: 0.4)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: _selectedMode == TemplateMode.drawAccordingTemplate
-                                            ? ColorConstants.primary
-                                            : const Color(0xFFE2E8F0),
-                                        width: _selectedMode == TemplateMode.drawAccordingTemplate ? 1.8 : 1.0,
-                                      ),
-                                      boxShadow: _selectedMode == TemplateMode.drawAccordingTemplate
-                                          ? [
-                                              BoxShadow(
-                                                color: ColorConstants.primary.withValues(alpha: 0.12),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 2),
-                                              )
-                                            ]
-                                          : [],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.brush_rounded,
-                                              size: 16,
-                                              color: _selectedMode == TemplateMode.drawAccordingTemplate
-                                                  ? ColorConstants.primary
-                                                  : ColorConstants.subTextColor,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'Guided Stencil',
-                                              style: TextStyle(
-                                                fontSize: 12.5,
-                                                fontWeight: FontWeight.bold,
-                                                color: _selectedMode == TemplateMode.drawAccordingTemplate
-                                                    ? ColorConstants.primary
-                                                    : ColorConstants.darkText,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 3),
-                                        const Text(
-                                          'Trace onion-skin timing guides',
-                                          style: TextStyle(
-                                            fontSize: 10.5,
-                                            color: ColorConstants.subTextColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
                         ],
                       ),
-
-                      // 5. Bottom Action Button
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0, top: 8.0),
-                        child: PrimaryButton(
-                          text: _selectedMode == TemplateMode.drawAccordingTemplate
-                              ? 'Start Guided Practice in Editor'
-                              : 'Start Lesson in Editor',
-                          icon: Icons.edit_rounded,
-                          height: 52,
-                          borderRadius: 14,
-                          onPressed: _startLesson,
-                          isLoading: _isCreating,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Trace ghost timing guides on your fresh layer (Best for learning)',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: Colors.grey.shade600,
+                          height: 1.25,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            );
-          },
+            ),
+            const SizedBox(width: 10),
+
+            // Full Template Option
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedMode = TemplateMode.useTemplate;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _selectedMode == TemplateMode.useTemplate
+                        ? ColorConstants.primary.withValues(alpha: 0.06)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _selectedMode == TemplateMode.useTemplate
+                          ? ColorConstants.primary
+                          : const Color(0xFFE2E8F0),
+                      width: _selectedMode == TemplateMode.useTemplate ? 2.0 : 1.0,
+                    ),
+                    boxShadow: _selectedMode == TemplateMode.useTemplate
+                        ? [
+                            BoxShadow(
+                              color: ColorConstants.primary.withValues(alpha: 0.12),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.layers_rounded,
+                            size: 20,
+                            color: _selectedMode == TemplateMode.useTemplate
+                                ? ColorConstants.primary
+                                : ColorConstants.mediumText,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Full Artwork',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: _selectedMode == TemplateMode.useTemplate
+                                  ? ColorConstants.primary
+                                  : ColorConstants.darkText,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Load complete editable frames to color, edit & extend',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: Colors.grey.shade600,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ),
+      ],
     );
   }
 
@@ -689,7 +861,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(6),
@@ -699,7 +871,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         style: TextStyle(
           color: text,
           fontSize: 10,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
