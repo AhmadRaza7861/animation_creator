@@ -117,81 +117,125 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
   void _showOutputSizePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Select Output Size',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: ColorConstants.darkText,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded, color: ColorConstants.mediumText, size: 22),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(color: ColorConstants.border_color),
-                ..._presets.map((preset) {
-                  final isSelected = preset == _selectedPreset;
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                    leading: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x1A0F172A),
+                blurRadius: 24,
+                offset: Offset(0, -6),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Top Drag Handle
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 12, bottom: 4),
                       decoration: BoxDecoration(
-                        color: isSelected ? ColorConstants.primaryLight : ColorConstants.cardBg,
-                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(
-                        preset.badge,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? ColorConstants.primaryDark : ColorConstants.mediumText,
+                    ),
+                  ),
+
+                  // Header Row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Select Output Size',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: ColorConstants.darkText,
+                          ),
                         ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: ColorConstants.mediumText,
+                            size: 22,
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Divider(height: 1, color: ColorConstants.border_color),
+
+                  // Scrollable Presets List
+                  Flexible(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: _presets.map((preset) {
+                          final isSelected = preset == _selectedPreset;
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                            leading: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isSelected ? ColorConstants.primaryLight : ColorConstants.cardBg,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                preset.badge,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? ColorConstants.primaryDark : ColorConstants.mediumText,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              preset.label,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? ColorConstants.primary : ColorConstants.darkText,
+                              ),
+                            ),
+                            subtitle: Text(
+                              preset.resolution,
+                              style: const TextStyle(fontSize: 12, color: ColorConstants.mediumText),
+                            ),
+                            trailing: isSelected
+                                ? const Icon(Icons.check_circle_rounded, color: ColorConstants.primary)
+                                : null,
+                            onTap: () {
+                              setState(() {
+                                _selectedPreset = preset;
+                              });
+                              Navigator.pop(ctx);
+                            },
+                          );
+                        }).toList(),
                       ),
                     ),
-                    title: Text(
-                      preset.label,
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? ColorConstants.primary : ColorConstants.darkText,
-                      ),
-                    ),
-                    subtitle: Text(
-                      preset.resolution,
-                      style: const TextStyle(fontSize: 12, color: ColorConstants.mediumText),
-                    ),
-                    trailing: isSelected
-                        ? const Icon(Icons.check_circle_rounded, color: ColorConstants.primary)
-                        : null,
-                    onTap: () {
-                      setState(() {
-                        _selectedPreset = preset;
-                      });
-                      Navigator.pop(ctx);
-                    },
-                  );
-                }),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
