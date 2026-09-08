@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-import 'package:path_provider/path_provider.dart';
+import '../../../../core/utils/app_path_provider.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../presentation/controllers/editor_controller.dart';
 import '../../projects/presentation/widgets/preview_pattern_painter.dart';
@@ -59,7 +59,7 @@ class MovieExportService {
     }
 
     // 1. Create temporary directory for frame images
-    final tempDir = await getTemporaryDirectory();
+    final tempDir = await AppPathProvider.getSafeTempDirectory();
     final framesDir = Directory('${tempDir.path}/export_frames_${DateTime.now().millisecondsSinceEpoch}');
     if (!await framesDir.exists()) {
       await framesDir.create(recursive: true);
@@ -337,27 +337,6 @@ class MovieExportService {
   }
 
   static Future<Directory> _getExportDirectory() async {
-    Directory? exportDir;
-    try {
-      final appDocs = await getApplicationDocumentsDirectory();
-      final localMovies = Directory('${appDocs.path}/Movies/Clipax');
-      if (!await localMovies.exists()) {
-        await localMovies.create(recursive: true);
-      }
-      exportDir = localMovies;
-    } catch (e) {
-      debugPrint('Error accessing appDocs directory: $e');
-    }
-
-    if (exportDir == null || !await exportDir.exists()) {
-      final tempDir = await getTemporaryDirectory();
-      final localMovies = Directory('${tempDir.path}/Movies/Clipax');
-      if (!await localMovies.exists()) {
-        await localMovies.create(recursive: true);
-      }
-      exportDir = localMovies;
-    }
-
-    return exportDir;
+    return AppPathProvider.getSafeExportDirectory();
   }
 }

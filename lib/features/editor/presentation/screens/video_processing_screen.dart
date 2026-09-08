@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_path_provider.dart';
 
 class VideoProcessingScreen extends StatefulWidget {
   final File videoFile;
@@ -39,12 +39,7 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
         _statusMessage = 'Extracting frames...';
       });
 
-      Directory? directory;
-      try {
-        directory = await getApplicationDocumentsDirectory();
-      } catch (e) {
-        directory = Directory.systemTemp;
-      }
+      final directory = await AppPathProvider.getSafeTempDirectory();
       final targetDir = Directory('${directory.path}/video_frames_${DateTime.now().millisecondsSinceEpoch}');
       if (!await targetDir.exists()) {
         await targetDir.create(recursive: true);

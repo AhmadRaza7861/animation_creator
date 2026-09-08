@@ -11,11 +11,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
-import 'canvas_size_screen.dart';
-import 'fps_screen.dart';
-import 'background_presets_screen.dart';
-import 'frames_reorder_screen.dart';
-import 'video_trimming_screen.dart';
 import 'brush_studio_screen.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../controllers/editor_providers.dart';
@@ -123,29 +118,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
         return Consumer(
           builder: (context, ref, child) {
             final currentController = ref.watch(editorControllerProvider(widget.projectId));
-
-            // Helper to get Canvas Size Label
-            String canvasSizeLabel = 'Landscape (16:9)';
-            final double ratio = currentController.aspectRatio ?? (16.0 / 9.0);
-            if ((ratio - 1.0).abs() < 0.05) {
-              canvasSizeLabel = 'Square (1:1)';
-            } else if ((ratio - 9.0 / 16.0).abs() < 0.05) {
-              canvasSizeLabel = 'Portrait (9:16)';
-            } else if ((ratio - 4.0 / 3.0).abs() < 0.05) {
-              canvasSizeLabel = 'Standard (4:3)';
-            } else if ((ratio - 16.0 / 9.0).abs() < 0.05) {
-              canvasSizeLabel = 'Landscape (16:9)';
-            } else {
-              canvasSizeLabel = 'Custom (${ratio.toStringAsFixed(2)})';
-            }
-
-            // Helper to get background label
-            String bgLabel = 'Plain Canvas';
-            if (currentController.globalBackground.pattern != null) {
-              bgLabel = currentController.globalBackground.pattern!.toUpperCase();
-            } else if (currentController.globalBackground.imagePath != null) {
-              bgLabel = 'Custom Image';
-            }
 
             return SafeArea(
               child: SingleChildScrollView(
@@ -892,7 +864,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
           child: SafeArea(
             child: Container(
               height: kToolbarHeight,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration:  BoxDecoration(
                 color: ColorConstants.border_color,
              //   border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA), width: 0.5)),
@@ -900,7 +872,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: ColorConstants.darkText),
+                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    visualDensity: VisualDensity.compact,
                     onPressed: () => _handleBack(context, controller),
                   ),
                 ValueListenableBuilder<DrawConfig>(
@@ -998,38 +973,24 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             }
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            //  border: Border.all(color: Colors.black.withOpacity(0.05)),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Container(
-                                //   width: 14,
-                                //   height: 14,
-                                //   alignment: Alignment.center,
-                                //   decoration: const BoxDecoration(
-                                //     shape: BoxShape.circle,
-                                //     color: Colors.white,
-                                //   ),
-                                //   child: Container(
-                                //     width: (controller.globalStrokeWidth * 0.4).clamp(2.0, 12.0),
-                                //     height: (controller.globalStrokeWidth * 0.4).clamp(2.0, 12.0),
-                                //     decoration: BoxDecoration(
-                                //       shape: BoxShape.circle,
-                                //       color: config.color,
-                                //     ),
-                                //   ),
-                                // ),
-                                SvgPicture.asset(AssetConstants.stock_icon),
-                                const SizedBox(width: 6),
+                                SvgPicture.asset(
+                                  AssetConstants.stock_icon,
+                                  width: 16,
+                                  height: 16,
+                                ),
+                                const SizedBox(width: 4),
                                 Text(
                                   '${controller.globalStrokeWidth.round()}px',
                                   style: const TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w400,
                                     color: Colors.black,
                                   ),
@@ -1374,23 +1335,43 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.undo_rounded, color: ColorConstants.darkText),
+                  icon: const Icon(Icons.undo_rounded, size: 22, color: ColorConstants.darkText),
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  visualDensity: VisualDensity.compact,
                   onPressed: () => controller.drawingController.undo(),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.redo_rounded, color: ColorConstants.darkText),
+                  icon: const Icon(Icons.redo_rounded, size: 22, color: ColorConstants.darkText),
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  visualDensity: VisualDensity.compact,
                   onPressed: () => controller.drawingController.redo(),
                 ),
                 IconButton(
-                  icon: SvgPicture.asset(AssetConstants.expander_icon),
+                  icon: SvgPicture.asset(
+                    AssetConstants.expander_icon,
+                    width: 20,
+                    height: 20,
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  visualDensity: VisualDensity.compact,
                   onPressed: _resetBoard,
                   tooltip: 'Reset Zoom / Position',
                 ),
                 IconButton(
-                  icon:  SvgPicture.asset(AssetConstants.setting_icon),
+                  icon: SvgPicture.asset(
+                    AssetConstants.setting_icon,
+                    width: 20,
+                    height: 20,
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  visualDensity: VisualDensity.compact,
                   onPressed: () => _showSettingsSheet(context, controller),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
               ],
             ),
           ),
