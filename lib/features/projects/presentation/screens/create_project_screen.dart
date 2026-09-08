@@ -746,60 +746,189 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               //   ),
               // ),
 
-              // const SizedBox(height: 20),
-              // // 4.5 Sticker Mode Selector
-              //  Text(
-              //   StringConstants.add_as_sticker,
-              //   style: TextStyle(
-              //     color: ColorConstants.text_color,
-              //     fontWeight: FontWeight.w500,
-              //     fontSize: 18,
-              //   ),
-              // ),
-              // const SizedBox(height: 10),
-              // Container(
-              //   decoration: BoxDecoration(
-              //     color: const Color(0xFFF7F8FA),
-              //     borderRadius: BorderRadius.circular(16),
-              //   ),
-              //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              //   child: Row(
-              //     children: [
-              //       const Expanded(
-              //         child: Column(
-              //           crossAxisAlignment: CrossAxisAlignment.start,
-              //           children: [
-              //             Text(
-              //               StringConstants.enable_sticker_mode,
-              //               style: TextStyle(
-              //                 fontSize: 15,
-              //                 fontWeight: FontWeight.bold,
-              //                 color: ColorConstants.darkText,
-              //               ),
-              //             ),
-              //             SizedBox(height: 4),
-              //             Text(
-              //               StringConstants.add_shapes_lines,
-              //               style: TextStyle(
-              //                 fontSize: 12,
-              //                 color: Color(0xFF8E8895),
-              //               ),
-              //             ),
-              //           ],
-              //         ),
-              //       ),
-              //       SizedBox(width: 4),
-              //       CustomSwitch(
-              //         value: _enableStickers,
-              //         onChanged: (bool value) {
-              //           setState(() {
-              //             _enableStickers = value;
-              //           });
-              //         },
-              //       ),
-              //     ],
-              //   ),
-              // ),
+              const SizedBox(height: 20),
+              // 4.5 Drawing Interaction Mode Selector
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x080F172A),
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: ColorConstants.primary.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.touch_app_rounded, color: ColorConstants.primary, size: 18),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Drawing Interaction Mode',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: ColorConstants.darkText,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Choose how strokes behave on canvas (switch anytime inside editor)',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        // Mode 1: Freehand Draw
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _enableStickers = false;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: !_enableStickers
+                                    ? ColorConstants.primary.withValues(alpha: 0.08)
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: !_enableStickers
+                                      ? ColorConstants.primary
+                                      : const Color(0xFFE2E8F0),
+                                  width: !_enableStickers ? 2.0 : 1.0,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.draw_rounded,
+                                        size: 18,
+                                        color: !_enableStickers
+                                            ? ColorConstants.primary
+                                            : const Color(0xFF64748B),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Freehand',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: !_enableStickers
+                                              ? ColorConstants.primary
+                                              : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Classic direct drawing without handles',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: Colors.grey.shade600,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        // Mode 2: Sticker / Object Mode
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _enableStickers = true;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _enableStickers
+                                    ? ColorConstants.primary.withValues(alpha: 0.08)
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: _enableStickers
+                                      ? ColorConstants.primary
+                                      : const Color(0xFFE2E8F0),
+                                  width: _enableStickers ? 2.0 : 1.0,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.interests_rounded,
+                                        size: 18,
+                                        color: _enableStickers
+                                            ? ColorConstants.primary
+                                            : const Color(0xFF64748B),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Sticker Mode',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: _enableStickers
+                                              ? ColorConstants.primary
+                                              : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Strokes can be moved, scaled & rotated',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: Colors.grey.shade600,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 20),
 
               // 5. Background Section

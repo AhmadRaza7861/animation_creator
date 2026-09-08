@@ -153,6 +153,15 @@ class EditorController extends ChangeNotifier {
   String get exportType => _exportType;
   bool get enableStickers => _enableStickers;
 
+  static bool _hasShownStickerHint = false;
+  bool get hasShownStickerHint => _hasShownStickerHint;
+  void markStickerHintShown() {
+    if (!_hasShownStickerHint) {
+      _hasShownStickerHint = true;
+      notifyListeners();
+    }
+  }
+
   set projectName(String val) {
     _projectName = val;
     notifyListeners();
@@ -1403,6 +1412,7 @@ class EditorController extends ChangeNotifier {
 
   // Stamping / confirm active stickers
   void stampActiveSticker() {
+    _hasShownStickerHint = true;
     if (drawingController.isCurrentLayerLocked) return;
 
     if (_activeSticker is ActiveTextSticker) {

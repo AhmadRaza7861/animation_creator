@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../package_code/paint_contents.dart';
 import '../../../../../package_code/src/drawing_board.dart';
 import '../../../../../package_code/src/drawing_controller.dart';
 import '../../../../../package_code/src/ruler/ruler_config.dart';
@@ -11,6 +10,7 @@ import '../widgets/sticker_widgets/text_sticker_widget.dart';
 import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
+import '../../../../core/constants/app_colors.dart';
 
 class CanvasArea extends ConsumerWidget {
   final String? projectId;
@@ -270,6 +270,76 @@ class CanvasArea extends ConsumerWidget {
                       ],
                     ),
             ),
+            if (activeSticker != null && !controller.hasShownStickerHint)
+              Positioned(
+                top: 12,
+                left: 16,
+                right: 16,
+                child: Center(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B).withOpacity(0.88),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.touch_app_rounded, color: Colors.white70, size: 15),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Drag handles to edit • Tap outside to stamp',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          InkWell(
+                            onTap: () {
+                              controller.markStickerHintShown();
+                              controller.stampActiveSticker();
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: ColorConstants.accent,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.check_rounded, color: Colors.white, size: 13),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Done',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       );
