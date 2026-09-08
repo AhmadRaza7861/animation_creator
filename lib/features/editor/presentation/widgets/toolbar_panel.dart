@@ -427,7 +427,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     required VoidCallback onTap,
     Color? color,
   }) {
-    final displayColor = color ?? Colors.grey.shade700;
+    final bool isSelected = color != null;
+    final Color displayColor = isSelected ? ColorConstants.accent : const Color(0xFF64748B);
     final controller = ref.read(editorControllerProvider(widget.projectId));
     return GestureDetector(
       onTap: () {
@@ -436,30 +437,40 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
         }
         onTap();
       },
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        width: 64,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 54),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? ColorConstants.accent.withValues(alpha: 0.09)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (svgAsset != null)
               SvgPicture.asset(
                 svgAsset,
-                width: 24,
-                height: 24,
+                width: 22,
+                height: 22,
                 colorFilter: ColorFilter.mode(displayColor, BlendMode.srcIn),
               )
             else if (icon != null)
-              Icon(icon, color: displayColor, size: 24),
-            const SizedBox(height: 4),
+              Icon(icon, color: displayColor, size: 22),
+            const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
                 color: displayColor,
-                fontSize: 16,
-                fontWeight: label == "Export"
+                fontSize: 11.5,
+                fontWeight: isSelected || label == "Export"
                     ? FontWeight.w700
-                    : FontWeight.w400,
+                    : FontWeight.w500,
+                letterSpacing: -0.1,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

@@ -13,7 +13,7 @@ class FakeProjectRepository implements ProjectRepository {
 }
 
 void main() {
-  testWidgets('SplashScreen renders cinematic vector drawing logo, letter-by-letter reveal, skip button, and dynamic phases', (WidgetTester tester) async {
+  testWidgets('SplashScreen renders cinematic vector drawing logo, letter-by-letter reveal, and dynamic phases', (WidgetTester tester) async {
     final fakeRepo = FakeProjectRepository();
 
     await tester.pumpWidget(
@@ -32,15 +32,14 @@ void main() {
     expect(find.text('x'), findsOneWidget);
 
     // Pump through logo drawing and typography reveal
-    await tester.pump(const Duration(milliseconds: 3000));
+    await tester.pump(const Duration(milliseconds: 1500));
     expect(find.text('ANIMATE ANYTHING'), findsOneWidget);
-    expect(find.text('Skip'), findsOneWidget);
 
     // Pump midway to see dynamic status text and custom painters
-    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 1200));
     expect(find.byType(CustomPaint), findsWidgets);
 
-    // Fast-forward past the 7.5s delay to trigger navigation
-    await tester.pump(const Duration(milliseconds: 3000));
+    // Fast-forward past the delay to trigger navigation
+    await tester.pump(const Duration(milliseconds: 1500));
   });
 }

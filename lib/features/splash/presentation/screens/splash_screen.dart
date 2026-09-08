@@ -37,10 +37,9 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _taglineFade;
   late Animation<double> _taglineSpacing;
 
-  // Progress & skip button
+  // Progress animation
   late Animation<double> _progressAnimation;
   late Animation<double> _bottomFade;
-  late Animation<double> _skipFade;
 
   Timer? _navTimer;
   bool _hasNavigated = false;
@@ -51,10 +50,10 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 1. Master timeline orchestration (6500ms)
+    // 1. Master timeline orchestration (3200ms)
     _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 6500),
+      duration: const Duration(milliseconds: 3200),
     );
 
     // 2. Orbiting stardust sparks loop
@@ -172,17 +171,10 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    _skipFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _mainController,
-        curve: const Interval(0.35, 0.55, curve: Curves.easeIn),
-      ),
-    );
-
     _mainController.forward();
 
-    // 7.5s Total Delay before smooth transition
-    _navTimer = Timer(const Duration(milliseconds: 7500), () {
+    // 3.6s Total Delay before smooth transition
+    _navTimer = Timer(const Duration(milliseconds: 3600), () {
       _navigateToHome();
     });
   }
@@ -259,54 +251,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
 
-            // 2. Interactive "Skip →" Button in Top-Right
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              right: 20,
-              child: AnimatedBuilder(
-                animation: _mainController,
-                builder: (context, child) {
-                  return Opacity(
-                    opacity: _skipFade.value,
-                    child: GestureDetector(
-                      onTap: _navigateToHome,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Skip',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white.withValues(alpha: 0.8),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 10,
-                              color: Colors.white.withValues(alpha: 0.8),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // 3. Central Animated Brand Content with 3D Holographic Tilt
+            // 2. Central Animated Brand Content with 3D Holographic Tilt
             Center(
               child: AnimatedBuilder(
                 animation: Listenable.merge([

@@ -971,26 +971,28 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             }
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 SvgPicture.asset(
                                   AssetConstants.stock_icon,
-                                  width: 16,
-                                  height: 16,
+                                  width: 14,
+                                  height: 14,
+                                  colorFilter: const ColorFilter.mode(Color(0xFF475569), BlendMode.srcIn),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${controller.globalStrokeWidth.round()}px',
                                   style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.black,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF334155),
                                   ),
                                 ),
                               ],
@@ -1487,7 +1489,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
               if (controller.activeCategory == 'Brush')
                 Positioned(
                   left: _brushPanelPosition?.dx ??
-                      (MediaQuery.of(context).size.width - 58 - 16),
+                      (MediaQuery.of(context).size.width - 52 - 16),
                   top: _brushPanelPosition?.dy ?? 120.0,
                   child: _buildRightVerticalPanel(controller),
                 ),
@@ -1576,21 +1578,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 _isRulerMenuExpanded && rulerConfig.type != RulerType.none;
 
             return Container(
-              width: 58,
+              width: 52,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.grey.shade200, width: 1.5),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Colors.grey.shade200, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 16,
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 14,
                     spreadRadius: 1,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 4),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1600,13 +1602,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     onPanUpdate: (details) {
                       setState(() {
                         final double currentX = _brushPanelPosition?.dx ??
-                            (MediaQuery.of(context).size.width - 58 - 16);
+                            (MediaQuery.of(context).size.width - 52 - 16);
                         final double currentY =
                             _brushPanelPosition?.dy ?? 120.0;
 
                         final double newX = (currentX + details.delta.dx).clamp(
                           16.0,
-                          MediaQuery.of(context).size.width - 58 - 16,
+                          MediaQuery.of(context).size.width - 52 - 16,
                         );
                         final double newY = (currentY + details.delta.dy).clamp(
                           MediaQuery.of(context).padding.top + 20.0,
@@ -1618,13 +1620,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     },
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 3),
                       alignment: Alignment.center,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(8),
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1632,22 +1634,22 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildGripDot(size: 3.2),
-                                const SizedBox(width: 3),
-                                _buildGripDot(size: 3.2),
-                                const SizedBox(width: 3),
-                                _buildGripDot(size: 3.2),
+                                _buildGripDot(size: 3.0),
+                                const SizedBox(width: 2.5),
+                                _buildGripDot(size: 3.0),
+                                const SizedBox(width: 2.5),
+                                _buildGripDot(size: 3.0),
                               ],
                             ),
-                            const SizedBox(height: 2.5),
+                            const SizedBox(height: 2.0),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildGripDot(size: 3.2),
-                                const SizedBox(width: 3),
-                                _buildGripDot(size: 3.2),
-                                const SizedBox(width: 3),
-                                _buildGripDot(size: 3.2),
+                                _buildGripDot(size: 3.0),
+                                const SizedBox(width: 2.5),
+                                _buildGripDot(size: 3.0),
+                                const SizedBox(width: 2.5),
+                                _buildGripDot(size: 3.0),
                               ],
                             ),
                           ],
@@ -1667,10 +1669,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                       },
                       child: Container(
                         margin: const EdgeInsets.only(top: 2, bottom: 2),
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          color: ColorConstants.accent.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(14),
+                          color: ColorConstants.accent.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1681,8 +1683,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                                   : (isRulerActive
                                       ? AssetConstants.ruler_icon
                                       : AssetConstants.brush_icon),
-                              width: 22,
-                              height: 22,
+                              width: 20,
+                              height: 20,
                               colorFilter: const ColorFilter.mode(
                                 ColorConstants.accent,
                                 BlendMode.srcIn,
@@ -1712,22 +1714,22 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         );
                       },
                       child: Container(
-                        width: 42,
-                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        width: 40,
+                        padding: const EdgeInsets.symmetric(vertical: 3.5),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: isBrushTipsActive
-                              ? ColorConstants.accent.withOpacity(0.08)
+                              ? ColorConstants.accent.withValues(alpha: 0.09)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SvgPicture.asset(
                               AssetConstants.brush_tips,
-                              width: 22,
-                              height: 22,
+                              width: 20,
+                              height: 20,
                               colorFilter: ColorFilter.mode(
                                 isBrushTipsActive
                                     ? ColorConstants.accent
@@ -1739,7 +1741,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             Text(
                               'Tips',
                               style: TextStyle(
-                                fontSize: 9.5,
+                                fontSize: 9.0,
                                 fontWeight: isBrushTipsActive
                                     ? FontWeight.w800
                                     : FontWeight.w600,
@@ -1752,7 +1754,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 5),
 
                     // 2. Single Brush Tool Button
                     GestureDetector(
@@ -1765,22 +1767,22 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             .setStyle(strokeWidth: controller.globalStrokeWidth);
                       },
                       child: Container(
-                        width: 42,
-                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        width: 40,
+                        padding: const EdgeInsets.symmetric(vertical: 3.5),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: isSingleBrushActive
-                              ? ColorConstants.accent.withOpacity(0.08)
+                              ? ColorConstants.accent.withValues(alpha: 0.09)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SvgPicture.asset(
                               AssetConstants.brush_icon,
-                              width: 22,
-                              height: 22,
+                              width: 20,
+                              height: 20,
                               colorFilter: ColorFilter.mode(
                                 isSingleBrushActive
                                     ? ColorConstants.accent
@@ -1792,7 +1794,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             Text(
                               'Brush',
                               style: TextStyle(
-                                fontSize: 9.5,
+                                fontSize: 9.0,
                                 fontWeight: isSingleBrushActive
                                     ? FontWeight.w800
                                     : FontWeight.w600,
@@ -1805,7 +1807,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 5),
 
                     // 3. Ruler Button (Toggles Ruler completely on/off)
                     GestureDetector(
@@ -1823,22 +1825,22 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         });
                       },
                       child: Container(
-                        width: 42,
-                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        width: 40,
+                        padding: const EdgeInsets.symmetric(vertical: 3.5),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: isRulerActive
-                              ? ColorConstants.accent.withOpacity(0.08)
+                              ? ColorConstants.accent.withValues(alpha: 0.09)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SvgPicture.asset(
                               AssetConstants.ruler_icon,
-                              width: 22,
-                              height: 22,
+                              width: 20,
+                              height: 20,
                               colorFilter: ColorFilter.mode(
                                 isRulerActive
                                     ? ColorConstants.accent
@@ -1850,7 +1852,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             Text(
                               'Ruler',
                               style: TextStyle(
-                                fontSize: 9.5,
+                                fontSize: 9.0,
                                 fontWeight: isRulerActive ? FontWeight.w800 : FontWeight.w600,
                                 color: isRulerActive ? ColorConstants.accent : Colors.grey.shade600,
                               ),
@@ -1859,7 +1861,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 5),
 
                     // 4. Sticker / Object Mode Toggle
                     GestureDetector(
@@ -1896,21 +1898,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         );
                       },
                       child: Container(
-                        width: 42,
-                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        width: 40,
+                        padding: const EdgeInsets.symmetric(vertical: 3.5),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: controller.enableStickers
-                              ? ColorConstants.accent.withOpacity(0.08)
+                              ? ColorConstants.accent.withValues(alpha: 0.09)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.auto_awesome_rounded,
-                              size: 22,
+                              size: 20,
                               color: controller.enableStickers
                                   ? ColorConstants.accent
                                   : Colors.grey.shade700,
@@ -1919,7 +1921,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                             Text(
                               'Sticker',
                               style: TextStyle(
-                                fontSize: 9.5,
+                                fontSize: 9.0,
                                 fontWeight: controller.enableStickers ? FontWeight.w800 : FontWeight.w600,
                                 color: controller.enableStickers ? ColorConstants.accent : Colors.grey.shade600,
                               ),
@@ -1928,7 +1930,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
 
                     // Collapse button
                     GestureDetector(
@@ -1939,8 +1941,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         });
                       },
                       child: Container(
-                        width: 24,
-                        height: 18,
+                        width: 22,
+                        height: 16,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
@@ -1948,7 +1950,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                         ),
                         child: const Icon(
                           Icons.keyboard_arrow_up_rounded,
-                          size: 14,
+                          size: 13,
                           color: Colors.black54,
                         ),
                       ),
