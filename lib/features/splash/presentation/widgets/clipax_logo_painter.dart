@@ -26,22 +26,52 @@ class ClipaxLogoPainter extends CustomPainter {
       radius: radius - strokeWidth / 2,
     );
 
-    // 1. Ambient Radial Glow behind the logo
+    // 1. Ambient Dual-Color Radial Glow behind the logo
     if (glowIntensity > 0.01) {
       final glowPaint = Paint()
         ..shader = RadialGradient(
           colors: [
-            ColorConstants.primary.withValues(alpha: 0.35 * glowIntensity),
-            const Color(0xFF9D60CC).withValues(alpha: 0.15 * glowIntensity),
+            ColorConstants.primary.withValues(alpha: 0.40 * glowIntensity),
+            const Color(0xFF9D60CC).withValues(alpha: 0.20 * glowIntensity),
             Colors.transparent,
           ],
           stops: const [0.0, 0.65, 1.0],
-        ).createShader(Rect.fromCircle(center: center, radius: radius * 1.4));
-      canvas.drawCircle(center, radius * 1.4, glowPaint);
+        ).createShader(Rect.fromCircle(center: center, radius: radius * 1.5));
+      canvas.drawCircle(center, radius * 1.5, glowPaint);
     }
 
-    // 2. Animated Gradient Film-Strip Arc
+    // 2. Animated Gradient Film-Strip Arc with Neon Aura & Comet Trail
     if (strokeProgress > 0.0) {
+      final sweepAngle = 1.55 * math.pi * strokeProgress.clamp(0.0, 1.0);
+
+      // A. Outer Neon Glow Underlayer
+      final glowArcPaint = Paint()
+        ..shader = SweepGradient(
+          colors: const [
+            Color(0xFFFF9318),
+            Color(0xFFFF5E3A),
+            Color(0xFF9D60CC),
+            Color(0xFFFF9318),
+          ],
+          stops: const [0.0, 0.35, 0.7, 1.0],
+          startAngle: 0.6 * math.pi,
+          endAngle: 2.2 * math.pi,
+          transform: GradientRotation(shimmerPhase * 2 * math.pi),
+        ).createShader(outerRect)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth * 1.45
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+
+      canvas.drawArc(
+        outerRect,
+        0.6 * math.pi,
+        sweepAngle,
+        false,
+        glowArcPaint,
+      );
+
+      // B. Main Sharp Gradient Film-Strip Arc
       final arcPaint = Paint()
         ..shader = SweepGradient(
           colors: const [
@@ -62,29 +92,44 @@ class ClipaxLogoPainter extends CustomPainter {
       canvas.drawArc(
         outerRect,
         0.6 * math.pi,
-        1.55 * math.pi * strokeProgress.clamp(0.0, 1.0),
+        sweepAngle,
         false,
         arcPaint,
       );
 
-      // Spark / comet head at the drawing tip of the arc
+      // C. Comet Spark Head & Glowing Trail
       if (strokeProgress < 0.99) {
-        final currentAngle = 0.6 * math.pi + (1.55 * math.pi * strokeProgress);
+        final currentAngle = 0.6 * math.pi + sweepAngle;
         final tipPos = center +
             Offset(
               (radius - strokeWidth / 2) * math.cos(currentAngle),
               (radius - strokeWidth / 2) * math.sin(currentAngle),
             );
 
+        // Trailing micro-sparks
+        for (int i = 1; i <= 4; i++) {
+          final trailAngle = currentAngle - (i * 0.08);
+          final trailPos = center +
+              Offset(
+                (radius - strokeWidth / 2) * math.cos(trailAngle),
+                (radius - strokeWidth / 2) * math.sin(trailAngle),
+              );
+          final trailPaint = Paint()
+            ..color = Colors.white.withValues(alpha: (1.0 - (i * 0.22)).clamp(0.0, 1.0))
+            ..style = PaintingStyle.fill;
+          canvas.drawCircle(trailPos, strokeWidth * (0.28 - (i * 0.05)), trailPaint);
+        }
+
+        // Intense glowing comet head
         final sparkGlow = Paint()
-          ..color = Colors.white.withValues(alpha: 0.9)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-        canvas.drawCircle(tipPos, strokeWidth * 0.48, sparkGlow);
+          ..color = Colors.white.withValues(alpha: 0.95)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+        canvas.drawCircle(tipPos, strokeWidth * 0.55, sparkGlow);
 
         final sparkCore = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.fill;
-        canvas.drawCircle(tipPos, strokeWidth * 0.28, sparkCore);
+        canvas.drawCircle(tipPos, strokeWidth * 0.30, sparkCore);
       }
     }
 
@@ -135,7 +180,8 @@ class ClipaxLogoPainter extends CustomPainter {
 
     // 4. Play Button Triangle with Neon Glow & Fill
     if (playProgress > 0.01) {
-      final double triScale = Curves.easeOutBack.transform(playProgress.clamp(0.0, 1.0));
+      final double triScale =
+          Curves.easeOutBack.transform(playProgress.clamp(0.0, 1.0));
       final triangleCenter = center + Offset(size.width * 0.08, 0);
       final triSize = size.width * 0.36 * triScale;
 
@@ -149,8 +195,8 @@ class ClipaxLogoPainter extends CustomPainter {
 
       // Soft purple glow shadow behind play triangle
       final shadowPaint = Paint()
-        ..color = const Color(0xFF9D60CC).withValues(alpha: 0.55 * playProgress)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+        ..color = const Color(0xFF9D60CC).withValues(alpha: 0.65 * playProgress)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
       canvas.drawPath(path, shadowPaint);
 
       // Dark obsidian-purple gradient fill
@@ -169,9 +215,9 @@ class ClipaxLogoPainter extends CustomPainter {
 
       // Golden accent border around play triangle
       final borderPaint = Paint()
-        ..color = ColorConstants.primary.withValues(alpha: 0.75 * playProgress)
+        ..color = ColorConstants.primary.withValues(alpha: 0.85 * playProgress)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.8
+        ..strokeWidth = 2.0
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(path, borderPaint);
     }
