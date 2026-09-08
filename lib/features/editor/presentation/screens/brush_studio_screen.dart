@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -97,17 +98,11 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       initialScrollOffset: _lastCategoryScrollOffset,
     );
 
-    _gridScrollController.addListener(() {
-      if (_gridScrollController.hasClients) {
-        _lastGridScrollOffset = _gridScrollController.offset;
-      }
-    });
-
-    _categoryScrollController.addListener(() {
-      if (_categoryScrollController.hasClients) {
-        _lastCategoryScrollOffset = _categoryScrollController.offset;
-      }
-    });
+    // Prewarm all brush previews in background so scrolling is 100% instant and buttery smooth
+    _StudioPreviewPainter.prewarmCache(
+      _allPresets,
+      widget.drawingController.drawConfig.value.color,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -810,6 +805,12 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
     return GridView.builder(
       controller: _gridScrollController,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      cacheExtent: 600.0,
+      addRepaintBoundaries: true,
+      addAutomaticKeepAlives: true,
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 180,
         mainAxisExtent: 132,
@@ -822,6 +823,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
         final isSelected = preset.id == _selectedPreset?.id;
 
         return _StudioBrushCard(
+          key: ValueKey(preset.id),
           preset: preset,
           color: config.color,
           isSelected: isSelected,
@@ -926,6 +928,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
 /// Custom Card Component for individual brushes
 class _StudioBrushCard extends StatelessWidget {
   const _StudioBrushCard({
+    super.key,
     required this.preset,
     required this.color,
     required this.isSelected,
@@ -944,24 +947,29 @@ class _StudioBrushCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
         decoration: BoxDecoration(
           color: isSelected ? accent.withValues(alpha: 0.05) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? accent : Colors.grey.shade200,
+            color: isSelected ? accent : const Color(0xFFE5E7EB),
             width: isSelected ? 2 : 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected
-                  ? accent.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.02),
-              blurRadius: isSelected ? 8 : 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : const [
+                  BoxShadow(
+                    color: Color(0x08000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
         ),
         child: Stack(
           children: [
@@ -978,10 +986,12 @@ class _StudioBrushCard extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: CustomPaint(
-                        painter: _StudioPreviewPainter(
-                          preset: preset,
-                          color: color,
+                      child: RepaintBoundary(
+                        child: CustomPaint(
+                          painter: _StudioPreviewPainter(
+                            preset: preset,
+                            color: color,
+                          ),
                         ),
                       ),
                     ),
@@ -1056,43 +1066,104 @@ class _StudioBrushCard extends StatelessWidget {
   }
 }
 
-/// Custom painter for the live stroke inside each brush card
+/// Custom painter for the live stroke inside each brush card with pre-warmed hardware-accelerated picture caching
 class _StudioPreviewPainter extends CustomPainter {
   _StudioPreviewPainter({required this.preset, required this.color});
 
   final BrushPreset preset;
   final Color color;
 
-  static const double _previewWidth = 7.0;
+  static const Size kPreviewSize = Size(160, 76);
+  static const double _previewWidth = 6.5;
+  static final Map<String, ui.Picture> _previewCache = <String, ui.Picture>{};
+
+  /// Warm up the preview cache for all presets
+  static void prewarmCache(List<BrushPreset> presets, Color color) {
+    for (final preset in presets) {
+      _getOrRenderPicture(preset, color);
+    }
+  }
+
+  static ui.Picture _getOrRenderPicture(BrushPreset preset, Color color) {
+    final String cacheKey = '${preset.id}_${color.toARGB32()}';
+    final cached = _previewCache[cacheKey];
+    if (cached != null) return cached;
+
+    if (_previewCache.length > 500) {
+      _previewCache.clear();
+    }
+
+    final recorder = ui.PictureRecorder();
+    final recordingCanvas =
+        Canvas(recorder, const Rect.fromLTWH(0, 0, 160, 76));
+
+    try {
+      final List<Offset> points = _sampleStroke(kPreviewSize);
+      if (points.isNotEmpty) {
+        final PaintContent content = preset.create()
+          ..paint = (Paint()
+            ..color = color
+            ..strokeWidth = _previewWidth
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..isAntiAlias = true);
+
+        content.startDraw(points.first);
+        for (int i = 1; i < points.length; i++) {
+          content.drawing(points[i]);
+        }
+        content.draw(recordingCanvas, kPreviewSize, false);
+      }
+    } catch (_) {
+      final fallbackPaint = Paint()
+        ..color = color
+        ..strokeWidth = 3.0
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true;
+      final path = Path();
+      final List<Offset> points = _sampleStroke(kPreviewSize);
+      if (points.isNotEmpty) {
+        path.moveTo(points.first.dx, points.first.dy);
+        for (int i = 1; i < points.length; i++) {
+          path.lineTo(points[i].dx, points[i].dy);
+        }
+        recordingCanvas.drawPath(path, fallbackPaint);
+      }
+    }
+
+    final picture = recorder.endRecording();
+    _previewCache[cacheKey] = picture;
+    return picture;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final List<Offset> points = _sampleStroke(size);
-    if (points.isEmpty) return;
+    if (size.width <= 0 || size.height <= 0) return;
 
-    final PaintContent content = preset.create()
-      ..paint = (Paint()
-        ..color = color
-        ..strokeWidth = _previewWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..isAntiAlias = true);
+    final picture = _getOrRenderPicture(preset, color);
 
-    content.startDraw(points.first);
-    for (int i = 1; i < points.length; i++) {
-      content.drawing(points[i]);
+    if (size.width != kPreviewSize.width || size.height != kPreviewSize.height) {
+      canvas.save();
+      canvas.scale(
+        size.width / kPreviewSize.width,
+        size.height / kPreviewSize.height,
+      );
+      canvas.drawPicture(picture);
+      canvas.restore();
+    } else {
+      canvas.drawPicture(picture);
     }
-    content.draw(canvas, size, false);
   }
 
-  List<Offset> _sampleStroke(Size size) {
+  static List<Offset> _sampleStroke(Size size) {
     final List<Offset> points = <Offset>[];
     final double padX = size.width * 0.12;
     final double usableW = size.width - padX * 2;
     final double midY = size.height / 2;
     final double amp = size.height * 0.22;
-    const int segments = 48;
+    const int segments = 20;
 
     for (int i = 0; i <= segments; i++) {
       final double t = i / segments;
@@ -1105,7 +1176,7 @@ class _StudioPreviewPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StudioPreviewPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.preset != preset;
+      oldDelegate.color != color || oldDelegate.preset.id != preset.id;
 }
 
 /// Custom painter for the interactive scratchpad banner

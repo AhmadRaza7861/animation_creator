@@ -145,7 +145,7 @@ class _PainterState extends State<Painter> {
   ///
   /// Handle pointer up event
   void _onPointerUp(PointerUpEvent pue) {
-    if (!widget.drawingController.couldDrawing || !widget.drawingController.hasPaintingContent) {
+    if (!widget.drawingController.hasPaintingContent) {
       return;
     }
 
@@ -161,11 +161,9 @@ class _PainterState extends State<Painter> {
   ///
   /// Handle pointer cancel event
   void _onPointerCancel(PointerCancelEvent pce) {
-    if (!widget.drawingController.couldDrawing) {
-      return;
+    if (widget.drawingController.hasPaintingContent) {
+      widget.drawingController.endDraw();
     }
-
-    widget.drawingController.endDraw();
   }
 
   /// GestureDetector 占位方法（防止单指绘制时触发画布平移）

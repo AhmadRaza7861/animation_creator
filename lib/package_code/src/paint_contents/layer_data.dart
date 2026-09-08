@@ -10,6 +10,7 @@ class LayerData {
     this.name = 'Layer',
     this.isVisible = true,
     this.isLocked = false,
+    this.isGuide = false,
     this.opacity = 1.0,
     this.blendMode = BlendMode.srcOver,
     List<PaintContent>? history,
@@ -25,6 +26,7 @@ class LayerData {
   String name;
   bool isVisible;
   bool isLocked;
+  bool isGuide;
   double opacity;
   BlendMode blendMode;
   
@@ -36,6 +38,7 @@ class LayerData {
     String? name,
     bool? isVisible,
     bool? isLocked,
+    bool? isGuide,
     double? opacity,
     BlendMode? blendMode,
     List<PaintContent>? history,
@@ -48,6 +51,7 @@ class LayerData {
       name: name ?? this.name,
       isVisible: isVisible ?? this.isVisible,
       isLocked: isLocked ?? this.isLocked,
+      isGuide: isGuide ?? this.isGuide,
       opacity: opacity ?? this.opacity,
       blendMode: blendMode ?? this.blendMode,
       history: newHistory,

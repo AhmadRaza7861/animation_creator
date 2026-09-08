@@ -484,6 +484,15 @@ class EditorController extends ChangeNotifier {
           );
         }
 
+        for (var controller in _canvases) {
+          if (controller.activeLayer.value == null || controller.activeLayer.value!.isLocked) {
+            final unlocked = controller.layers.where((l) => !l.isLocked).firstOrNull;
+            if (unlocked != null) {
+              controller.activeLayer.value = unlocked;
+            }
+          }
+        }
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           for (var controller in _canvases) {
             controller.forceRefreshLayers();
@@ -609,7 +618,7 @@ class EditorController extends ChangeNotifier {
       canvas.saveLayer(Offset.zero & canvasSize, Paint());
       for (int i = controller.layers.length - 1; i >= 0; i--) {
         final layer = controller.layers[i];
-        if (!layer.isVisible) continue;
+        if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') continue;
 
         canvas.saveLayer(
           Offset.zero & canvasSize,
@@ -683,6 +692,7 @@ class EditorController extends ChangeNotifier {
           name: lMap['name'] as String,
           isVisible: lMap['isVisible'] as bool,
           isLocked: lMap['isLocked'] as bool,
+          isGuide: (lMap['isGuide'] as bool?) ?? (lMap['name'] == 'Stencil Guide' || (lMap['name'] as String? ?? '').contains('Guide')),
           opacity: (lMap['opacity'] as num).toDouble(),
           blendMode: BlendMode.values[lMap['blendMode'] as int],
           history: history,
@@ -697,10 +707,16 @@ class EditorController extends ChangeNotifier {
       if (matchedLayer != null) {
         controller.activeLayer.value = matchedLayer;
       } else {
-        controller.activeLayer.value = controller.layers.first;
+        controller.activeLayer.value = controller.layers.firstWhere(
+          (l) => !l.isLocked,
+          orElse: () => controller.layers.first,
+        );
       }
     } else if (controller.layers.isNotEmpty) {
-      controller.activeLayer.value = controller.layers.first;
+      controller.activeLayer.value = controller.layers.firstWhere(
+        (l) => !l.isLocked,
+        orElse: () => controller.layers.first,
+      );
     }
 
     _setupCanvasController(controller);
@@ -830,6 +846,13 @@ class EditorController extends ChangeNotifier {
         stampActiveSticker();
       }
       _currentIndex = index;
+      final currentCanvas = _canvases[index];
+      if (currentCanvas.activeLayer.value == null || currentCanvas.activeLayer.value!.isLocked) {
+        final unlocked = currentCanvas.layers.where((l) => !l.isLocked).firstOrNull;
+        if (unlocked != null) {
+          currentCanvas.activeLayer.value = unlocked;
+        }
+      }
       notifyListeners();
     }
   }
@@ -988,6 +1011,7 @@ class EditorController extends ChangeNotifier {
           name: lMap['name'] as String,
           isVisible: lMap['isVisible'] as bool,
           isLocked: lMap['isLocked'] as bool,
+          isGuide: (lMap['isGuide'] as bool?) ?? false,
           opacity: (lMap['opacity'] as num).toDouble(),
           blendMode: BlendMode.values[lMap['blendMode'] as int],
           history: history,

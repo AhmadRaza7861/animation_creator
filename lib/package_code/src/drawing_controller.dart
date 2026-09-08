@@ -507,15 +507,15 @@ class DrawingController extends ChangeNotifier {
   /// Get current brush color
   Color get getColor => drawConfig.value.color;
 
-  /// 能否开始绘制（无手指触摸时）
+  /// 能否开始绘制（无手指或单指触摸进入时）
   ///
-  /// Whether drawing can start (when no finger is touching)
-  bool get couldStartDraw => drawConfig.value.fingerCount == 0;
+  /// Whether drawing can start (when at most single finger is touching)
+  bool get couldStartDraw => drawConfig.value.fingerCount <= 1;
 
   /// 能否进行绘制（单指触摸时）
   ///
-  /// Whether drawing is allowed (when single finger is touching)
-  bool get couldDrawing => drawConfig.value.fingerCount == 1;
+  /// Whether drawing is allowed (when at most single finger is touching)
+  bool get couldDrawing => drawConfig.value.fingerCount <= 1;
 
   /// 是否有正在绘制的内容
   ///
@@ -1423,6 +1423,7 @@ class DrawingController extends ChangeNotifier {
         'name': layer.name,
         'isVisible': layer.isVisible,
         'isLocked': layer.isLocked,
+        'isGuide': layer.isGuide,
         'opacity': layer.opacity,
         'blendMode': layer.blendMode.index,
         'currentIndex': layer.currentIndex,

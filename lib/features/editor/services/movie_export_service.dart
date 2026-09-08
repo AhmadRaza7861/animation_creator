@@ -254,7 +254,7 @@ class MovieExportService {
     canvas.saveLayer(Offset.zero & sourceSize, Paint());
     for (int i = controller.layers.length - 1; i >= 0; i--) {
       final layer = controller.layers[i];
-      if (!layer.isVisible) continue;
+      if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') continue;
 
       canvas.saveLayer(
         Offset.zero & sourceSize,

@@ -292,13 +292,13 @@ class FramePainter extends CustomPainter {
     canvas.saveLayer(Offset.zero & originalSize, Paint());
     for (int i = controller.layers.length - 1; i >= 0; i--) {
       final layer = controller.layers[i];
-      if (!layer.isVisible) continue;
+      if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') continue;
 
       canvas.saveLayer(
         Offset.zero & originalSize,
         Paint()
           ..blendMode = layer.blendMode
-          ..color = Colors.white.withOpacity(layer.opacity),
+          ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
       );
 
       for (int j = 0; j < layer.currentIndex; j++) {

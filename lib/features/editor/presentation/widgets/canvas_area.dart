@@ -111,8 +111,8 @@ class CanvasArea extends ConsumerWidget {
                   controller.stampActiveSticker();
                 }
               },
-              boardPanEnabled: activeSticker == null && !controller.drawingController.isCurrentLayerLocked,
-              boardScaleEnabled: activeSticker == null && !controller.drawingController.isCurrentLayerLocked,
+              boardPanEnabled: activeSticker == null,
+              boardScaleEnabled: activeSticker == null,
               isDrawingEnabled: activeSticker == null && !controller.isTextToolSelected && !controller.drawingController.isCurrentLayerLocked,
               background: ValueListenableBuilder<DrawConfig>(
                 valueListenable: controller.drawingController.drawConfig,

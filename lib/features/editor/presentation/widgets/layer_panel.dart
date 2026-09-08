@@ -95,6 +95,7 @@ class _LayerPanelState extends State<LayerPanel> {
       name: '${layer.name} Copy',
       isVisible: layer.isVisible,
       isLocked: layer.isLocked,
+      isGuide: layer.isGuide,
       opacity: layer.opacity,
       blendMode: layer.blendMode,
       history: layer.history.map((e) => e.copy()).toList(),
