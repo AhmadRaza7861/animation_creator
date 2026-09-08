@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:dummy/core/constants/app_assets.dart';
@@ -7,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
@@ -1430,7 +1428,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     left: _rulerBarPosition!.dx.clamp(
                       8.0,
                       MediaQuery.of(context).size.width -
-                          (_isRulerBarCollapsed ? 130.0 : 380.0) -
+                          (_isRulerBarCollapsed ? 110.0 : 325.0) -
                           8.0,
                     ),
                     top: _rulerBarPosition!.dy.clamp(
@@ -1515,7 +1513,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Grip Drag Handle
+                  // Grip Drag Handle (6-dot matrix)
                   GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onPanUpdate: (details) {
@@ -1542,11 +1540,36 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       alignment: Alignment.center,
                       child: Container(
-                        width: 18,
-                        height: 4,
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2),
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildGripDot(size: 3.2),
+                                const SizedBox(width: 3),
+                                _buildGripDot(size: 3.2),
+                                const SizedBox(width: 3),
+                                _buildGripDot(size: 3.2),
+                              ],
+                            ),
+                            const SizedBox(height: 2.5),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildGripDot(size: 3.2),
+                                const SizedBox(width: 3),
+                                _buildGripDot(size: 3.2),
+                                const SizedBox(width: 3),
+                                _buildGripDot(size: 3.2),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -1791,12 +1814,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
     );
   }
 
+  Widget _buildGripDot({double size = 3.2, Color? color}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color ?? const Color(0xFF9CA3AF),
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+
   Widget _buildHorizontalRulerBar(EditorController controller) {
     return ValueListenableBuilder<RulerConfig>(
       valueListenable: controller.drawingController.rulerConfig,
       builder: (context, rulerConfig, child) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(22),
@@ -1813,13 +1847,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 0. Drag Grip Handle (Movable)
+              // 0. Drag Grip Handle (Movable 6-dot matrix in capsule)
               GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onPanUpdate: (details) {
                   setState(() {
                     final double screenW = MediaQuery.of(context).size.width;
-                    final double barW = _isRulerBarCollapsed ? 130.0 : 380.0;
+                    final double barW = _isRulerBarCollapsed ? 110.0 : 325.0;
                     final double barH = 48.0;
                     final double defaultX = (screenW - barW) / 2;
                     final double stackH = MediaQuery.of(context).size.height -
@@ -1844,14 +1878,44 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
                   alignment: Alignment.center,
                   child: Container(
-                    width: 4,
-                    height: 20,
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildGripDot(size: 3.0),
+                            const SizedBox(width: 2.5),
+                            _buildGripDot(size: 3.0),
+                          ],
+                        ),
+                        const SizedBox(height: 2.5),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildGripDot(size: 3.0),
+                            const SizedBox(width: 2.5),
+                            _buildGripDot(size: 3.0),
+                          ],
+                        ),
+                        const SizedBox(height: 2.5),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildGripDot(size: 3.0),
+                            const SizedBox(width: 2.5),
+                            _buildGripDot(size: 3.0),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1900,10 +1964,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 ),
                 // Hairline vertical divider
                 Container(
-                  height: 24,
+                  height: 22,
                   width: 1,
                   color: Colors.grey.shade200,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
                 ),
                 // 2. LINE
                 _buildHorizontalRulerItem(
@@ -1920,7 +1984,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     }
                   },
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 // 3. CIRC
                 _buildHorizontalRulerItem(
                   label: 'CIRC',
@@ -1936,7 +2000,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     }
                   },
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 // 4. BOX
                 _buildHorizontalRulerItem(
                   label: 'BOX',
@@ -1952,7 +2016,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     }
                   },
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 // 5. MIRR (2-Way Mirror)
                 _buildHorizontalRulerItem(
                   label: 'MIRR',
@@ -1975,7 +2039,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     }
                   },
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 // 6. 4-MIRR (4-Way Quadrant Symmetry)
                 _buildHorizontalRulerItem(
                   label: '4-MIRR',
@@ -1996,10 +2060,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                 ),
                 // Collapse Button
                 Container(
-                  height: 24,
+                  height: 22,
                   width: 1,
                   color: Colors.grey.shade200,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
                 ),
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -2009,7 +2073,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(5),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
@@ -2111,24 +2175,24 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 46,
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        width: 38,
+        padding: const EdgeInsets.symmetric(vertical: 3),
         decoration: BoxDecoration(
           color: isSelected ? ColorConstants.accent.withValues(alpha: 0.08) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              height: 24,
+              height: 22,
               alignment: Alignment.center,
               child: assetPath != null
                   ? SvgPicture.asset(
                       assetPath,
-                      width: 22,
-                      height: 22,
+                      width: 20,
+                      height: 20,
                       colorFilter: ColorFilter.mode(
                         isSelected ? ColorConstants.accent : Colors.grey.shade700,
                         BlendMode.srcIn,
@@ -2136,7 +2200,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     )
                   : Icon(
                       icon,
-                      size: 20,
+                      size: 18,
                       color: isSelected ? ColorConstants.accent : Colors.grey.shade700,
                     ),
             ),
@@ -2144,10 +2208,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
             Text(
               label,
               style: TextStyle(
-                fontSize: 9.5,
+                fontSize: 9.0,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 color: isSelected ? ColorConstants.accent : Colors.grey.shade600,
-                letterSpacing: 0.3,
+                letterSpacing: 0.1,
               ),
             ),
           ],
