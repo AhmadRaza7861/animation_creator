@@ -80,7 +80,7 @@ class EditorController extends ChangeNotifier {
   int _currentIndex = 0;
   bool _isLoadingProject = false;
   
-  double? _aspectRatio;
+  double _aspectRatio = 1.0;
   String? _templateFolder;
   String? _templateExtension;
   String? _templateMode;
@@ -142,7 +142,7 @@ class EditorController extends ChangeNotifier {
   }
   bool get isLoadingProject => _isLoadingProject;
 
-  double? get aspectRatio => _aspectRatio;
+  double get aspectRatio => _aspectRatio;
   String? get templateFolder => _templateFolder;
   String? get templateExtension => _templateExtension;
   String? get templateMode => _templateMode;
@@ -339,7 +339,7 @@ class EditorController extends ChangeNotifier {
   }
 
   set aspectRatio(double? ratio) {
-    _aspectRatio = ratio;
+    _aspectRatio = ratio ?? 1.0;
     notifyListeners();
   }
 
@@ -433,8 +433,10 @@ class EditorController extends ChangeNotifier {
       if (data.state.containsKey('exportType')) {
         _exportType = data.state['exportType'] as String? ?? 'Mp4';
       }
-      if (data.state.containsKey('aspectRatio')) {
-        _aspectRatio = data.state['aspectRatio'] as double?;
+      if (data.state.containsKey('aspectRatio') && data.state['aspectRatio'] != null) {
+        _aspectRatio = (data.state['aspectRatio'] as num).toDouble();
+      } else {
+        _aspectRatio = 1.0;
       }
       if (data.state.containsKey('fps')) {
         _fps = data.state['fps'] as int;
@@ -545,11 +547,38 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get hasAnyDrawing {
+    if (_templateFolder != null && _templateFolder!.isNotEmpty) return true;
+    if (_templateFrameAssets.isNotEmpty) return true;
+    if (_activeSticker != null) return true;
+    if (_globalBackground.imagePath != null && _globalBackground.imagePath!.isNotEmpty) return true;
+    if (_canvases.length > 1) return true;
+
+    for (final canvas in _canvases) {
+      for (final layer in canvas.layers) {
+        final int validCount = layer.currentIndex.clamp(0, layer.history.length);
+        for (int i = 0; i < validCount; i++) {
+          final content = layer.history[i];
+          if (content is! EmptyContent) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   Future<void> saveProject() async {
     if (_activeSticker != null) {
       stampActiveSticker();
     }
     if (_canvases.isEmpty || projectId == null) return;
+
+    if (!hasAnyDrawing) {
+      // Do not store blank project without drawings; delete placeholder
+      await repository.deleteProject(projectId!);
+      return;
+    }
 
     final Map<String, dynamic> state = {
       'globalBackground': {

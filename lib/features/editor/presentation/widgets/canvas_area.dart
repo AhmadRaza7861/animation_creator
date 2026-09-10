@@ -349,37 +349,33 @@ class CanvasArea extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        if (controller.aspectRatio != null) {
-          return Center(
-            child: AspectRatio(
-              aspectRatio: controller.aspectRatio!,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 16,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints aspectConstraints) {
-                      return buildBoard(aspectConstraints);
-                    },
+        return Center(
+          child: AspectRatio(
+            aspectRatio: controller.aspectRatio,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints aspectConstraints) {
+                    return buildBoard(aspectConstraints);
+                  },
                 ),
               ),
             ),
-          );
-        } else {
-          return buildBoard(constraints);
-        }
+          ),
+        );
       },
     );
   }

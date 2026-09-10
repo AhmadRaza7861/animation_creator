@@ -37,7 +37,21 @@ class ProjectRepository {
       for (final entity in entities) {
         if (entity is Directory) {
           final metaFile = File('${entity.path}/meta.json');
+          final dataFile = File('${entity.path}/data.json');
           if (await metaFile.exists()) {
+            if (await dataFile.exists()) {
+              try {
+                final dataStr = await dataFile.readAsString();
+                final state = jsonDecode(dataStr) as Map<String, dynamic>;
+                if (!_hasAnyContent(state)) {
+                  // Automatically clean up blank project directory with 0 drawings
+                  try {
+                    await entity.delete(recursive: true);
+                  } catch (_) {}
+                  continue;
+                }
+              } catch (_) {}
+            }
             final jsonStr = await metaFile.readAsString();
             projects.add(ProjectMeta.fromJson(jsonDecode(jsonStr)));
           }
@@ -50,6 +64,45 @@ class ProjectRepository {
     }
 
     return projects;
+  }
+
+  bool _hasAnyContent(Map<String, dynamic> state) {
+    final String? templateFolder = state['templateFolder'] as String?;
+    if (templateFolder != null && templateFolder.isNotEmpty) return true;
+
+    final List? templateFrameAssets = state['templateFrameAssets'] as List?;
+    if (templateFrameAssets != null && templateFrameAssets.isNotEmpty) return true;
+
+    final globalBg = state['globalBackground'];
+    if (globalBg is Map) {
+      final String? bgImg = globalBg['imagePath'] as String?;
+      if (bgImg != null && bgImg.isNotEmpty) return true;
+    }
+
+    final List? canvases = state['canvases'] as List?;
+    if (canvases == null || canvases.isEmpty) return false;
+    if (canvases.length > 1) return true;
+
+    for (final canvas in canvases) {
+      if (canvas is! Map) continue;
+      final List? layers = canvas['layers'] as List?;
+      if (layers == null) continue;
+      for (final layer in layers) {
+        if (layer is! Map) continue;
+        final int currentIndex = layer['currentIndex'] as int? ?? 0;
+        final List? history = layer['history'] as List?;
+        if (history != null && history.isNotEmpty && currentIndex > 0) {
+          final int validCount = currentIndex.clamp(0, history.length);
+          for (int i = 0; i < validCount; i++) {
+            final item = history[i];
+            if (item is Map && item['type'] != 'EmptyContent') {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
 
   Future<ProjectData?> loadProject(String projectId) async {
