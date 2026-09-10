@@ -14,6 +14,7 @@ import '../../../templates/data/tutorial_project_builder.dart';
 import '../../../templates/domain/template_model.dart';
 import '../../../editor/presentation/screens/editor_screen.dart';
 import '../../../../core/widgets/animated_dashed_border.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 
 class ProjectsScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -515,6 +516,40 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   style: TextStyle(fontSize: 11),
                 ),
               ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // Settings Button
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.settings_outlined,
+              color: ColorConstants.darkText,
+              size: 20,
             ),
           ),
         ),

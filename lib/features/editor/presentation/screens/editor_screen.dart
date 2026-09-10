@@ -24,6 +24,7 @@ import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/custom_switch.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
   final String? projectId;
@@ -2102,6 +2103,28 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                           size: 13,
                           color: Colors.black54,
                         ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.help_outline_rounded, color: Colors.blueAccent, size: 22),
+                        ),
+                        title: const Text('Help, Feedback & Legal', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text('Privacy policy, contact support, rate app', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                          );
+                        },
                       ),
                     ],
                   ),
