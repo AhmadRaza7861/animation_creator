@@ -189,18 +189,10 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                             context: context,
                             backgroundColor: Colors.transparent,
                             builder: (BuildContext context) {
-                              return Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0x1A0F172A),
-                                      blurRadius: 20,
-                                      offset: Offset(0, -4),
-                                    ),
-                                  ],
-                                ),
+                              return Material(
+                                color: Colors.white,
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                clipBehavior: Clip.antiAlias,
                                 child: SafeArea(
                                   child: Padding(
                                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -227,58 +219,64 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                                           ),
                                         ),
                                         const SizedBox(height: 14),
-                                        ListTile(
+                                        Material(
+                                          color: const Color(0xFFF8FAFC),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(14),
                                             side: const BorderSide(color: Color(0xFFE2E8F0)),
                                           ),
-                                          tileColor: const Color(0xFFF8FAFC),
-                                          leading: Container(
-                                            width: 38,
-                                            height: 38,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFEFF6FF),
-                                              borderRadius: BorderRadius.circular(10),
+                                          clipBehavior: Clip.antiAlias,
+                                          child: ListTile(
+                                            leading: Container(
+                                              width: 38,
+                                              height: 38,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEFF6FF),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB), size: 20),
                                             ),
-                                            child: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB), size: 20),
+                                            title: const Text(
+                                              'Photo Gallery',
+                                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
+                                            ),
+                                            subtitle: const Text(
+                                              'Choose an image from your device',
+                                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                            ),
+                                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                            onTap: () => Navigator.of(context).pop(ImageSource.gallery),
                                           ),
-                                          title: const Text(
-                                            'Photo Gallery',
-                                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
-                                          ),
-                                          subtitle: const Text(
-                                            'Choose an image from your device',
-                                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                          ),
-                                          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
-                                          onTap: () => Navigator.of(context).pop(ImageSource.gallery),
                                         ),
                                         const SizedBox(height: 10),
-                                        ListTile(
+                                        Material(
+                                          color: const Color(0xFFF8FAFC),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(14),
                                             side: const BorderSide(color: Color(0xFFE2E8F0)),
                                           ),
-                                          tileColor: const Color(0xFFF8FAFC),
-                                          leading: Container(
-                                            width: 38,
-                                            height: 38,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFFFF7ED),
-                                              borderRadius: BorderRadius.circular(10),
+                                          clipBehavior: Clip.antiAlias,
+                                          child: ListTile(
+                                            leading: Container(
+                                              width: 38,
+                                              height: 38,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFFF7ED),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: const Icon(Icons.photo_camera_rounded, color: Color(0xFFEA580C), size: 20),
                                             ),
-                                            child: const Icon(Icons.photo_camera_rounded, color: Color(0xFFEA580C), size: 20),
+                                            title: const Text(
+                                              'Camera',
+                                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
+                                            ),
+                                            subtitle: const Text(
+                                              'Take a new photo now',
+                                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                            ),
+                                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                            onTap: () => Navigator.of(context).pop(ImageSource.camera),
                                           ),
-                                          title: const Text(
-                                            'Camera',
-                                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
-                                          ),
-                                          subtitle: const Text(
-                                            'Take a new photo now',
-                                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                          ),
-                                          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
-                                          onTap: () => Navigator.of(context).pop(ImageSource.camera),
                                         ),
                                       ],
                                     ),
@@ -298,8 +296,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         );
                         if (file != null) {
                           final ui.Image image = await _getFileImage(file.path);
-                          controller.drawingController.setPaintContent(
-                            ImageContent(image, imageUrl: file.path),
+                          controller.addImageSticker(
+                            image,
+                            imageUrl: file.path,
                           );
                         }
                       } catch (e) {

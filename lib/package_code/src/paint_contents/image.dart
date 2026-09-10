@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
 import 'package:flutter/painting.dart';
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
@@ -43,9 +46,8 @@ class ImageContent extends PaintContent {
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (image == null) return;
-    final bool isAsset = imageUrl != null && imageUrl!.startsWith('assets/');
     final bool isZeroSize = this.size == Offset.zero || (this.size.dx == 0 && this.size.dy == 0);
-    final Rect rect = (isAsset || isZeroSize)
+    final Rect rect = isZeroSize
         ? (Offset.zero & size)
         : Rect.fromPoints(startPoint, startPoint + this.size);
     paintImage(
@@ -78,5 +80,30 @@ class ImageContent extends PaintContent {
       'imageUrl': imageUrl,
       'paint': paint.toJson(),
     };
+  }
+
+  @override
+  Future<void> prepareExport() async {
+    if (image == null && imageUrl != null && imageUrl!.isNotEmpty) {
+      try {
+        if (imageUrl!.startsWith('assets/')) {
+          final ByteData data = await rootBundle.load(imageUrl!);
+          final Uint8List bytes = data.buffer.asUint8List();
+          final Completer<ui.Image> completer = Completer<ui.Image>();
+          ui.decodeImageFromList(bytes, (img) => completer.complete(img));
+          image = await completer.future;
+        } else {
+          final File file = File(imageUrl!);
+          if (await file.exists()) {
+            final Uint8List bytes = await file.readAsBytes();
+            final Completer<ui.Image> completer = Completer<ui.Image>();
+            ui.decodeImageFromList(bytes, (img) => completer.complete(img));
+            image = await completer.future;
+          }
+        }
+      } catch (e) {
+        // Ignored
+      }
+    }
   }
 }

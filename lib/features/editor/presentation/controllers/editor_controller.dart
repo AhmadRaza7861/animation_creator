@@ -10,8 +10,6 @@ import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/paint_contents/layer_data.dart';
 import '../../../../package_code/src/paint_contents/paint_content_decoder.dart';
-import '../../../../package_code/src/paint_contents/simple_line.dart';
-import '../../../../package_code/src/paint_contents/smooth_line.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
@@ -1500,6 +1498,65 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Import an image / photo directly as an interactive movable/scalable sticker
+  void addImageSticker(ui.Image image, {String imageUrl = '', Offset? position}) {
+    if (drawingController.isCurrentLayerLocked) return;
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
+    drawingController.rulerConfig.value =
+        drawingController.rulerConfig.value.copyWith(type: RulerType.none);
+
+    final double imgW = image.width.toDouble();
+    final double imgH = image.height.toDouble();
+    final Size? canvasSize = drawingController.drawConfig.value.size;
+    final double maxW = (canvasSize != null && canvasSize.width > 0) ? canvasSize.width * 0.6 : 260.0;
+    final double maxH = (canvasSize != null && canvasSize.height > 0) ? canvasSize.height * 0.6 : 260.0;
+
+    double targetW = imgW > 0 ? imgW : 200.0;
+    double targetH = imgH > 0 ? imgH : 200.0;
+
+    final double scaleRatio = math.min(
+      maxW / (targetW > 0 ? targetW : 1.0),
+      maxH / (targetH > 0 ? targetH : 1.0),
+    );
+    if (scaleRatio < 1.0) {
+      targetW *= scaleRatio;
+      targetH *= scaleRatio;
+    } else if (targetW < 120.0 || targetH < 120.0) {
+      final double upScale = math.min(180.0 / targetW, 180.0 / targetH);
+      targetW *= upScale;
+      targetH *= upScale;
+    }
+
+    final Size stickerSize = Size(targetW, targetH);
+    final Offset centerPos = position ??
+        ((canvasSize != null && canvasSize.width > 0 && canvasSize.height > 0)
+            ? Offset(canvasSize.width / 2, canvasSize.height / 2)
+            : const Offset(180, 240));
+
+    final imageContent = ImageContent.data(
+      startPoint: Offset.zero,
+      size: Offset(targetW, targetH),
+      image: image,
+      imageUrl: imageUrl,
+      paint: Paint()..isAntiAlias = true,
+    );
+
+    final newSticker = ActiveShapeSticker(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: imageContent,
+      offset: centerPos,
+      size: stickerSize,
+    );
+
+    _activeSticker = newSticker;
+    _initActiveStickerHistory(newSticker);
+    _activeCategory = 'Brush';
+    updateSnapshot();
+    notifyListeners();
+  }
+
   bool Function(PaintContent) _createInterceptDraw(DrawingController controller) {
     return (content) {
       if (controller.isCurrentLayerLocked) return false;
@@ -1636,16 +1693,15 @@ class EditorController extends ChangeNotifier {
         return true;
       } else if (content is ImageContent) {
         final ImageContent image = content;
-        final bounds = Rect.fromPoints(
-          image.startPoint,
-          image.startPoint + image.size,
-        ).inflate(image.paint.strokeWidth / 2);
+        final Offset start = image.startPoint;
+        final Offset end = image.startPoint + image.size;
+        final bounds = Rect.fromPoints(start, end).inflate(image.paint.strokeWidth / 2);
 
-        if (bounds.isEmpty) return false;
+        if (bounds.isEmpty || bounds.width <= 0 || bounds.height <= 0) return false;
 
         final localContent = ImageContent.data(
-          startPoint: image.startPoint - bounds.topLeft,
-          size: image.size,
+          startPoint: Offset.zero,
+          size: Offset(bounds.width, bounds.height),
           image: image.image,
           imageUrl: image.imageUrl,
           paint: image.paint,

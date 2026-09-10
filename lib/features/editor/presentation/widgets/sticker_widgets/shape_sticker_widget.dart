@@ -578,7 +578,7 @@ class _StickerPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    content.draw(canvas, canvasSize ?? size, false);
+    content.draw(canvas, size, false);
   }
 
   @override
