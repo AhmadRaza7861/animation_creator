@@ -1,12 +1,9 @@
-import 'dart:math';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 
 import '../drawing_controller.dart';
 import '../helper/ex_value_builder.dart';
-import '../paint_contents/paint_content.dart';
 import 'brush_presets.dart';
+import 'brush_preview_renderer.dart';
 import 'brush_tip_shape_panel.dart';
 
 /// 笔刷预设面板
@@ -95,11 +92,6 @@ class _BrushPresetPanelState extends State<BrushPresetPanel> {
     } else {
       _selected = null;
     }
-
-    _BrushPreviewPainter.prewarmCache(
-      _presets,
-      widget.controller.drawConfig.value.color,
-    );
   }
 
   void _select(BrushPreset preset) {
@@ -165,9 +157,9 @@ class _BrushPresetPanelState extends State<BrushPresetPanel> {
               child: GridView.builder(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                cacheExtent: 300.0,
+                cacheExtent: 140.0,
                 addRepaintBoundaries: true,
-                addAutomaticKeepAlives: true,
+                addAutomaticKeepAlives: false,
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 150,
                   mainAxisExtent: 108,
@@ -265,115 +257,16 @@ class _BrushCell extends StatelessWidget {
 ///
 /// 用对应笔刷在格子里实时画出一段 S 形示例笔迹
 ///
-/// Paints a live S-shaped sample stroke of the given brush inside the cell with pre-warmed Picture caching
+/// Paints a live S-shaped sample stroke of the given brush inside the cell with authentic, crash-safe vector preview
 class _BrushPreviewPainter extends CustomPainter {
-  _BrushPreviewPainter({required this.preset, required this.color});
+  const _BrushPreviewPainter({required this.preset, required this.color});
 
   final BrushPreset preset;
   final Color color;
 
-  static const Size kPreviewSize = Size(130, 64);
-  static const double _previewWidth = 8.0;
-  static final Map<String, ui.Picture> _previewCache = <String, ui.Picture>{};
-
-  /// Warm up the preview cache for all presets
-  static void prewarmCache(List<BrushPreset> presets, Color color) {
-    for (final preset in presets) {
-      _getOrRenderPicture(preset, color);
-    }
-  }
-
-  static ui.Picture _getOrRenderPicture(BrushPreset preset, Color color) {
-    final String cacheKey = '${preset.id}_${color.toARGB32()}';
-    final cached = _previewCache[cacheKey];
-    if (cached != null) return cached;
-
-    if (_previewCache.length > 500) {
-      _previewCache.clear();
-    }
-
-    final recorder = ui.PictureRecorder();
-    final recordingCanvas =
-        Canvas(recorder, const Rect.fromLTWH(0, 0, 130, 64));
-
-    try {
-      final List<Offset> points = _sampleStroke(kPreviewSize);
-      if (points.isNotEmpty) {
-        final PaintContent content = preset.create()
-          ..paint = (Paint()
-            ..color = color
-            ..strokeWidth = _previewWidth
-            ..style = PaintingStyle.stroke
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round
-            ..isAntiAlias = true);
-
-        content.startDraw(points.first);
-        for (int i = 1; i < points.length; i++) {
-          content.drawing(points[i]);
-        }
-        content.draw(recordingCanvas, kPreviewSize, false);
-      }
-    } catch (_) {
-      final fallbackPaint = Paint()
-        ..color = color
-        ..strokeWidth = 3.0
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..isAntiAlias = true;
-      final path = Path();
-      final List<Offset> points = _sampleStroke(kPreviewSize);
-      if (points.isNotEmpty) {
-        path.moveTo(points.first.dx, points.first.dy);
-        for (int i = 1; i < points.length; i++) {
-          path.lineTo(points[i].dx, points[i].dy);
-        }
-        recordingCanvas.drawPath(path, fallbackPaint);
-      }
-    }
-
-    final picture = recorder.endRecording();
-    _previewCache[cacheKey] = picture;
-    return picture;
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.width <= 0 || size.height <= 0) return;
-
-    final picture = _getOrRenderPicture(preset, color);
-
-    if (size.width != kPreviewSize.width || size.height != kPreviewSize.height) {
-      canvas.save();
-      canvas.scale(
-        size.width / kPreviewSize.width,
-        size.height / kPreviewSize.height,
-      );
-      canvas.drawPicture(picture);
-      canvas.restore();
-    } else {
-      canvas.drawPicture(picture);
-    }
-  }
-
-  /// 生成一段横跨格子的正弦示例笔迹
-  ///
-  /// Build a sine-shaped sample stroke spanning the cell
-  static List<Offset> _sampleStroke(Size size) {
-    final List<Offset> points = <Offset>[];
-    final double padX = size.width * 0.12;
-    final double usableW = size.width - padX * 2;
-    final double midY = size.height / 2;
-    final double amp = size.height * 0.24;
-    const int segments = 20;
-
-    for (int i = 0; i <= segments; i++) {
-      final double t = i / segments;
-      final double x = padX + usableW * t;
-      final double y = midY - sin(t * pi * 2) * amp;
-      points.add(Offset(x, y));
-    }
-    return points;
+    BrushPreviewRenderer.paintPreview(canvas, size, preset, color);
   }
 
   @override

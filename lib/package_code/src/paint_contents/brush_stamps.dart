@@ -84,11 +84,37 @@ class BrushStampLibrary {
   /// 获取（并缓存）指定纹理 / Get (and cache) a texture
   ui.Image get(String key) => _cache.putIfAbsent(key, () => _bake(key));
 
+  /// 异步预热全部笔尖纹理（非阻塞后台执行）/ Asynchronously pre-warm all textures
+  void prewarmAsync() {
+    Future<void>.microtask(() {
+      for (final BrushStamp stamp in kBrushStamps) {
+        get(stamp.key);
+      }
+    });
+  }
+
   ui.Image _bake(String key) {
-    final ui.PictureRecorder recorder = ui.PictureRecorder();
-    final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, _res, _res));
-    _paint(canvas, key, _res);
-    return recorder.endRecording().toImageSync(_res.toInt(), _res.toInt());
+    try {
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, _res, _res));
+      _paint(canvas, key, _res);
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image image = picture.toImageSync(_res.toInt(), _res.toInt());
+      picture.dispose();
+      return image;
+    } catch (_) {
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, _res, _res));
+      canvas.drawCircle(
+        const Offset(_res / 2, _res / 2),
+        _res / 2,
+        Paint()..color = Colors.white..isAntiAlias = true,
+      );
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image fallback = picture.toImageSync(_res.toInt(), _res.toInt());
+      picture.dispose();
+      return fallback;
+    }
   }
 
   void _paint(Canvas canvas, String key, double s) {

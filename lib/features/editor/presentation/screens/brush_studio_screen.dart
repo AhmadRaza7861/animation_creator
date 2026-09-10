@@ -1,10 +1,11 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_bar/brush_presets.dart';
+import '../../../../package_code/src/drawing_bar/brush_preview_renderer.dart';
+import '../../../../package_code/src/paint_contents/brush_stamps.dart';
 import 'brush_tip_studio_screen.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/helper/ex_value_builder.dart';
@@ -48,16 +49,18 @@ class BrushStudioScreen extends StatefulWidget {
 class _BrushStudioScreenState extends State<BrushStudioScreen> {
   static double _lastGridScrollOffset = 0.0;
   static double _lastCategoryScrollOffset = 0.0;
-  static String _lastCategory = 'All';
+  static String _lastCategory = 'Artistic & Inks';
+  static bool _lastIsListView = true;
 
   late final ScrollController _gridScrollController;
   late final ScrollController _categoryScrollController;
 
   late List<BrushPreset> _allPresets;
   BrushPreset? _selectedPreset;
-  String _selectedCategory = 'All';
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
+  String _selectedCategory = 'Artistic & Inks';
+  // String _searchQuery = '';
+  // final TextEditingController _searchController = TextEditingController();
+  late bool _isListView;
 
   // Test Scratchpad state
   final List<PaintContent> _scratchpadStrokes = <PaintContent>[];
@@ -66,7 +69,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   late double _strokeWidth;
 
   final List<String> _categories = const [
-    'All',
+    // 'All', // Commented out as requested
     'Artistic & Inks',
     'Pencils & Sketch',
     'Brushes & Spray',
@@ -80,6 +83,8 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   @override
   void initState() {
     super.initState();
+    _isListView = _lastIsListView;
+    BrushStampLibrary.instance.prewarmAsync();
     _allPresets = widget.presets ?? kDefaultBrushPresets;
     _strokeWidth = widget.drawingController.drawConfig.value.strokeWidth;
     final String? presetId = widget.drawingController.activeBrushPresetId;
@@ -89,19 +94,20 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
         orElse: () => null,
       );
     }
-    _selectedCategory = _lastCategory;
+    if (_categories.contains(_lastCategory)) {
+      _selectedCategory = _lastCategory;
+    } else if (_selectedPreset != null) {
+      _selectedCategory =
+          _findCategoryForPreset(_selectedPreset!) ?? _categories.first;
+    } else {
+      _selectedCategory = _categories.first;
+    }
 
     _gridScrollController = ScrollController(
       initialScrollOffset: _lastGridScrollOffset,
     );
     _categoryScrollController = ScrollController(
       initialScrollOffset: _lastCategoryScrollOffset,
-    );
-
-    // Prewarm all brush previews in background so scrolling is 100% instant and buttery smooth
-    _StudioPreviewPainter.prewarmCache(
-      _allPresets,
-      widget.drawingController.drawConfig.value.color,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -123,15 +129,24 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       final presets = _filteredPresets;
       final int index = presets.indexWhere((p) => p.id == _selectedPreset!.id);
       if (index >= 0) {
-        final double screenWidth = MediaQuery.of(context).size.width;
-        final double availableWidth = screenWidth - 32.0;
-        final int crossAxisCount = (availableWidth / 180.0).ceil().clamp(1, 4);
-        final int rowIndex = index ~/ crossAxisCount;
-        const double rowHeight = 132.0 + 12.0;
-        final double targetOffset = (rowIndex * rowHeight - 40.0).clamp(
-          0.0,
-          _gridScrollController.position.maxScrollExtent,
-        );
+        double targetOffset = 0.0;
+        if (_isListView) {
+          const double itemHeight = 136.0 + 12.0;
+          targetOffset = (index * itemHeight - 40.0).clamp(
+            0.0,
+            _gridScrollController.position.maxScrollExtent,
+          );
+        } else {
+          final double screenWidth = MediaQuery.of(context).size.width;
+          final double availableWidth = screenWidth - 32.0;
+          final int crossAxisCount = (availableWidth / 180.0).ceil().clamp(1, 4);
+          final int rowIndex = index ~/ crossAxisCount;
+          const double rowHeight = 132.0 + 12.0;
+          targetOffset = (rowIndex * rowHeight - 40.0).clamp(
+            0.0,
+            _gridScrollController.position.maxScrollExtent,
+          );
+        }
         _gridScrollController.jumpTo(targetOffset);
         _lastGridScrollOffset = targetOffset;
       }
@@ -149,168 +164,22 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
     _lastCategory = _selectedCategory;
     _gridScrollController.dispose();
     _categoryScrollController.dispose();
-    _searchController.dispose();
+    // _searchController.dispose();
     super.dispose();
+  }
+
+  String? _findCategoryForPreset(BrushPreset preset) {
+    return preset.effectiveCategory;
   }
 
   List<BrushPreset> get _filteredPresets {
     return _allPresets.where((preset) {
-      // Category filter
-      if (_selectedCategory != 'All') {
-        final id = preset.id.toLowerCase();
-        switch (_selectedCategory) {
-          case 'Artistic & Inks':
-            if (!id.contains('ink') &&
-                !id.contains('dip') &&
-                !id.contains('calligraphy') &&
-                !id.contains('rough') &&
-                !id.contains('soft') &&
-                !id.contains('choppy') &&
-                !id.contains('watercolor') &&
-                !id.contains('charcoal') &&
-                !id.contains('chalk') &&
-                !id.contains('bristle') &&
-                !id.contains('dry') &&
-                !id.contains('sponge') &&
-                !id.contains('splash') &&
-                !id.contains('splatter') &&
-                !id.contains('spatter') &&
-                !id.contains('rake')) {
-              return false;
-            }
-            break;
-          case 'Pencils & Sketch':
-            if (!id.contains('pencil') &&
-                !id.contains('sketch') &&
-                !id.contains('crayon') &&
-                !id.contains('grain') &&
-                !id.contains('sand') &&
-                !id.contains('scratches')) {
-              return false;
-            }
-            break;
-          case 'Brushes & Spray':
-            if (!id.contains('brush') &&
-                !id.contains('spray') &&
-                !id.contains('stipple') &&
-                !id.contains('highlighter') &&
-                !id.contains('smoke') &&
-                !id.contains('bokeh')) {
-              return false;
-            }
-            break;
-          case 'Magic & Glow':
-            if (!id.contains('neon') &&
-                !id.contains('rainbow') &&
-                !id.contains('ribbon') &&
-                !id.contains('constellation') &&
-                !id.contains('electric') &&
-                !id.contains('bubble') &&
-                !id.contains('chain') &&
-                !id.contains('audio') &&
-                !id.contains('stitch') &&
-                !id.contains('galaxy') &&
-                !id.contains('embers') &&
-                !id.contains('glitter') &&
-                !id.contains('starglow') &&
-                !id.contains('bubbles') &&
-                !id.contains('crackle') &&
-                !id.contains('sparkles') &&
-                !id.contains('circuit')) {
-              return false;
-            }
-            break;
-          case 'Nature & Elements':
-            if (!id.contains('leaves') &&
-                !id.contains('petals') &&
-                !id.contains('blossom') &&
-                !id.contains('pinetree') &&
-                !id.contains('grass') &&
-                !id.contains('cloud') &&
-                !id.contains('snow') &&
-                !id.contains('rain') &&
-                !id.contains('flame') &&
-                !id.contains('feather') &&
-                !id.contains('ripple') &&
-                !id.contains('sun') &&
-                !id.contains('crescent')) {
-              return false;
-            }
-            break;
-          case 'Stamps & Shapes':
-            if (!id.contains('butterfly') &&
-                !id.contains('paw') &&
-                !id.contains('fish') &&
-                !id.contains('heart') &&
-                !id.contains('star') &&
-                !id.contains('crown') &&
-                !id.contains('gem') &&
-                !id.contains('lightning') &&
-                !id.contains('music') &&
-                !id.contains('confetti') &&
-                !id.contains('ghost') &&
-                !id.contains('rocket') &&
-                !id.contains('atom') &&
-                !id.contains('puzzle') &&
-                !id.contains('anchor') &&
-                !id.contains('hourglass') &&
-                !id.contains('lightbulb') &&
-                !id.contains('bell') &&
-                !id.contains('key') &&
-                !id.contains('bowtie') &&
-                !id.contains('crosshair') &&
-                !id.contains('outline') &&
-                !id.contains('ring') &&
-                !id.contains('diamond') &&
-                !id.contains('triangle') &&
-                !id.contains('hexagon') &&
-                !id.contains('octagon') &&
-                !id.contains('shield') &&
-                !id.contains('spiral') &&
-                !id.contains('teardrop')) {
-              return false;
-            }
-            break;
-          case 'Textures & FX':
-            if (!id.contains('marble') &&
-                !id.contains('honeycomb') &&
-                !id.contains('lace') &&
-                !id.contains('weave') &&
-                !id.contains('cobweb') &&
-                !id.contains('cells') &&
-                !id.contains('fur') &&
-                !id.contains('hair') &&
-                !id.contains('grunge') &&
-                !id.contains('orange') &&
-                !id.contains('static') &&
-                !id.contains('sprinkles')) {
-              return false;
-            }
-            break;
-          case 'Patterns & 3D':
-            if (!id.contains('dots') &&
-                !id.contains('squares') &&
-                !id.contains('dash') &&
-                !id.contains('pixel') &&
-                !id.contains('mosaic') &&
-                !id.contains('halftone') &&
-                !id.contains('hatch') &&
-                !id.contains('gradient') &&
-                !id.contains('3d') &&
-                !id.contains('candy') &&
-                !id.contains('saw') &&
-                !id.contains('gear') &&
-                !id.contains('heartbeat') &&
-                !id.contains('stitch') &&
-                !id.contains('audio') &&
-                !id.contains('chain')) {
-              return false;
-            }
-            break;
-        }
+      if (_selectedCategory != 'All' &&
+          preset.effectiveCategory != _selectedCategory) {
+        return false;
       }
-
-      // Search query filter
+      /*
+      // Search query filter (commented out)
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
         final matchesName = preset.name.toLowerCase().contains(query);
@@ -319,7 +188,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
           return false;
         }
       }
-
+      */
       return true;
     }).toList();
   }
@@ -430,6 +299,20 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
         ],
       ),
       actions: [
+        IconButton(
+          tooltip: _isListView ? 'Compact Grid View' : 'Showcase List View',
+          icon: Icon(
+            _isListView ? Icons.grid_view_rounded : Icons.view_agenda_rounded,
+            size: 20,
+            color: const Color(0xFF2D3139),
+          ),
+          onPressed: () {
+            setState(() {
+              _isListView = !_isListView;
+              _lastIsListView = _isListView;
+            });
+          },
+        ),
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: TextButton.icon(
@@ -664,56 +547,64 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   Widget _buildFilterSection(Color accent) {
     return Column(
       children: [
-        // Search Input
+        /*
+        // Search Input (commented out as requested)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Container(
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val.trim();
-                });
-              },
-              style: const TextStyle(fontSize: 13, color: Color(0xFF1E2024)),
-              decoration: InputDecoration(
-                hintText: 'Search brushes by name...',
-                hintStyle: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF9CA3AF),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val.trim();
+                      });
+                    },
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF1E2024)),
+                    decoration: InputDecoration(
+                      hintText: 'Search brushes by name...',
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        size: 18,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear_rounded,
+                                size: 16,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
                 ),
-                prefixIcon: const Icon(
-                  Icons.search_rounded,
-                  size: 18,
-                  color: Color(0xFF9CA3AF),
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(
-                          Icons.clear_rounded,
-                          size: 16,
-                          color: Color(0xFF9CA3AF),
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 11),
               ),
-            ),
+            ],
           ),
         ),
+        */
 
         // Category Pills List
         Container(
@@ -802,15 +693,41 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       );
     }
 
+    if (_isListView) {
+      return ListView.separated(
+        controller: _gridScrollController,
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        addRepaintBoundaries: true,
+        addAutomaticKeepAlives: false,
+        itemCount: presets.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final preset = presets[index];
+          final isSelected = preset.id == _selectedPreset?.id;
+
+          return _StudioShowcaseCard(
+            key: ValueKey(preset.id),
+            preset: preset,
+            color: config.color,
+            isSelected: isSelected,
+            accent: accent,
+            onTap: () => _selectPreset(preset),
+          );
+        },
+      );
+    }
+
     return GridView.builder(
       controller: _gridScrollController,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
-      cacheExtent: 600.0,
       addRepaintBoundaries: true,
-      addAutomaticKeepAlives: true,
+      addAutomaticKeepAlives: false,
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 180,
         mainAxisExtent: 132,
@@ -920,6 +837,180 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Full-width showcase card showcasing detailed, high-definition authentic stroke previews
+class _StudioShowcaseCard extends StatelessWidget {
+  const _StudioShowcaseCard({
+    super.key,
+    required this.preset,
+    required this.color,
+    required this.isSelected,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final BrushPreset preset;
+  final Color color;
+  final bool isSelected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: isSelected ? accent.withValues(alpha: 0.04) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? accent : const Color(0xFFE5E7EB),
+            width: isSelected ? 2.0 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.16),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : const [
+                  BoxShadow(
+                    color: Color(0x06000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header Row: Icon badge + Name/Description + Selection Pill
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? accent.withValues(alpha: 0.12)
+                        : const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    preset.icon,
+                    size: 18,
+                    color: isSelected ? accent : const Color(0xFF4B5563),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        preset.name,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w600,
+                          color: isSelected
+                              ? accent
+                              : const Color(0xFF1E2024),
+                        ),
+                      ),
+                      if (preset.description.isNotEmpty)
+                        Text(
+                          preset.description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF888E9B),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Selection Radio Pill
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? accent
+                        : const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSelected
+                            ? Icons.check_circle_rounded
+                            : Icons.radio_button_unchecked_rounded,
+                        size: 14,
+                        color: isSelected ? Colors.white : const Color(0xFF9CA3AF),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isSelected ? 'Active' : 'Select',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color:
+                              isSelected ? Colors.white : const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // Spacious Stroke Preview Panel (60px high x full width)
+            Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? accent.withValues(alpha: 0.25)
+                      : const Color(0xFFECEEF2),
+                  width: 1,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: _StudioPreviewPainter(
+                      preset: preset,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1066,112 +1157,16 @@ class _StudioBrushCard extends StatelessWidget {
   }
 }
 
-/// Custom painter for the live stroke inside each brush card with pre-warmed hardware-accelerated picture caching
+/// Custom painter for the live stroke inside each brush card with authentic, crash-safe vector preview
 class _StudioPreviewPainter extends CustomPainter {
-  _StudioPreviewPainter({required this.preset, required this.color});
+  const _StudioPreviewPainter({required this.preset, required this.color});
 
   final BrushPreset preset;
   final Color color;
 
-  static const Size kPreviewSize = Size(160, 76);
-  static const double _previewWidth = 6.5;
-  static final Map<String, ui.Picture> _previewCache = <String, ui.Picture>{};
-
-  /// Warm up the preview cache for all presets
-  static void prewarmCache(List<BrushPreset> presets, Color color) {
-    for (final preset in presets) {
-      _getOrRenderPicture(preset, color);
-    }
-  }
-
-  static ui.Picture _getOrRenderPicture(BrushPreset preset, Color color) {
-    final String cacheKey = '${preset.id}_${color.toARGB32()}';
-    final cached = _previewCache[cacheKey];
-    if (cached != null) return cached;
-
-    if (_previewCache.length > 500) {
-      _previewCache.clear();
-    }
-
-    final recorder = ui.PictureRecorder();
-    final recordingCanvas =
-        Canvas(recorder, const Rect.fromLTWH(0, 0, 160, 76));
-
-    try {
-      final List<Offset> points = _sampleStroke(kPreviewSize);
-      if (points.isNotEmpty) {
-        final PaintContent content = preset.create()
-          ..paint = (Paint()
-            ..color = color
-            ..strokeWidth = _previewWidth
-            ..style = PaintingStyle.stroke
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round
-            ..isAntiAlias = true);
-
-        content.startDraw(points.first);
-        for (int i = 1; i < points.length; i++) {
-          content.drawing(points[i]);
-        }
-        content.draw(recordingCanvas, kPreviewSize, false);
-      }
-    } catch (_) {
-      final fallbackPaint = Paint()
-        ..color = color
-        ..strokeWidth = 3.0
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..isAntiAlias = true;
-      final path = Path();
-      final List<Offset> points = _sampleStroke(kPreviewSize);
-      if (points.isNotEmpty) {
-        path.moveTo(points.first.dx, points.first.dy);
-        for (int i = 1; i < points.length; i++) {
-          path.lineTo(points[i].dx, points[i].dy);
-        }
-        recordingCanvas.drawPath(path, fallbackPaint);
-      }
-    }
-
-    final picture = recorder.endRecording();
-    _previewCache[cacheKey] = picture;
-    return picture;
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.width <= 0 || size.height <= 0) return;
-
-    final picture = _getOrRenderPicture(preset, color);
-
-    if (size.width != kPreviewSize.width || size.height != kPreviewSize.height) {
-      canvas.save();
-      canvas.scale(
-        size.width / kPreviewSize.width,
-        size.height / kPreviewSize.height,
-      );
-      canvas.drawPicture(picture);
-      canvas.restore();
-    } else {
-      canvas.drawPicture(picture);
-    }
-  }
-
-  static List<Offset> _sampleStroke(Size size) {
-    final List<Offset> points = <Offset>[];
-    final double padX = size.width * 0.12;
-    final double usableW = size.width - padX * 2;
-    final double midY = size.height / 2;
-    final double amp = size.height * 0.22;
-    const int segments = 20;
-
-    for (int i = 0; i <= segments; i++) {
-      final double t = i / segments;
-      final double x = padX + usableW * t;
-      final double y = midY - sin(t * pi * 2) * amp;
-      points.add(Offset(x, y));
-    }
-    return points;
+    BrushPreviewRenderer.paintPreview(canvas, size, preset, color);
   }
 
   @override

@@ -21,6 +21,7 @@ class BrushPreset {
     required this.name,
     required this.icon,
     required this.create,
+    this.category = '',
     this.description = '',
   });
 
@@ -30,6 +31,9 @@ class BrushPreset {
   /// 显示名称 / Display name
   final String name;
 
+  /// 所属分类 / Category
+  final String category;
+
   /// 图标 / Icon
   final IconData icon;
 
@@ -38,7 +42,175 @@ class BrushPreset {
 
   /// 创建一个全新的绘制内容实例 / Create a fresh drawing-content instance
   final PaintContent Function() create;
+
+  /// 获取此笔刷所属的唯一确定分类 / Explicit canonical category
+  String get effectiveCategory =>
+      category.isNotEmpty ? category : (kBrushPresetCategories[id] ?? 'Artistic & Inks');
 }
+
+/// 权威笔刷分类字典 (精确 1 对 1 归属，杜绝跨分类重复)
+const Map<String, String> kBrushPresetCategories = <String, String>{
+  // 1. 艺术墨水 / Inks & Artistic Pens -> Artistic & Inks
+  'ink': 'Artistic & Inks',
+  'dipPen': 'Artistic & Inks',
+  'calligraphy': 'Artistic & Inks',
+  'roughPen': 'Artistic & Inks',
+  'penSoft': 'Artistic & Inks',
+  'penChoppy': 'Artistic & Inks',
+  'watercolor': 'Artistic & Inks',
+  'charcoal': 'Artistic & Inks',
+  'chalk': 'Artistic & Inks',
+  'chalkStamp': 'Artistic & Inks',
+  'bristle': 'Artistic & Inks',
+  'bristleTex': 'Artistic & Inks',
+  'dryBrush': 'Artistic & Inks',
+  'sponge': 'Artistic & Inks',
+  'splash': 'Artistic & Inks',
+  'splatter': 'Artistic & Inks',
+  'spatter': 'Artistic & Inks',
+  'inkDrops': 'Artistic & Inks',
+  'rake': 'Artistic & Inks',
+
+  // 2. 素描与铅笔 / Pencils & Sketch -> Pencils & Sketch
+  'sketch': 'Pencils & Sketch',
+  'crayon': 'Pencils & Sketch',
+  'pencil': 'Pencils & Sketch',
+  'pencilH': 'Pencils & Sketch',
+  'pencilHB': 'Pencils & Sketch',
+  'pencil6B': 'Pencils & Sketch',
+  'grain': 'Pencils & Sketch',
+  'sand': 'Pencils & Sketch',
+  'scratches': 'Pencils & Sketch',
+
+  // 3. 画笔与喷枪 / Brushes & Spray -> Brushes & Spray
+  'brush': 'Brushes & Spray',
+  'highlighter': 'Brushes & Spray',
+  'airbrush': 'Brushes & Spray',
+  'airbrushDark': 'Brushes & Spray',
+  'spray': 'Brushes & Spray',
+  'stipple': 'Brushes & Spray',
+  'smoke': 'Brushes & Spray',
+  'bokeh': 'Brushes & Spray',
+
+  // 4. 魔法与辉光 / Magic & Glow -> Magic & Glow
+  'neonGlow': 'Magic & Glow',
+  'rainbow': 'Magic & Glow',
+  'ribbon': 'Magic & Glow',
+  'constellation': 'Magic & Glow',
+  'electricArc': 'Magic & Glow',
+  'bubbleTrail': 'Magic & Glow',
+  'chain': 'Magic & Glow',
+  'audioSpectrum': 'Magic & Glow',
+  'stitch': 'Magic & Glow',
+  'galaxy': 'Magic & Glow',
+  'embers': 'Magic & Glow',
+  'glitter': 'Magic & Glow',
+  'starGlow': 'Magic & Glow',
+  'bubbles': 'Magic & Glow',
+  'crackle': 'Magic & Glow',
+  'sparkles': 'Magic & Glow',
+  'circuit': 'Magic & Glow',
+
+  // 5. 自然与元素 / Nature & Elements -> Nature & Elements
+  'leaves': 'Nature & Elements',
+  'petals': 'Nature & Elements',
+  'blossom': 'Nature & Elements',
+  'flowerEight': 'Nature & Elements',
+  'mapleLeaf': 'Nature & Elements',
+  'pineTree': 'Nature & Elements',
+  'grass': 'Nature & Elements',
+  'cloud': 'Nature & Elements',
+  'snowflake': 'Nature & Elements',
+  'snowDots': 'Nature & Elements',
+  'rainStreaks': 'Nature & Elements',
+  'flame': 'Nature & Elements',
+  'feather': 'Nature & Elements',
+  'ripples': 'Nature & Elements',
+  'sun': 'Nature & Elements',
+  'crescent': 'Nature & Elements',
+  'clover': 'Nature & Elements',
+  'mushroom': 'Nature & Elements',
+  'shell': 'Nature & Elements',
+
+  // 6. 印章与符号 / Stamps & Symbols -> Stamps & Shapes
+  'butterfly': 'Stamps & Shapes',
+  'paw': 'Stamps & Shapes',
+  'fish': 'Stamps & Shapes',
+  'hearts': 'Stamps & Shapes',
+  'heartsTex': 'Stamps & Shapes',
+  'stars': 'Stamps & Shapes',
+  'fourStar': 'Stamps & Shapes',
+  'eightStar': 'Stamps & Shapes',
+  'crown': 'Stamps & Shapes',
+  'gem': 'Stamps & Shapes',
+  'lightning': 'Stamps & Shapes',
+  'musicNotes': 'Stamps & Shapes',
+  'confetti': 'Stamps & Shapes',
+  'confettiTex': 'Stamps & Shapes',
+  'ghost': 'Stamps & Shapes',
+  'rocket': 'Stamps & Shapes',
+  'atom': 'Stamps & Shapes',
+  'puzzle': 'Stamps & Shapes',
+  'anchor': 'Stamps & Shapes',
+  'hourglass': 'Stamps & Shapes',
+  'lightbulb': 'Stamps & Shapes',
+  'bell': 'Stamps & Shapes',
+  'key': 'Stamps & Shapes',
+  'bowtie': 'Stamps & Shapes',
+  'crosshair': 'Stamps & Shapes',
+
+  // 7. 几何与轮廓 / Shapes & Outlines -> Stamps & Shapes
+  'outlineStar': 'Stamps & Shapes',
+  'outlineHeart': 'Stamps & Shapes',
+  'outlineCircle': 'Stamps & Shapes',
+  'outlineSquare': 'Stamps & Shapes',
+  'outlineTriangle': 'Stamps & Shapes',
+  'outlineHexagon': 'Stamps & Shapes',
+  'ring': 'Stamps & Shapes',
+  'squareRing': 'Stamps & Shapes',
+  'diamondRing': 'Stamps & Shapes',
+  'diamond': 'Stamps & Shapes',
+  'triangle': 'Stamps & Shapes',
+  'hexagon': 'Stamps & Shapes',
+  'octagon': 'Stamps & Shapes',
+  'shield': 'Stamps & Shapes',
+  'spiral': 'Stamps & Shapes',
+  'teardrop': 'Stamps & Shapes',
+
+  // 8. 材质与纹理 / Textures & FX -> Textures & FX
+  'marble': 'Textures & FX',
+  'honeycomb': 'Textures & FX',
+  'lace': 'Textures & FX',
+  'weave': 'Textures & FX',
+  'mesh': 'Textures & FX',
+  'cobweb': 'Textures & FX',
+  'cells': 'Textures & FX',
+  'fur': 'Textures & FX',
+  'hair': 'Textures & FX',
+  'grunge': 'Textures & FX',
+  'orange': 'Textures & FX',
+  'staticNoise': 'Textures & FX',
+  'sprinkles': 'Textures & FX',
+  'static': 'Textures & FX',
+
+  // 9. 图案、网点与 3D / Patterns, Halftone & 3D -> Patterns & 3D
+  'dots': 'Patterns & 3D',
+  'squares': 'Patterns & 3D',
+  'dash': 'Patterns & 3D',
+  'pixel': 'Patterns & 3D',
+  'mosaic': 'Patterns & 3D',
+  'halftone': 'Patterns & 3D',
+  'halftoneTex': 'Patterns & 3D',
+  'hatch': 'Patterns & 3D',
+  'halftoneRight': 'Patterns & 3D',
+  'halftoneLeft': 'Patterns & 3D',
+  'gradient': 'Patterns & 3D',
+  'brush3d': 'Patterns & 3D',
+  'candyCane': 'Patterns & 3D',
+  'saw': 'Patterns & 3D',
+  'gear': 'Patterns & 3D',
+  'heartbeat': 'Patterns & 3D',
+};
 
 /// 默认笔刷预设列表 (110+ 预设)
 ///
