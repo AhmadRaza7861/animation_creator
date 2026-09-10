@@ -270,7 +270,9 @@ class CanvasArea extends ConsumerWidget {
                       ],
                     ),
             ),
-            if (activeSticker != null && !controller.hasShownStickerHint)
+            if (activeSticker != null &&
+                !controller.hasShownStickerHint &&
+                controller.activeCategory == 'Brush')
               Positioned(
                 top: 12,
                 left: 16,
@@ -281,11 +283,11 @@ class CanvasArea extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B).withOpacity(0.88),
+                        color: const Color(0xFF1E293B).withValues(alpha: 0.88),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),

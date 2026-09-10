@@ -1334,87 +1334,89 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                   },
                 ),
                  const Spacer(),
-                Tooltip(
-                  message: controller.enableStickers
-                      ? 'Sticker Mode: Strokes can be moved, scaled & rotated. Tap to switch to Freehand.'
-                      : 'Freehand Mode: Direct drawing without handles. Tap to switch to Sticker Mode.',
-                  child: InkWell(
-                    onTap: () {
-                      controller.enableStickers = !controller.enableStickers;
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(
-                                controller.enableStickers
-                                    ? Icons.auto_awesome_rounded
-                                    : Icons.edit_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
+                if (controller.activeCategory == 'Brush') ...[
+                  Tooltip(
+                    message: controller.enableStickers
+                        ? 'Sticker Mode: Strokes can be moved, scaled & rotated. Tap to switch to Freehand.'
+                        : 'Freehand Mode: Direct drawing without handles. Tap to switch to Sticker Mode.',
+                    child: InkWell(
+                      onTap: () {
+                        controller.enableStickers = !controller.enableStickers;
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(
                                   controller.enableStickers
-                                      ? '🎯 Sticker Mode Active: Strokes can be moved & rotated'
-                                      : '✏️ Freehand Mode Active: Direct drawing on canvas',
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                      ? Icons.auto_awesome_rounded
+                                      : Icons.edit_rounded,
+                                  color: Colors.white,
+                                  size: 18,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    controller.enableStickers
+                                        ? '🎯 Sticker Mode Active: Strokes can be moved & rotated'
+                                        : '✏️ Freehand Mode Active: Direct drawing on canvas',
+                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            duration: const Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
-                      decoration: BoxDecoration(
-                        color: controller.enableStickers
-                            ? ColorConstants.accent.withOpacity(0.12)
-                            : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+                        decoration: BoxDecoration(
                           color: controller.enableStickers
-                              ? ColorConstants.accent.withOpacity(0.4)
-                              : const Color(0xFFE5E7EB),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            controller.enableStickers
-                                ? Icons.auto_awesome_rounded
-                                : Icons.edit_rounded,
-                            size: 13,
+                              ? ColorConstants.accent.withValues(alpha: 0.12)
+                              : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color: controller.enableStickers
-                                ? ColorConstants.accent
-                                : const Color(0xFF4B5563),
+                              ? ColorConstants.accent.withValues(alpha: 0.4)
+                              : const Color(0xFFE5E7EB),
+                            width: 1,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            controller.enableStickers ? 'Sticker' : 'Draw',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              controller.enableStickers
+                                  ? Icons.auto_awesome_rounded
+                                  : Icons.edit_rounded,
+                              size: 13,
                               color: controller.enableStickers
                                   ? ColorConstants.accent
                                   : const Color(0xFF4B5563),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              controller.enableStickers ? 'Sticker' : 'Draw',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: controller.enableStickers
+                                    ? ColorConstants.accent
+                                    : const Color(0xFF4B5563),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 2),
+                  const SizedBox(width: 2),
+                ],
                 IconButton(
                   icon: const Icon(Icons.undo_rounded, size: 22, color: ColorConstants.darkText),
                   padding: const EdgeInsets.all(6),
@@ -1863,74 +1865,76 @@ class _EditorScreenState extends ConsumerState<EditorScreen> with WidgetsBinding
                     ),
                     const SizedBox(height: 5),
 
-                    // 4. Sticker / Object Mode Toggle
-                    GestureDetector(
-                      onTap: () {
-                        controller.enableStickers = !controller.enableStickers;
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(
-                                  controller.enableStickers
-                                      ? Icons.auto_awesome_rounded
-                                      : Icons.edit_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
+                    // 4. Sticker / Object Mode Toggle (Only when Brush is selected)
+                    if (controller.activeCategory == 'Brush') ...[
+                      GestureDetector(
+                        onTap: () {
+                          controller.enableStickers = !controller.enableStickers;
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(
                                     controller.enableStickers
-                                        ? '🎯 Sticker Mode Active: Strokes can be moved & rotated'
-                                        : '✏️ Freehand Mode Active: Direct drawing on canvas',
-                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                        ? Icons.auto_awesome_rounded
+                                        : Icons.edit_rounded,
+                                    color: Colors.white,
+                                    size: 18,
                                   ),
-                                ),
-                              ],
-                            ),
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 40,
-                        padding: const EdgeInsets.symmetric(vertical: 3.5),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: controller.enableStickers
-                              ? ColorConstants.accent.withValues(alpha: 0.09)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 20,
-                              color: controller.enableStickers
-                                  ? ColorConstants.accent
-                                  : Colors.grey.shade700,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Sticker',
-                              style: TextStyle(
-                                fontSize: 9.0,
-                                fontWeight: controller.enableStickers ? FontWeight.w800 : FontWeight.w600,
-                                color: controller.enableStickers ? ColorConstants.accent : Colors.grey.shade600,
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      controller.enableStickers
+                                          ? '🎯 Sticker Mode Active: Strokes can be moved & rotated'
+                                          : '✏️ Freehand Mode Active: Direct drawing on canvas',
+                                      style: const TextStyle(fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
+                                ],
                               ),
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
-                          ],
+                          );
+                        },
+                        child: Container(
+                          width: 40,
+                          padding: const EdgeInsets.symmetric(vertical: 3.5),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: controller.enableStickers
+                                ? ColorConstants.accent.withValues(alpha: 0.09)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 20,
+                                color: controller.enableStickers
+                                    ? ColorConstants.accent
+                                    : Colors.grey.shade700,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Sticker',
+                                style: TextStyle(
+                                  fontSize: 9.0,
+                                  fontWeight: controller.enableStickers ? FontWeight.w800 : FontWeight.w600,
+                                  color: controller.enableStickers ? ColorConstants.accent : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 5),
+                      const SizedBox(height: 5),
+                    ],
 
                     // Collapse button
                     GestureDetector(

@@ -13,6 +13,7 @@ import '../../../../package_code/src/paint_contents/paint_content_decoder.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
+import '../../../../core/utils/app_path_provider.dart';
 import '../widgets/sticker_widgets/text_sticker_widget.dart';
 import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
@@ -67,6 +68,7 @@ class EditorController extends ChangeNotifier {
       color: Colors.black,
     );
     _addNewCanvas(initial: true);
+    _loadStickerHintPersistence();
     if (projectId != null) {
       loadProjectData();
     }
@@ -152,12 +154,40 @@ class EditorController extends ChangeNotifier {
   bool get enableStickers => _enableStickers;
 
   static bool _hasShownStickerHint = false;
+  static bool _hintPersistenceLoaded = false;
+
   bool get hasShownStickerHint => _hasShownStickerHint;
+
+  Future<void> _loadStickerHintPersistence() async {
+    if (_hintPersistenceLoaded) return;
+    try {
+      final docDir = await AppPathProvider.getSafeDocumentsDirectory();
+      final flagFile = File('${docDir.path}/sticker_hint_shown.flag');
+      if (await flagFile.exists()) {
+        _hasShownStickerHint = true;
+      }
+      _hintPersistenceLoaded = true;
+      notifyListeners();
+    } catch (_) {}
+  }
+
   void markStickerHintShown() {
     if (!_hasShownStickerHint) {
       _hasShownStickerHint = true;
+      _persistStickerHintShown();
       notifyListeners();
     }
+  }
+
+  Future<void> _persistStickerHintShown() async {
+    try {
+      final docDir = await AppPathProvider.getSafeDocumentsDirectory();
+      final flagFile = File('${docDir.path}/sticker_hint_shown.flag');
+      if (!await flagFile.exists()) {
+        await flagFile.create(recursive: true);
+        await flagFile.writeAsString('1');
+      }
+    } catch (_) {}
   }
 
   set projectName(String val) {
@@ -1410,7 +1440,10 @@ class EditorController extends ChangeNotifier {
 
   // Stamping / confirm active stickers
   void stampActiveSticker() {
-    _hasShownStickerHint = true;
+    if (!_hasShownStickerHint) {
+      _hasShownStickerHint = true;
+      _persistStickerHintShown();
+    }
     if (drawingController.isCurrentLayerLocked) return;
 
     if (_activeSticker is ActiveTextSticker) {
@@ -1563,9 +1596,6 @@ class EditorController extends ChangeNotifier {
       if (_activeSticker != null) {
         stampActiveSticker();
       }
-      if (!_enableStickers && content is! Lasso && content is! ShapeStickerContent) {
-        return false;
-      }
       if (content is Circle && content.radius > 0) {
         final double inflation = content.paint.strokeWidth / 2;
         final actualCenter = content.startFromCenter ? content.startPoint : content.center;
@@ -1616,6 +1646,7 @@ class EditorController extends ChangeNotifier {
         notifyListeners();
         return true;
       } else if (content is FreehandLine || content is SmoothLine) {
+        if (!_enableStickers) return false;
         final List<Offset> points = content is FreehandLine
             ? (content as FreehandLine).points ?? const []
             : (content as SmoothLine).points;
