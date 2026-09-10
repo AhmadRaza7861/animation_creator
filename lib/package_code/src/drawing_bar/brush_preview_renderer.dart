@@ -96,15 +96,14 @@ class BrushPreviewRenderer {
     double width = 8.0;
 
     if (id.contains('pencilh')) {
-      width = 2.2;
+      width = 14.0;
+    } else if (id.contains('pencil6b') || id.contains('crayon')) {
+      width = 18.0;
     } else if (id.contains('pencil') ||
         id.contains('sketch') ||
-        id.contains('fineliner') ||
-        id.contains('technical') ||
+        id.contains('grain') ||
         id.contains('crayongrain')) {
-      width = 3.6;
-    } else if (id.contains('crayon') || id.contains('pencil6b')) {
-      width = 5.5;
+      width = 16.0;
     } else if (id.contains('calligraphy') ||
         id.contains('fountain') ||
         id.contains('dip') ||
@@ -114,7 +113,7 @@ class BrushPreviewRenderer {
         id.contains('brushpen') ||
         id.contains('sumi') ||
         id.contains('reed')) {
-      width = 7.5;
+      width = 12.0;
     } else if (id.contains('stamp') ||
         id.contains('heart') ||
         id.contains('star') ||
