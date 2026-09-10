@@ -223,11 +223,9 @@ class _BrushCell extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    size: Size.infinite,
-                    painter: _BrushPreviewPainter(preset: preset, color: color),
-                  ),
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: _BrushPreviewPainter(preset: preset, color: color),
                 ),
               ),
             ),

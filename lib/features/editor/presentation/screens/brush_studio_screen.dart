@@ -84,7 +84,6 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   void initState() {
     super.initState();
     _isListView = _lastIsListView;
-    BrushStampLibrary.instance.prewarmAsync();
     _allPresets = widget.presets ?? kDefaultBrushPresets;
     _strokeWidth = widget.drawingController.drawConfig.value.strokeWidth;
     final String? presetId = widget.drawingController.activeBrushPresetId;
@@ -164,6 +163,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
     _lastCategory = _selectedCategory;
     _gridScrollController.dispose();
     _categoryScrollController.dispose();
+    BrushPreviewRenderer.clearCache();
     // _searchController.dispose();
     super.dispose();
   }
@@ -624,6 +624,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                 label: Text(cat),
                 selected: isSelected,
                 onSelected: (_) {
+                  BrushPreviewRenderer.clearCache();
                   setState(() {
                     _selectedCategory = cat;
                     _lastCategory = cat;
@@ -697,6 +698,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       return ListView.separated(
         controller: _gridScrollController,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        cacheExtent: 180.0,
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
@@ -723,6 +725,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
     return GridView.builder(
       controller: _gridScrollController,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      cacheExtent: 180.0,
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
@@ -999,12 +1002,10 @@ class _StudioShowcaseCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: _StudioPreviewPainter(
-                      preset: preset,
-                      color: color,
-                    ),
+                child: CustomPaint(
+                  painter: _StudioPreviewPainter(
+                    preset: preset,
+                    color: color,
                   ),
                 ),
               ),
@@ -1077,12 +1078,10 @@ class _StudioBrushCard extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: RepaintBoundary(
-                        child: CustomPaint(
-                          painter: _StudioPreviewPainter(
-                            preset: preset,
-                            color: color,
-                          ),
+                      child: CustomPaint(
+                        painter: _StudioPreviewPainter(
+                          preset: preset,
+                          color: color,
                         ),
                       ),
                     ),

@@ -90,72 +90,52 @@ class ImageTipBrush extends FreehandLine {
       return;
     }
 
-    final ui.Image image = BrushStampLibrary.instance.get(stampKey);
     final double width = paint.strokeWidth;
     final double radius = width / 2;
     final double angleRad = angle * 3.1415926535897932 / 180;
 
-    final Paint tint = Paint()
-      ..colorFilter = ColorFilter.mode(paint.color, BlendMode.srcIn)
-      ..isAntiAlias = true
-      ..filterQuality = FilterQuality.medium;
-    final double sigma = radius * (1 - hardness) * 0.6;
-    if (sigma > 0) {
-      tint.maskFilter = MaskFilter.blur(BlurStyle.normal, sigma);
-    }
-
-    final Rect src =
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
-
     if (points.length == 1) {
-      _stamp(canvas, image, src, points.first, radius, angleRad, tint);
+      BrushStampLibrary.instance.paintDirect(
+        canvas,
+        stampKey,
+        points.first,
+        radius,
+        paint.color,
+        angle: angleRad,
+        flipX: flipX,
+        flipY: flipY,
+        hardness: hardness,
+      );
       return;
     }
 
-    final double frac = spacing > 0 ? spacing : 0.05;
-    final double step = (width * frac).clamp(0.5, double.infinity);
+    final double frac = spacing > 0 ? spacing : 0.08;
+    final double step = (width * frac).clamp(1.2, double.infinity);
     final Path path = buildSmoothPath();
 
+    int index = 0;
     for (final ui.PathMetric metric in path.computeMetrics()) {
       double distance = 0.0;
-      while (distance <= metric.length) {
+      while (distance <= metric.length && index < 400) {
         final ui.Tangent? tangent = metric.getTangentForOffset(distance);
         if (tangent != null) {
-          _stamp(
+          BrushStampLibrary.instance.paintDirect(
             canvas,
-            image,
-            src,
+            stampKey,
             tangent.position,
             radius,
-            (followPath ? tangent.angle : 0) + angleRad,
-            tint,
+            paint.color,
+            angle: (followPath ? tangent.angle : 0) + angleRad,
+            flipX: flipX,
+            flipY: flipY,
+            hardness: hardness,
           );
         }
+        index++;
         distance += step;
       }
+      if (index >= 400) break;
     }
-  }
-
-  void _stamp(
-    Canvas canvas,
-    ui.Image image,
-    Rect src,
-    Offset center,
-    double radius,
-    double angle,
-    Paint paint,
-  ) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(angle);
-    canvas.scale(flipX ? -1 : 1, flipY ? -1 : 1);
-    canvas.drawImageRect(
-      image,
-      src,
-      Rect.fromCenter(center: Offset.zero, width: radius * 2, height: radius * 2),
-      paint,
-    );
-    canvas.restore();
   }
 
   @override

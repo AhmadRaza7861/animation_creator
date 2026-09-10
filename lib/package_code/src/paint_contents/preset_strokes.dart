@@ -53,14 +53,14 @@ abstract class PresetStroke extends FreehandLine {
 
   /// 沿路径行走 / Walk along the smoothed path
   void walk(double step, void Function(ui.Tangent t, double d, double total, int i) fn) {
-    final double s = step.clamp(0.5, double.infinity);
+    final double s = step.clamp(1.2, double.infinity);
     final List<ui.PathMetric> ms = buildSmoothPath().computeMetrics().toList();
     final double total = ms.fold<double>(0, (double a, ui.PathMetric m) => a + m.length);
     int i = 0;
     double acc = 0;
     for (final ui.PathMetric m in ms) {
       double d = 0;
-      while (d <= m.length) {
+      while (d <= m.length && i < 400) {
         final ui.Tangent? t = m.getTangentForOffset(d);
         if (t != null) {
           fn(t, acc + d, total, i);
@@ -68,6 +68,7 @@ abstract class PresetStroke extends FreehandLine {
         i++;
         d += s;
       }
+      if (i >= 400) break;
       acc += m.length;
     }
   }

@@ -795,16 +795,14 @@ class _TipDabPainter extends CustomPainter {
     final Offset center = size.center(Offset.zero);
     final double radius = size.shortestSide * 0.42;
 
-    if (item.isStamp) {
-      final ui.Image image = BrushStampLibrary.instance.get(item.stampKey!);
-      canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        Rect.fromCenter(center: center, width: radius * 2, height: radius * 2),
-        Paint()
-          ..colorFilter = ColorFilter.mode(color, BlendMode.srcIn)
-          ..isAntiAlias = true
-          ..filterQuality = FilterQuality.medium,
+    if (item.isStamp && item.stampKey != null) {
+      BrushStampLibrary.instance.paintDirect(
+        canvas,
+        item.stampKey!,
+        center,
+        radius,
+        color,
+        hardness: item.hardness,
       );
       return;
     }

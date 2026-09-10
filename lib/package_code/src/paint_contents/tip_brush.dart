@@ -222,14 +222,14 @@ class TipBrush extends FreehandLine {
       return;
     }
 
-    final double frac = spacing > 0 ? spacing : 0.05;
-    final double step = (width * frac).clamp(0.5, double.infinity);
+    final double frac = spacing > 0 ? spacing : 0.08;
+    final double step = (width * frac).clamp(1.2, double.infinity);
     final Path path = buildSmoothPath();
 
     int index = 0;
     for (final PathMetric metric in path.computeMetrics()) {
       double distance = 0.0;
-      while (distance <= metric.length) {
+      while (distance <= metric.length && index < 400) {
         final Tangent? tangent = metric.getTangentForOffset(distance);
         if (tangent != null) {
           paintDab(
@@ -249,6 +249,7 @@ class TipBrush extends FreehandLine {
         index++;
         distance += step;
       }
+      if (index >= 400) break;
     }
   }
 

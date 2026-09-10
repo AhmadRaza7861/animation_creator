@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
+import 'dart:ui' as ui;
 
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
@@ -61,13 +62,13 @@ abstract class ShapeBrushLine extends FreehandLine {
     }
 
     // 间距随画笔粗细缩放，并保证为正防止死循环
-    final double step = (width * spacingRatio).clamp(0.5, double.infinity);
+    final double step = (width * spacingRatio).clamp(1.2, double.infinity);
     final Path path = buildSmoothPath();
 
     int index = 0;
     for (final PathMetric metric in path.computeMetrics()) {
       double distance = 0.0;
-      while (distance <= metric.length) {
+      while (distance <= metric.length && index < 400) {
         final Tangent? tangent = metric.getTangentForOffset(distance);
         if (tangent != null) {
           paintStamp(canvas, tangent.position, tangent.angle, radius, stampPaint, index);
@@ -75,6 +76,7 @@ abstract class ShapeBrushLine extends FreehandLine {
         index++;
         distance += step;
       }
+      if (index >= 400) break;
     }
   }
 
@@ -391,13 +393,7 @@ class SoftRoundBrush extends ShapeBrushLine {
   String get contentType => 'SoftRoundBrush';
 
   @override
-  Paint stampPaintOf(Paint source) {
-    final double sigma = (source.strokeWidth / 2) * softness;
-    return source.copyWith(
-      style: PaintingStyle.fill,
-      maskFilter: sigma > 0 ? MaskFilter.blur(BlurStyle.normal, sigma) : null,
-    );
-  }
+  Paint stampPaintOf(Paint source) => source.copyWith(style: PaintingStyle.fill);
 
   @override
   void paintStamp(
@@ -408,7 +404,21 @@ class SoftRoundBrush extends ShapeBrushLine {
     Paint paint,
     int index,
   ) {
-    canvas.drawCircle(center, radius, paint);
+    if (softness <= 0.05) {
+      canvas.drawCircle(center, radius, paint);
+      return;
+    }
+    final Color color = paint.color;
+    final double innerStop = (1.0 - softness).clamp(0.0, 0.9);
+    final Paint gradPaint = Paint()
+      ..isAntiAlias = true
+      ..shader = ui.Gradient.radial(
+        center,
+        radius,
+        <Color>[color, color, color.withValues(alpha: 0)],
+        <double>[0.0, innerStop, 1.0],
+      );
+    canvas.drawCircle(center, radius, gradPaint);
   }
 
   @override
@@ -492,11 +502,9 @@ class AirbrushBrush extends ShapeBrushLine {
 
   @override
   Paint stampPaintOf(Paint source) {
-    final double sigma = (source.strokeWidth / 2) * 0.12;
     return source.copyWith(
       style: PaintingStyle.fill,
-      color: source.color.withValues(alpha: source.color.a * 0.5),
-      maskFilter: sigma > 0 ? MaskFilter.blur(BlurStyle.normal, sigma) : null,
+      color: source.color.withValues(alpha: (source.color.a * 0.45).clamp(0.0, 1.0)),
     );
   }
 

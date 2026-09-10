@@ -65,7 +65,7 @@ abstract class PatternLine extends FreehandLine {
     final double width = paint.strokeWidth;
     final double amp = width * amplitude;
     final double per = (width * period).clamp(2.0, double.infinity);
-    final double step = (per / 10).clamp(0.5, double.infinity);
+    final double step = (per / 10).clamp(1.2, double.infinity);
 
     final Paint line = paint.copyWith(
       style: PaintingStyle.stroke,
@@ -76,10 +76,11 @@ abstract class PatternLine extends FreehandLine {
 
     final Path out = Path();
     bool started = false;
+    int index = 0;
 
     for (final PathMetric metric in buildSmoothPath().computeMetrics()) {
       double d = 0;
-      while (d <= metric.length) {
+      while (d <= metric.length && index < 400) {
         final Tangent? t = metric.getTangentForOffset(d);
         if (t != null) {
           final double off = _wave(d / per) * amp;
@@ -91,8 +92,10 @@ abstract class PatternLine extends FreehandLine {
             out.lineTo(p.dx, p.dy);
           }
         }
+        index++;
         d += step;
       }
+      if (index >= 400) break;
     }
 
     canvas.drawPath(out, line);
@@ -314,16 +317,17 @@ class HairLine extends FreehandLine {
     );
 
     final List<PathMetric> metrics = buildSmoothPath().computeMetrics().toList();
-    final double step = (width * 0.25).clamp(1.0, double.infinity);
+    final double step = (width * 0.25).clamp(1.2, double.infinity);
 
     for (int s = 0; s < strands; s++) {
       final double base = strands == 1 ? 0 : (s / (strands - 1) - 0.5) * width;
       final Path strand = Path();
       bool started = false;
+      int index = 0;
 
       for (final PathMetric metric in metrics) {
         double d = 0;
-        while (d <= metric.length) {
+        while (d <= metric.length && index < 400) {
           final Tangent? t = metric.getTangentForOffset(d);
           if (t != null) {
             // 轻微起伏，让发丝不完全平行
@@ -337,8 +341,10 @@ class HairLine extends FreehandLine {
               strand.lineTo(p.dx, p.dy);
             }
           }
+          index++;
           d += step;
         }
+        if (index >= 400) break;
       }
       canvas.drawPath(strand, hair);
     }
@@ -396,16 +402,19 @@ class PixelLine extends FreehandLine {
       return;
     }
 
-    final double step = (cell / 2).clamp(0.5, double.infinity);
+    final double step = (cell / 2).clamp(1.2, double.infinity);
+    int index = 0;
     for (final PathMetric metric in buildSmoothPath().computeMetrics()) {
       double d = 0;
-      while (d <= metric.length) {
+      while (d <= metric.length && index < 400) {
         final Tangent? t = metric.getTangentForOffset(d);
         if (t != null) {
           put(t.position);
         }
+        index++;
         d += step;
       }
+      if (index >= 400) break;
     }
   }
 
@@ -527,16 +536,17 @@ class SketchLine extends FreehandLine {
     );
 
     final List<PathMetric> metrics = buildSmoothPath().computeMetrics().toList();
-    final double step = (width * 0.4).clamp(1.0, double.infinity);
+    final double step = (width * 0.4).clamp(1.2, double.infinity);
 
     for (int pass = 0; pass < passes; pass++) {
       final Path scratch = Path();
       bool started = false;
       int i = 0;
+      int index = 0;
 
       for (final PathMetric metric in metrics) {
         double d = 0;
-        while (d <= metric.length) {
+        while (d <= metric.length && index < 400) {
           final Tangent? t = metric.getTangentForOffset(d);
           if (t != null) {
             final double off = _rand(seed, pass * 1000 + i, 3) * width * 0.45;
@@ -552,8 +562,10 @@ class SketchLine extends FreehandLine {
             }
           }
           i++;
+          index++;
           d += step;
         }
+        if (index >= 400) break;
       }
       canvas.drawPath(scratch, pen);
     }
