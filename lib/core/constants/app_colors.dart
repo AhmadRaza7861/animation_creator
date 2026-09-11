@@ -34,4 +34,5 @@ class ColorConstants {
   static const Color text_sub2_color = Color(0xff918A8A);
   static const Color divider_color = Color(0xffE9E9E9);
   static const Color border_color_2 = Color(0xffF2F1F1);
+  static const Color un_select_color = Color(0xff978F8F);
 }

@@ -266,111 +266,18 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       body: SafeArea(
         child: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(color: ColorConstants.primary),
+                child: CircularProgressIndicator(color: Color(0xFF6366F1)),
               )
             : (_currentTab == 0 ? _buildHomeTab() : _buildProjectsTab()),
       ),
-      floatingActionButton: SizedBox(
-        width: 60,
-        height: 60,
-        child: FloatingActionButton(
-          onPressed: _createNewProject,
-          backgroundColor: ColorConstants.primary,
-          elevation: 6,
-          shape: const CircleBorder(),
-          child: const Icon(
-            Icons.add_rounded,
-            color: Colors.white,
-            size: 34,
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        height: 72,
-        color: Colors.white,
-        elevation: 16,
-        padding: EdgeInsets.zero,
-        surfaceTintColor: Colors.white,
-        child: Container(
-          decoration: const BoxDecoration(
-            border: Border(
-              top: BorderSide(
-                color: Color(0xFFEEF0F6),
-                width: 1.2,
-              ),
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 42.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Home Tab
-              InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () {
-                  setState(() {
-                    _currentTab = 0;
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.home_rounded,
-                        color: _currentTab == 0 ? ColorConstants.primary : const Color(0xFFB0A9B8),
-                        size: 26,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        StringConstants.homeTab,
-                        style: TextStyle(
-                          color: _currentTab == 0 ? ColorConstants.primary : const Color(0xFFB0A9B8),
-                          fontSize: 11,
-                          fontWeight: _currentTab == 0 ? FontWeight.w800 : FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 48), // Gap for central FAB
-              // Projects Tab
-              InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () {
-                  setState(() {
-                    _currentTab = 1;
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.folder_rounded,
-                        color: _currentTab == 1 ? ColorConstants.primary : const Color(0xFFB0A9B8),
-                        size: 26,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        StringConstants.projectsTab,
-                        style: TextStyle(
-                          color: _currentTab == 1 ? ColorConstants.primary : const Color(0xFFB0A9B8),
-                          fontSize: 11,
-                          fontWeight: _currentTab == 1 ? FontWeight.w800 : FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      bottomNavigationBar: CurvedScoopBottomNavBar(
+        currentTab: _currentTab,
+        onTabSelected: (index) {
+          if (_currentTab != index) {
+            setState(() => _currentTab = index);
+          }
+        },
+        onCenterAction: _createNewProject,
       ),
     );
   }
@@ -1354,7 +1261,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: ColorConstants.primary,
+                    backgroundColor: const Color(0xFF0F172A),
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     shape: RoundedRectangleBorder(
@@ -1370,3 +1277,254 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
   }
 }
+
+// ============================================================================
+// CURVED SCOOPED BOTTOM NAVIGATION BAR
+// ============================================================================
+
+class CurvedScoopBottomNavBar extends StatelessWidget {
+  final int currentTab;
+  final ValueChanged<int> onTabSelected;
+  final VoidCallback onCenterAction;
+
+  const CurvedScoopBottomNavBar({
+    super.key,
+    required this.currentTab,
+    required this.onTabSelected,
+    required this.onCenterAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    const double barHeight = 64.0;
+    final double totalHeight = barHeight + bottomPadding;
+
+    return SizedBox(
+      height: totalHeight + 12.0,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          // 1. Curved Scooped White Background
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: totalHeight,
+            child: CustomPaint(
+              size: Size(double.infinity, totalHeight),
+              painter: _CurvedScoopPainter(
+                backgroundColor: Colors.white,
+                borderColor: const Color(0xFFEFF1F6),
+                scoopRadius: 34.0,
+                scoopDepth: 20.0,
+                cornerRadius: 24.0,
+              ),
+            ),
+          ),
+
+          // 2. Side Tab Items (Home on left, Projects on right)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: bottomPadding,
+            height: barHeight,
+            child: Row(
+              children: [
+                // Left Tab (Home)
+                Expanded(
+                  child: _buildNavItem(
+                    icon: currentTab == 0 ? Icons.home_rounded : Icons.home_outlined,
+                    label: StringConstants.homeTab,
+                    isSelected: currentTab == 0,
+                    onTap: () => onTabSelected(0),
+                  ),
+                ),
+
+                // Center Spacer for the floating circle
+                const SizedBox(width: 84),
+
+                // Right Tab (Projects)
+                Expanded(
+                  child: _buildNavItem(
+                    icon: currentTab == 1 ? Icons.folder_rounded : Icons.folder_outlined,
+                    label: StringConstants.projectsTab,
+                    isSelected: currentTab == 1,
+                    onTap: () => onTabSelected(1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 3. Central Protruding Floating Action Button in App Signature Theme
+          Positioned(
+            top: 0,
+            child: GestureDetector(
+              onTap: onCenterAction,
+              child: Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFFFF9318),
+                      Color(0xFFFF7A1A),
+                      Color(0xFFFF5E28),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final Color itemColor = isSelected ? ColorConstants.text_color : ColorConstants.un_select_color;
+
+    return InkWell(
+      onTap: onTap,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 25,
+            color: itemColor,
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: itemColor,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+              fontSize: 11,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurvedScoopPainter extends CustomPainter {
+  final Color backgroundColor;
+  final Color borderColor;
+  final double scoopRadius;
+  final double scoopDepth;
+  final double cornerRadius;
+
+  _CurvedScoopPainter({
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.scoopRadius,
+    required this.scoopDepth,
+    required this.cornerRadius,
+  });
+
+  Path _createPath(Size size) {
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+    final cX = w / 2;
+
+    final double rCorner = cornerRadius;
+    final double rScoop = scoopRadius;
+    final double dScoop = scoopDepth;
+    final double t = 16.0;
+
+    final double x1 = cX - rScoop - t;
+    final double x2 = cX + rScoop + t;
+
+    path.moveTo(0, h);
+    path.lineTo(0, rCorner);
+    path.quadraticBezierTo(0, 0, rCorner, 0);
+    path.lineTo(x1, 0);
+
+    // Smooth entrance into scoop
+    path.cubicTo(
+      cX - rScoop, 0,
+      cX - rScoop + 6, dScoop,
+      cX, dScoop,
+    );
+
+    // Smooth exit from scoop
+    path.cubicTo(
+      cX + rScoop - 6, dScoop,
+      cX + rScoop, 0,
+      x2, 0,
+    );
+
+    path.lineTo(w - rCorner, 0);
+    path.quadraticBezierTo(w, 0, w, rCorner);
+    path.lineTo(w, h);
+    path.close();
+
+    return path;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _createPath(size);
+
+    // Draw clean ambient drop shadow
+    canvas.drawShadow(path, Colors.black.withValues(alpha: 0.06), 10.0, false);
+
+    // Draw solid white fill
+    final fillPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, fillPaint);
+
+    // Draw subtle hairline top border
+    final strokePaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawPath(path, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CurvedScoopPainter oldDelegate) {
+    return oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.scoopRadius != scoopRadius ||
+        oldDelegate.scoopDepth != scoopDepth ||
+        oldDelegate.borderColor != borderColor;
+  }
+}
+
+
