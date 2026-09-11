@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/app_back_button.dart';
 
 class BackgroundPresetsScreen extends StatefulWidget {
   final String? initialPattern;
@@ -44,10 +45,7 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: ColorConstants.darkText),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: const AppBackButton(),
         title:  Text(
           StringConstants.background_presets,
           //preset

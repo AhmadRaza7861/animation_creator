@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../data/tutorials_data.dart';
 import '../../data/tutorial_project_builder.dart';
@@ -127,18 +128,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF4F5F8),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 16),
-            onPressed: () => Navigator.pop(context),
-            padding: EdgeInsets.zero,
-          ),
-        ),
+        leading: const AppBackButton(),
         title: _isSearching
             ? TextField(
                 controller: _searchController,

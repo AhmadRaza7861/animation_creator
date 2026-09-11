@@ -10,6 +10,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../data/project_repository.dart';
 import '../../../templates/domain/template_model.dart';
 import '../widgets/preview_pattern_painter.dart';
@@ -457,10 +458,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
       extendBodyBehindAppBar: true,
       //backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: ColorConstants.darkText,size: 20,),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: const AppBackButton(),
         title:Text(
           StringConstants.new_project,
           style: TextStyle(

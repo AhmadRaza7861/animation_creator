@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../dialogs/rate_us_dialog.dart';
 import '../dialogs/contact_us_dialog.dart';
 import 'privacy_policy_screen.dart';
@@ -26,10 +27,7 @@ class SettingsScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: const AppBackButton(),
         title: const Text(
           'Settings',
           style: TextStyle(

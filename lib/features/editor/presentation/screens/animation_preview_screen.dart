@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../controllers/editor_controller.dart'; // contains CanvasBackground definition
 
@@ -71,9 +72,8 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
-          onPressed: () => Navigator.pop(context),
+        leading: AppBackButton(
+          onPressed: _stopAndGoBack,
         ),
         title: const Text(
           'Preview Animation',

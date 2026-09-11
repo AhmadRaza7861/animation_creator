@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
 import '../constants/app_colors.dart';
 import 'primary_button.dart';
+import 'app_back_button.dart';
 
 class ColorPickerScreen extends StatefulWidget {
   final Color initialColor;
@@ -216,10 +217,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
             color: ColorConstants.darkText,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: const AppBackButton(),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

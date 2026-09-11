@@ -3,6 +3,7 @@ import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/widgets/app_back_button.dart';
 
 class FpsScreen extends StatefulWidget {
   final int initialFps;
@@ -72,12 +73,7 @@ class _FpsScreenState extends State<FpsScreen> {
     return Scaffold(
       backgroundColor: ColorConstants.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
-          onPressed: () {
-            Navigator.pop(context); // Cancel changes by popping with null
-          },
-        ),
+        leading: const AppBackButton(),
         actions: [
           TextButton(
             onPressed: () {

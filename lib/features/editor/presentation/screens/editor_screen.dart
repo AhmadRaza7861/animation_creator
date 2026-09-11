@@ -23,6 +23,7 @@ import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/custom_switch.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 
@@ -1046,18 +1047,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
               ),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 20,
-                      color: ColorConstants.darkText,
-                    ),
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    visualDensity: VisualDensity.compact,
+                  AppBackButton(
+                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                    size: 36,
+                    borderRadius: 10,
                     onPressed: () => _handleBack(context, controller),
                   ),
                   ValueListenableBuilder<DrawConfig>(

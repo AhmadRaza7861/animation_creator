@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/app_back_button.dart';
 
 class GalleryScreen extends StatelessWidget {
   final List<ui.Image> images;
@@ -23,10 +24,7 @@ class GalleryScreen extends StatelessWidget {
         backgroundColor: ColorConstants.background,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: ColorConstants.darkText),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: const AppBackButton(),
       ),
       body: images.isEmpty
           ? Center(

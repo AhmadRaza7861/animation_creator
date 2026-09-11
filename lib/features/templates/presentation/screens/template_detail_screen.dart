@@ -6,6 +6,7 @@ import '../../../editor/presentation/screens/editor_screen.dart';
 import '../../data/tutorial_project_builder.dart';
 import '../../domain/template_model.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/app_back_button.dart';
 
 class TemplateDetailScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -234,18 +235,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF4F5F8),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 16),
-            onPressed: () => Navigator.pop(context),
-            padding: EdgeInsets.zero,
-          ),
-        ),
+        leading: const AppBackButton(),
         title: Text(
           widget.template.name,
           maxLines: 1,

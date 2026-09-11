@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/helper/ex_value_builder.dart';
@@ -548,24 +549,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       backgroundColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0.5,
-      leading: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => Navigator.of(context).pop(),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2F3F5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Color(0xFF2D3139),
-            ),
-          ),
-        ),
-      ),
+      leading: const AppBackButton(),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [

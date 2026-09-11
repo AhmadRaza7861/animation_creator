@@ -4,6 +4,7 @@ import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/widgets/app_back_button.dart';
 import '../../../services/movie_export_service.dart';
 import 'fullscreen_player_screen.dart';
 
@@ -31,25 +32,23 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
   @override
   void initState() {
     super.initState();
-    _isGif = widget.options.format.toUpperCase() == 'GIF' || widget.filePath.toLowerCase().endsWith('.gif');
+    _isGif = widget.filePath.toLowerCase().endsWith('.gif');
     if (!_isGif) {
-      _initVideoPlayer();
+      _initVideo();
     }
   }
 
-  Future<void> _initVideoPlayer() async {
-    try {
-      final file = File(widget.filePath);
-      _videoController = VideoPlayerController.file(file);
-      await _videoController!.initialize();
-      if (mounted) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error initializing thumbnail player: $e');
-    }
+  Future<void> _initVideo() async {
+    _videoController = VideoPlayerController.file(File(widget.filePath))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          _videoController?.setLooping(true);
+          _videoController?.play();
+        }
+      });
   }
 
   @override
@@ -176,10 +175,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ColorConstants.darkText, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: const AppBackButton(),
         title: const Text(
           'Export Ready',
           style: TextStyle(

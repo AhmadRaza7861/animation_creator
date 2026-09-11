@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/app_back_button.dart';
 
 class CanvasPreset {
   final String name;
@@ -144,12 +145,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
     return Scaffold(
    //   backgroundColor: ColorConstants.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: ColorConstants.darkText),
-          onPressed: () {
-            Navigator.pop(context); // Pop without returning data (cancels changes)
-          },
-        ),
+        leading: const AppBackButton(),
         actions: [
           TextButton(
             onPressed: () {
