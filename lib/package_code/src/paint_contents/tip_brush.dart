@@ -223,13 +223,13 @@ class TipBrush extends FreehandLine {
     }
 
     final double frac = spacing > 0 ? spacing : 0.08;
-    final double step = (width * frac).clamp(1.2, double.infinity);
+    final double step = (width * frac).clamp(2.5, double.infinity);
     final Path path = buildSmoothPath();
 
     int index = 0;
     for (final PathMetric metric in path.computeMetrics()) {
       double distance = 0.0;
-      while (distance <= metric.length && index < 400) {
+      while (distance <= metric.length) {
         final Tangent? tangent = metric.getTangentForOffset(distance);
         if (tangent != null) {
           paintDab(
@@ -249,7 +249,6 @@ class TipBrush extends FreehandLine {
         index++;
         distance += step;
       }
-      if (index >= 400) break;
     }
   }
 
@@ -312,13 +311,21 @@ class TipBrush extends FreehandLine {
     int seed = 0,
     int index = 0,
   }) {
+    if (angle == 0 && roundness >= 0.99 && !flipX && !flipY && kind == BrushTipKind.round) {
+      canvas.drawCircle(center, radius, paint);
+      return;
+    }
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.rotate(angle);
-    canvas.scale(
-      flipX ? -1 : 1,
-      (flipY ? -1 : 1) * (roundness <= 0 ? 0.02 : roundness),
-    );
+    if (angle != 0) {
+      canvas.rotate(angle);
+    }
+    if (flipX || flipY || roundness < 0.99) {
+      canvas.scale(
+        flipX ? -1 : 1,
+        (flipY ? -1 : 1) * (roundness <= 0 ? 0.02 : roundness),
+      );
+    }
     _drawShape(canvas, kind, radius, paint, seed, index);
     canvas.restore();
   }
@@ -509,7 +516,7 @@ class TipBrush extends FreehandLine {
       case BrushTipKind.bristle:
         // 干笔/鬃毛：多条平行细线
         final Paint stroke = _strokePaint(paint, radius * 0.07);
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < 8; i++) {
           final double y = _jitter(seed, index, i) * radius;
           final double x0 = -radius * (0.6 + 0.4 * ((_jitter(seed, index, 40 + i) + 1) / 2));
           final double x1 = radius * (0.6 + 0.4 * ((_jitter(seed, index, 80 + i) + 1) / 2));
@@ -518,49 +525,49 @@ class TipBrush extends FreehandLine {
       case BrushTipKind.dryBrush:
         // 干枯笔触：断续的短划
         final Paint stroke = _strokePaint(paint, radius * 0.08);
-        for (int i = 0; i < 22; i++) {
+        for (int i = 0; i < 10; i++) {
           final double y = _jitter(seed, index, i) * radius;
           final double cx = _jitter(seed, index, 60 + i) * radius * 0.7;
-          final double half = radius * 0.12 * (0.5 + (_jitter(seed, index, 120 + i) + 1) / 2);
+          final double half = radius * 0.14 * (0.5 + (_jitter(seed, index, 120 + i) + 1) / 2);
           if (cx * cx + y * y <= radius * radius) {
             canvas.drawLine(Offset(cx - half, y), Offset(cx + half, y), stroke);
           }
         }
       case BrushTipKind.stipple:
         // 点画：大量细小圆点
-        for (int i = 0; i < 46; i++) {
+        for (int i = 0; i < 20; i++) {
           final double dx = _jitter(seed, index, i * 2) * radius;
           final double dy = _jitter(seed, index, i * 2 + 1) * radius;
           if (dx * dx + dy * dy <= radius * radius) {
-            canvas.drawCircle(Offset(dx, dy), radius * 0.05, paint);
+            canvas.drawCircle(Offset(dx, dy), radius * 0.07, paint);
           }
         }
       case BrushTipKind.charcoal:
         // 炭笔：密集且大小不一的颗粒
-        for (int i = 0; i < 44; i++) {
+        for (int i = 0; i < 20; i++) {
           final double dx = _jitter(seed, index, i * 2) * radius;
           final double dy = _jitter(seed, index, i * 2 + 1) * radius;
           if (dx * dx + dy * dy <= radius * radius) {
-            final double s = radius * 0.14 * (0.4 + (_jitter(seed, index, 300 + i) + 1) / 2 * 0.6);
+            final double s = radius * 0.18 * (0.4 + (_jitter(seed, index, 300 + i) + 1) / 2 * 0.6);
             canvas.drawRect(Rect.fromCenter(center: Offset(dx, dy), width: s, height: s), paint);
           }
         }
       case BrushTipKind.sponge:
         // 海绵：多孔的小环
         final Paint stroke = _strokePaint(paint, radius * 0.06);
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < 8; i++) {
           final double dx = _jitter(seed, index, i * 2) * radius * 0.9;
           final double dy = _jitter(seed, index, i * 2 + 1) * radius * 0.9;
-          final double r = radius * 0.22 * (0.4 + (_jitter(seed, index, 220 + i) + 1) / 2 * 0.6);
+          final double r = radius * 0.25 * (0.4 + (_jitter(seed, index, 220 + i) + 1) / 2 * 0.6);
           canvas.drawCircle(Offset(dx, dy), r, stroke);
         }
       case BrushTipKind.splash:
         // 墨点飞溅：中心大块 + 四散小滴
         canvas.drawCircle(Offset.zero, radius * 0.45, paint);
-        for (int i = 0; i < 14; i++) {
+        for (int i = 0; i < 8; i++) {
           final double dx = _jitter(seed, index, i * 2) * radius * 1.1;
           final double dy = _jitter(seed, index, i * 2 + 1) * radius * 1.1;
-          final double r = radius * 0.16 * (0.3 + (_jitter(seed, index, 260 + i) + 1) / 2 * 0.7);
+          final double r = radius * 0.18 * (0.3 + (_jitter(seed, index, 260 + i) + 1) / 2 * 0.7);
           canvas.drawCircle(Offset(dx, dy), r, paint);
         }
       case BrushTipKind.grassClump:
@@ -1258,11 +1265,12 @@ class TipBrush extends FreehandLine {
     return path;
   }
 
-  /// 稳定的伪随机抖动 [-1, 1]（纹理类笔尖用）
+  /// 稳定的伪随机抖动 [-1, 1]（纹理类笔尖用，0 内存分配）
   ///
-  /// Stable pseudo-random jitter in [-1, 1] (for textured tips)
+  /// Stable zero-allocation pseudo-random jitter in [-1, 1] (for textured tips)
   static double _jitter(int seed, int index, int channel) {
-    final int s = (seed + index * 374761393 + channel * 668265263) & 0x7fffffff;
-    return Random(s).nextDouble() * 2 - 1;
+    int s = (seed + index * 374761393 + channel * 668265263) & 0x7fffffff;
+    s = ((s ^ (s >> 13)) * 1274126177) & 0x7fffffff;
+    return (s / 0x3fffffff) - 1.0;
   }
 }

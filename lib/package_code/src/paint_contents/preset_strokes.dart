@@ -7,10 +7,11 @@ import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
 import 'freehand_line.dart';
 
-/// 稳定伪随机 [-1,1] / Stable pseudo-random in [-1, 1]
+/// 稳定伪随机 [-1,1] / Stable zero-allocation pseudo-random in [-1, 1]
 double _rand(int seed, int i, int ch) {
-  final int s = (seed + i * 374761393 + ch * 668265263) & 0x7fffffff;
-  return Random(s).nextDouble() * 2 - 1;
+  int s = (seed + i * 374761393 + ch * 668265263) & 0x7fffffff;
+  s = ((s ^ (s >> 13)) * 1274126177) & 0x7fffffff;
+  return (s / 0x3fffffff) - 1.0;
 }
 
 /// 稳定伪随机 [0,1] / Stable pseudo-random in [0, 1]
@@ -53,14 +54,14 @@ abstract class PresetStroke extends FreehandLine {
 
   /// 沿路径行走 / Walk along the smoothed path
   void walk(double step, void Function(ui.Tangent t, double d, double total, int i) fn) {
-    final double s = step.clamp(1.2, double.infinity);
+    final double s = step.clamp(2.0, double.infinity);
     final List<ui.PathMetric> ms = buildSmoothPath().computeMetrics().toList();
     final double total = ms.fold<double>(0, (double a, ui.PathMetric m) => a + m.length);
     int i = 0;
     double acc = 0;
     for (final ui.PathMetric m in ms) {
       double d = 0;
-      while (d <= m.length && i < 400) {
+      while (d <= m.length) {
         final ui.Tangent? t = m.getTangentForOffset(d);
         if (t != null) {
           fn(t, acc + d, total, i);
@@ -68,7 +69,6 @@ abstract class PresetStroke extends FreehandLine {
         i++;
         d += s;
       }
-      if (i >= 400) break;
       acc += m.length;
     }
   }
@@ -294,20 +294,20 @@ class PencilLine extends PresetStroke {
     }
     final double w = paint.strokeWidth;
     final double baseAlpha = paint.color.a * opacity;
+    final Paint speckPaint = paint.copyWith(style: PaintingStyle.fill);
+    final double speckRadius = (w * speck).clamp(0.35, double.infinity);
+    final int safeDensity = density.clamp(1, 15);
 
     walk(w * 0.3, (ui.Tangent t, double d, double total, int i) {
       final Offset n = normalOf(t);
       final Offset dir = dirOf(t);
-      for (int k = 0; k < density; k++) {
+      for (int k = 0; k < safeDensity; k++) {
         final double off = _rand(seed, i, k * 2) * w * spread * 0.5;
         final double along = _rand(seed, i, k * 2 + 1) * w * 0.25;
         final Offset p = t.position + n * off + dir * along;
         final double a = (baseAlpha * (0.25 + _rand01(seed, i, 200 + k) * 0.75)).clamp(0.0, 1.0);
-        canvas.drawCircle(
-          p,
-          (w * speck).clamp(0.35, double.infinity),
-          paint.copyWith(style: PaintingStyle.fill, color: paint.color.withValues(alpha: a)),
-        );
+        speckPaint.color = paint.color.withValues(alpha: a);
+        canvas.drawCircle(p, speckRadius, speckPaint);
       }
     });
   }
@@ -471,6 +471,7 @@ class MosaicLine extends PresetStroke {
     }
     final double cell = paint.strokeWidth.clamp(2.0, double.infinity);
     final Set<int> seen = <int>{};
+    final Paint cellPaint = paint.copyWith(style: PaintingStyle.fill);
 
     void put(Offset p) {
       final int cx = (p.dx / cell).floor();
@@ -481,9 +482,10 @@ class MosaicLine extends PresetStroke {
       }
       final double t = _rand01(seed, key & 0xffff, 9);
       final Color col = t > 0.5 ? _lighten(paint.color, (t - 0.5) * 0.5) : _darken(paint.color, (0.5 - t) * 0.4);
+      cellPaint.color = col;
       canvas.drawRect(
         Rect.fromLTWH(cx * cell, cy * cell, cell, cell),
-        paint.copyWith(style: PaintingStyle.fill, color: col),
+        cellPaint,
       );
     }
 

@@ -1133,7 +1133,6 @@ class DrawingController extends ChangeNotifier {
     } else {
       _refresh();
     }
-    updateSnapshot();
   }
 
   /// 结束绘制（手指抬起，保存绘制内容）

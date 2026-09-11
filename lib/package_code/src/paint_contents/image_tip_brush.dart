@@ -110,13 +110,13 @@ class ImageTipBrush extends FreehandLine {
     }
 
     final double frac = spacing > 0 ? spacing : 0.08;
-    final double step = (width * frac).clamp(1.2, double.infinity);
+    final double step = (width * frac).clamp(2.5, double.infinity);
     final Path path = buildSmoothPath();
 
     int index = 0;
     for (final ui.PathMetric metric in path.computeMetrics()) {
       double distance = 0.0;
-      while (distance <= metric.length && index < 400) {
+      while (distance <= metric.length) {
         final ui.Tangent? tangent = metric.getTangentForOffset(distance);
         if (tangent != null) {
           BrushStampLibrary.instance.paintDirect(
@@ -134,7 +134,6 @@ class ImageTipBrush extends FreehandLine {
         index++;
         distance += step;
       }
-      if (index >= 400) break;
     }
   }
 

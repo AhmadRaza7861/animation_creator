@@ -11,10 +11,11 @@ import 'freehand_line.dart';
 /// 沿路径重复的波形类型 / Waveform patterns repeated along the path
 enum LinePattern { saw, zigzag, gear, heartbeat }
 
-/// 稳定伪随机 [-1,1] / Stable pseudo-random in [-1, 1]
+/// 稳定伪随机 [-1,1] / Stable zero-allocation pseudo-random in [-1, 1]
 double _rand(int seed, int i, int ch) {
-  final int s = (seed + i * 374761393 + ch * 668265263) & 0x7fffffff;
-  return Random(s).nextDouble() * 2 - 1;
+  int s = (seed + i * 374761393 + ch * 668265263) & 0x7fffffff;
+  s = ((s ^ (s >> 13)) * 1274126177) & 0x7fffffff;
+  return (s / 0x3fffffff) - 1.0;
 }
 
 int _seedOf(List<Offset> points) {
@@ -80,7 +81,7 @@ abstract class PatternLine extends FreehandLine {
 
     for (final PathMetric metric in buildSmoothPath().computeMetrics()) {
       double d = 0;
-      while (d <= metric.length && index < 400) {
+      while (d <= metric.length) {
         final Tangent? t = metric.getTangentForOffset(d);
         if (t != null) {
           final double off = _wave(d / per) * amp;
@@ -95,7 +96,6 @@ abstract class PatternLine extends FreehandLine {
         index++;
         d += step;
       }
-      if (index >= 400) break;
     }
 
     canvas.drawPath(out, line);
@@ -327,7 +327,7 @@ class HairLine extends FreehandLine {
 
       for (final PathMetric metric in metrics) {
         double d = 0;
-        while (d <= metric.length && index < 400) {
+        while (d <= metric.length) {
           final Tangent? t = metric.getTangentForOffset(d);
           if (t != null) {
             // 轻微起伏，让发丝不完全平行
@@ -344,7 +344,6 @@ class HairLine extends FreehandLine {
           index++;
           d += step;
         }
-        if (index >= 400) break;
       }
       canvas.drawPath(strand, hair);
     }
@@ -406,7 +405,7 @@ class PixelLine extends FreehandLine {
     int index = 0;
     for (final PathMetric metric in buildSmoothPath().computeMetrics()) {
       double d = 0;
-      while (d <= metric.length && index < 400) {
+      while (d <= metric.length) {
         final Tangent? t = metric.getTangentForOffset(d);
         if (t != null) {
           put(t.position);
@@ -414,7 +413,6 @@ class PixelLine extends FreehandLine {
         index++;
         d += step;
       }
-      if (index >= 400) break;
     }
   }
 
@@ -546,7 +544,7 @@ class SketchLine extends FreehandLine {
 
       for (final PathMetric metric in metrics) {
         double d = 0;
-        while (d <= metric.length && index < 400) {
+        while (d <= metric.length) {
           final Tangent? t = metric.getTangentForOffset(d);
           if (t != null) {
             final double off = _rand(seed, pass * 1000 + i, 3) * width * 0.45;
@@ -565,7 +563,6 @@ class SketchLine extends FreehandLine {
           index++;
           d += step;
         }
-        if (index >= 400) break;
       }
       canvas.drawPath(scratch, pen);
     }

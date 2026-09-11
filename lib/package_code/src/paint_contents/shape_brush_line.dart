@@ -62,13 +62,13 @@ abstract class ShapeBrushLine extends FreehandLine {
     }
 
     // 间距随画笔粗细缩放，并保证为正防止死循环
-    final double step = (width * spacingRatio).clamp(1.2, double.infinity);
+    final double step = (width * spacingRatio).clamp(2.5, double.infinity);
     final Path path = buildSmoothPath();
 
     int index = 0;
     for (final PathMetric metric in path.computeMetrics()) {
       double distance = 0.0;
-      while (distance <= metric.length && index < 400) {
+      while (distance <= metric.length) {
         final Tangent? tangent = metric.getTangentForOffset(distance);
         if (tangent != null) {
           paintStamp(canvas, tangent.position, tangent.angle, radius, stampPaint, index);
@@ -76,7 +76,6 @@ abstract class ShapeBrushLine extends FreehandLine {
         index++;
         distance += step;
       }
-      if (index >= 400) break;
     }
   }
 
@@ -86,12 +85,9 @@ abstract class ShapeBrushLine extends FreehandLine {
   /// override this to add a blur mask filter or reduce opacity.
   Paint stampPaintOf(Paint source) => source.copyWith(style: PaintingStyle.fill);
 
-  /// 在路径上某一点绘制一个笔尖，默认盖出 [tip] 形状。
-  /// 纹理类笔刷（喷枪、粉笔、散布等）可重写此方法绘制多个抖动的小图形。
+  /// 绘制单个笔尖印章，默认调用 [_stamp]，子类可重写以实现复杂效果
   ///
-  /// Paint a single stamp at a point on the path. By default stamps the [tip]
-  /// shape. Textured brushes (airbrush, chalk, scatter) override this to paint
-  /// multiple jittered marks.
+  /// Paint a single stamp dab. Calls [_stamp] by default.
   void paintStamp(
     Canvas canvas,
     Offset center,
@@ -103,13 +99,14 @@ abstract class ShapeBrushLine extends FreehandLine {
     _stamp(canvas, center, angle, radius, paint);
   }
 
-  /// 基于笔迹与索引生成稳定的伪随机抖动值，范围 [-1, 1]
+  /// 基于笔迹与索引生成稳定的伪随机抖动值，范围 [-1, 1]（0 内存分配）
   ///
-  /// Deterministic pseudo-random jitter in [-1, 1], stable across repaints so
+  /// Deterministic zero-allocation pseudo-random jitter in [-1, 1], stable across repaints so
   /// the texture does not flicker between frames or differ from the cache.
   double jitter(int index, int channel) {
-    final int s = (_seed + index * 374761393 + channel * 668265263) & 0x7fffffff;
-    return Random(s).nextDouble() * 2 - 1;
+    int s = (_seed + index * 374761393 + channel * 668265263) & 0x7fffffff;
+    s = ((s ^ (s >> 13)) * 1274126177) & 0x7fffffff;
+    return (s / 0x3fffffff) - 1.0;
   }
 
   int get _seed {
