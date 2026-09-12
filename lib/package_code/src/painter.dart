@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'drawing_controller.dart';
 import 'helper/ex_value_builder.dart';
+import '../paint_contents.dart';
 
 /// 绘图板组件
 ///
@@ -246,9 +247,13 @@ class _UpPainter extends CustomPainter {
       return;
     }
 
-    if (controller.eraserContent != null) {
-      // 橡皮擦模式：只对活跃图层应用擦除效果
-      // Eraser mode: apply erasing effect only to the active layer
+    final PaintContent? activeDrawing = controller.drawingContent;
+    final bool isModifierActive = controller.eraserContent != null ||
+        (activeDrawing is BlurContent || activeDrawing is SmudgeContent);
+
+    if (isModifierActive) {
+      // 橡皮擦/模糊/涂抹模式：只对活跃图层应用修改效果
+      // Modifier mode (eraser/blur/smudge): apply live modifier effect to the active layer
 
       final activeLayer = controller.activeLayer.value;
 
@@ -257,8 +262,8 @@ class _UpPainter extends CustomPainter {
         if (!layer.isVisible) continue;
 
         if (layer == activeLayer) {
-          // 活跃图层：开启新层以应用 BlendMode.clear
-          // Active layer: start new layer to apply BlendMode.clear
+          // 活跃图层：开启新层以应用 BlendMode.clear / dstOut
+          // Active layer: start new layer to apply BlendMode modifiers
           canvas.saveLayer(Offset.zero & size, Paint());
 
           canvas.saveLayer(
@@ -273,12 +278,13 @@ class _UpPainter extends CustomPainter {
             layer.history[j].draw(canvas, size, false);
           }
 
+          if (controller.eraserContent != null) {
+            controller.eraserContent?.draw(canvas, size, false);
+          } else if (activeDrawing != null) {
+            activeDrawing.draw(canvas, size, false);
+          }
+
           canvas.restore();
-
-          // 应用橡皮擦效果（仅作用于当前的 saveLayer）
-          // Apply eraser effect (only affects the current saveLayer)
-          controller.eraserContent?.draw(canvas, size, false);
-
           canvas.restore();
         } else {
           // 非活跃图层：正常绘制
@@ -407,9 +413,11 @@ class _DeepPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     debugPrint('_DeepPainter.paint start! Size: $size, History: ${controller.currentIndex}');
-    // 橡皮擦绘制时，屏蔽底层画板的绘制，由顶层画板负责显示
-    if (controller.eraserContent != null) {
-      debugPrint('_DeepPainter.paint: Eraser active, skipping');
+    // 橡皮擦/模糊/涂抹实时绘制时，屏蔽底层画板的绘制，由顶层画板负责合成显示
+    final PaintContent? activeDrawing = controller.drawingContent;
+    if (controller.eraserContent != null ||
+        (activeDrawing is BlurContent || activeDrawing is SmudgeContent)) {
+      debugPrint('_DeepPainter.paint: Modifier active (eraser/blur/smudge), skipping');
       return;
     }
 

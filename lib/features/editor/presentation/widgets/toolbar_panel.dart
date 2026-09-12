@@ -364,6 +364,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         strokeWidth: controller.globalStrokeWidth,
                       );
                       controller.activeCategory = 'Blur';
+                      controller.drawingController.prepareSnapshot();
                     },
                   ),
                   _bottomToolbarCategoryItem(
@@ -378,6 +379,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         strokeWidth: controller.globalStrokeWidth,
                       );
                       controller.activeCategory = 'Smudge';
+                      controller.drawingController.prepareSnapshot();
                     },
                   ),
 

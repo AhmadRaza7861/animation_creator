@@ -444,6 +444,59 @@ class DrawingController extends ChangeNotifier {
   /// Cached image data for optimizing eraser performance
   ui.Image? cachedImage;
 
+  /// 同步生成当前画板的快照图片（0ms延迟，用于模糊和涂抹工具）
+  ui.Image? generateSnapshotSync([Size? customSize]) {
+    final Size? size = customSize ?? drawConfig.value.size;
+    if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0) return null;
+    final double pixelRatio = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+    final int targetWidth = (size.width * pixelRatio).round();
+    final int targetHeight = (size.height * pixelRatio).round();
+    if (targetWidth <= 0 || targetHeight <= 0) return null;
+
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas tempCanvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, targetWidth.toDouble(), targetHeight.toDouble()),
+    );
+    tempCanvas.scale(pixelRatio);
+
+    tempCanvas.saveLayer(Offset.zero & size, Paint());
+
+    for (int i = layers.length - 1; i >= 0; i--) {
+      final layer = layers[i];
+      if (!layer.isVisible) continue;
+
+      tempCanvas.saveLayer(
+        Offset.zero & size,
+        Paint()
+          ..blendMode = layer.blendMode
+          ..color = Colors.white.withValues(alpha: layer.opacity),
+      );
+
+      final int count = layer.currentIndex.clamp(0, layer.history.length);
+      for (int j = 0; j < count; j++) {
+        layer.history[j].draw(tempCanvas, size, true);
+      }
+
+      tempCanvas.restore();
+    }
+
+    tempCanvas.restore();
+
+    final ui.Picture picture = recorder.endRecording();
+    return picture.toImageSync(targetWidth, targetHeight);
+  }
+
+  /// 预先准备画板快照（当切换到模糊/涂抹工具时调用）
+  void prepareSnapshot() {
+    if (drawConfig.value.size != null) {
+      final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
+      if (snapshot != null) {
+        cachedImage = snapshot;
+      }
+    }
+  }
+
   /// 上次渲染的历史总索引，用于避免 _DeepPainter 使用静态跨实例缓存
   int lastTotalIndex = -1;
 
@@ -741,18 +794,30 @@ class DrawingController extends ChangeNotifier {
       drawingContent = newContent;
     } else if (_paintContent is BlurContent) {
       newContent = _paintContent.copy();
-      (newContent as BlurContent).strength = drawConfig.value.strength;
-      newContent.paint = drawConfig.value.paint;
-      newContent.startDraw(startPoint);
-      _takeSnapshot(startPoint, forEyedropper: false);
-      drawingContent = newContent;
+      final blur = newContent as BlurContent;
+      blur.strength = drawConfig.value.strength;
+      blur.paint = drawConfig.value.paint;
+      if (drawConfig.value.size != null) {
+        cachedImage = generateSnapshotSync(drawConfig.value.size);
+      }
+      if (cachedImage != null) {
+        blur.setImageData(cachedImage!);
+      }
+      blur.startDraw(startPoint);
+      drawingContent = blur;
     } else if (_paintContent is SmudgeContent) {
       newContent = _paintContent.copy();
-      (newContent as SmudgeContent).strength = drawConfig.value.strength;
-      newContent.paint = drawConfig.value.paint;
-      newContent.startDraw(startPoint);
-      _takeSnapshot(startPoint, forEyedropper: false);
-      drawingContent = newContent;
+      final smudge = newContent as SmudgeContent;
+      smudge.strength = drawConfig.value.strength;
+      smudge.paint = drawConfig.value.paint;
+      if (drawConfig.value.size != null) {
+        cachedImage = generateSnapshotSync(drawConfig.value.size);
+      }
+      if (cachedImage != null) {
+        smudge.setImageData(cachedImage!);
+      }
+      smudge.startDraw(startPoint);
+      drawingContent = smudge;
     } else if (_paintContent is FillContent) {
       _drawFill(startPoint);
     } else {

@@ -7,9 +7,9 @@ import '../draw_path/draw_path.dart';
 import '../paint_extension/ex_paint.dart';
 import 'paint_content.dart';
 
-/// 模糊画笔，用于柔化底层图像像素
-/// 
-/// Blur brush, used to soften underlying image pixels
+/// 模糊画笔，用于柔化底层图像像素 (Progressive Soft Blur Engine)
+///
+/// Blur brush: smoothly softens underlying drawing pixels with gentle Gaussian diffusion and feathered masking
 class BlurContent extends PaintContent {
   BlurContent({this.strength = 0.5});
 
@@ -25,7 +25,7 @@ class BlurContent extends PaintContent {
       path: DrawPath.fromJson(data['path'] as Map<String, dynamic>),
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
       strength: (data['strength'] ?? 0.5) as double,
-      image: null, // Asynchronously populated by _loadCanvasData
+      image: null,
     );
   }
 
@@ -66,16 +66,23 @@ class BlurContent extends PaintContent {
       image!.height.toDouble(),
     );
 
-    // 1. Save a layer bounding the entire canvas with layer opacity support
-    final double opacity = paint.color.a;
-    final Paint layerPaint = Paint();
-    if (opacity < 1.0) {
-      layerPaint.color = Colors.white.withValues(alpha: opacity);
-    }
-    canvas.saveLayer(canvasRect, layerPaint);
+    final double strokeWidth = paint.strokeWidth;
+    final double maskFeather = (strokeWidth * 0.25).clamp(2.0, 8.0);
+    final double sigma = (strength * 8.0 + 3.0) * (strokeWidth / 25.0).clamp(0.6, 2.0);
 
-    // 2. Draw the blurred snapshot image scaled accurately to canvasRect
-    final double sigma = (strength * 10.0) * (paint.strokeWidth / 20.0).clamp(0.5, 2.0);
+    // 1. Softly erase the sharp base artwork under the brush path using BlendMode.dstOut
+    final Paint softErasePaint = Paint()
+      ..blendMode = BlendMode.dstOut
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, maskFeather);
+    canvas.drawPath(path.path, softErasePaint);
+
+    // 2. Composite the Gaussian-blurred snapshot in the erased region
+    canvas.saveLayer(canvasRect, Paint()..blendMode = BlendMode.srcOver);
+
     final Paint blurPaint = Paint()
       ..filterQuality = ui.FilterQuality.high
       ..imageFilter = ui.ImageFilter.blur(
@@ -86,24 +93,23 @@ class BlurContent extends PaintContent {
 
     canvas.drawImageRect(image!, srcRect, canvasRect, blurPaint);
 
-    // 3. Draw the stroke path with dstIn to mask out everything EXCEPT the path bounds.
-    // Apply strokeCap & strokeJoin round with a controlled maskBlurRadius for exact preview matching.
-    final Paint maskPaint = Paint()..blendMode = BlendMode.dstIn;
-    canvas.saveLayer(canvasRect, maskPaint);
+    // 3. Mask the blurred image to the exact brush stroke path using BlendMode.dstIn with soft feather
+    final Paint maskLayerPaint = Paint()..blendMode = BlendMode.dstIn;
+    canvas.saveLayer(canvasRect, maskLayerPaint);
 
-    final double maskBlurRadius = (paint.strokeWidth * 0.2).clamp(1.0, 6.0);
-    final Paint strokePaint = paint.copyWith()
+    final Paint strokeMaskPaint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, maskBlurRadius)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, maskFeather)
       ..blendMode = BlendMode.srcOver;
 
-    canvas.drawPath(path.path, strokePaint);
-    canvas.restore();
+    canvas.drawPath(path.path, strokeMaskPaint);
+    canvas.restore(); // restore mask layer
 
-    // 4. Restore the original canvas state
+    // 4. Restore the blurred image layer
     canvas.restore();
   }
 
