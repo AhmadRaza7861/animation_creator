@@ -121,15 +121,14 @@ class ClippedHistoryContent extends PaintContent {
     // Shift canvas to render global history elements relative to local 0,0
     canvas.translate(-clipRect.topLeft.dx, -clipRect.topLeft.dy);
     
-    // Render the history elements with an unconstrained Size to prevent TextContent from wrapping 
-    // to the sticker's narrow bounding box width.
-    const Size unconstrainedSize = Size(100000, 100000);
+    // Render the history elements with full canvas dimensions so ImageContent and TextContent
+    // render in their original global canvas coordinates before being clipped.
+    final Size renderCanvasSize = (canvasSize != null && canvasSize!.width > 0 && canvasSize!.height > 0)
+        ? canvasSize!
+        : (size.width > 0 && size.height > 0 ? size : const Size(100000, 100000));
+
     for (final content in history) {
-      if (content is ImageContent) {
-        content.draw(canvas, size, deeper);
-      } else {
-        content.draw(canvas, unconstrainedSize, deeper);
-      }
+      content.draw(canvas, renderCanvasSize, deeper);
     }
     
     // Restore saveLayer

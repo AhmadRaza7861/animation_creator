@@ -1809,7 +1809,7 @@ class EditorController extends ChangeNotifier {
           historyCopy,
           drawPath,
           bounds,
-          canvasSize: controller.drawConfig.value.size,
+          canvasSize: controller.drawConfig.value.size ?? drawingControllerSize,
         );
 
         _activeSticker = ActiveShapeSticker(
