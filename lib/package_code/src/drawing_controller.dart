@@ -443,6 +443,9 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Cached image data for optimizing eraser performance
   ui.Image? cachedImage;
+  Uint8List? cachedRgbaData;
+  int? cachedRgbaWidth;
+  int? cachedRgbaHeight;
 
   /// 同步生成当前画板的快照图片（0ms延迟，用于模糊和涂抹工具）
   ui.Image? generateSnapshotSync([Size? customSize]) {
@@ -493,6 +496,13 @@ class DrawingController extends ChangeNotifier {
       final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
       if (snapshot != null) {
         cachedImage = snapshot;
+        snapshot.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
+          if (data != null) {
+            cachedRgbaData = data.buffer.asUint8List();
+            cachedRgbaWidth = snapshot.width;
+            cachedRgbaHeight = snapshot.height;
+          }
+        });
       }
     }
   }
@@ -786,6 +796,9 @@ class DrawingController extends ChangeNotifier {
       newContent.paint = drawConfig.value.paint.copyWith();
       newContent.startDraw(startPoint);
       eraserContent = newContent;
+      cachedImage = null;
+      _refresh();
+      _refreshDeep();
     } else if (_paintContent is Eyedropper) {
       newContent = _paintContent.copy();
       newContent.paint = drawConfig.value.paint;
@@ -798,26 +811,45 @@ class DrawingController extends ChangeNotifier {
       blur.strength = drawConfig.value.strength;
       blur.paint = drawConfig.value.paint;
       if (drawConfig.value.size != null) {
-        cachedImage = generateSnapshotSync(drawConfig.value.size);
-      }
-      if (cachedImage != null) {
-        blur.setImageData(cachedImage!);
+        final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
+        if (snapshot != null) {
+          blur.setImageData(snapshot);
+        }
       }
       blur.startDraw(startPoint);
       drawingContent = blur;
+      cachedImage = null;
+      _refresh();
+      _refreshDeep();
     } else if (_paintContent is SmudgeContent) {
       newContent = _paintContent.copy();
       final smudge = newContent as SmudgeContent;
       smudge.strength = drawConfig.value.strength;
       smudge.paint = drawConfig.value.paint;
+      smudge.onRepaint = _refresh;
       if (drawConfig.value.size != null) {
-        cachedImage = generateSnapshotSync(drawConfig.value.size);
-      }
-      if (cachedImage != null) {
-        smudge.setImageData(cachedImage!);
+        final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
+        if (snapshot != null) {
+          smudge.setImageData(snapshot);
+          if (cachedRgbaData != null && cachedRgbaWidth == snapshot.width && cachedRgbaHeight == snapshot.height) {
+            smudge.setRgbaData(cachedRgbaData!, cachedRgbaWidth!, cachedRgbaHeight!);
+          }
+          snapshot.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
+            if (data != null) {
+              cachedRgbaData = data.buffer.asUint8List();
+              cachedRgbaWidth = snapshot.width;
+              cachedRgbaHeight = snapshot.height;
+              smudge.setRgbaData(cachedRgbaData!, cachedRgbaWidth!, cachedRgbaHeight!);
+              _refresh();
+            }
+          });
+        }
       }
       smudge.startDraw(startPoint);
       drawingContent = smudge;
+      cachedImage = null;
+      _refresh();
+      _refreshDeep();
     } else if (_paintContent is FillContent) {
       _drawFill(startPoint);
     } else {

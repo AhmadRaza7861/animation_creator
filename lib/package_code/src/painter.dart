@@ -252,58 +252,29 @@ class _UpPainter extends CustomPainter {
         (activeDrawing is BlurContent || activeDrawing is SmudgeContent);
 
     if (isModifierActive) {
-      // 橡皮擦/模糊/涂抹模式：只对活跃图层应用修改效果
-      // Modifier mode (eraser/blur/smudge): apply live modifier effect to the active layer
-
+      // 橡皮擦/模糊/涂抹模式：只绘制活跃图层（带修改效果）
       final activeLayer = controller.activeLayer.value;
+      if (activeLayer == null || !activeLayer.isVisible) return;
 
-      for (int i = controller.layers.length - 1; i >= 0; i--) {
-        final layer = controller.layers[i];
-        if (!layer.isVisible) continue;
+      canvas.saveLayer(
+        Offset.zero & size,
+        Paint()
+          ..blendMode = activeLayer.blendMode
+          ..color = Colors.white.withValues(alpha: activeLayer.opacity),
+      );
 
-        if (layer == activeLayer) {
-          // 活跃图层：开启新层以应用 BlendMode.clear / dstOut
-          // Active layer: start new layer to apply BlendMode modifiers
-          canvas.saveLayer(Offset.zero & size, Paint());
-
-          canvas.saveLayer(
-            Offset.zero & size,
-            Paint()
-              ..blendMode = layer.blendMode
-              ..color = Colors.white.withValues(alpha: layer.opacity),
-          );
-
-          final int count = layer.currentIndex.clamp(0, layer.history.length);
-          for (int j = 0; j < count; j++) {
-            layer.history[j].draw(canvas, size, false);
-          }
-
-          if (controller.eraserContent != null) {
-            controller.eraserContent?.draw(canvas, size, false);
-          } else if (activeDrawing != null) {
-            activeDrawing.draw(canvas, size, false);
-          }
-
-          canvas.restore();
-          canvas.restore();
-        } else {
-          // 非活跃图层：正常绘制
-          // Non-active layers: draw normally
-          canvas.saveLayer(
-            Offset.zero & size,
-            Paint()
-              ..blendMode = layer.blendMode
-              ..color = Colors.white.withValues(alpha: layer.opacity),
-          );
-
-          final int count = layer.currentIndex.clamp(0, layer.history.length);
-          for (int j = 0; j < count; j++) {
-            layer.history[j].draw(canvas, size, false);
-          }
-
-          canvas.restore();
-        }
+      final int count = activeLayer.currentIndex.clamp(0, activeLayer.history.length);
+      for (int j = 0; j < count; j++) {
+        activeLayer.history[j].draw(canvas, size, false);
       }
+
+      if (controller.eraserContent != null) {
+        controller.eraserContent?.draw(canvas, size, false);
+      } else if (activeDrawing != null) {
+        activeDrawing.draw(canvas, size, false);
+      }
+
+      canvas.restore();
     } else {
       controller.drawingContent?.draw(canvas, size, false);
     }
@@ -413,27 +384,31 @@ class _DeepPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     debugPrint('_DeepPainter.paint start! Size: $size, History: ${controller.currentIndex}');
-    // 橡皮擦/模糊/涂抹实时绘制时，屏蔽底层画板的绘制，由顶层画板负责合成显示
-    final PaintContent? activeDrawing = controller.drawingContent;
-    if (controller.eraserContent != null ||
-        (activeDrawing is BlurContent || activeDrawing is SmudgeContent)) {
-      debugPrint('_DeepPainter.paint: Modifier active (eraser/blur/smudge), skipping');
-      return;
-    }
 
     // 1. Draw Onion Skins if enabled
     if (isOnionEnabled && allControllers != null) {
       _drawOnionSkins(canvas, size);
     }
 
-    int totalContents = controller.layers.fold(0, (sum, layer) => sum + (layer.isVisible ? layer.currentIndex : 0));
+    final PaintContent? activeDrawing = controller.drawingContent;
+    final bool isModifierActive = controller.eraserContent != null ||
+        (activeDrawing is BlurContent || activeDrawing is SmudgeContent);
 
-    if (totalContents == 0) {
+    final activeLayer = controller.activeLayer.value;
+
+    int totalContents = controller.layers.fold(0, (sum, layer) {
+      if (!layer.isVisible) return sum;
+      if (isModifierActive && layer == activeLayer) return sum; // Skipped, rendered by _UpPainter
+      return sum + layer.currentIndex;
+    });
+
+    if (totalContents == 0 && !isModifierActive) {
       return;
     }
 
-    // 检查缓存是否有效：尺寸相同、历史索引相同且不为空
-    final bool cacheValid = controller.lastRenderedSize == size && 
+    // 检查缓存是否有效：尺寸相同、历史索引相同且不为空（修改器激活时跳过缓存，以渲染非活跃图层）
+    final bool cacheValid = !isModifierActive &&
+        controller.lastRenderedSize == size && 
         controller.lastTotalIndex == controller.totalCurrentIndex &&
         controller.cachedImage != null;
 
@@ -454,7 +429,7 @@ class _DeepPainter extends CustomPainter {
       return;
     }
     
-    debugPrint('_DeepPainter.paint: Cache invalid or empty. Building new picture from $totalContents items.');
+    debugPrint('_DeepPainter.paint: Cache invalid or modifier active. Building picture from $totalContents items.');
 
     final double pixelRatio = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
     final int targetWidth = (size.width * pixelRatio).round();
@@ -475,6 +450,8 @@ class _DeepPainter extends CustomPainter {
     for (int i = controller.layers.length - 1; i >= 0; i--) {
       final layer = controller.layers[i];
       if (!layer.isVisible) continue;
+      // 如果当前是修改器激活状态，活跃图层由 _UpPainter 独立渲染，避免与底层重复或造成透明镂空穿透
+      if (isModifierActive && layer == activeLayer) continue;
       
       canvas.saveLayer(
         Offset.zero & size, 
@@ -502,17 +479,19 @@ class _DeepPainter extends CustomPainter {
     canvas.restore();
     tempCanvas.restore();
 
-    // 更新缓存版本信息
-    controller.lastRenderedSize = size;
-    controller.lastTotalIndex = controller.totalCurrentIndex;
+    if (!isModifierActive) {
+      // 更新缓存版本信息
+      controller.lastRenderedSize = size;
+      controller.lastTotalIndex = controller.totalCurrentIndex;
 
-    final ui.Picture picture = recorder.endRecording();
+      final ui.Picture picture = recorder.endRecording();
 
-    // 只在尺寸有效时生成高 DPI 缓存图片，避免 Invalid image dimensions 异常
-    if (targetWidth > 0 && targetHeight > 0) {
-      picture.toImage(targetWidth, targetHeight).then((ui.Image value) {
-        controller.cachedImage = value;
-      });
+      // 只在尺寸有效时生成高 DPI 缓存图片，避免 Invalid image dimensions 异常
+      if (targetWidth > 0 && targetHeight > 0) {
+        picture.toImage(targetWidth, targetHeight).then((ui.Image value) {
+          controller.cachedImage = value;
+        });
+      }
     }
   }
 
