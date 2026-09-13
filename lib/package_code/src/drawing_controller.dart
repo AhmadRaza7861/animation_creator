@@ -723,6 +723,71 @@ class DrawingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets or updates a dedicated Video Layer for this frame.
+  ///
+  /// Video frames are isolated on a dedicated 'Video Layer' at the bottom of the layer stack
+  /// and locked by default to protect the video reference from accidental brush/eraser modifications.
+  /// An active, unlocked 'Drawing' layer is positioned above it, enabling rotoscoping, tracing,
+  /// and drawing directly over the video frames.
+  void setVideoLayer(PaintContent content) {
+    // 1. Check if a video layer already exists
+    LayerData? videoLayer;
+    for (final l in layers) {
+      if (l.name == 'Video Layer' || l.id.startsWith('video_layer_')) {
+        videoLayer = l;
+        break;
+      }
+    }
+
+    if (videoLayer != null) {
+      videoLayer.history = [content];
+      videoLayer.currentIndex = 1;
+      videoLayer.isLocked = true;
+      videoLayer.isVisible = true;
+    } else {
+      // 2. Create new dedicated Video Layer
+      videoLayer = LayerData(
+        id: 'video_layer_${DateTime.now().microsecondsSinceEpoch}',
+        name: 'Video Layer',
+        isLocked: true,
+        isVisible: true,
+        history: [content],
+        currentIndex: 1,
+      );
+
+      // Append at the bottom of the layer stack (rendered first)
+      layers.add(videoLayer);
+    }
+
+    // 3. Ensure an active unlocked Drawing layer exists on top
+    LayerData? drawingLayer;
+    for (final l in layers) {
+      if (l != videoLayer && !l.isLocked) {
+        drawingLayer = l;
+        break;
+      }
+    }
+
+    if (drawingLayer == null) {
+      drawingLayer = LayerData(
+        id: 'layer_${DateTime.now().microsecondsSinceEpoch + 1}',
+        name: 'Drawing',
+        isLocked: false,
+        isVisible: true,
+      );
+      layers.insert(0, drawingLayer); // Top layer in UI & render order
+    }
+
+    // Set drawing layer as active
+    activeLayer.value = drawingLayer;
+
+    // Refresh rendering and invalidate caches
+    cachedImage = null;
+    _refreshDeep();
+    updateSnapshot();
+    notifyListeners();
+  }
+
   /// 批量添加多条绘制内容
   ///
   /// Add multiple drawing contents in batch

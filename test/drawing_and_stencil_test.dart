@@ -180,5 +180,38 @@ void main() {
       expect(userLayer.history.length, 1);
       expect(stencilLayer.history.length, 1);
     });
+
+    test('Video Layer Import sets up dedicated locked Video Layer and active Drawing layer', () {
+      final controller = DrawingController();
+      expect(controller.layers.length, 1);
+
+      final dummyLine = SimpleLine()
+        ..startPoint = const Offset(0, 0)
+        ..endPoint = const Offset(50, 50);
+
+      // Call setVideoLayer
+      controller.setVideoLayer(dummyLine);
+
+      // Verify layers: should have an active Drawing layer on top and a locked Video Layer at bottom
+      expect(controller.layers.length, 2);
+      final videoLayer = controller.layers.firstWhere((l) => l.name == 'Video Layer');
+      final drawingLayer = controller.layers.firstWhere((l) => l.name == 'Drawing' || l.name == 'Background');
+
+      expect(videoLayer.isLocked, isTrue);
+      expect(videoLayer.history.length, 1);
+      expect(videoLayer.history.first, equals(dummyLine));
+
+      expect(drawingLayer.isLocked, isFalse);
+      expect(controller.activeLayer.value, equals(drawingLayer));
+
+      // Draw with brush - should commit to drawingLayer, leaving videoLayer untouched
+      controller.setPaintContent(FreehandLine());
+      controller.startDraw(const Offset(10, 10));
+      controller.drawing(const Offset(20, 20));
+      controller.endDraw();
+
+      expect(drawingLayer.history.length, 1);
+      expect(videoLayer.history.length, 1); // Video layer intact!
+    });
   });
 }

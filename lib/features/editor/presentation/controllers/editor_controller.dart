@@ -957,12 +957,12 @@ class EditorController extends ChangeNotifier {
         final int frameIndex = targetStartIndex + i;
 
         if (frameIndex < _canvases.length) {
-          // Existing frame: insert video frame underneath existing drawings
+          // Existing frame: assign video frame to dedicated Video Layer
           final existingCanvas = _canvases[frameIndex];
-          existingCanvas.insertContentAsBase(imageContent);
+          existingCanvas.setVideoLayer(imageContent);
           _thumbnails[frameIndex] = image;
         } else {
-          // Additional frame: append new canvas frame
+          // Additional frame: create new canvas frame with dedicated Video Layer and active Drawing layer
           final newCanvas = DrawingController();
           newCanvas.drawConfig.value = newCanvas.drawConfig.value.copyWith(
             strokeWidth: _globalStrokeWidth,
@@ -970,7 +970,7 @@ class EditorController extends ChangeNotifier {
           );
           _setupCanvasController(newCanvas);
 
-          newCanvas.addContent(imageContent);
+          newCanvas.setVideoLayer(imageContent);
           _canvases.add(newCanvas);
           _thumbnails.add(image);
         }
