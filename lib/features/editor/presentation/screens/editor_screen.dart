@@ -21,6 +21,7 @@ import '../widgets/sticker_widgets/text_sticker_widget.dart';
 import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
+import '../widgets/project_loading_view.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/custom_switch.dart';
 import '../../../../core/widgets/app_back_button.dart';
@@ -1020,12 +1021,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     final controller = ref.watch(editorControllerProvider(widget.projectId));
 
     if (controller.isLoadingProject) {
-      return const Scaffold(
-        backgroundColor: ColorConstants.background,
-        body: Center(
-          child: CircularProgressIndicator(color: ColorConstants.accent),
-        ),
-      );
+      return const ProjectLoadingView();
     }
 
     return PopScope(

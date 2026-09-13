@@ -28,7 +28,6 @@ class ProjectsScreen extends StatefulWidget {
 class _ProjectsScreenState extends State<ProjectsScreen> {
   List<ProjectMeta> _projects = [];
   List<TemplateModel> _featuredTemplates = [];
-  bool _isLoading = true;
   int _currentTab = 0; // 0: Home, 1: Projects
 
   // Projects search state
@@ -48,13 +47,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
     await Future.wait([
       _loadProjectsInternal(),
       _loadFeaturedTutorials(),
     ]);
     if (mounted) {
-      setState(() => _isLoading = false);
+      setState(() {});
     }
   }
 
@@ -264,11 +262,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FC),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF6366F1)),
-              )
-            : (_currentTab == 0 ? _buildHomeTab() : _buildProjectsTab()),
+        child: _currentTab == 0 ? _buildHomeTab() : _buildProjectsTab(),
       ),
       bottomNavigationBar: CurvedScoopBottomNavBar(
         currentTab: _currentTab,
@@ -741,19 +735,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         const SizedBox(height: 14),
 
         // Horizontal Carousel
-        if (_featuredTemplates.isEmpty)
-          Container(
-            height: 170,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFEEF0F5)),
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(color: ColorConstants.primary),
-            ),
-          )
-        else
+        if (_featuredTemplates.isNotEmpty)
           SizedBox(
             height: 195,
             child: ListView.separated(
@@ -763,6 +745,25 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               itemBuilder: (context, index) {
                 final template = _featuredTemplates[index];
                 return _buildFeaturedTutorialCard(template);
+              },
+            ),
+          )
+        else
+          SizedBox(
+            height: 195,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 3,
+              separatorBuilder: (c, i) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                return Container(
+                  width: 220,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFEEF0F5)),
+                  ),
+                );
               },
             ),
           ),

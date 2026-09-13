@@ -173,6 +173,9 @@ class _SplashScreenState extends State<SplashScreen>
 
     _mainController.forward();
 
+    // Pre-warm project cache during splash animation
+    widget.repository.listProjects().catchError((_) => []);
+
     // 3.6s Total Delay before smooth transition
     _navTimer = Timer(const Duration(milliseconds: 3600), () {
       _navigateToHome();
