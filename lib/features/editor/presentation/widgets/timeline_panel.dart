@@ -127,6 +127,8 @@ class TimelinePanel extends ConsumerWidget {
       canvasKeys: controller.canvases.map((c) => ObjectKey(c)).toList(),
       onReorder: (oldIdx, newIdx) => controller.reorderFrames(oldIdx, newIdx),
       globalBackground: controller.globalBackground,
+      layerCount: controller.drawingController.layers.length,
+      drawingController: controller.drawingController,
     );
   }
 }

@@ -374,53 +374,53 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         const Spacer(),
 
         // Get Pro Button
-        GestureDetector(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('👑 Clipax Pro features unlocking soon!'),
-                backgroundColor: ColorConstants.primary,
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: ColorConstants.primary.withValues(alpha: 0.6),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Get Pro',
-                  style: TextStyle(
-                    color: ColorConstants.darkText,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
-                ),
-                SizedBox(width: 4),
-                Text(
-                  '👑',
-                  style: TextStyle(fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
+        // GestureDetector(
+        //   onTap: () {
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       const SnackBar(
+        //         content: Text('👑 Clipax Pro features unlocking soon!'),
+        //         backgroundColor: ColorConstants.primary,
+        //       ),
+        //     );
+        //   },
+        //   child: Container(
+        //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        //     decoration: BoxDecoration(
+        //       color: Colors.white,
+        //       borderRadius: BorderRadius.circular(20),
+        //       border: Border.all(
+        //         color: ColorConstants.primary.withValues(alpha: 0.6),
+        //         width: 1.2,
+        //       ),
+        //       boxShadow: [
+        //         BoxShadow(
+        //           color: Colors.black.withValues(alpha: 0.04),
+        //           blurRadius: 8,
+        //           offset: const Offset(0, 2),
+        //         ),
+        //       ],
+        //     ),
+        //     child: const Row(
+        //       mainAxisSize: MainAxisSize.min,
+        //       children: [
+        //         Text(
+        //           'Get Pro',
+        //           style: TextStyle(
+        //             color: ColorConstants.darkText,
+        //             fontWeight: FontWeight.w800,
+        //             fontSize: 12,
+        //           ),
+        //         ),
+        //         SizedBox(width: 4),
+        //         Text(
+        //           '👑',
+        //           style: TextStyle(fontSize: 11),
+        //         ),
+        //       ],
+        //     ),
+        //   ),
+        // ),
+        // const SizedBox(width: 8),
 
         // Settings Button
         GestureDetector(

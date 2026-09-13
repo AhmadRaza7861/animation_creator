@@ -39,4 +39,6 @@ class AssetConstants {
   static const String color_picker_icon = 'assets/icons/color_picker_icon.svg';
   static const String export_icon = 'assets/icons/export_icon.svg';
   static const String stock_icon = 'assets/icons/stock_icon.svg';
+  static const String layer_icon = 'assets/icons/layer_icon.svg';
+  static const String import_icon = 'assets/icons/import_icon.svg';
 }

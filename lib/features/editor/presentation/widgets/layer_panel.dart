@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/paint_contents/layer_data.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_assets.dart';
 
 const List<BlendMode> _kCommonBlendModes = [
   BlendMode.srcOver,
@@ -228,9 +230,28 @@ class _LayerPanelState extends State<LayerPanel> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Layers',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ColorConstants.darkText),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  AssetConstants.layer_icon,
+                  width: 18,
+                  height: 18,
+                  colorFilter: const ColorFilter.mode(
+                    ColorConstants.darkText,
+                    BlendMode.srcIn,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Layers (${widget.controller.layers.length})',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: ColorConstants.darkText,
+                  ),
+                ),
+              ],
             ),
             InkWell(
               onTap: widget.onClose,

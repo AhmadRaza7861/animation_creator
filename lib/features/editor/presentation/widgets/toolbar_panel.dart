@@ -14,6 +14,7 @@ import '../../../../../core/widgets/font_presets.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
 import '../screens/export/make_movie_screen.dart';
+import '../screens/video_trimming_screen.dart';
 import 'sticker_widgets/text_sticker_widget.dart';
 
 class ToolbarPanel extends ConsumerStatefulWidget {
@@ -180,141 +181,11 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     },
                   ),
                   _bottomToolbarCategoryItem(
-                    label: 'Assets',
-                    svgAsset: AssetConstants.assets_icon,
-                    isSelected: controller.activeCategory == 'Assets',
-                    onTap: () async {
-                      final ImageSource? source =
-                          await showModalBottomSheet<ImageSource>(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            builder: (BuildContext context) {
-                              return Material(
-                                color: Colors.white,
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                                clipBehavior: Clip.antiAlias,
-                                child: SafeArea(
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Center(
-                                          child: Container(
-                                            width: 38,
-                                            height: 4,
-                                            margin: const EdgeInsets.only(bottom: 16),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFE2E8F0),
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                          ),
-                                        ),
-                                        const Text(
-                                          'Import Image Sticker',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
-                                            color: Color(0xFF0F172A),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 14),
-                                        Material(
-                                          color: const Color(0xFFF8FAFC),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(14),
-                                            side: const BorderSide(color: Color(0xFFE2E8F0)),
-                                          ),
-                                          clipBehavior: Clip.antiAlias,
-                                          child: ListTile(
-                                            leading: Container(
-                                              width: 38,
-                                              height: 38,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFEFF6FF),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB), size: 20),
-                                            ),
-                                            title: const Text(
-                                              'Photo Gallery',
-                                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
-                                            ),
-                                            subtitle: const Text(
-                                              'Choose an image from your device',
-                                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                            ),
-                                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
-                                            onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Material(
-                                          color: const Color(0xFFF8FAFC),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(14),
-                                            side: const BorderSide(color: Color(0xFFE2E8F0)),
-                                          ),
-                                          clipBehavior: Clip.antiAlias,
-                                          child: ListTile(
-                                            leading: Container(
-                                              width: 38,
-                                              height: 38,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFFFF7ED),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: const Icon(Icons.photo_camera_rounded, color: Color(0xFFEA580C), size: 20),
-                                            ),
-                                            title: const Text(
-                                              'Camera',
-                                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
-                                            ),
-                                            subtitle: const Text(
-                                              'Take a new photo now',
-                                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                            ),
-                                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
-                                            onTap: () => Navigator.of(context).pop(ImageSource.camera),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-
-                      if (source == null) return;
-                      try {
-                        final XFile? file = await _picker.pickImage(
-                          source: source,
-                          maxWidth: 1920,
-                          maxHeight: 1920,
-                          imageQuality: 90,
-                        );
-                        if (file != null) {
-                          final ui.Image image = await _getFileImage(file.path);
-                          controller.addImageSticker(
-                            image,
-                            imageUrl: file.path,
-                          );
-                        }
-                      } catch (e) {
-                        debugPrint('Error picking sticker image: $e');
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Could not pick image: $e'),
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
-                        }
-                      }
-                    },
+                    label: 'Import',
+                    svgAsset: AssetConstants.import_icon,
+                    isSelected: controller.activeCategory == 'Import' || controller.activeCategory == 'Assets',
+                    onTap: () => _showImportBottomSheet(context, controller),
                   ),
-
 
                   _bottomToolbarCategoryItem(
                     label: 'Text',
@@ -1183,6 +1054,265 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
           icon,
           size: 18,
           color: isActive ? Colors.white : Colors.black87,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showImportBottomSheet(BuildContext context, EditorController controller) async {
+    final selectedOption = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4.5,
+                      margin: const EdgeInsets.only(bottom: 18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: ColorConstants.accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: SvgPicture.asset(
+                            AssetConstants.import_icon,
+                            width: 18,
+                            height: 18,
+                            colorFilter: const ColorFilter.mode(
+                              ColorConstants.accent,
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Import Media',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          Text(
+                            'Add video animation or image stickers',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // 1. Video Animation Option
+                  _buildImportOptionTile(
+                    icon: Icons.movie_creation_rounded,
+                    iconColor: const Color(0xFF8B5CF6),
+                    iconBgColor: const Color(0xFFF3E8FF),
+                    title: 'Import Video Animation',
+                    subtitle: 'Trim and import video clips into animation frames',
+                    badge: 'Animation',
+                    onTap: () => Navigator.of(context).pop('video'),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 2. Photo Gallery Option
+                  _buildImportOptionTile(
+                    icon: Icons.photo_library_rounded,
+                    iconColor: const Color(0xFF2563EB),
+                    iconBgColor: const Color(0xFFEFF6FF),
+                    title: 'Photo Gallery Image',
+                    subtitle: 'Add an image sticker to the active canvas frame',
+                    onTap: () => Navigator.of(context).pop('gallery'),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 3. Camera Option
+                  _buildImportOptionTile(
+                    icon: Icons.photo_camera_rounded,
+                    iconColor: const Color(0xFFEA580C),
+                    iconBgColor: const Color(0xFFFFF7ED),
+                    title: 'Camera Photo',
+                    subtitle: 'Take a new photo with device camera',
+                    onTap: () => Navigator.of(context).pop('camera'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedOption == null) return;
+
+    if (selectedOption == 'video') {
+      try {
+        final XFile? file = await _picker.pickVideo(source: ImageSource.gallery);
+        if (file == null) return;
+
+        if (!mounted) return;
+        final trimmedFrames = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoTrimmingScreen(videoFile: File(file.path)),
+          ),
+        );
+
+        if (trimmedFrames != null && trimmedFrames is List<String>) {
+          await controller.importVideoFrames(trimmedFrames);
+        }
+      } catch (e) {
+        debugPrint('Error importing video: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not import video: $e')),
+          );
+        }
+      }
+    } else if (selectedOption == 'gallery' || selectedOption == 'camera') {
+      try {
+        final source = selectedOption == 'camera' ? ImageSource.camera : ImageSource.gallery;
+        final XFile? file = await _picker.pickImage(
+          source: source,
+          maxWidth: 1920,
+          maxHeight: 1920,
+          imageQuality: 90,
+        );
+        if (file != null) {
+          final ui.Image image = await _getFileImage(file.path);
+          controller.addImageSticker(image, imageUrl: file.path);
+        }
+      } catch (e) {
+        debugPrint('Error picking sticker image: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not pick image: $e'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildImportOptionTile({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
+    required String title,
+    required String subtitle,
+    String? badge,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: const Color(0xFFF8FAFC),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        if (badge != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: iconBgColor,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              badge,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: iconColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 13,
+                color: Color(0xFF94A3B8),
+              ),
+            ],
+          ),
         ),
       ),
     );

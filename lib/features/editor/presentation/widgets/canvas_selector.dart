@@ -1,6 +1,9 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_assets.dart';
+import '../../../../package_code/src/drawing_controller.dart';
 import '../controllers/editor_controller.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 
@@ -17,6 +20,8 @@ class CanvasSelector extends StatefulWidget {
   final List<Key> canvasKeys;
   final void Function(int oldIndex, int newIndex) onReorder;
   final CanvasBackground? globalBackground;
+  final int? layerCount;
+  final DrawingController? drawingController;
 
   const CanvasSelector({
     super.key,
@@ -32,6 +37,8 @@ class CanvasSelector extends StatefulWidget {
     required this.canvasKeys,
     required this.onReorder,
     this.globalBackground,
+    this.layerCount,
+    this.drawingController,
   });
 
   @override
@@ -97,42 +104,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
       ),
       child: Row(
         children: [
-          // Layers Button
-          Padding(
-            padding: const EdgeInsets.only(left: 12.0),
-            child: Material(
-              color: Colors.transparent,
-              child: IconButton(
-                icon: const Icon(Icons.layers_rounded, size: 26, color: ColorConstants.darkText),
-                onPressed: widget.onOpenFrames,
-                tooltip: 'Layers',
-              ),
-            ),
-          ),
-          // Video Import Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2.0),
-            child: Material(
-              color: Colors.transparent,
-              child: IconButton(
-                icon: const Icon(Icons.video_library_rounded, size: 24, color: ColorConstants.darkText),
-                onPressed: widget.onImportVideo,
-                tooltip: 'Import Video',
-              ),
-            ),
-          ),
-          // Play Button
-          Padding(
-            padding: const EdgeInsets.only(left: 2.0, right: 6.0),
-            child: Material(
-              color: Colors.transparent,
-              child: IconButton(
-                icon: const Icon(Icons.play_arrow_rounded, size: 28, color: ColorConstants.darkText),
-                onPressed: widget.onPlay,
-                tooltip: 'Play Animation',
-              ),
-            ),
-          ),
+          // Compact Action Console Pod (Layers, Import Video & Play)
+          _buildTimelineActionPod(),
           // Reorderable Frame Thumbnails list
           Expanded(
             child: ReorderableListView.builder(
@@ -164,6 +137,153 @@ class _CanvasSelectorState extends State<CanvasSelector> {
         ],
       ),
     );
+  }
+
+  Widget _buildTimelineActionPod() {
+    return Container(
+      height: 56,
+      margin: const EdgeInsets.only(left: 8.0, right: 6.0, top: 12.0, bottom: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08), width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // 1. Layer Button with SVG Icon & Dynamic Layer Count Badge
+          _buildLayerButtonWithBadge(),
+          const SizedBox(width: 4),
+          // Subtle Vertical Divider
+          Container(
+            width: 1,
+            height: 32,
+            color: Colors.grey.shade200,
+          ),
+          const SizedBox(width: 4),
+          // 2. Play / Preview Animation Button
+          Tooltip(
+            message: 'Play Animation',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(9),
+                onTap: widget.onPlay,
+                child: Container(
+                  width: 34,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: ColorConstants.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      size: 26,
+                      color: ColorConstants.accent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLayerButtonWithBadge() {
+    Widget buildContent(int count) {
+      return Tooltip(
+        message: 'Layers ($count)',
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(9),
+            onTap: widget.onOpenFrames,
+            child: Container(
+              width: 36,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  // Layer SVG Icon
+                  SvgPicture.asset(
+                    AssetConstants.layer_icon,
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                      ColorConstants.darkText,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  // Layer Count Badge (Top-Right)
+                  Positioned(
+                    top: -4,
+                    right: -5,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                      decoration: BoxDecoration(
+                        color: ColorConstants.accent,
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(color: Colors.white, width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ColorConstants.accent.withValues(alpha: 0.35),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (widget.drawingController != null) {
+      return ListenableBuilder(
+        listenable: widget.drawingController!,
+        builder: (context, _) {
+          final count = widget.drawingController!.layers.length;
+          return buildContent(count > 0 ? count : 1);
+        },
+      );
+    }
+
+    final count = widget.layerCount ?? 1;
+    return buildContent(count);
   }
 
   Widget _buildDashedAddButton() {
