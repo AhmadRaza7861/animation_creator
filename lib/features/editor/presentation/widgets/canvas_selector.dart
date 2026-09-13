@@ -104,9 +104,18 @@ class _CanvasSelectorState extends State<CanvasSelector> {
       ),
       child: Row(
         children: [
-          // Compact Action Console Pod (Layers, Import Video & Play)
-          _buildTimelineActionPod(),
-          // Reorderable Frame Thumbnails list
+          // 1. Standalone Layer Button with SVG Icon & Dynamic Layer Count Badge
+          _buildLayerButtonWithBadge(),
+          // 2. Standalone Play / Preview Animation Button
+          _buildPlayButton(),
+          // Subtle Vertical Divider separating tools from frame sequence
+          Container(
+            width: 1,
+            height: 32,
+            margin: const EdgeInsets.only(right: 8.0),
+            color: Colors.black.withValues(alpha: 0.08),
+          ),
+          // 3. Reorderable Frame Thumbnails list
           Expanded(
             child: ReorderableListView.builder(
               key: const PageStorageKey('timeline_canvas_selector_scroll'),
@@ -129,7 +138,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
               },
             ),
           ),
-          // Dashed Add Frame Button
+          // 4. Dashed Add Frame Button
           Padding(
             padding: const EdgeInsets.only(right: 16.0, left: 8.0),
             child: _buildDashedAddButton(),
@@ -139,64 +148,39 @@ class _CanvasSelectorState extends State<CanvasSelector> {
     );
   }
 
-  Widget _buildTimelineActionPod() {
+  Widget _buildPlayButton() {
     return Container(
+      width: 56,
       height: 56,
-      margin: const EdgeInsets.only(left: 8.0, right: 6.0, top: 12.0, bottom: 12.0),
-      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+      margin: const EdgeInsets.only(right: 8.0, top: 12.0, bottom: 12.0),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.08), width: 1.0),
+        color: const Color(0xFFFFF5EB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: ColorConstants.primary.withValues(alpha: 0.25),
+          width: 1.0,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: ColorConstants.primary.withValues(alpha: 0.08),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // 1. Layer Button with SVG Icon & Dynamic Layer Count Badge
-          _buildLayerButtonWithBadge(),
-          const SizedBox(width: 4),
-          // Subtle Vertical Divider
-          Container(
-            width: 1,
-            height: 32,
-            color: Colors.grey.shade200,
-          ),
-          const SizedBox(width: 4),
-          // 2. Play / Preview Animation Button
-          Tooltip(
-            message: 'Play Animation',
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(9),
-                onTap: widget.onPlay,
-                child: Container(
-                  width: 34,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: ColorConstants.accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.play_arrow_rounded,
-                      size: 26,
-                      color: ColorConstants.accent,
-                    ),
-                  ),
-                ),
-              ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: widget.onPlay,
+          child: const Center(
+            child: Icon(
+              Icons.play_arrow_rounded,
+              size: 28,
+              color: ColorConstants.primary,
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -205,20 +189,30 @@ class _CanvasSelectorState extends State<CanvasSelector> {
     Widget buildContent(int count) {
       return Tooltip(
         message: 'Layers ($count)',
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(9),
-            onTap: widget.onOpenFrames,
-            child: Container(
-              width: 36,
-              height: 48,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+        child: Container(
+          width: 56,
+          height: 56,
+          margin: const EdgeInsets.only(left: 10.0, right: 8.0, top: 12.0, bottom: 12.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.black.withValues(alpha: 0.08),
+              width: 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: widget.onOpenFrames,
               child: Stack(
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
@@ -226,8 +220,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                   // Layer SVG Icon
                   SvgPicture.asset(
                     AssetConstants.layer_icon,
-                    width: 20,
-                    height: 20,
+                    width: 22,
+                    height: 22,
                     colorFilter: const ColorFilter.mode(
                       ColorConstants.darkText,
                       BlendMode.srcIn,
@@ -236,17 +230,17 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                   // Layer Count Badge (Top-Right)
                   Positioned(
                     top: -4,
-                    right: -5,
+                    right: -4,
                     child: Container(
+                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
                       decoration: BoxDecoration(
-                        color: ColorConstants.accent,
-                        borderRadius: BorderRadius.circular(7),
-                        border: Border.all(color: Colors.white, width: 1.2),
+                        color: ColorConstants.primary,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: Colors.white, width: 1.5),
                         boxShadow: [
                           BoxShadow(
-                            color: ColorConstants.accent.withValues(alpha: 0.35),
+                            color: ColorConstants.primary.withValues(alpha: 0.35),
                             blurRadius: 3,
                             offset: const Offset(0, 1),
                           ),
@@ -256,7 +250,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       child: Text(
                         '$count',
                         style: const TextStyle(
-                          fontSize: 8.5,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           height: 1.0,
