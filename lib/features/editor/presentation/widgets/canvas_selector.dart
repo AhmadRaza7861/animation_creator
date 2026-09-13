@@ -57,7 +57,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
   @override
   void didUpdateWidget(covariant CanvasSelector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentIndex != widget.currentIndex) {
+    if (oldWidget.currentIndex != widget.currentIndex ||
+        oldWidget.thumbnails.length != widget.thumbnails.length) {
       _scrollToCurrentIndex(animate: true);
     }
   }

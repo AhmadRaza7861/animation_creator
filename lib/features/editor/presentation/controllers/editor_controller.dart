@@ -890,7 +890,7 @@ class EditorController extends ChangeNotifier {
       if (_activeSticker != null) {
         stampActiveSticker();
       }
-      final targetIndex = atIndex ?? (_currentIndex + 1);
+      final targetIndex = atIndex ?? _canvases.length;
       _canvases.insert(targetIndex, controller);
       _thumbnails.insert(targetIndex, null);
       _currentIndex = targetIndex;
@@ -924,7 +924,7 @@ class EditorController extends ChangeNotifier {
   }
 
   void addFrame() {
-    _addNewCanvas();
+    _addNewCanvas(atIndex: _canvases.length);
   }
 
   void addFrameAt(int index, {bool isRight = true}) {
