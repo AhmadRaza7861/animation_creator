@@ -37,21 +37,7 @@ class ProjectRepository {
       for (final entity in entities) {
         if (entity is Directory) {
           final metaFile = File('${entity.path}/meta.json');
-          final dataFile = File('${entity.path}/data.json');
           if (await metaFile.exists()) {
-            if (await dataFile.exists()) {
-              try {
-                final dataStr = await dataFile.readAsString();
-                final state = jsonDecode(dataStr) as Map<String, dynamic>;
-                if (!_hasAnyContent(state)) {
-                  // Automatically clean up blank project directory with 0 drawings
-                  try {
-                    await entity.delete(recursive: true);
-                  } catch (_) {}
-                  continue;
-                }
-              } catch (_) {}
-            }
             final jsonStr = await metaFile.readAsString();
             projects.add(ProjectMeta.fromJson(jsonDecode(jsonStr)));
           }
@@ -66,50 +52,26 @@ class ProjectRepository {
     return projects;
   }
 
-  bool _hasAnyContent(Map<String, dynamic> state) {
-    final String? templateFolder = state['templateFolder'] as String?;
-    if (templateFolder != null && templateFolder.isNotEmpty) return true;
-
-    final List? templateFrameAssets = state['templateFrameAssets'] as List?;
-    if (templateFrameAssets != null && templateFrameAssets.isNotEmpty) return true;
-
-    final globalBg = state['globalBackground'];
-    if (globalBg is Map) {
-      final String? bgImg = globalBg['imagePath'] as String?;
-      if (bgImg != null && bgImg.isNotEmpty) return true;
-    }
-
-    final List? canvases = state['canvases'] as List?;
-    if (canvases == null || canvases.isEmpty) return false;
-    if (canvases.length > 1) return true;
-
-    for (final canvas in canvases) {
-      if (canvas is! Map) continue;
-      final List? layers = canvas['layers'] as List?;
-      if (layers == null) continue;
-      for (final layer in layers) {
-        if (layer is! Map) continue;
-        final int currentIndex = layer['currentIndex'] as int? ?? 0;
-        final List? history = layer['history'] as List?;
-        if (history != null && history.isNotEmpty && currentIndex > 0) {
-          final int validCount = currentIndex.clamp(0, history.length);
-          for (int i = 0; i < validCount; i++) {
-            final item = history[i];
-            if (item is Map && item['type'] != 'EmptyContent') {
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return false;
-  }
-
   Future<ProjectData?> loadProject(String projectId) async {
     try {
       final dir = await _getProjectDirectory(projectId);
-      final metaFile = File('${dir.path}/meta.json');
-      final dataFile = File('${dir.path}/data.json');
+      File metaFile = File('${dir.path}/meta.json');
+      File dataFile = File('${dir.path}/data.json');
+
+      // Fallback to .tmp files if app was killed mid-write
+      if (!await metaFile.exists()) {
+        final metaTmp = File('${dir.path}/meta.json.tmp');
+        if (await metaTmp.exists()) {
+          metaFile = metaTmp;
+        }
+      }
+
+      if (!await dataFile.exists()) {
+        final dataTmp = File('${dir.path}/data.json.tmp');
+        if (await dataTmp.exists()) {
+          dataFile = dataTmp;
+        }
+      }
 
       if (!await metaFile.exists() || !await dataFile.exists()) {
         return null;
@@ -142,7 +104,7 @@ class ProjectRepository {
       String? thumbnailPath;
       if (thumbnailBytes != null) {
         final thumbFile = File('${dir.path}/thumb.png');
-        await thumbFile.writeAsBytes(thumbnailBytes);
+        await thumbFile.writeAsBytes(thumbnailBytes, flush: true);
         thumbnailPath = thumbFile.path;
         try {
           await FileImage(thumbFile).evict();
@@ -179,10 +141,26 @@ class ProjectRepository {
         );
       }
 
-      await metaFile.writeAsString(jsonEncode(meta.toJson()));
-
+      // 1. Write data.json atomically with flush
+      final dataTmp = File('${dir.path}/data.json.tmp');
+      await dataTmp.writeAsString(jsonEncode(state), flush: true);
       final dataFile = File('${dir.path}/data.json');
-      await dataFile.writeAsString(jsonEncode(state));
+      if (await dataFile.exists()) {
+        try {
+          await dataFile.delete();
+        } catch (_) {}
+      }
+      await dataTmp.rename(dataFile.path);
+
+      // 2. Write meta.json atomically with flush
+      final metaTmp = File('${dir.path}/meta.json.tmp');
+      await metaTmp.writeAsString(jsonEncode(meta.toJson()), flush: true);
+      if (await metaFile.exists()) {
+        try {
+          await metaFile.delete();
+        } catch (_) {}
+      }
+      await metaTmp.rename(metaFile.path);
 
       return id;
     } catch (e) {

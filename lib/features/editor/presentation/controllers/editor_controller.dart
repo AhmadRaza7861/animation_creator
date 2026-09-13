@@ -55,12 +55,13 @@ class CanvasBackground {
 
 class EditorController extends ChangeNotifier {
   final ProjectRepository repository;
-  final String? projectId;
+  String? _projectId;
+  String? get projectId => _projectId;
 
   EditorController({
     required this.repository,
-    this.projectId,
-  }) {
+    String? projectId,
+  }) : _projectId = projectId {
     _globalStrokeWidth = 10.0;
     _colorOpacity = 1.0;
     GlobalToolState.instance.setStyle(
@@ -91,6 +92,25 @@ class EditorController extends ChangeNotifier {
   String _exportType = 'Mp4';
   String? _savedJsonData;
   bool _enableStickers = true;
+  // Auto-save and persistence state
+  Timer? _autoSaveTimer;
+  bool _isSaving = false;
+  bool _hasPendingSave = false;
+  bool _isDirty = false;
+
+  bool get isDirty => _isDirty;
+
+  void markDirty() {
+    _isDirty = true;
+    _scheduleAutoSave();
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 1500), () {
+      saveProject();
+    });
+  }
 
   // Onion skin settings
   bool _isOnionEnabled = true;
@@ -192,11 +212,13 @@ class EditorController extends ChangeNotifier {
 
   set projectName(String val) {
     _projectName = val;
+    markDirty();
     notifyListeners();
   }
 
   set exportType(String val) {
     _exportType = val;
+    markDirty();
     notifyListeners();
   }
 
@@ -226,6 +248,7 @@ class EditorController extends ChangeNotifier {
 
   set colorOpacity(double val) {
     _colorOpacity = val;
+    markDirty();
     notifyListeners();
   }
 
@@ -275,6 +298,7 @@ class EditorController extends ChangeNotifier {
         break;
     }
     drawingController.setStyle(strokeWidth: _globalStrokeWidth);
+    markDirty();
     notifyListeners();
   }
 
@@ -305,6 +329,7 @@ class EditorController extends ChangeNotifier {
       _undoneStickerHistoryIndex = -1;
     }
     updateSnapshot();
+    markDirty();
     notifyListeners();
   }
 
@@ -322,11 +347,13 @@ class EditorController extends ChangeNotifier {
 
   set globalStrokeWidth(double val) {
     _globalStrokeWidth = val;
+    markDirty();
     notifyListeners();
   }
 
   set globalBackground(CanvasBackground bg) {
     _globalBackground = bg;
+    markDirty();
     notifyListeners();
   }
 
@@ -335,16 +362,19 @@ class EditorController extends ChangeNotifier {
     if (!val && _activeSticker != null) {
       stampActiveSticker();
     }
+    markDirty();
     notifyListeners();
   }
 
   set aspectRatio(double? ratio) {
     _aspectRatio = ratio ?? 1.0;
+    markDirty();
     notifyListeners();
   }
 
   set fps(int value) {
     _fps = value;
+    markDirty();
     notifyListeners();
   }
 
@@ -353,6 +383,7 @@ class EditorController extends ChangeNotifier {
     if (opacity != null) _gridOpacity = opacity;
     if (vertical != null) _gridVerticalSpacing = vertical;
     if (horizontal != null) _gridHorizontalSpacing = horizontal;
+    markDirty();
     notifyListeners();
   }
 
@@ -362,6 +393,7 @@ class EditorController extends ChangeNotifier {
     if (loop != null) _onionLoop = loop;
     if (before != null) _onionBefore = before;
     if (after != null) _onionAfter = after;
+    markDirty();
     notifyListeners();
   }
 
@@ -568,17 +600,33 @@ class EditorController extends ChangeNotifier {
     return false;
   }
 
-  Future<void> saveProject() async {
+  Future<void> saveProject({bool immediate = false}) async {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = null;
+
+    if (_isSaving) {
+      _hasPendingSave = true;
+      return;
+    }
+    _isSaving = true;
+
+    try {
+      do {
+        _hasPendingSave = false;
+        await _performSave();
+      } while (_hasPendingSave);
+    } catch (e) {
+      debugPrint('Error in saveProject: $e');
+    } finally {
+      _isSaving = false;
+    }
+  }
+
+  Future<void> _performSave() async {
     if (_activeSticker != null) {
       stampActiveSticker();
     }
-    if (_canvases.isEmpty || projectId == null) return;
-
-    if (!hasAnyDrawing) {
-      // Do not store blank project without drawings; delete placeholder
-      await repository.deleteProject(projectId!);
-      return;
-    }
+    if (_canvases.isEmpty) return;
 
     final Map<String, dynamic> state = {
       'globalBackground': {
@@ -628,11 +676,15 @@ class EditorController extends ChangeNotifier {
       }
     }
 
-    await repository.saveProject(
-      projectId: projectId,
+    final savedId = await repository.saveProject(
+      projectId: _projectId,
+      title: _projectName,
       state: state,
       thumbnailBytes: thumbBytes,
     );
+    _projectId ??= savedId;
+
+    _isDirty = false;
   }
 
   Future<Uint8List?> _generateSolidThumbnailBytes() async {
@@ -864,6 +916,9 @@ class EditorController extends ChangeNotifier {
         _drawActiveSticker(canvas, size, _activeSticker!);
       }
     };
+    controller.addListener(() {
+      markDirty();
+    });
     controller.realTimeSnapshot.addListener(() {
       final idx = _canvases.indexOf(controller);
       if (idx != -1) {
@@ -1876,6 +1931,8 @@ class EditorController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = null;
     for (var controller in _canvases) {
       controller.drawConfig.removeListener(_onDrawConfigChanged);
       controller.dispose();

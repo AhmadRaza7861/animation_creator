@@ -57,6 +57,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    try {
+      ref.read(editorControllerProvider(widget.projectId)).saveProject(immediate: true);
+    } catch (_) {}
     _transformationController.dispose();
     super.dispose();
   }
@@ -64,8 +67,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      ref.read(editorControllerProvider(widget.projectId)).saveProject();
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      try {
+        ref.read(editorControllerProvider(widget.projectId)).saveProject(immediate: true);
+      } catch (_) {}
     }
   }
 
