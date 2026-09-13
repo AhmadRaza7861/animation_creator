@@ -119,7 +119,7 @@ class _AudioLibraryScreenState extends State<AudioLibraryScreen> {
                           _selectedCategory = cat;
                         });
                       },
-                      selectedColor: const Color(0xFFFF4B72),
+                      selectedColor: const Color(0xFFFF9318),
                       backgroundColor: const Color(0xFFF0F1F5),
                       labelStyle: TextStyle(
                         fontSize: 13,
@@ -155,8 +155,9 @@ class _AudioLibraryScreenState extends State<AudioLibraryScreen> {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: isPlaying
-                            ? const Color(0xFFFF4B72).withValues(alpha: 0.5)
+                            ? const Color(0xFFFF9318).withValues(alpha: 0.6)
                             : Colors.black.withValues(alpha: 0.05),
+                        width: isPlaying ? 1.5 : 1.0,
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -173,7 +174,7 @@ class _AudioLibraryScreenState extends State<AudioLibraryScreen> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF0F3),
+                            color: const Color(0xFFFFF4E8),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Center(
@@ -216,7 +217,7 @@ class _AudioLibraryScreenState extends State<AudioLibraryScreen> {
                         IconButton(
                           icon: Icon(
                             isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
-                            color: const Color(0xFFFF4B72),
+                            color: const Color(0xFFFF9318),
                             size: 34,
                           ),
                           onPressed: () => _previewItem(item),
@@ -226,7 +227,7 @@ class _AudioLibraryScreenState extends State<AudioLibraryScreen> {
                         ElevatedButton(
                           onPressed: () => _selectItem(item),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF4B72),
+                            backgroundColor: const Color(0xFFFF9318),
                             foregroundColor: Colors.white,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

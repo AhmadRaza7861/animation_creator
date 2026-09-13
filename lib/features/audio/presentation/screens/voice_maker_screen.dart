@@ -171,11 +171,11 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                         width: 110,
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFFFFF0F3) : Colors.white,
-                          borderRadius: BorderRadius.circular(14),
+                          color: isSelected ? const Color(0xFFFFF4E8) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isSelected ? const Color(0xFFFF4B72) : Colors.black.withValues(alpha: 0.08),
-                            width: isSelected ? 2 : 1,
+                            color: isSelected ? const Color(0xFFFF9318) : Colors.black.withValues(alpha: 0.08),
+                            width: isSelected ? 2.0 : 1.0,
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -195,7 +195,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: isSelected ? const Color(0xFFFF4B72) : const Color(0xFF1E1E24),
+                                color: isSelected ? const Color(0xFFFF9318) : const Color(0xFF1E1E24),
                               ),
                               textAlign: TextAlign.center,
                               maxLines: 2,
@@ -253,7 +253,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Pitch', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                        Text('${_pitch.toStringAsFixed(1)}x', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF4B72))),
+                        Text('${_pitch.toStringAsFixed(1)}x', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF9318))),
                       ],
                     ),
                     Slider(
@@ -261,7 +261,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                       min: 0.5,
                       max: 2.0,
                       divisions: 15,
-                      activeColor: const Color(0xFFFF4B72),
+                      activeColor: const Color(0xFFFF9318),
                       onChanged: (val) {
                         setState(() {
                           _pitch = val;
@@ -274,7 +274,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Speed', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                        Text('${_speed.toStringAsFixed(1)}x', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF4B72))),
+                        Text('${_speed.toStringAsFixed(1)}x', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF9318))),
                       ],
                     ),
                     Slider(
@@ -282,7 +282,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                       min: 0.6,
                       max: 1.8,
                       divisions: 12,
-                      activeColor: const Color(0xFFFF4B72),
+                      activeColor: const Color(0xFFFF9318),
                       onChanged: (val) {
                         setState(() {
                           _speed = val;
@@ -308,14 +308,14 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                         onPressed: _isSynthesizing ? null : _previewVoice,
                         icon: Icon(
                           _isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                          color: const Color(0xFFFF4B72),
+                          color: const Color(0xFFFF9318),
                         ),
                         label: Text(
                           _isPlaying ? 'Stop' : 'Preview',
-                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF4B72)),
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF9318)),
                         ),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFFF4B72), width: 1.5),
+                          side: const BorderSide(color: Color(0xFFFF9318), width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(26),
                           ),
@@ -333,7 +333,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                       child: ElevatedButton(
                         onPressed: _isSynthesizing ? null : _addToTimeline,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF4B72),
+                          backgroundColor: const Color(0xFFFF9318),
                           foregroundColor: Colors.white,
                           elevation: 2,
                           shape: RoundedRectangleBorder(

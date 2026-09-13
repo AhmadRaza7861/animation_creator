@@ -185,8 +185,8 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                             child: CustomPaint(
                               painter: WaveformPainter(
                                 samples: widget.clip.waveformSamples,
-                                waveColor: const Color(0xFFFF4B72),
-                                playedColor: const Color(0xFFD81B60),
+                                waveColor: const Color(0xFFFF9318),
+                                playedColor: const Color(0xFFE07C0A),
                                 progress: scrubberFraction,
                               ),
                             ),
@@ -253,7 +253,7 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                             bottom: 40,
                             child: Container(
                               width: 2,
-                              color: const Color(0xFFFF4B72),
+                              color: const Color(0xFFFF9318),
                             ),
                           ),
 
@@ -299,12 +299,12 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.skip_previous_rounded, color: Color(0xFFFF4B72), size: 28),
+                        icon: const Icon(Icons.skip_previous_rounded, color: Color(0xFFFF9318), size: 28),
                         onPressed: () => _seekTo(_trimStartMs),
                       ),
                       Text(
                         _formatTimecode(_trimStartMs),
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFF4B72)),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFF9318)),
                       ),
                     ],
                   ),
@@ -321,11 +321,11 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                         height: 52,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF4B72),
+                          color: const Color(0xFFFF9318),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFFF4B72).withValues(alpha: 0.35),
+                              color: const Color(0xFFFF9318).withValues(alpha: 0.35),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
@@ -352,10 +352,10 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                     children: [
                       Text(
                         _formatTimecode(_trimEndMs),
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFF4B72)),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFF9318)),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.skip_next_rounded, color: Color(0xFFFF4B72), size: 28),
+                        icon: const Icon(Icons.skip_next_rounded, color: Color(0xFFFF9318), size: 28),
                         onPressed: () => _seekTo(_trimEndMs),
                       ),
                     ],
@@ -385,7 +385,7 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                     Navigator.pop(context, trimmedClip);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF4B72),
+                    backgroundColor: const Color(0xFFFF9318),
                     foregroundColor: Colors.white,
                     elevation: 3,
                     shape: RoundedRectangleBorder(
@@ -410,7 +410,7 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
       width: 32,
       height: 48,
       decoration: BoxDecoration(
-        color: const Color(0xFFFF4B72),
+        color: const Color(0xFFFF9318),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(

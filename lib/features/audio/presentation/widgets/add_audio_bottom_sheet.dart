@@ -207,10 +207,10 @@ class AddAudioBottomSheet extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF0F3),
+                    color: const Color(0xFFFFF4E8),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: const Color(0xFFFF4B72), size: 24),
+                  child: Icon(icon, color: const Color(0xFFFF9318), size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

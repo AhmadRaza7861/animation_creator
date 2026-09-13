@@ -44,7 +44,7 @@ class TimelinePanel extends ConsumerWidget {
           if (added > 0) {
             Fluttertoast.showToast(
               msg: 'Added $added frames to match audio duration (${controller.canvases.length} total)',
-              backgroundColor: const Color(0xFFFF4B72),
+              backgroundColor: const Color(0xFFFF9318),
               textColor: Colors.white,
               toastLength: Toast.LENGTH_SHORT,
             );

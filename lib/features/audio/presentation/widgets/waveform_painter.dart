@@ -10,8 +10,8 @@ class WaveformPainter extends CustomPainter {
 
   const WaveformPainter({
     required this.samples,
-    this.waveColor = const Color(0xFFFF4B72),
-    this.playedColor = const Color(0xFFC2185B),
+    this.waveColor = const Color(0xFFFF9318),
+    this.playedColor = const Color(0xFFE07C0A),
     this.progress = 0.0,
     this.barWidth = 2.5,
     this.barGap = 1.5,

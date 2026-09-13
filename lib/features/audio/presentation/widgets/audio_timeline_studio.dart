@@ -277,7 +277,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
 
     Fluttertoast.showToast(
       msg: 'Audio clip split at ${_formatTimecode(needleMs)}',
-      backgroundColor: const Color(0xFFFF4B72),
+      backgroundColor: const Color(0xFFFF9318),
       textColor: Colors.white,
     );
   }
@@ -308,7 +308,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
 
     Fluttertoast.showToast(
       msg: 'Audio clip duplicated',
-      backgroundColor: const Color(0xFFFF4B72),
+      backgroundColor: const Color(0xFFFF9318),
       textColor: Colors.white,
     );
   }
@@ -322,29 +322,48 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
         valueListenable: volumeNotifier,
         builder: (context, currentVol, _) => Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF1E1E24),
+            color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 20,
+                offset: Offset(0, -4),
+              ),
+            ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Top drag pill
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Volume Control',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
+                        color: Color(0xFF1E1E24),
+                        fontSize: 17,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF4B72),
+                        color: const Color(0xFFFF9318),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -364,7 +383,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                     IconButton(
                       icon: Icon(
                         currentVol == 0 ? Icons.volume_off_rounded : Icons.volume_down_rounded,
-                        color: Colors.white70,
+                        color: const Color(0xFF6B6E7B),
                       ),
                       onPressed: () {
                         final newVol = currentVol == 0 ? 1.0 : 0.0;
@@ -378,10 +397,11 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                     Expanded(
                       child: SliderTheme(
                         data: SliderTheme.of(context).copyWith(
-                          activeTrackColor: const Color(0xFFFF4B72),
-                          inactiveTrackColor: Colors.white24,
-                          thumbColor: Colors.white,
-                          overlayColor: const Color(0xFFFF4B72).withValues(alpha: 0.2),
+                          activeTrackColor: const Color(0xFFFF9318),
+                          inactiveTrackColor: const Color(0xFFEBEBF0),
+                          thumbColor: const Color(0xFFFF9318),
+                          overlayColor: const Color(0xFFFF9318).withValues(alpha: 0.15),
+                          trackHeight: 4,
                         ),
                         child: Slider(
                           value: currentVol,
@@ -400,7 +420,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                         ),
                       ),
                     ),
-                    const Icon(Icons.volume_up_rounded, color: Colors.white70),
+                    const Icon(Icons.volume_up_rounded, color: Color(0xFF6B6E7B)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -431,7 +451,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       widget.onAudioStateChanged(widget.audioState);
       Fluttertoast.showToast(
         msg: 'Updated to ${sfxClip.title}',
-        backgroundColor: const Color(0xFFFF4B72),
+        backgroundColor: const Color(0xFFFF9318),
         textColor: Colors.white,
       );
     }
@@ -521,7 +541,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                   IconButton(
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-                    icon: const Icon(Icons.volume_up_rounded, color: Color(0xFFFF4B72), size: 26),
+                    icon: const Icon(Icons.volume_up_rounded, color: Color(0xFFFF9318), size: 26),
                     onPressed: widget.onToggleAudioMode,
                     tooltip: 'Back to Canvas Timeline',
                   ),
@@ -544,7 +564,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                         height: 36,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Color(0xFFFFF0F3),
+                          color: Color(0xFFFFF4E8),
                         ),
                         child: ValueListenableBuilder<bool>(
                           valueListenable: _isPlayingNotifier,
@@ -553,7 +573,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                               padding: EdgeInsets.zero,
                               icon: Icon(
                                 isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                color: const Color(0xFFFF4B72),
+                                color: const Color(0xFFFF9318),
                                 size: 22,
                               ),
                               onPressed: _togglePlayPause,
@@ -573,12 +593,12 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
 
                   const Spacer(),
 
-                  // Add Audio Button (+) in coral
+                  // Add Audio Button (+) in coral/amber primary
                   Container(
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF4B72),
+                      color: const Color(0xFFFF9318),
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: IconButton(
@@ -626,7 +646,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                     },
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: isSelected ? const Color(0xFFFFF0F3) : Colors.transparent,
+                                        color: isSelected ? const Color(0xFFFFF8F0) : Colors.transparent,
                                         border: const Border(
                                           bottom: BorderSide(color: Color(0xFFEBEBF0), width: 1),
                                         ),
@@ -646,7 +666,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                               size: 18,
                                               color: track.isMuted
                                                   ? Colors.red
-                                                  : (isSelected ? const Color(0xFFFF4B72) : const Color(0xFF6B6E7B)),
+                                                  : (isSelected ? const Color(0xFFFF9318) : const Color(0xFF6B6E7B)),
                                             ),
                                           ),
                                           const SizedBox(height: 6),
@@ -662,7 +682,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                               size: 18,
                                               color: track.isLocked
                                                   ? const Color(0xFFFF9800)
-                                                  : (isSelected ? const Color(0xFFFF4B72) : const Color(0xFF9E9EA7)),
+                                                  : (isSelected ? const Color(0xFFFF9318) : const Color(0xFF9E9EA7)),
                                             ),
                                           ),
                                         ],
@@ -754,7 +774,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                         final double clipWidth = ((clip.trimmedDurationMs / 1000.0) * _pixelsPerSecond).clamp(36.0, 4000.0);
                                         final double clipY = 28.0 + (trackIdx * trackHeight);
                                         final bool isClipSelected = selectedClipId == clip.id;
-                                        final Color clipColor = isClipSelected ? const Color(0xFF00BCD4) : const Color(0xFFFF4B72);
+                                        final Color clipColor = isClipSelected ? const Color(0xFF00BCD4) : const Color(0xFFFF9318);
 
                                         return Positioned(
                                           left: clipX,
@@ -793,7 +813,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                         color: clipColor,
                                                         borderRadius: BorderRadius.circular(isClipSelected ? 4 : 8),
                                                         border: Border.all(
-                                                          color: isClipSelected ? Colors.white : const Color(0xFFD81B60),
+                                                          color: isClipSelected ? Colors.white : const Color(0xFFE07C0A),
                                                           width: isClipSelected ? 1.5 : 1.0,
                                                         ),
                                                         boxShadow: [
@@ -816,7 +836,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                               child: CustomPaint(
                                                                 painter: WaveformPainter(
                                                                   samples: clip.waveformSamples,
-                                                                  waveColor: Colors.white.withValues(alpha: 0.85),
+                                                                  waveColor: Colors.white.withValues(alpha: 0.88),
                                                                   playedColor: Colors.white,
                                                                   barWidth: 2.0,
                                                                   barGap: 1.0,
@@ -961,13 +981,13 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                         // Top Triangle Pointer Indicator
                                         CustomPaint(
                                           size: const Size(12, 10),
-                                          painter: _PlayheadTrianglePainter(color: const Color(0xFFFF4B72)),
+                                          painter: _PlayheadTrianglePainter(color: const Color(0xFFFF9318)),
                                         ),
                                         // Vertical Line Needle
                                         Expanded(
                                           child: Container(
                                             width: 2,
-                                            color: const Color(0xFFFF4B72),
+                                            color: const Color(0xFFFF9318),
                                           ),
                                         ),
                                       ],
@@ -1009,8 +1029,15 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       height: 72,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: const BoxDecoration(
-        color: Color(0xFF1E1E24),
-        border: Border(top: BorderSide(color: Color(0xFF2C2D35), width: 1)),
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFEBEBF0), width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, -2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1023,12 +1050,13 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
               width: 42,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFF2A2B33),
+                color: const Color(0xFFF4F5F8),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE5E6EB), width: 1),
               ),
               child: const Icon(
                 Icons.keyboard_double_arrow_left_rounded,
-                color: Colors.white,
+                color: Color(0xFF2C2D35),
                 size: 22,
               ),
             ),
@@ -1037,7 +1065,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
           Container(
             width: 1,
             height: 28,
-            color: Colors.white24,
+            color: const Color(0xFFE5E6EB),
             margin: const EdgeInsets.symmetric(horizontal: 6),
           ),
 
@@ -1056,7 +1084,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                 child: Text(
                   '][',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF2C2D35),
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -1.0,
@@ -1101,6 +1129,8 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
+    final Color itemColor = isDestructive ? const Color(0xFFFF4B72) : const Color(0xFF2C2D35);
+
     return Expanded(
       child: Material(
         color: Colors.transparent,
@@ -1115,14 +1145,14 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                 iconWidget ??
                     Icon(
                       icon,
-                      color: isDestructive ? const Color(0xFFFF5252) : Colors.white,
+                      color: itemColor,
                       size: 22,
                     ),
                 const SizedBox(height: 4),
                 Text(
                   label,
                   style: TextStyle(
-                    color: isDestructive ? const Color(0xFFFF5252) : Colors.white,
+                    color: itemColor,
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1169,7 +1199,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFFFF4B72) : const Color(0xFFD4D5DC),
+                        color: isSelected ? const Color(0xFFFF9318) : const Color(0xFFD4D5DC),
                         width: isSelected ? 2.5 : 1.0,
                       ),
                     ),
@@ -1192,7 +1222,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFFF4B72) : Colors.black.withValues(alpha: 0.6),
+                              color: isSelected ? const Color(0xFFFF9318) : Colors.black.withValues(alpha: 0.6),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -1278,6 +1308,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
   void _showClipOptionsMenu(AudioClip clip) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1285,22 +1316,34 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             ListTile(
-              leading: const Icon(Icons.tune_rounded, color: Color(0xFFFF4B72)),
-              title: const Text('Trim & Edit Waveform'),
+              leading: const Icon(Icons.tune_rounded, color: Color(0xFFFF9318)),
+              title: const Text('Trim & Edit Waveform', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1E1E24))),
               onTap: () {
                 Navigator.pop(context);
                 _editClip(clip);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-              title: const Text('Delete Audio Clip', style: TextStyle(color: Colors.red)),
+              leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF4B72)),
+              title: const Text('Delete Audio Clip', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFFF4B72))),
               onTap: () {
                 Navigator.pop(context);
                 _deleteClip(clip);
               },
             ),
+            const SizedBox(height: 8),
           ],
         ),
       ),

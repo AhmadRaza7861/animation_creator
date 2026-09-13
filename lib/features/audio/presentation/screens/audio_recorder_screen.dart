@@ -152,7 +152,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> with SingleTi
                     right: 0,
                     child: Container(
                       height: 2,
-                      color: const Color(0xFFFF4B72).withValues(alpha: 0.25),
+                      color: const Color(0xFFFF9318).withValues(alpha: 0.25),
                     ),
                   ),
 
@@ -164,7 +164,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> with SingleTi
                         child: CustomPaint(
                           painter: _LiveWaveformPainter(
                             amplitudes: _liveAmplitudes,
-                            color: const Color(0xFFFF4B72),
+                            color: const Color(0xFFFF9318),
                           ),
                         ),
                       ),
@@ -226,10 +226,10 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> with SingleTi
                             height: 80,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color(0xFFFF4B72),
+                              color: const Color(0xFFFF9318),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFFF4B72).withValues(alpha: _isRecording ? 0.5 : 0.25),
+                                  color: const Color(0xFFFF9318).withValues(alpha: _isRecording ? 0.5 : 0.25),
                                   blurRadius: _isRecording ? 20 : 12,
                                   spreadRadius: _isRecording ? 4 : 1,
                                   offset: const Offset(0, 4),

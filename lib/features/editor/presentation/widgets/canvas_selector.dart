@@ -164,15 +164,15 @@ class _CanvasSelectorState extends State<CanvasSelector> {
         height: 56,
         margin: const EdgeInsets.only(right: 8.0, top: 12.0, bottom: 12.0),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF0F3),
+          color: const Color(0xFFFFF4E8),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: const Color(0xFFFF4B72).withValues(alpha: 0.25),
+            color: const Color(0xFFFF9318).withValues(alpha: 0.35),
             width: 1.0,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF4B72).withValues(alpha: 0.08),
+              color: const Color(0xFFFF9318).withValues(alpha: 0.12),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -190,7 +190,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                   child: Icon(
                     Icons.music_note_rounded,
                     size: 24,
-                    color: Color(0xFFFF4B72),
+                    color: Color(0xFFFF9318),
                   ),
                 ),
                 if (count > 0)
@@ -200,7 +200,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF4B72),
+                        color: const Color(0xFFFF9318),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
