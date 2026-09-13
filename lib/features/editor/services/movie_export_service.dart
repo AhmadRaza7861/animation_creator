@@ -9,6 +9,8 @@ import '../../../../core/utils/app_path_provider.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../presentation/controllers/editor_controller.dart';
 import '../../projects/presentation/widgets/preview_pattern_painter.dart';
+import '../../audio/domain/models/audio_project_state.dart';
+import '../../audio/domain/models/audio_clip.dart';
 
 class ExportOptions {
   final String movieName;
@@ -34,6 +36,7 @@ class MovieExportService {
     required CanvasBackground globalBackground,
     required ExportOptions options,
     required void Function(double progress, String status) onProgress,
+    AudioProjectState? audioState,
     bool Function()? isCancelled,
   }) async {
     if (canvases.isEmpty) {
@@ -66,24 +69,23 @@ class MovieExportService {
     }
 
     try {
-      final int totalCanvases = canvases.length;
-      final Size targetSize = options.outputSize;
-      final int fps = options.fps.clamp(1, 60);
+      final int fps = options.fps > 0 ? options.fps : 12;
+      final int totalFrames = canvases.length;
 
       // If user only created 1 frame, write fps frames (1 full second) so FFmpeg has a valid sequence
-      final int totalFrames = (totalCanvases == 1) ? fps : totalCanvases;
+      final int renderCount = totalFrames == 1 ? fps : totalFrames;
 
       // 2. Render each canvas frame to PNG
-      for (int i = 0; i < totalFrames; i++) {
+      for (int i = 0; i < renderCount; i++) {
         if (isCancelled != null && isCancelled()) {
           throw Exception('Export cancelled');
         }
 
-        final int canvasIndex = (totalCanvases == 1) ? 0 : i;
-        final canvasController = canvases[canvasIndex];
+        final int canvasIndex = i < totalFrames ? i : 0;
+        final DrawingController canvas = canvases[canvasIndex];
         final Uint8List pngBytes = await _renderCanvasToPng(
-          controller: canvasController,
-          targetSize: targetSize,
+          controller: canvas,
+          targetSize: options.outputSize,
           background: effectiveBg,
           transparentBackground: options.transparentBackground,
           includeWatermark: options.includeWatermark,
@@ -93,8 +95,8 @@ class MovieExportService {
         final File frameFile = File('${framesDir.path}/frame_$frameIndexStr.png');
         await frameFile.writeAsBytes(pngBytes);
 
-        final double frameProgress = 0.05 + (0.45 * (i + 1) / totalFrames);
-        onProgress(frameProgress, 'Rendering frame ${i + 1}/$totalFrames...');
+        final double frameProgress = 0.05 + (0.45 * (i + 1) / renderCount);
+        onProgress(frameProgress, 'Rendering frame ${i + 1}/$renderCount...');
       }
 
       if (isCancelled != null && isCancelled()) {
@@ -114,6 +116,21 @@ class MovieExportService {
       final String inputPattern = '${framesDir.path}/frame_%04d.png';
       final bool isGif = options.format.toUpperCase() == 'GIF';
 
+      // Check for valid audio clips to mix
+      final List<AudioClip> activeClips = [];
+      if (!isGif && audioState != null) {
+        for (final track in audioState.tracks) {
+          if (track.isMuted) continue;
+          for (final clip in track.clips) {
+            if (clip.isMuted || clip.filePath.isEmpty) continue;
+            final file = File(clip.filePath);
+            if (file.existsSync()) {
+              activeClips.add(clip);
+            }
+          }
+        }
+      }
+
       final List<String> args;
       if (isGif) {
         final String gifFilter = options.transparentBackground
@@ -125,6 +142,37 @@ class MovieExportService {
           '-framerate', '$fps',
           '-i', inputPattern,
           '-vf', gifFilter,
+          outputFilePath,
+        ];
+      } else if (activeClips.isNotEmpty) {
+        // Multi-track audio mixing
+        final List<String> audioInputs = [];
+        final List<String> filterChains = [];
+
+        for (int idx = 0; idx < activeClips.length; idx++) {
+          final clip = activeClips[idx];
+          audioInputs.addAll(['-i', clip.filePath]);
+          final int delayMs = clip.startOffsetMs.clamp(0, 3600000);
+          filterChains.add('[${idx + 1}:a]adelay=$delayMs|$delayMs[a$idx]');
+        }
+
+        final String mixInputs = List.generate(activeClips.length, (i) => '[a$i]').join('');
+        final String audioFilter = '${filterChains.join(';')};${mixInputs}amix=inputs=${activeClips.length}[aout]';
+
+        args = [
+          '-y',
+          '-framerate', '$fps',
+          '-i', inputPattern,
+          ...audioInputs,
+          '-filter_complex', audioFilter,
+          '-map', '0:v',
+          '-map', '[aout]',
+          '-c:v', 'libx264',
+          '-c:a', 'aac',
+          '-b:a', '192k',
+          '-pix_fmt', 'yuv420p',
+          '-preset', 'ultrafast',
+          '-shortest',
           outputFilePath,
         ];
       } else {

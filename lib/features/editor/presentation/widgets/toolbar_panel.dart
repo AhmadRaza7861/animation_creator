@@ -64,6 +64,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
           initialFormat: controller.exportType,
           fps: controller.fps,
           projectAspectRatio: controller.aspectRatio,
+          audioState: controller.audioState,
         ),
       ),
     );

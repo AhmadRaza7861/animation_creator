@@ -5,6 +5,7 @@ import '../../../../../core/widgets/app_back_button.dart';
 import '../../controllers/editor_controller.dart';
 import '../../../services/movie_export_service.dart';
 import 'export_progress_screen.dart';
+import '../../../../audio/domain/models/audio_project_state.dart';
 
 class OutputSizePreset {
   final String label;
@@ -27,6 +28,7 @@ class MakeMovieScreen extends StatefulWidget {
   final String initialFormat; // 'Mp4' or 'GIF'
   final int fps;
   final double? projectAspectRatio;
+  final AudioProjectState? audioState;
 
   const MakeMovieScreen({
     super.key,
@@ -36,6 +38,7 @@ class MakeMovieScreen extends StatefulWidget {
     required this.initialFormat,
     required this.fps,
     this.projectAspectRatio,
+    this.audioState,
   });
 
   @override
@@ -265,6 +268,7 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
           canvases: widget.canvases,
           globalBackground: widget.globalBackground,
           options: options,
+          audioState: widget.audioState,
         ),
       ),
     );

@@ -14,6 +14,7 @@ import '../../../../package_code/src/ruler/ruler_config.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 import '../../../../core/utils/app_path_provider.dart';
+import '../../../audio/domain/models/audio_project_state.dart';
 import '../widgets/sticker_widgets/text_sticker_widget.dart';
 import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
@@ -138,6 +139,60 @@ class EditorController extends ChangeNotifier {
   Object? _activeSticker;
   List<Object> _activeStickerHistory = [];
   int _activeStickerHistoryIndex = -1;
+
+  // Audio Studio state
+  AudioProjectState _audioState = AudioProjectState();
+  bool _isAudioStudioOpen = false;
+
+  AudioProjectState get audioState => _audioState;
+  bool get isAudioStudioOpen => _isAudioStudioOpen;
+  set isAudioStudioOpen(bool val) {
+    _isAudioStudioOpen = val;
+    notifyListeners();
+  }
+
+  /// Automatically ensures that the project has enough frames to cover the complete duration
+  /// of all active audio tracks and clips.
+  /// Returns the number of frames added.
+  int ensureFramesForAudio({bool notify = true}) {
+    final int maxMs = _audioState.maxDurationMs;
+    if (maxMs <= 0) return 0;
+
+    final int effectiveFps = _fps > 0 ? _fps : 9;
+    final int requiredFrames = ((maxMs / 1000.0) * effectiveFps).ceil();
+    final int currentFrames = _canvases.length;
+
+    if (requiredFrames > currentFrames) {
+      final int framesToAdd = requiredFrames - currentFrames;
+      for (int i = 0; i < framesToAdd; i++) {
+        final controller = DrawingController();
+        controller.drawConfig.value = controller.drawConfig.value.copyWith(
+          strokeWidth: _globalStrokeWidth,
+          size: drawingControllerSize,
+        );
+        _setupCanvasController(controller);
+        _canvases.add(controller);
+        _thumbnails.add(null);
+      }
+      markDirty();
+      if (notify) {
+        notifyListeners();
+      }
+      return framesToAdd;
+    }
+    return 0;
+  }
+
+  int updateAudioState(AudioProjectState newState, {bool autoAddFrames = true}) {
+    _audioState = newState;
+    int addedFrames = 0;
+    if (autoAddFrames) {
+      addedFrames = ensureFramesForAudio(notify: false);
+    }
+    markDirty();
+    notifyListeners();
+    return addedFrames;
+  }
 
   Object? _undoneSticker;
   List<Object> _undoneStickerHistory = [];
@@ -374,6 +429,9 @@ class EditorController extends ChangeNotifier {
 
   set fps(int value) {
     _fps = value;
+    if (_audioState.isNotEmpty) {
+      ensureFramesForAudio(notify: false);
+    }
     markDirty();
     notifyListeners();
   }
@@ -484,6 +542,13 @@ class EditorController extends ChangeNotifier {
       }
       if (data.state.containsKey('enableStickers')) {
         _enableStickers = data.state['enableStickers'] as bool;
+      }
+      if (data.state.containsKey('audio')) {
+        try {
+          _audioState = AudioProjectState.fromJson(data.state['audio'] as Map<String, dynamic>);
+        } catch (e) {
+          debugPrint('Failed to parse audio state: $e');
+        }
       }
 
       // Restore background
@@ -648,6 +713,7 @@ class EditorController extends ChangeNotifier {
       'templateFrameCount': _templateFrameCount,
       'templateFrameAssets': _templateFrameAssets,
       'enableStickers': _enableStickers,
+      'audio': _audioState.toJson(),
       'canvases': [],
     };
 

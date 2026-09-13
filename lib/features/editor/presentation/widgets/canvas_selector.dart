@@ -22,6 +22,8 @@ class CanvasSelector extends StatefulWidget {
   final CanvasBackground? globalBackground;
   final int? layerCount;
   final DrawingController? drawingController;
+  final VoidCallback? onOpenAudioStudio;
+  final int? audioClipCount;
 
   const CanvasSelector({
     super.key,
@@ -39,6 +41,8 @@ class CanvasSelector extends StatefulWidget {
     this.globalBackground,
     this.layerCount,
     this.drawingController,
+    this.onOpenAudioStudio,
+    this.audioClipCount,
   });
 
   @override
@@ -107,7 +111,9 @@ class _CanvasSelectorState extends State<CanvasSelector> {
         children: [
           // 1. Standalone Layer Button with SVG Icon & Dynamic Layer Count Badge
           _buildLayerButtonWithBadge(),
-          // 2. Standalone Play / Preview Animation Button
+          // 2. Standalone Audio Studio Button with dynamic count
+          if (widget.onOpenAudioStudio != null) _buildAudioButtonWithBadge(),
+          // 3. Standalone Play / Preview Animation Button
           _buildPlayButton(),
           // Subtle Vertical Divider separating tools from frame sequence
           Container(
@@ -145,6 +151,72 @@ class _CanvasSelectorState extends State<CanvasSelector> {
             child: _buildDashedAddButton(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAudioButtonWithBadge() {
+    final int count = widget.audioClipCount ?? 0;
+    return Tooltip(
+      message: 'Audio Studio',
+      child: Container(
+        width: 56,
+        height: 56,
+        margin: const EdgeInsets.only(right: 8.0, top: 12.0, bottom: 12.0),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF0F3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFFF4B72).withValues(alpha: 0.25),
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF4B72).withValues(alpha: 0.08),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: widget.onOpenAudioStudio,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Center(
+                  child: Icon(
+                    Icons.music_note_rounded,
+                    size: 24,
+                    color: Color(0xFFFF4B72),
+                  ),
+                ),
+                if (count > 0)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF4B72),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

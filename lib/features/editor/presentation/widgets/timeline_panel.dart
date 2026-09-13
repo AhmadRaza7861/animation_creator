@@ -2,8 +2,10 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../controllers/editor_providers.dart';
 import 'canvas_selector.dart';
+import '../../../audio/presentation/widgets/audio_timeline_studio.dart';
 import '../screens/gallery_screen.dart';
 import '../screens/video_trimming_screen.dart';
 import '../screens/animation_preview_screen.dart';
@@ -20,6 +22,36 @@ class TimelinePanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(editorControllerProvider(projectId));
+
+    if (controller.isAudioStudioOpen) {
+      return AudioTimelineStudio(
+        audioState: controller.audioState,
+        currentFrameIndex: controller.currentIndex,
+        totalFrames: controller.canvases.length,
+        fps: controller.fps,
+        frameThumbnails: controller.thumbnails,
+        onToggleAudioMode: () {
+          controller.isAudioStudioOpen = false;
+        },
+        onFrameSelected: (index) {
+          controller.selectCanvas(index);
+        },
+        onAddFrame: () {
+          controller.addFrame();
+        },
+        onAudioStateChanged: (updated) {
+          final added = controller.updateAudioState(updated, autoAddFrames: true);
+          if (added > 0) {
+            Fluttertoast.showToast(
+              msg: 'Added $added frames to match audio duration (${controller.canvases.length} total)',
+              backgroundColor: const Color(0xFFFF4B72),
+              textColor: Colors.white,
+              toastLength: Toast.LENGTH_SHORT,
+            );
+          }
+        },
+      );
+    }
 
     void openGallery() {
       final validImages = controller.thumbnails.whereType<ui.Image>().toList();
@@ -129,6 +161,10 @@ class TimelinePanel extends ConsumerWidget {
       globalBackground: controller.globalBackground,
       layerCount: controller.drawingController.layers.length,
       drawingController: controller.drawingController,
+      onOpenAudioStudio: () {
+        controller.isAudioStudioOpen = true;
+      },
+      audioClipCount: controller.audioState.allClips.length,
     );
   }
 }

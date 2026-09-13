@@ -8,16 +8,20 @@ import '../../../services/movie_export_service.dart';
 import 'widgets/projector_animation.dart';
 import 'share_movie_screen.dart';
 
+import '../../../../audio/domain/models/audio_project_state.dart';
+
 class ExportProgressScreen extends StatefulWidget {
   final List<DrawingController> canvases;
   final CanvasBackground globalBackground;
   final ExportOptions options;
+  final AudioProjectState? audioState;
 
   const ExportProgressScreen({
     super.key,
     required this.canvases,
     required this.globalBackground,
     required this.options,
+    this.audioState,
   });
 
   @override
@@ -43,6 +47,7 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
         canvases: widget.canvases,
         globalBackground: widget.globalBackground,
         options: widget.options,
+        audioState: widget.audioState,
         onProgress: (progress, status) {
           if (mounted) {
             setState(() {
