@@ -1,110 +1,32 @@
-import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import '../../domain/models/audio_clip.dart';
-import '../screens/audio_library_screen.dart';
-import '../screens/audio_recorder_screen.dart';
-import '../screens/audio_trimmer_screen.dart';
-import '../screens/voice_maker_screen.dart';
+
+enum AudioAddSource {
+  voiceMaker,
+  library,
+  recorder,
+  filePicker,
+}
 
 class AddAudioBottomSheet extends StatelessWidget {
   final int defaultTrackIndex;
-  final void Function(AudioClip clip) onAudioClipAdded;
 
   const AddAudioBottomSheet({
     super.key,
-    required this.defaultTrackIndex,
-    required this.onAudioClipAdded,
+    this.defaultTrackIndex = 0,
   });
 
-  static Future<void> show({
+  static Future<AudioAddSource?> show({
     required BuildContext context,
-    required int defaultTrackIndex,
-    required void Function(AudioClip clip) onAudioClipAdded,
+    int defaultTrackIndex = 0,
   }) {
-    return showModalBottomSheet(
+    return showModalBottomSheet<AudioAddSource>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => AddAudioBottomSheet(
         defaultTrackIndex: defaultTrackIndex,
-        onAudioClipAdded: onAudioClipAdded,
       ),
     );
-  }
-
-  void _openFilePicker(BuildContext context) async {
-    Navigator.pop(context);
-    try {
-      final result = await FilePickerPlatform.instance.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg'],
-      );
-
-      if (result.isNotEmpty && result.first.path != null) {
-        final pickedFile = result.first;
-        final file = File(pickedFile.path!);
-        final clip = AudioClip(
-          title: pickedFile.name.split('.').first,
-          filePath: file.path,
-          trackIndex: defaultTrackIndex,
-          durationMs: 3000, // Default duration, will be refined in trimmer
-        );
-
-        if (!context.mounted) return;
-        final trimmed = await Navigator.push<AudioClip>(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AudioTrimmerScreen(clip: clip),
-          ),
-        );
-
-        if (trimmed != null) {
-          onAudioClipAdded(trimmed);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error picking audio file: $e');
-    }
-  }
-
-  void _openVoiceMaker(BuildContext context) async {
-    Navigator.pop(context);
-    final clip = await Navigator.push<AudioClip>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => VoiceMakerScreen(defaultTrackIndex: defaultTrackIndex),
-      ),
-    );
-    if (clip != null) {
-      onAudioClipAdded(clip);
-    }
-  }
-
-  void _openAudioLibrary(BuildContext context) async {
-    Navigator.pop(context);
-    final clip = await Navigator.push<AudioClip>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AudioLibraryScreen(defaultTrackIndex: defaultTrackIndex),
-      ),
-    );
-    if (clip != null) {
-      onAudioClipAdded(clip);
-    }
-  }
-
-  void _openAudioRecorder(BuildContext context) async {
-    Navigator.pop(context);
-    final clip = await Navigator.push<AudioClip>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AudioRecorderScreen(defaultTrackIndex: defaultTrackIndex),
-      ),
-    );
-    if (clip != null) {
-      onAudioClipAdded(clip);
-    }
   }
 
   @override
@@ -151,7 +73,7 @@ class AddAudioBottomSheet extends StatelessWidget {
               icon: Icons.record_voice_over_rounded,
               title: 'Voice maker',
               subtitle: 'Generate animated character voices & speech',
-              onTap: () => _openVoiceMaker(context),
+              onTap: () => Navigator.pop(context, AudioAddSource.voiceMaker),
             ),
 
             // Option 2: Audio Library
@@ -159,7 +81,7 @@ class AddAudioBottomSheet extends StatelessWidget {
               icon: Icons.library_music_rounded,
               title: 'Audio Library',
               subtitle: 'Sound effects, cartoon boings, whooshes & loops',
-              onTap: () => _openAudioLibrary(context),
+              onTap: () => Navigator.pop(context, AudioAddSource.library),
             ),
 
             // Option 3: Audio Recorder
@@ -167,7 +89,7 @@ class AddAudioBottomSheet extends StatelessWidget {
               icon: Icons.mic_rounded,
               title: 'Audio Recorder',
               subtitle: 'Record voice-overs directly with microphone',
-              onTap: () => _openAudioRecorder(context),
+              onTap: () => Navigator.pop(context, AudioAddSource.recorder),
             ),
 
             // Option 4: Add Audio (File Picker)
@@ -175,7 +97,7 @@ class AddAudioBottomSheet extends StatelessWidget {
               icon: Icons.audio_file_rounded,
               title: 'Add Audio',
               subtitle: 'Import MP3, WAV, AAC from device storage',
-              onTap: () => _openFilePicker(context),
+              onTap: () => Navigator.pop(context, AudioAddSource.filePicker),
             ),
 
             const SizedBox(height: 8),

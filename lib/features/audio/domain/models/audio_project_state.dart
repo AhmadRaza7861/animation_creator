@@ -31,8 +31,11 @@ class AudioProjectState {
 
   void addClip(AudioClip clip, {int? targetTrackIndex}) {
     final int idx = (targetTrackIndex ?? clip.trackIndex).clamp(0, tracks.length - 1);
-    final updatedClip = clip.copyWith(trackIndex: idx);
-    tracks[idx].clips.add(updatedClip);
+    final targetTrack = tracks[idx];
+    final int safeOffset = targetTrack.clampOffsetToPreventOverlap(clip, clip.startOffsetMs);
+    final updatedClip = clip.copyWith(trackIndex: idx, startOffsetMs: safeOffset);
+    targetTrack.clips.add(updatedClip);
+    targetTrack.resolveOverlapForClip(updatedClip);
   }
 
   void removeClip(String clipId) {
@@ -46,11 +49,18 @@ class AudioProjectState {
       final idx = track.clips.indexWhere((c) => c.id == updated.id);
       if (idx != -1) {
         if (track.index == updated.trackIndex) {
+          final int safeOffset = track.clampOffsetToPreventOverlap(updated, updated.startOffsetMs);
+          updated.startOffsetMs = safeOffset;
           track.clips[idx] = updated;
+          track.resolveOverlapForClip(updated);
         } else {
           track.clips.removeAt(idx);
           final targetIdx = updated.trackIndex.clamp(0, tracks.length - 1);
-          tracks[targetIdx].clips.add(updated);
+          final targetTrack = tracks[targetIdx];
+          final int safeOffset = targetTrack.clampOffsetToPreventOverlap(updated, updated.startOffsetMs);
+          updated.startOffsetMs = safeOffset;
+          targetTrack.clips.add(updated);
+          targetTrack.resolveOverlapForClip(updated);
         }
         return;
       }
@@ -78,6 +88,35 @@ class AudioProjectState {
     }
   }
 
+  AudioTrack addTrack({String? name}) {
+    final newTrack = AudioTrack(
+      index: tracks.length,
+      name: name ?? 'Track ${tracks.length + 1}',
+    );
+    tracks.add(newTrack);
+    return newTrack;
+  }
+
+  void ensureTrackCount(int count) {
+    while (tracks.length < count) {
+      addTrack();
+    }
+  }
+
+  bool removeTrack(int trackIndex) {
+    if (trackIndex < 0 || trackIndex >= tracks.length || tracks.length <= 4) {
+      return false;
+    }
+    tracks.removeAt(trackIndex);
+    for (int i = 0; i < tracks.length; i++) {
+      tracks[i].index = i;
+      for (final clip in tracks[i].clips) {
+        clip.trackIndex = i;
+      }
+    }
+    return true;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'tracks': tracks.map((t) => t.toJson()).toList(),
@@ -90,6 +129,9 @@ class AudioProjectState {
       final List<AudioTrack> parsed = tracksJson
           .map((t) => AudioTrack.fromJson(t as Map<String, dynamic>))
           .toList();
+      for (int i = 0; i < parsed.length; i++) {
+        parsed[i].index = i;
+      }
       while (parsed.length < 4) {
         parsed.add(AudioTrack(index: parsed.length));
       }
