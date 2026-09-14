@@ -922,13 +922,36 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
               ),
               child: Row(
                 children: [
-                  // Audio Studio Mode Exit / Toggle button
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-                    icon: const Icon(Icons.volume_up_rounded, color: Color(0xFFFF9318), size: 26),
-                    onPressed: widget.onToggleAudioMode,
-                    tooltip: 'Back to Canvas Timeline',
+                  // Audio Studio Mode Exit Button (Back to Animation Frames Timeline)
+                  GestureDetector(
+                    onTap: widget.onToggleAudioMode,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F5F8),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE5E6EB), width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: Color(0xFF2C2D35),
+                            size: 13,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Frames',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2C2D35),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
 
                   const Spacer(),
@@ -1778,23 +1801,37 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       ),
       child: Row(
         children: [
-          // 1. Collapse / Back Button (<<)
+          // 1. Deselect / Close Handle Button (Done / ✕)
           GestureDetector(
             onTap: () {
               _selectedClipIdNotifier.value = null;
             },
             child: Container(
-              width: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               height: 48,
               decoration: BoxDecoration(
                 color: const Color(0xFFF4F5F8),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFFE5E6EB), width: 1),
               ),
-              child: const Icon(
-                Icons.keyboard_double_arrow_left_rounded,
-                color: Color(0xFF2C2D35),
-                size: 22,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.close_rounded,
+                    color: Color(0xFF2C2D35),
+                    size: 18,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Done',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2C2D35),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

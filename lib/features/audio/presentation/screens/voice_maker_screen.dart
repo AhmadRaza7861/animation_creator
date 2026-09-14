@@ -156,7 +156,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
               ),
               const SizedBox(height: 10),
               SizedBox(
-                height: 100,
+                height: 116,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: VoiceMakerService.presets.length,
@@ -169,7 +169,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                       onTap: () => _selectPreset(preset),
                       child: Container(
                         width: 110,
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         decoration: BoxDecoration(
                           color: isSelected ? const Color(0xFFFFF4E8) : Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -187,19 +187,22 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(preset.icon, style: const TextStyle(fontSize: 26)),
-                            const SizedBox(height: 6),
-                            Text(
-                              preset.name,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: isSelected ? const Color(0xFFFF9318) : const Color(0xFF1E1E24),
+                            const SizedBox(height: 4),
+                            Flexible(
+                              child: Text(
+                                preset.name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isSelected ? const Color(0xFFFF9318) : const Color(0xFF1E1E24),
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -301,7 +304,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                 children: [
                   // Preview Button
                   Expanded(
-                    flex: 1,
+                    flex: 2,
                     child: SizedBox(
                       height: 52,
                       child: OutlinedButton.icon(
@@ -309,12 +312,16 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                         icon: Icon(
                           _isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
                           color: const Color(0xFFFF9318),
+                          size: 20,
                         ),
                         label: Text(
                           _isPlaying ? 'Stop' : 'Preview',
                           style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF9318)),
+                          maxLines: 1,
+                          softWrap: false,
                         ),
                         style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           side: const BorderSide(color: Color(0xFFFF9318), width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(26),
@@ -327,12 +334,13 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
 
                   // Add to timeline Button
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: SizedBox(
                       height: 52,
                       child: ElevatedButton(
                         onPressed: _isSynthesizing ? null : _addToTimeline,
                         style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           backgroundColor: const Color(0xFFFF9318),
                           foregroundColor: Colors.white,
                           elevation: 2,
@@ -348,7 +356,9 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                               )
                             : const Text(
                                 'Add to timeline',
-                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                maxLines: 1,
+                                softWrap: false,
                               ),
                       ),
                     ),

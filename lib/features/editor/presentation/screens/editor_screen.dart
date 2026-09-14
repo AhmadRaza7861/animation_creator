@@ -1018,6 +1018,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     BuildContext context,
     EditorController controller,
   ) async {
+    if (controller.isAudioStudioOpen) {
+      controller.isAudioStudioOpen = false;
+      return;
+    }
     await controller.saveProject();
     if (context.mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
