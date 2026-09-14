@@ -109,20 +109,9 @@ class _CanvasSelectorState extends State<CanvasSelector> {
       ),
       child: Row(
         children: [
-          // 1. Standalone Layer Button with SVG Icon & Dynamic Layer Count Badge
-          _buildLayerButtonWithBadge(),
-          // 2. Standalone Audio Studio Button with dynamic count
-          if (widget.onOpenAudioStudio != null) _buildAudioButtonWithBadge(),
-          // 3. Standalone Play / Preview Animation Button
-          _buildPlayButton(),
-          // Subtle Vertical Divider separating tools from frame sequence
-          Container(
-            width: 1,
-            height: 32,
-            margin: const EdgeInsets.only(right: 8.0),
-            color: Colors.black.withValues(alpha: 0.08),
-          ),
-          // 3. Reorderable Frame Thumbnails list
+          // Unified Compact Control Dock (Layers, Audio, Play)
+          _buildToolsDock(),
+          // Reorderable Frame Thumbnails list
           Expanded(
             child: ReorderableListView.builder(
               key: const PageStorageKey('timeline_canvas_selector_scroll'),
@@ -145,9 +134,9 @@ class _CanvasSelectorState extends State<CanvasSelector> {
               },
             ),
           ),
-          // 4. Dashed Add Frame Button
+          // Dashed Add Frame Button
           Padding(
-            padding: const EdgeInsets.only(right: 16.0, left: 8.0),
+            padding: const EdgeInsets.only(right: 14.0, left: 6.0),
             child: _buildDashedAddButton(),
           ),
         ],
@@ -155,202 +144,191 @@ class _CanvasSelectorState extends State<CanvasSelector> {
     );
   }
 
-  Widget _buildAudioButtonWithBadge() {
-    final int count = widget.audioClipCount ?? 0;
-    return Tooltip(
-      message: 'Audio Studio',
-      child: Container(
-        width: 56,
-        height: 56,
-        margin: const EdgeInsets.only(right: 8.0, top: 12.0, bottom: 12.0),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF4E8),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFFFF9318).withValues(alpha: 0.35),
-            width: 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF9318).withValues(alpha: 0.12),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: widget.onOpenAudioStudio,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Center(
-                  child: Icon(
-                    Icons.music_note_rounded,
-                    size: 24,
-                    color: Color(0xFFFF9318),
-                  ),
-                ),
-                if (count > 0)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF9318),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$count',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildToolsDock() {
+    final int layerCount = widget.drawingController != null
+        ? (widget.drawingController!.layers.isNotEmpty ? widget.drawingController!.layers.length : 1)
+        : (widget.layerCount ?? 1);
+    final int audioCount = widget.audioClipCount ?? 0;
 
-  Widget _buildPlayButton() {
     return Container(
-      width: 56,
-      height: 56,
-      margin: const EdgeInsets.only(right: 8.0, top: 12.0, bottom: 12.0),
+      height: 52,
+      margin: const EdgeInsets.only(left: 8.0, right: 6.0, top: 14.0, bottom: 14.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF5EB),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: ColorConstants.primary.withValues(alpha: 0.25),
+          color: Colors.black.withValues(alpha: 0.08),
           width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: ColorConstants.primary.withValues(alpha: 0.08),
-            blurRadius: 4,
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: widget.onPlay,
-          child: const Center(
-            child: Icon(
-              Icons.play_arrow_rounded,
-              size: 28,
-              color: ColorConstants.primary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLayerButtonWithBadge() {
-    Widget buildContent(int count) {
-      return Tooltip(
-        message: 'Layers ($count)',
-        child: Container(
-          width: 56,
-          height: 56,
-          margin: const EdgeInsets.only(left: 10.0, right: 8.0, top: 12.0, bottom: 12.0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.black.withValues(alpha: 0.08),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 1. Layers Button
+          Tooltip(
+            message: 'Layers ($layerCount)',
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(15)),
               onTap: widget.onOpenFrames,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  // Layer SVG Icon
-                  SvgPicture.asset(
-                    AssetConstants.layer_icon,
-                    width: 22,
-                    height: 22,
-                    colorFilter: const ColorFilter.mode(
-                      ColorConstants.darkText,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  // Layer Count Badge (Top-Right)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: ColorConstants.primary,
-                        borderRadius: BorderRadius.circular(9),
-                        border: Border.all(color: Colors.white, width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ColorConstants.primary.withValues(alpha: 0.35),
-                            blurRadius: 3,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
+              child: SizedBox(
+                width: 38,
+                height: 50,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    SvgPicture.asset(
+                      AssetConstants.layer_icon,
+                      width: 19,
+                      height: 19,
+                      colorFilter: const ColorFilter.mode(
+                        ColorConstants.darkText,
+                        BlendMode.srcIn,
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$count',
-                        style: const TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          height: 1.0,
+                    ),
+                    Positioned(
+                      top: 5,
+                      right: 3,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
+                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                        decoration: BoxDecoration(
+                          color: ColorConstants.primary,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white, width: 1.2),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$layerCount',
+                          style: const TextStyle(
+                            fontSize: 8.0,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    }
 
-    if (widget.drawingController != null) {
-      return ListenableBuilder(
-        listenable: widget.drawingController!,
-        builder: (context, _) {
-          final count = widget.drawingController!.layers.length;
-          return buildContent(count > 0 ? count : 1);
-        },
-      );
-    }
+          // Subtle Divider
+          Container(
+            width: 1,
+            height: 20,
+            color: Colors.black.withValues(alpha: 0.07),
+          ),
 
-    final count = widget.layerCount ?? 1;
-    return buildContent(count);
+          // 2. Audio Studio Button
+          if (widget.onOpenAudioStudio != null) ...[
+            Tooltip(
+              message: 'Audio Studio${audioCount > 0 ? " ($audioCount clips)" : ""}',
+              child: InkWell(
+                onTap: widget.onOpenAudioStudio,
+                child: SizedBox(
+                  width: 38,
+                  height: 50,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        Icons.music_note_rounded,
+                        size: 21,
+                        color: audioCount > 0
+                            ? const Color(0xFFFF9318)
+                            : const Color(0xFF6E6E78),
+                      ),
+                      if (audioCount > 0)
+                        Positioned(
+                          top: 5,
+                          right: 3,
+                          child: Container(
+                            constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
+                            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF9318),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.white, width: 1.2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFFF9318).withValues(alpha: 0.4),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$audioCount',
+                              style: const TextStyle(
+                                fontSize: 8.0,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                height: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Subtle Divider
+            Container(
+              width: 1,
+              height: 20,
+              color: Colors.black.withValues(alpha: 0.07),
+            ),
+          ],
+
+          // 3. Play / Preview Animation Button
+          Tooltip(
+            message: 'Preview Animation',
+            child: InkWell(
+              borderRadius: const BorderRadius.horizontal(right: Radius.circular(15)),
+              onTap: widget.onPlay,
+              child: Container(
+                width: 42,
+                height: 50,
+                padding: const EdgeInsets.all(4.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9318),
+                    borderRadius: BorderRadius.circular(11),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF9318).withValues(alpha: 0.35),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      size: 22,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildDashedAddButton() {
@@ -458,6 +436,31 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                     color: Colors.white,
                     size: 13,
                   ),
+                ),
+              ),
+            ),
+          ),
+
+          // Frame Number Badge
+          Positioned(
+            bottom: 4,
+            left: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? ColorConstants.primary
+                    : Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: Colors.white, width: 1.0),
+              ),
+              child: Text(
+                '${index + 1}',
+                style: const TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  height: 1.0,
                 ),
               ),
             ),
