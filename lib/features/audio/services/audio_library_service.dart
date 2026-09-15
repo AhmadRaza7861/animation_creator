@@ -155,7 +155,7 @@ class AudioLibraryService {
     }
 
     final File sfxFile = File('${sfxDir.path}/${item.id}.wav');
-    if (!await sfxFile.exists()) {
+    if (!await sfxFile.exists() || await sfxFile.length() < 100) {
       final Uint8List wavBytes = synthesizeWavForItem(item);
       await sfxFile.writeAsBytes(wavBytes, flush: true);
     }
@@ -316,8 +316,8 @@ class AudioLibraryService {
     header.setUint32(40, dataSize, Endian.little);
 
     final Uint8List wavBytes = Uint8List(44 + dataSize);
-    wavBytes.setRange(0, 44, header.buffer.asUint8List());
-    wavBytes.setRange(44, 44 + dataSize, pcmData.buffer.asUint8List());
+    wavBytes.setRange(0, 44, header.buffer.asUint8List(header.offsetInBytes, 44));
+    wavBytes.setRange(44, 44 + dataSize, pcmData.buffer.asUint8List(pcmData.offsetInBytes, dataSize));
     return wavBytes;
   }
 

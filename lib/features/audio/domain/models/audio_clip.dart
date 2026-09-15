@@ -9,7 +9,9 @@ class AudioClip {
   int durationMs; // Duration of the active clip in milliseconds
   int trimStartMs; // Start offset within the source audio file
   int trimEndMs; // End offset within the source audio file
-  double volume; // 0.0 to 1.0
+  int fadeInMs; // Fade in duration in milliseconds (0 = no fade)
+  int fadeOutMs; // Fade out duration in milliseconds (0 = no fade)
+  double volume; // 0.0 to 2.0 (default 1.0)
   bool isMuted;
   List<double> waveformSamples; // Normalized amplitudes (0.0 to 1.0)
 
@@ -22,6 +24,8 @@ class AudioClip {
     required this.durationMs,
     this.trimStartMs = 0,
     int? trimEndMs,
+    this.fadeInMs = 0,
+    this.fadeOutMs = 0,
     this.volume = 1.0,
     this.isMuted = false,
     List<double>? waveformSamples,
@@ -32,6 +36,45 @@ class AudioClip {
   int get endOffsetMs => startOffsetMs + (trimEndMs - trimStartMs);
   int get trimmedDurationMs => (trimEndMs - trimStartMs).clamp(0, durationMs);
 
+  /// Fraction of trimmed duration occupied by fade-in (0.0 to 1.0)
+  double get fadeInFraction {
+    if (trimmedDurationMs <= 0 || fadeInMs <= 0) return 0.0;
+    return (fadeInMs / trimmedDurationMs).clamp(0.0, 1.0);
+  }
+
+  /// Fraction of trimmed duration occupied by fade-out (0.0 to 1.0)
+  double get fadeOutFraction {
+    if (trimmedDurationMs <= 0 || fadeOutMs <= 0) return 0.0;
+    return (fadeOutMs / trimmedDurationMs).clamp(0.0, 1.0);
+  }
+
+  /// Returns true if this clip is active on the timeline at [timelineMs].
+  bool isPlayingAt(int timelineMs) {
+    return timelineMs >= startOffsetMs && timelineMs < endOffsetMs;
+  }
+
+  /// Computes the volume multiplier (0.0 to 1.0) based on fade-in and fade-out
+  /// for a given [localOffsetMs] (relative to the start of this clip on the timeline, 0..trimmedDurationMs).
+  double computeFadeMultiplier(int localOffsetMs) {
+    if (trimmedDurationMs <= 0) return 1.0;
+    final int clampedOffset = localOffsetMs.clamp(0, trimmedDurationMs);
+    double multiplier = 1.0;
+
+    // Apply Fade In
+    if (fadeInMs > 0 && clampedOffset < fadeInMs) {
+      multiplier = (clampedOffset / fadeInMs).clamp(0.0, 1.0);
+    }
+
+    // Apply Fade Out
+    final int remainingMs = trimmedDurationMs - clampedOffset;
+    if (fadeOutMs > 0 && remainingMs < fadeOutMs) {
+      final double outMul = (remainingMs / fadeOutMs).clamp(0.0, 1.0);
+      multiplier = multiplier < outMul ? multiplier : outMul;
+    }
+
+    return multiplier.clamp(0.0, 1.0);
+  }
+
   AudioClip copyWith({
     String? title,
     String? filePath,
@@ -40,6 +83,8 @@ class AudioClip {
     int? durationMs,
     int? trimStartMs,
     int? trimEndMs,
+    int? fadeInMs,
+    int? fadeOutMs,
     double? volume,
     bool? isMuted,
     List<double>? waveformSamples,
@@ -53,6 +98,8 @@ class AudioClip {
       durationMs: durationMs ?? this.durationMs,
       trimStartMs: trimStartMs ?? this.trimStartMs,
       trimEndMs: trimEndMs ?? this.trimEndMs,
+      fadeInMs: fadeInMs ?? this.fadeInMs,
+      fadeOutMs: fadeOutMs ?? this.fadeOutMs,
       volume: volume ?? this.volume,
       isMuted: isMuted ?? this.isMuted,
       waveformSamples: waveformSamples ?? this.waveformSamples,
@@ -69,6 +116,8 @@ class AudioClip {
       'durationMs': durationMs,
       'trimStartMs': trimStartMs,
       'trimEndMs': trimEndMs,
+      'fadeInMs': fadeInMs,
+      'fadeOutMs': fadeOutMs,
       'volume': volume,
       'isMuted': isMuted,
       'waveformSamples': waveformSamples,
@@ -91,6 +140,8 @@ class AudioClip {
       durationMs: duration,
       trimStartMs: json['trimStartMs'] as int? ?? 0,
       trimEndMs: json['trimEndMs'] as int? ?? duration,
+      fadeInMs: json['fadeInMs'] as int? ?? 0,
+      fadeOutMs: json['fadeOutMs'] as int? ?? 0,
       volume: (json['volume'] as num?)?.toDouble() ?? 1.0,
       isMuted: json['isMuted'] as bool? ?? false,
       waveformSamples: samples,

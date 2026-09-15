@@ -76,15 +76,66 @@ class AudioProjectState {
     return null;
   }
 
+  /// Whether any track in the project is currently soloed.
+  bool get hasSoloTracks => tracks.any((t) => t.isSolo);
+
+  /// Evaluates whether [track] should produce audio (handles solo & mute).
+  bool isTrackActive(AudioTrack track) {
+    if (track.isMuted) return false;
+    if (hasSoloTracks) return track.isSolo;
+    return true;
+  }
+
+  /// Evaluates whether [clip] should produce audio (handles parent track solo/mute & clip mute).
+  bool isClipActive(AudioClip clip) {
+    if (clip.isMuted || clip.filePath.isEmpty) return false;
+    if (clip.trackIndex >= 0 && clip.trackIndex < tracks.length) {
+      return isTrackActive(tracks[clip.trackIndex]);
+    }
+    return false;
+  }
+
+  /// Returns all clips that are actively playing at the given [timelineMs] position.
+  List<AudioClip> getActiveClipsAt(int timelineMs) {
+    final List<AudioClip> active = [];
+    for (final track in tracks) {
+      if (!isTrackActive(track)) continue;
+      for (final clip in track.clips) {
+        if (!clip.isMuted && clip.filePath.isNotEmpty && clip.isPlayingAt(timelineMs)) {
+          active.add(clip);
+        }
+      }
+    }
+    return active;
+  }
+
   void toggleMute(int trackIndex) {
     if (trackIndex >= 0 && trackIndex < tracks.length) {
       tracks[trackIndex].isMuted = !tracks[trackIndex].isMuted;
     }
   }
 
+  void toggleSolo(int trackIndex) {
+    if (trackIndex >= 0 && trackIndex < tracks.length) {
+      tracks[trackIndex].isSolo = !tracks[trackIndex].isSolo;
+    }
+  }
+
   void toggleLock(int trackIndex) {
     if (trackIndex >= 0 && trackIndex < tracks.length) {
       tracks[trackIndex].isLocked = !tracks[trackIndex].isLocked;
+    }
+  }
+
+  void setTrackVolume(int trackIndex, double volume) {
+    if (trackIndex >= 0 && trackIndex < tracks.length) {
+      tracks[trackIndex].volume = volume.clamp(0.0, 2.0);
+    }
+  }
+
+  void renameTrack(int trackIndex, String name) {
+    if (trackIndex >= 0 && trackIndex < tracks.length) {
+      tracks[trackIndex].name = name.trim().isNotEmpty ? name.trim() : 'Track ${trackIndex + 1}';
     }
   }
 
@@ -104,7 +155,7 @@ class AudioProjectState {
   }
 
   bool removeTrack(int trackIndex) {
-    if (trackIndex < 0 || trackIndex >= tracks.length || tracks.length <= 4) {
+    if (trackIndex < 0 || trackIndex >= tracks.length || tracks.length <= 1) {
       return false;
     }
     tracks.removeAt(trackIndex);

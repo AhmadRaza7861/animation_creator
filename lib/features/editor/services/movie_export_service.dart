@@ -117,15 +117,15 @@ class MovieExportService {
       final bool isGif = options.format.toUpperCase() == 'GIF';
 
       // Check for valid audio clips to mix
-      final List<AudioClip> activeClips = [];
+      final List<({AudioClip clip, double trackVolume})> activeClipsWithVol = [];
       if (!isGif && audioState != null) {
         for (final track in audioState.tracks) {
-          if (track.isMuted) continue;
+          if (!audioState.isTrackActive(track)) continue;
           for (final clip in track.clips) {
             if (clip.isMuted || clip.filePath.isEmpty) continue;
             final file = File(clip.filePath);
             if (file.existsSync()) {
-              activeClips.add(clip);
+              activeClipsWithVol.add((clip: clip, trackVolume: track.volume));
             }
           }
         }
@@ -144,20 +144,14 @@ class MovieExportService {
           '-vf', gifFilter,
           outputFilePath,
         ];
-      } else if (activeClips.isNotEmpty) {
-        // Multi-track audio mixing
+      } else if (activeClipsWithVol.isNotEmpty) {
+        // Multi-track audio mixing with trimming, volume scaling, fade-in/out, and delay sync
         final List<String> audioInputs = [];
-        final List<String> filterChains = [];
-
-        for (int idx = 0; idx < activeClips.length; idx++) {
-          final clip = activeClips[idx];
-          audioInputs.addAll(['-i', clip.filePath]);
-          final int delayMs = clip.startOffsetMs.clamp(0, 3600000);
-          filterChains.add('[${idx + 1}:a]adelay=$delayMs|$delayMs[a$idx]');
+        for (final item in activeClipsWithVol) {
+          audioInputs.addAll(['-i', item.clip.filePath]);
         }
 
-        final String mixInputs = List.generate(activeClips.length, (i) => '[a$i]').join('');
-        final String audioFilter = '${filterChains.join(';')};${mixInputs}amix=inputs=${activeClips.length}[aout]';
+        final String audioFilter = buildAudioFilterComplex(activeClipsWithVol)!;
 
         args = [
           '-y',
@@ -170,6 +164,8 @@ class MovieExportService {
           '-c:v', 'libx264',
           '-c:a', 'aac',
           '-b:a', '192k',
+          '-ar', '48000',
+          '-ac', '2',
           '-pix_fmt', 'yuv420p',
           '-preset', 'ultrafast',
           '-shortest',
@@ -382,6 +378,57 @@ class MovieExportService {
     canvas.drawRRect(bgRRect, bgPaint);
 
     textPainter.paint(canvas, position);
+  }
+
+  /// Builds the FFmpeg filter_complex string for multi-track audio mixing with trimming, volume, fade, and delay synchronization.
+  static String? buildAudioFilterComplex(List<({AudioClip clip, double trackVolume})> activeClipsWithVol) {
+    if (activeClipsWithVol.isEmpty) return null;
+    final List<String> filterChains = [];
+
+    for (int idx = 0; idx < activeClipsWithVol.length; idx++) {
+      final item = activeClipsWithVol[idx];
+      final clip = item.clip;
+      final double trackVol = item.trackVolume;
+      final double effVolume = (clip.volume * trackVol).clamp(0.0, 2.0);
+
+      final double trimStartSec = (clip.trimStartMs / 1000.0).clamp(0.0, clip.durationMs / 1000.0);
+      final double trimEndSec = (clip.trimEndMs / 1000.0).clamp(trimStartSec + 0.05, clip.durationMs / 1000.0);
+      final double trimmedDurSec = (trimEndSec - trimStartSec).clamp(0.05, 3600.0);
+      final int delayMs = clip.startOffsetMs.clamp(0, 3600000);
+
+      final List<String> nodeFilters = [
+        'atrim=start=${trimStartSec.toStringAsFixed(3)}:end=${trimEndSec.toStringAsFixed(3)}',
+        'asetpts=PTS-STARTPTS',
+      ];
+
+      if (effVolume != 1.0) {
+        nodeFilters.add('volume=${effVolume.toStringAsFixed(2)}');
+      }
+
+      if (clip.fadeInMs > 0) {
+        final double fadeInSec = (clip.fadeInMs / 1000.0).clamp(0.01, trimmedDurSec);
+        nodeFilters.add('afade=t=in:st=0:d=${fadeInSec.toStringAsFixed(3)}');
+      }
+
+      if (clip.fadeOutMs > 0) {
+        final double fadeOutSec = (clip.fadeOutMs / 1000.0).clamp(0.01, trimmedDurSec);
+        final double fadeStartSec = (trimmedDurSec - fadeOutSec).clamp(0.0, trimmedDurSec);
+        nodeFilters.add('afade=t=out:st=${fadeStartSec.toStringAsFixed(3)}:d=${fadeOutSec.toStringAsFixed(3)}');
+      }
+
+      nodeFilters.add('adelay=$delayMs|$delayMs');
+      nodeFilters.add('aresample=48000');
+      nodeFilters.add('aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo');
+
+      filterChains.add('[${idx + 1}:a]${nodeFilters.join(',')}[a$idx]');
+    }
+
+    if (activeClipsWithVol.length == 1) {
+      return '${filterChains.first};[a0]anull[aout]';
+    } else {
+      final String mixInputs = List.generate(activeClipsWithVol.length, (i) => '[a$i]').join('');
+      return '${filterChains.join(';')};${mixInputs}amix=inputs=${activeClipsWithVol.length}:dropout_transition=0:normalize=0[aout]';
+    }
   }
 
   static Future<Directory> _getExportDirectory() async {

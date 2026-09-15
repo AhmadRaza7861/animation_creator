@@ -4,14 +4,16 @@ class AudioTrack {
   int index;
   String name;
   bool isMuted;
+  bool isSolo;
   bool isLocked;
-  double volume; // 0.0 to 1.0
+  double volume; // 0.0 to 1.0 (or 2.0 boost)
   List<AudioClip> clips;
 
   AudioTrack({
     required this.index,
     String? name,
     this.isMuted = false,
+    this.isSolo = false,
     this.isLocked = false,
     this.volume = 1.0,
     List<AudioClip>? clips,
@@ -22,6 +24,7 @@ class AudioTrack {
     int? index,
     String? name,
     bool? isMuted,
+    bool? isSolo,
     bool? isLocked,
     double? volume,
     List<AudioClip>? clips,
@@ -30,6 +33,7 @@ class AudioTrack {
       index: index ?? this.index,
       name: name ?? this.name,
       isMuted: isMuted ?? this.isMuted,
+      isSolo: isSolo ?? this.isSolo,
       isLocked: isLocked ?? this.isLocked,
       volume: volume ?? this.volume,
       clips: clips != null ? List<AudioClip>.from(clips) : List<AudioClip>.from(this.clips),
@@ -41,6 +45,7 @@ class AudioTrack {
       'index': index,
       'name': name,
       'isMuted': isMuted,
+      'isSolo': isSolo,
       'isLocked': isLocked,
       'volume': volume,
       'clips': clips.map((c) => c.toJson()).toList(),
@@ -58,6 +63,7 @@ class AudioTrack {
       index: idx,
       name: json['name'] as String? ?? 'Track ${idx + 1}',
       isMuted: json['isMuted'] as bool? ?? false,
+      isSolo: json['isSolo'] as bool? ?? false,
       isLocked: json['isLocked'] as bool? ?? false,
       volume: (json['volume'] as num?)?.toDouble() ?? 1.0,
       clips: clips,

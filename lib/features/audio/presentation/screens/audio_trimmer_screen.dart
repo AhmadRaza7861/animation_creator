@@ -474,7 +474,8 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                           : widget.clip.title,
                       trimStartMs: _trimStartMs,
                       trimEndMs: _trimEndMs,
-                      durationMs: (_trimEndMs - _trimStartMs).clamp(100, widget.clip.durationMs),
+                      fadeInMs: widget.clip.fadeInMs,
+                      fadeOutMs: widget.clip.fadeOutMs,
                     );
                     Navigator.pop(context, trimmedClip);
                   },

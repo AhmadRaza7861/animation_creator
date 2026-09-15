@@ -106,6 +106,9 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
         _leftHeadersVerticalScrollController.jumpTo(_lanesVerticalScrollController.offset);
       }
     });
+
+    // Pre-warm audio clips in the background so playback starts instantaneously
+    _playbackService.prewarmState(widget.audioState);
   }
 
   @override
@@ -119,6 +122,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     }
     if (oldWidget.totalFrames != widget.totalFrames || oldWidget.audioState != widget.audioState) {
       _clipRevisionNotifier.value++;
+      _playbackService.prewarmState(widget.audioState);
     }
   }
 
@@ -169,6 +173,9 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       await _playbackService.pause();
       _isPlayingNotifier.value = false;
     } else {
+      if (_positionNotifier.value >= _maxTimelineMs - 50) {
+        _positionNotifier.value = 0;
+      }
       _isPlayingNotifier.value = true;
 
       await _playbackService.playTracks(
@@ -210,29 +217,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     }
 
     if (_isPlayingNotifier.value) {
-      _playbackService.playTracks(
-        state: widget.audioState,
-        startMs: clamped,
-        maxTimelineMs: _maxTimelineMs,
-        onPositionUpdate: (posMs) {
-          if (!mounted) return;
-          _positionNotifier.value = posMs;
-          final int f = ((posMs / 1000.0) * widget.fps).floor().clamp(0, widget.totalFrames - 1);
-          if (f != _lastDispatchedFrame && f != widget.currentFrameIndex) {
-            _lastDispatchedFrame = f;
-            widget.onFrameSelected(f);
-            _scrollToActiveFrame(f);
-          }
-        },
-        onPlaybackComplete: () {
-          if (!mounted) return;
-          _isPlayingNotifier.value = false;
-          _positionNotifier.value = 0;
-          _lastDispatchedFrame = 0;
-          widget.onFrameSelected(0);
-          _scrollToActiveFrame(0);
-        },
-      );
+      _playbackService.seekTo(clamped, widget.audioState);
     }
   }
 
@@ -402,6 +387,8 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       trimEndMs: origTrimEnd,
       volume: clip.volume,
       isMuted: clip.isMuted,
+      fadeInMs: 0,
+      fadeOutMs: clip.fadeOutMs,
       waveformSamples: part2Samples.isNotEmpty ? part2Samples : List.generate(30, (i) => 0.4),
     );
 
@@ -433,6 +420,8 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       trimEndMs: clip.trimEndMs,
       volume: clip.volume,
       isMuted: clip.isMuted,
+      fadeInMs: clip.fadeInMs,
+      fadeOutMs: clip.fadeOutMs,
       waveformSamples: List<double>.from(clip.waveformSamples),
     );
 
@@ -529,6 +518,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                           clip.isMuted = newVol == 0;
                           _clipRevisionNotifier.value++;
                           widget.onAudioStateChanged(widget.audioState);
+                          _playbackService.updateLiveVolumes(widget.audioState);
                         },
                       ),
                       Expanded(
@@ -550,6 +540,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                               clip.volume = val;
                               clip.isMuted = val == 0.0;
                               _clipRevisionNotifier.value++;
+                              _playbackService.updateLiveVolumes(widget.audioState);
                             },
                             onChangeEnd: (val) {
                               widget.onAudioStateChanged(widget.audioState);
@@ -563,6 +554,710 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                   const SizedBox(height: 12),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFadeInOutSheet(AudioClip clip) {
+    final fadeInNotifier = ValueNotifier<double>(clip.fadeInMs / 1000.0);
+    final fadeOutNotifier = ValueNotifier<double>(clip.fadeOutMs / 1000.0);
+    final double maxFadeSeconds = ((clip.trimmedDurationMs / 2.0) / 1000.0).clamp(0.1, 5.0);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 20,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Fade In / Fade Out',
+                      style: TextStyle(
+                        color: Color(0xFF1E1E24),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF6B6E7B)),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Fade In Section
+                ValueListenableBuilder<double>(
+                  valueListenable: fadeInNotifier,
+                  builder: (context, fadeInSec, _) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.trending_up_rounded, color: Color(0xFFFF9318), size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Fade In Duration',
+                                  style: TextStyle(
+                                    color: Color(0xFF1E1E24),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF4E8),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFF9318).withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                '${fadeInSec.toStringAsFixed(1)}s',
+                                style: const TextStyle(
+                                  color: Color(0xFFFF9318),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: const Color(0xFFFF9318),
+                            inactiveTrackColor: const Color(0xFFEBEBF0),
+                            thumbColor: const Color(0xFFFF9318),
+                            overlayColor: const Color(0xFFFF9318).withValues(alpha: 0.15),
+                            trackHeight: 4,
+                          ),
+                          child: Slider(
+                            value: fadeInSec.clamp(0.0, maxFadeSeconds),
+                            min: 0.0,
+                            max: maxFadeSeconds,
+                            divisions: (maxFadeSeconds * 10).round().clamp(1, 100),
+                            onChanged: (val) {
+                              fadeInNotifier.value = val;
+                              clip.fadeInMs = (val * 1000).round();
+                              _clipRevisionNotifier.value++;
+                              _playbackService.updateLiveVolumes(widget.audioState);
+                            },
+                            onChangeEnd: (val) {
+                              widget.onAudioStateChanged(widget.audioState);
+                            },
+                          ),
+                        ),
+                        // Presets row for Fade In
+                        Row(
+                          children: [
+                            _buildFadePresetChip(
+                              label: 'None',
+                              isSelected: fadeInSec == 0,
+                              onTap: () {
+                                fadeInNotifier.value = 0.0;
+                                clip.fadeInMs = 0;
+                                _clipRevisionNotifier.value++;
+                                widget.onAudioStateChanged(widget.audioState);
+                                _playbackService.updateLiveVolumes(widget.audioState);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFadePresetChip(
+                              label: '0.5s',
+                              isSelected: (fadeInSec - 0.5).abs() < 0.05,
+                              onTap: () {
+                                final v = 0.5.clamp(0.0, maxFadeSeconds);
+                                fadeInNotifier.value = v;
+                                clip.fadeInMs = (v * 1000).round();
+                                _clipRevisionNotifier.value++;
+                                widget.onAudioStateChanged(widget.audioState);
+                                _playbackService.updateLiveVolumes(widget.audioState);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFadePresetChip(
+                              label: '1.0s',
+                              isSelected: (fadeInSec - 1.0).abs() < 0.05,
+                              onTap: () {
+                                final v = 1.0.clamp(0.0, maxFadeSeconds);
+                                fadeInNotifier.value = v;
+                                clip.fadeInMs = (v * 1000).round();
+                                _clipRevisionNotifier.value++;
+                                widget.onAudioStateChanged(widget.audioState);
+                                _playbackService.updateLiveVolumes(widget.audioState);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFadePresetChip(
+                              label: '2.0s',
+                              isSelected: (fadeInSec - 2.0).abs() < 0.05,
+                              onTap: () {
+                                final v = 2.0.clamp(0.0, maxFadeSeconds);
+                                fadeInNotifier.value = v;
+                                clip.fadeInMs = (v * 1000).round();
+                                _clipRevisionNotifier.value++;
+                                widget.onAudioStateChanged(widget.audioState);
+                                _playbackService.updateLiveVolumes(widget.audioState);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFEBEBF0), height: 1),
+                const SizedBox(height: 16),
+
+                // Fade Out Section
+                ValueListenableBuilder<double>(
+                  valueListenable: fadeOutNotifier,
+                  builder: (context, fadeOutSec, _) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.trending_down_rounded, color: Color(0xFFFF9318), size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Fade Out Duration',
+                                  style: TextStyle(
+                                    color: Color(0xFF1E1E24),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF4E8),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFF9318).withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                '${fadeOutSec.toStringAsFixed(1)}s',
+                                style: const TextStyle(
+                                  color: Color(0xFFFF9318),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: const Color(0xFFFF9318),
+                            inactiveTrackColor: const Color(0xFFEBEBF0),
+                            thumbColor: const Color(0xFFFF9318),
+                            overlayColor: const Color(0xFFFF9318).withValues(alpha: 0.15),
+                            trackHeight: 4,
+                          ),
+                          child: Slider(
+                            value: fadeOutSec.clamp(0.0, maxFadeSeconds),
+                            min: 0.0,
+                            max: maxFadeSeconds,
+                            divisions: (maxFadeSeconds * 10).round().clamp(1, 100),
+                            onChanged: (val) {
+                              fadeOutNotifier.value = val;
+                              clip.fadeOutMs = (val * 1000).round();
+                              _clipRevisionNotifier.value++;
+                              _playbackService.updateLiveVolumes(widget.audioState);
+                            },
+                            onChangeEnd: (val) {
+                              widget.onAudioStateChanged(widget.audioState);
+                            },
+                          ),
+                        ),
+                        // Presets row for Fade Out
+                        Row(
+                          children: [
+                            _buildFadePresetChip(
+                              label: 'None',
+                              isSelected: fadeOutSec == 0,
+                              onTap: () {
+                                fadeOutNotifier.value = 0.0;
+                                clip.fadeOutMs = 0;
+                                _clipRevisionNotifier.value++;
+                                widget.onAudioStateChanged(widget.audioState);
+                                _playbackService.updateLiveVolumes(widget.audioState);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFadePresetChip(
+                              label: '0.5s',
+                              isSelected: (fadeOutSec - 0.5).abs() < 0.05,
+                              onTap: () {
+                                final v = 0.5.clamp(0.0, maxFadeSeconds);
+                                fadeOutNotifier.value = v;
+                                clip.fadeOutMs = (v * 1000).round();
+                                _clipRevisionNotifier.value++;
+                                widget.onAudioStateChanged(widget.audioState);
+                                _playbackService.updateLiveVolumes(widget.audioState);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFadePresetChip(
+                              label: '1.0s',
+                              isSelected: (fadeOutSec - 1.0).abs() < 0.05,
+                              onTap: () {
+                                final v = 1.0.clamp(0.0, maxFadeSeconds);
+                                fadeOutNotifier.value = v;
+                                clip.fadeOutMs = (v * 1000).round();
+                                _clipRevisionNotifier.value++;
+                                widget.onAudioStateChanged(widget.audioState);
+                                _playbackService.updateLiveVolumes(widget.audioState);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFadePresetChip(
+                              label: '2.0s',
+                              isSelected: (fadeOutSec - 2.0).abs() < 0.05,
+                              onTap: () {
+                                final v = 2.0.clamp(0.0, maxFadeSeconds);
+                                fadeOutNotifier.value = v;
+                                clip.fadeOutMs = (v * 1000).round();
+                                _clipRevisionNotifier.value++;
+                                widget.onAudioStateChanged(widget.audioState);
+                                _playbackService.updateLiveVolumes(widget.audioState);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFadePresetChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF9318) : const Color(0xFFF4F5F8),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF9318) : const Color(0xFFE5E6EB),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF2C2D35),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTrackOptionsModal(int trackIndex) {
+    if (trackIndex < 0 || trackIndex >= widget.audioState.tracks.length) return;
+    final track = widget.audioState.tracks[trackIndex];
+    final trackVolNotifier = ValueNotifier<double>(track.volume);
+    final isSoloNotifier = ValueNotifier<bool>(track.isSolo);
+    final isMutedNotifier = ValueNotifier<bool>(track.isMuted);
+    final isLockedNotifier = ValueNotifier<bool>(track.isLocked);
+    final nameController = TextEditingController(text: track.name);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 20,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9318),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'T${trackIndex + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Track ${trackIndex + 1} Options',
+                          style: const TextStyle(
+                            color: Color(0xFF1E1E24),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF6B6E7B)),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Track Name Input
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Track Name',
+                    hintText: 'e.g. Background Music, Voiceover, SFX',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.check_rounded, color: Color(0xFFFF9318)),
+                      onPressed: () {
+                        widget.audioState.renameTrack(trackIndex, nameController.text.trim());
+                        _clipRevisionNotifier.value++;
+                        widget.onAudioStateChanged(widget.audioState);
+                        Fluttertoast.showToast(msg: 'Track renamed');
+                      },
+                    ),
+                  ),
+                  onSubmitted: (val) {
+                    widget.audioState.renameTrack(trackIndex, val.trim());
+                    _clipRevisionNotifier.value++;
+                    widget.onAudioStateChanged(widget.audioState);
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Solo / Mute / Lock Quick Bar
+                Row(
+                  children: [
+                    // Solo Button
+                    Expanded(
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: isSoloNotifier,
+                        builder: (context, solo, _) => InkWell(
+                          onTap: () {
+                            widget.audioState.toggleSolo(trackIndex);
+                            isSoloNotifier.value = widget.audioState.tracks[trackIndex].isSolo;
+                            _clipRevisionNotifier.value++;
+                            widget.onAudioStateChanged(widget.audioState);
+                            _playbackService.updateLiveVolumes(widget.audioState);
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: solo ? const Color(0xFFFFB300) : const Color(0xFFF4F5F8),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: solo ? const Color(0xFFFFB300) : const Color(0xFFE5E6EB),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'S',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    color: solo ? Colors.white : const Color(0xFF6B6E7B),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  solo ? 'Solo ON' : 'Solo',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: solo ? Colors.white : const Color(0xFF6B6E7B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Mute Button
+                    Expanded(
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: isMutedNotifier,
+                        builder: (context, muted, _) => InkWell(
+                          onTap: () {
+                            widget.audioState.toggleMute(trackIndex);
+                            isMutedNotifier.value = widget.audioState.tracks[trackIndex].isMuted;
+                            _clipRevisionNotifier.value++;
+                            widget.onAudioStateChanged(widget.audioState);
+                            _playbackService.updateLiveVolumes(widget.audioState);
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: muted ? const Color(0xFFFF4B72) : const Color(0xFFF4F5F8),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: muted ? const Color(0xFFFF4B72) : const Color(0xFFE5E6EB),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                                  size: 16,
+                                  color: muted ? Colors.white : const Color(0xFF6B6E7B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  muted ? 'Muted' : 'Mute',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: muted ? Colors.white : const Color(0xFF6B6E7B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Lock Button
+                    Expanded(
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: isLockedNotifier,
+                        builder: (context, locked, _) => InkWell(
+                          onTap: () {
+                            widget.audioState.toggleLock(trackIndex);
+                            isLockedNotifier.value = widget.audioState.tracks[trackIndex].isLocked;
+                            _clipRevisionNotifier.value++;
+                            widget.onAudioStateChanged(widget.audioState);
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: locked ? const Color(0xFFFF9800) : const Color(0xFFF4F5F8),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: locked ? const Color(0xFFFF9800) : const Color(0xFFE5E6EB),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  locked ? Icons.lock_rounded : Icons.lock_open_rounded,
+                                  size: 16,
+                                  color: locked ? Colors.white : const Color(0xFF6B6E7B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  locked ? 'Locked' : 'Lock',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: locked ? Colors.white : const Color(0xFF6B6E7B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Track Master Volume Slider
+                ValueListenableBuilder<double>(
+                  valueListenable: trackVolNotifier,
+                  builder: (context, vol, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Track Master Volume',
+                            style: TextStyle(
+                              color: Color(0xFF1E1E24),
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '${(vol * 100).round()}%',
+                            style: const TextStyle(
+                              color: Color(0xFFFF9318),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: const Color(0xFFFF9318),
+                          inactiveTrackColor: const Color(0xFFEBEBF0),
+                          thumbColor: const Color(0xFFFF9318),
+                          trackHeight: 4,
+                        ),
+                        child: Slider(
+                          value: vol,
+                          min: 0.0,
+                          max: 2.0,
+                          divisions: 40,
+                          onChanged: (val) {
+                            trackVolNotifier.value = val;
+                            widget.audioState.setTrackVolume(trackIndex, val);
+                            _clipRevisionNotifier.value++;
+                            _playbackService.updateLiveVolumes(widget.audioState);
+                          },
+                          onChangeEnd: (val) {
+                            widget.onAudioStateChanged(widget.audioState);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Track Actions (Clear / Delete)
+                if (widget.audioState.tracks.length > 1) ...[
+                  const Divider(color: Color(0xFFEBEBF0)),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF4B72)),
+                    title: const Text('Delete Track', style: TextStyle(color: Color(0xFFFF4B72), fontWeight: FontWeight.w600)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      final removed = widget.audioState.removeTrack(trackIndex);
+                      if (removed) {
+                        _selectedTrackIndexNotifier.value = (_selectedTrackIndexNotifier.value - 1).clamp(0, widget.audioState.tracks.length - 1);
+                        _selectedClipIdNotifier.value = null;
+                        _clipRevisionNotifier.value++;
+                        widget.onAudioStateChanged(widget.audioState);
+                        Fluttertoast.showToast(msg: 'Track deleted');
+                      }
+                    },
+                  ),
+                ],
+              ],
             ),
           ),
         ),
@@ -1050,26 +1745,13 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                               onTap: _addNewTrack,
                               borderRadius: BorderRadius.circular(4),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFFF4E8),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(color: const Color(0xFFFF9318).withValues(alpha: 0.5)),
                                 ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.add_rounded, size: 13, color: Color(0xFFFF9318)),
-                                    Text(
-                                      'Track',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFFFF9318),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                child: const Icon(Icons.add_rounded, size: 15, color: Color(0xFFFF9318)),
                               ),
                             ),
                           ),
@@ -1103,6 +1785,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                 _selectedTrackIndexNotifier.value = trackIdx;
                                                 _selectedClipIdNotifier.value = null;
                                               },
+                                              onLongPress: () => _showTrackOptionsModal(trackIdx),
                                               child: Container(
                                                 height: _trackHeight,
                                                 decoration: BoxDecoration(
@@ -1117,41 +1800,78 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                 child: Column(
                                                   mainAxisAlignment: MainAxisAlignment.center,
                                                   children: [
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                                      decoration: BoxDecoration(
-                                                        color: isSelected ? const Color(0xFFFF9318) : const Color(0xFFEBEBF0),
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(
-                                                        'T${trackIdx + 1}',
-                                                        style: TextStyle(
-                                                          fontSize: 9.5,
-                                                          fontWeight: FontWeight.w800,
-                                                          color: isSelected ? Colors.white : const Color(0xFF6B6E7B),
+                                                    GestureDetector(
+                                                      onTap: () => _showTrackOptionsModal(trackIdx),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                        decoration: BoxDecoration(
+                                                          color: isSelected ? const Color(0xFFFF9318) : const Color(0xFFEBEBF0),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          'T${trackIdx + 1}',
+                                                          style: TextStyle(
+                                                            fontSize: 9.0,
+                                                            fontWeight: FontWeight.w800,
+                                                            color: isSelected ? Colors.white : const Color(0xFF6B6E7B),
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
-                                                    const SizedBox(height: 3),
+                                                    const SizedBox(height: 2),
                                                     Row(
                                                       mainAxisAlignment: MainAxisAlignment.center,
                                                       children: [
+                                                        // Solo toggle button
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            widget.audioState.toggleSolo(trackIdx);
+                                                            _clipRevisionNotifier.value++;
+                                                            widget.onAudioStateChanged(widget.audioState);
+                                                            _playbackService.updateLiveVolumes(widget.audioState);
+                                                          },
+                                                          child: Container(
+                                                            width: 13,
+                                                            height: 13,
+                                                            decoration: BoxDecoration(
+                                                              color: track.isSolo ? const Color(0xFFFFB300) : Colors.transparent,
+                                                              borderRadius: BorderRadius.circular(2),
+                                                              border: Border.all(
+                                                                color: track.isSolo ? const Color(0xFFFFB300) : const Color(0xFFC0C1CA),
+                                                                width: 0.8,
+                                                              ),
+                                                            ),
+                                                            child: Center(
+                                                              child: Text(
+                                                                'S',
+                                                                style: TextStyle(
+                                                                  fontSize: 7.5,
+                                                                  fontWeight: FontWeight.w900,
+                                                                  color: track.isSolo ? Colors.white : const Color(0xFF6B6E7B),
+                                                                  height: 1.0,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 2),
                                                         // Mute button
                                                         GestureDetector(
                                                           onTap: () {
                                                             widget.audioState.toggleMute(trackIdx);
                                                             _clipRevisionNotifier.value++;
                                                             widget.onAudioStateChanged(widget.audioState);
+                                                            _playbackService.updateLiveVolumes(widget.audioState);
                                                           },
                                                           child: Icon(
                                                             track.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                                                            size: 15,
+                                                            size: 13,
                                                             color: track.isMuted
                                                                 ? Colors.red
                                                                 : (isSelected ? const Color(0xFFFF9318) : const Color(0xFF6B6E7B)),
                                                           ),
                                                         ),
-                                                        const SizedBox(width: 4),
+                                                        const SizedBox(width: 2),
                                                         // Lock button
                                                         GestureDetector(
                                                           onTap: () {
@@ -1161,7 +1881,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                           },
                                                           child: Icon(
                                                             track.isLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
-                                                            size: 15,
+                                                            size: 13,
                                                             color: track.isLocked
                                                                 ? const Color(0xFFFF9800)
                                                                 : (isSelected ? const Color(0xFFFF9318) : const Color(0xFF9E9EA7)),
@@ -1554,6 +2274,8 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                                                     playedColor: const Color(0xFFE07C0A),
                                                                                     barWidth: 2.0,
                                                                                     barGap: 1.0,
+                                                                                    fadeInFraction: clip.fadeInFraction,
+                                                                                    fadeOutFraction: clip.fadeOutFraction,
                                                                                   ),
                                                                                 ),
                                                                               ),
@@ -1843,60 +2565,77 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
             margin: const EdgeInsets.symmetric(horizontal: 6),
           ),
 
-          // Action 1: Sound FX (Star)
-          _buildActionButton(
-            icon: Icons.star_border_rounded,
-            label: 'Sound FX',
-            onTap: () => _openSoundFXSelector(clip),
-          ),
-
-          // Action 2: Split (][)
-          _buildActionButton(
-            iconWidget: const SizedBox(
-              height: 22,
-              child: Center(
-                child: Text(
-                  '][',
-                  style: TextStyle(
-                    color: Color(0xFF2C2D35),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -1.0,
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  // Action 1: Split (][)
+                  _buildActionButton(
+                    iconWidget: const SizedBox(
+                      height: 22,
+                      child: Center(
+                        child: Text(
+                          '][',
+                          style: TextStyle(
+                            color: Color(0xFF2C2D35),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -1.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                    label: 'Split',
+                    onTap: _splitSelectedClip,
                   ),
-                ),
+
+                  // Action 2: Fade (Fade In / Fade Out)
+                  _buildActionButton(
+                    icon: Icons.graphic_eq_rounded,
+                    label: 'Fade',
+                    onTap: () => _showFadeInOutSheet(clip),
+                  ),
+
+                  // Action 3: Volume (Speaker)
+                  _buildActionButton(
+                    icon: Icons.volume_up_outlined,
+                    label: 'Volume',
+                    onTap: () => _showVolumeSlider(clip),
+                  ),
+
+                  // Action 4: Sound FX (Star)
+                  _buildActionButton(
+                    icon: Icons.star_border_rounded,
+                    label: 'Sound FX',
+                    onTap: () => _openSoundFXSelector(clip),
+                  ),
+
+                  // Action 5: Track Switcher
+                  _buildActionButton(
+                    icon: Icons.swap_vert_rounded,
+                    label: 'Track ${clip.trackIndex + 1}',
+                    onTap: () => _showTrackSelectionMenu(clip),
+                  ),
+
+                  // Action 6: Duplicate (Copy)
+                  _buildActionButton(
+                    icon: Icons.copy_rounded,
+                    label: 'Duplicate',
+                    onTap: _duplicateSelectedClip,
+                  ),
+
+                  // Action 7: Delete (Trash)
+                  _buildActionButton(
+                    icon: Icons.delete_outline_rounded,
+                    label: 'Delete',
+                    isDestructive: true,
+                    onTap: () => _deleteClip(clip),
+                  ),
+                ],
               ),
             ),
-            label: 'Split',
-            onTap: _splitSelectedClip,
-          ),
-
-          // Action 3: Volume (Speaker)
-          _buildActionButton(
-            icon: Icons.volume_up_outlined,
-            label: 'Volume',
-            onTap: () => _showVolumeSlider(clip),
-          ),
-
-          // Action 4: Track Switcher
-          _buildActionButton(
-            icon: Icons.swap_vert_rounded,
-            label: 'Track ${clip.trackIndex + 1}',
-            onTap: () => _showTrackSelectionMenu(clip),
-          ),
-
-          // Action 5: Duplicate (Copy)
-          _buildActionButton(
-            icon: Icons.copy_rounded,
-            label: 'Duplicate',
-            onTap: _duplicateSelectedClip,
-          ),
-
-          // Action 6: Delete (Trash)
-          _buildActionButton(
-            icon: Icons.delete_outline_rounded,
-            label: 'Delete',
-            isDestructive: true,
-            onTap: () => _deleteClip(clip),
           ),
         ],
       ),
@@ -1912,36 +2651,35 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
   }) {
     final Color itemColor = isDestructive ? const Color(0xFFFF4B72) : const Color(0xFF2C2D35);
 
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                iconWidget ??
-                    Icon(
-                      icon,
-                      color: itemColor,
-                      size: 22,
-                    ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: TextStyle(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              iconWidget ??
+                  Icon(
+                    icon,
                     color: itemColor,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
+                    size: 22,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: itemColor,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),

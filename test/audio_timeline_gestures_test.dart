@@ -1,0 +1,171 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:dummy/features/audio/domain/models/audio_clip.dart';
+import 'package:dummy/features/audio/domain/models/audio_track.dart';
+import 'package:dummy/features/audio/domain/models/audio_project_state.dart';
+import 'package:dummy/features/audio/presentation/widgets/audio_timeline_studio.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('AudioTimelineStudio Gestures & 2D Manipulation Tests', () {
+    late AudioProjectState audioState;
+    late AudioClip clip1;
+    late AudioClip clip2;
+    AudioProjectState? lastUpdatedState;
+
+    setUp(() {
+      audioState = AudioProjectState();
+      clip1 = AudioClip(
+        id: 'clip_t1',
+        title: 'Voiceover 1',
+        filePath: '/mock/voice.m4a',
+        trackIndex: 0,
+        startOffsetMs: 1000,
+        durationMs: 4000,
+        trimStartMs: 0,
+        trimEndMs: 4000,
+      );
+      clip2 = AudioClip(
+        id: 'clip_t2',
+        title: 'Background Music',
+        filePath: '/mock/music.mp3',
+        trackIndex: 1,
+        startOffsetMs: 500,
+        durationMs: 5000,
+        trimStartMs: 0,
+        trimEndMs: 5000,
+      );
+
+      audioState.addClip(clip1);
+      audioState.addClip(clip2);
+      clip1 = audioState.findClip('clip_t1')!;
+      clip2 = audioState.findClip('clip_t2')!;
+      lastUpdatedState = null;
+    });
+
+    Widget createTestWidget() {
+      return MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 800,
+            height: 400,
+            child: AudioTimelineStudio(
+              audioState: audioState,
+              currentFrameIndex: 0,
+              totalFrames: 24,
+              fps: 12,
+              frameThumbnails: const [],
+              onToggleAudioMode: () {},
+              onFrameSelected: (_) {},
+              onAddFrame: () {},
+              onAudioStateChanged: (updated) {
+                lastUpdatedState = updated;
+              },
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('Renders tracks and clips accurately', (tester) async {
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
+
+      expect(find.text('Voiceover 1'), findsOneWidget);
+      expect(find.text('Background Music'), findsOneWidget);
+      expect(find.text('T1'), findsOneWidget);
+      expect(find.text('T2'), findsOneWidget);
+    });
+
+    testWidgets('Dragging audio clip horizontally (left/right) moves startOffsetMs', (tester) async {
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
+
+      final clipFinder = find.byKey(const ValueKey('clip_pos_clip_t1'));
+      expect(clipFinder, findsOneWidget);
+
+      final initialCenter = tester.getCenter(clipFinder);
+      expect(clip1.startOffsetMs, 1000);
+
+      // Drag right by 60 pixels (at 120 px/sec, 60px = 500ms shift)
+      final gesture = await tester.startGesture(initialCenter);
+      await gesture.moveBy(const Offset(60, 0));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(clip1.startOffsetMs, closeTo(1500, 50));
+      expect(lastUpdatedState, isNotNull);
+
+      // Now drag left by 120 pixels (at 120 px/sec, 120px = 1000ms shift left)
+      final newCenter = tester.getCenter(clipFinder);
+      final gesture2 = await tester.startGesture(newCenter);
+      await gesture2.moveBy(const Offset(-120, 0));
+      await tester.pump();
+      await gesture2.up();
+      await tester.pumpAndSettle();
+
+      expect(clip1.startOffsetMs, closeTo(500, 50));
+    });
+
+    testWidgets('Dragging audio clip vertically moves it down to Track 2 and up to Track 1', (tester) async {
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
+
+      final clipFinder = find.byKey(const ValueKey('clip_pos_clip_t1'));
+      expect(clipFinder, findsOneWidget);
+      expect(clip1.trackIndex, 0);
+
+      final initialCenter = tester.getCenter(clipFinder);
+
+      // Drag down by 52px (height of 1 track) to shift to Track 2 (index 1)
+      // Use offset on Track 3 / 4 space to avoid overlap with clip2
+      final gesture = await tester.startGesture(initialCenter);
+      await gesture.moveBy(const Offset(200, 104)); // Move right by 200px and down 2 tracks (to Track 3, index 2)
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(clip1.trackIndex, 2);
+      expect(audioState.tracks[2].clips.any((c) => c.id == 'clip_t1'), isTrue);
+      expect(audioState.tracks[0].clips.any((c) => c.id == 'clip_t1'), isFalse);
+    });
+
+    testWidgets('Left and Right trim handles resize trimmed duration', (tester) async {
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
+
+      // Tap on clip1 to select it and reveal orange trim handles
+      final clipFinder = find.byKey(const ValueKey('clip_pos_clip_t1'));
+      await tester.tap(clipFinder);
+      await tester.pump();
+
+      final leftHandle = find.byKey(const ValueKey('clip_trim_left_clip_t1'));
+      final rightHandle = find.byKey(const ValueKey('clip_trim_right_clip_t1'));
+
+      expect(leftHandle, findsOneWidget);
+      expect(rightHandle, findsOneWidget);
+
+      // 1. Drag Left Trim Handle to the right by 24px (200ms)
+      final leftCenter = tester.getCenter(leftHandle);
+      final leftGesture = await tester.startGesture(leftCenter);
+      await leftGesture.moveBy(const Offset(24, 0));
+      await tester.pump();
+      await leftGesture.up();
+      await tester.pumpAndSettle();
+
+      expect(clip1.trimStartMs, closeTo(200, 50));
+
+      // 2. Drag Right Trim Handle to the left by 60px (500ms)
+      final rightCenter = tester.getCenter(rightHandle);
+      final rightGesture = await tester.startGesture(rightCenter);
+      await rightGesture.moveBy(const Offset(-60, 0));
+      await tester.pump();
+      await rightGesture.up();
+      await tester.pumpAndSettle();
+
+      expect(clip1.trimEndMs, closeTo(3500, 50));
+    });
+  });
+}
