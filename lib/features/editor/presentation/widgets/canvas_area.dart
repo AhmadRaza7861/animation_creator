@@ -11,6 +11,7 @@ import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 
 class CanvasArea extends ConsumerWidget {
   final String? projectId;
@@ -26,42 +27,20 @@ class CanvasArea extends ConsumerWidget {
     BuildContext context,
     EditorController controller,
     Offset position,
-  ) {
+  ) async {
     if (controller.drawingController.isCurrentLayerLocked) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Current layer is locked.')),
       );
       return;
     }
-    String text = '';
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add Text Sticker'),
-          content: TextField(
-            autofocus: true,
-            onChanged: (v) => text = v,
-            decoration: const InputDecoration(hintText: 'Enter text here'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                if (text.isNotEmpty) {
-                  controller.addTextSticker(text, position);
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
+    final text = await AppDialogs.showTextStickerDialog(
+      context,
+      title: 'Add Text Sticker',
     );
+    if (text != null && text.trim().isNotEmpty) {
+      controller.addTextSticker(text.trim(), position);
+    }
   }
 
   @override

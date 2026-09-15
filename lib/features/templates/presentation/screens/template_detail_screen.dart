@@ -7,6 +7,7 @@ import '../../data/tutorial_project_builder.dart';
 import '../../domain/template_model.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 
 class TemplateDetailScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -98,27 +99,9 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     setState(() => _isCreating = true);
 
     try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (c) => PopScope(
-          canPop: false,
-          child: AlertDialog(
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(18))),
-            content: Row(
-              children: [
-                const CircularProgressIndicator(color: ColorConstants.primary),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Text(
-                    'Opening ${widget.template.name}...',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      AppDialogs.showProgressDialog(
+        context,
+        message: 'Opening ${widget.template.name}...',
       );
 
       // 1. Prepare genuine vector project state

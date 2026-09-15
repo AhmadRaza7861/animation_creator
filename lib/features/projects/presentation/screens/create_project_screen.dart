@@ -11,6 +11,7 @@ import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 import '../../data/project_repository.dart';
 import '../../../templates/domain/template_model.dart';
 import '../widgets/preview_pattern_painter.dart';
@@ -251,27 +252,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     }
 
     if (widget.template != null && mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (c) => PopScope(
-          canPop: false,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            content: const Row(
-              children: [
-                CircularProgressIndicator(color: Color(0xFF5C52E5)),
-                SizedBox(width: 24),
-                Text(
-                  'Creating Project...',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      AppDialogs.showProgressDialog(
+        context,
+        message: 'Creating Project...',
       );
     }
 

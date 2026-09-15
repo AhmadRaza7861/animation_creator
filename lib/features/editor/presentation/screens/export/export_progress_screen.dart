@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../../package_code/src/drawing_controller.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/widgets/app_back_button.dart';
+import '../../../../../core/widgets/app_dialogs.dart';
 import '../../controllers/editor_controller.dart';
 import '../../../services/movie_export_service.dart';
 import 'widgets/projector_animation.dart';
@@ -86,75 +87,24 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
     }
   }
 
-  void _onCancelPressed() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Cancel Export?',
-          style: TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
-        ),
-        content: const Text(
-          'Are you sure you want to stop exporting this animation?',
-          style: TextStyle(color: ColorConstants.mediumText),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('NO', style: TextStyle(color: ColorConstants.subTextColor, fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _isCancelled = true;
-              Navigator.pop(context);
-            },
-            child: const Text('YES, CANCEL', style: TextStyle(color: ColorConstants.primary, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
+  void _onCancelPressed() async {
+    final shouldCancel = await AppDialogs.showCancelExportDialog(context);
+    if (shouldCancel && mounted) {
+      _isCancelled = true;
+      Navigator.pop(context);
+    }
   }
 
-  void _showErrorDialog(String error) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Export Notice',
-          style: TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
-        ),
-        content: Text(
-          error,
-          style: const TextStyle(color: ColorConstants.mediumText),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            child: const Text('OK', style: TextStyle(color: ColorConstants.subTextColor, fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                _progress = 0.0;
-                _isCancelled = false;
-                _isExporting = true;
-                _errorMessage = null;
-              });
-              _startExport();
-            },
-            child: const Text('RETRY', style: TextStyle(color: ColorConstants.primary, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  void _showErrorDialog(String error) async {
+    await AppDialogs.showNoticeDialog(
+      context,
+      title: 'Export Notice',
+      message: error,
+      isError: true,
     );
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override

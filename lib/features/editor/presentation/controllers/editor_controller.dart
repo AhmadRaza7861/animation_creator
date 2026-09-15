@@ -678,7 +678,7 @@ class EditorController extends ChangeNotifier {
     try {
       do {
         _hasPendingSave = false;
-        await _performSave();
+        await _performSave(stampStickers: immediate);
       } while (_hasPendingSave);
     } catch (e) {
       debugPrint('Error in saveProject: $e');
@@ -687,8 +687,8 @@ class EditorController extends ChangeNotifier {
     }
   }
 
-  Future<void> _performSave() async {
-    if (_activeSticker != null) {
+  Future<void> _performSave({bool stampStickers = false}) async {
+    if (stampStickers && _activeSticker != null) {
       stampActiveSticker();
     }
     if (_canvases.isEmpty) return;

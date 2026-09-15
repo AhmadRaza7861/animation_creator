@@ -11,6 +11,7 @@ import '../../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_assets.dart';
 import '../../../../../core/widgets/font_presets.dart';
+import '../../../../../core/widgets/app_dialogs.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
 import '../screens/export/make_movie_screen.dart';
@@ -629,37 +630,16 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
   void _editTextStickerContent(
     ActiveTextSticker sticker,
     EditorController controller,
-  ) {
-    String text = sticker.text;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Text Sticker'),
-          content: TextField(
-            controller: TextEditingController(text: sticker.text),
-            onChanged: (v) => text = v,
-            decoration: const InputDecoration(hintText: 'Enter text here'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                if (text.isNotEmpty) {
-                  sticker.text = text;
-                  controller.updateSnapshot();
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
+  ) async {
+    final text = await AppDialogs.showTextStickerDialog(
+      context,
+      initialText: sticker.text,
+      title: 'Edit Text Sticker',
     );
+    if (text != null && text.trim().isNotEmpty) {
+      sticker.text = text.trim();
+      controller.updateSnapshot();
+    }
   }
 
   void _showFontSelectionSheet(

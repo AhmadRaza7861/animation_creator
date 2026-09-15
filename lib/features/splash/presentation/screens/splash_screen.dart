@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../projects/data/project_repository.dart';
+import '../../../projects/domain/project_model.dart';
 import '../../../projects/presentation/screens/projects_screen.dart';
 import '../widgets/clipax_logo_painter.dart';
 
@@ -174,7 +175,7 @@ class _SplashScreenState extends State<SplashScreen>
     _mainController.forward();
 
     // Pre-warm project cache during splash animation
-    widget.repository.listProjects().catchError((_) => []);
+    widget.repository.listProjects().catchError((_) => <ProjectMeta>[]);
 
     // 3.6s Total Delay before smooth transition
     _navTimer = Timer(const Duration(milliseconds: 3600), () {

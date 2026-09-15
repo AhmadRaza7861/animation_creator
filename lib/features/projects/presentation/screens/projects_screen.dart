@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 import '../../data/project_repository.dart';
 import '../../domain/project_model.dart';
 import '../widgets/project_card.dart';
@@ -141,43 +143,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> _renameProject(ProjectMeta project) async {
-    final controller = TextEditingController(text: project.title);
-    final newTitle = await showDialog<String>(
-      context: context,
-      builder: (c) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Rename Project',
-          style: TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
-        ),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'New Title',
-            labelStyle: TextStyle(color: ColorConstants.primary),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: ColorConstants.primary, width: 2),
-            ),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(c, controller.text),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorConstants.primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final newTitle = await AppDialogs.showRenameProjectDialog(
+      context,
+      initialTitle: project.title,
     );
 
     if (newTitle != null && newTitle.trim().isNotEmpty) {
@@ -223,32 +191,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> _deleteProject(ProjectMeta project) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Delete Project?',
-          style: TextStyle(fontWeight: FontWeight.bold, color: ColorConstants.darkText),
-        ),
-        content: Text('Are you sure you want to delete "${project.title}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(c, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirm = await AppDialogs.showDeleteProjectDialog(
+      context,
+      title: project.title,
     );
 
     if (confirm == true) {
@@ -259,19 +204,29 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
-      body: SafeArea(
-        child: _currentTab == 0 ? _buildHomeTab() : _buildProjectsTab(),
-      ),
-      bottomNavigationBar: CurvedScoopBottomNavBar(
-        currentTab: _currentTab,
-        onTabSelected: (index) {
-          if (_currentTab != index) {
-            setState(() => _currentTab = index);
-          }
-        },
-        onCenterAction: _createNewProject,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldExit = await AppDialogs.showExitAppDialog(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FC),
+        body: SafeArea(
+          child: _currentTab == 0 ? _buildHomeTab() : _buildProjectsTab(),
+        ),
+        bottomNavigationBar: CurvedScoopBottomNavBar(
+          currentTab: _currentTab,
+          onTabSelected: (index) {
+            if (_currentTab != index) {
+              setState(() => _currentTab = index);
+            }
+          },
+          onCenterAction: _createNewProject,
+        ),
       ),
     );
   }

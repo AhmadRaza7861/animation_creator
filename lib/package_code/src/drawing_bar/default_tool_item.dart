@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_dialogs.dart';
 import '../../helpers.dart';
 import '../../paint_contents.dart';
 import '../drawing_controller.dart';
@@ -81,32 +82,13 @@ class DefaultToolItem extends StatelessWidget {
   factory DefaultToolItem.text({required BuildContext context}) {
     return DefaultToolItem(
       onTap: (DrawingController controller) async {
-        String text = '';
-        final bool? success = await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Enter Text'),
-              content: TextField(
-                onChanged: (v) => text = v,
-                decoration: const InputDecoration(hintText: 'Enter text here'),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Confirm'),
-                ),
-              ],
-            );
-          },
+        final text = await AppDialogs.showTextStickerDialog(
+          context,
+          title: 'Enter Text',
         );
 
-        if (success == true && text.isNotEmpty) {
-          controller.setPaintContent(TextContent(text: text));
+        if (text != null && text.trim().isNotEmpty) {
+          controller.setPaintContent(TextContent(text: text.trim()));
         }
       },
       icon: Icons.text_fields,
