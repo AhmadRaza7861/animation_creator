@@ -44,10 +44,10 @@ class AppPathProvider {
     // 4. Try Android specific internal storage paths
     if (Platform.isAndroid) {
       final candidatePaths = [
-        '/data/user/0/com.example.dummy/cache',
-        '/data/data/com.example.dummy/cache',
-        '/data/user/0/com.example.dummy/app_flutter',
-        '/data/data/com.example.dummy/app_flutter',
+        '/data/user/0/com.flipbook.draw.animation/cache',
+        '/data/data/com.flipbook.draw.animation/cache',
+        '/data/user/0/com.flipbook.draw.animation/app_flutter',
+        '/data/data/com.flipbook.draw.animation/app_flutter',
       ];
       for (final path in candidatePaths) {
         try {
@@ -113,10 +113,10 @@ class AppPathProvider {
     // 4. Android internal storage
     if (Platform.isAndroid) {
       final candidatePaths = [
-        '/data/user/0/com.example.dummy/app_flutter',
-        '/data/data/com.example.dummy/app_flutter',
-        '/data/user/0/com.example.dummy/files',
-        '/data/data/com.example.dummy/files',
+        '/data/user/0/com.flipbook.draw.animation/app_flutter',
+        '/data/data/com.flipbook.draw.animation/app_flutter',
+        '/data/user/0/com.flipbook.draw.animation/files',
+        '/data/data/com.flipbook.draw.animation/files',
       ];
       for (final path in candidatePaths) {
         try {
