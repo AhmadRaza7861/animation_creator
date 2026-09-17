@@ -543,18 +543,7 @@ class DrawingController extends ChangeNotifier {
           ..color = Colors.white.withValues(alpha: layer.opacity),
       );
 
-      final int count = layer.currentIndex.clamp(0, layer.history.length);
-      int startIndex = 0;
-      for (int j = count - 1; j >= 0; j--) {
-        if (layer.history[j] is SmudgeContent) {
-          startIndex = j;
-          break;
-        }
-      }
-      for (int j = startIndex; j < count; j++) {
-        layer.history[j].draw(tempCanvas, size, true);
-      }
-
+      layer.drawHistory(tempCanvas, size, true);
       tempCanvas.restore();
     }
 
@@ -1069,18 +1058,7 @@ class DrawingController extends ChangeNotifier {
           ..color = Colors.white.withValues(alpha: layer.opacity),
       );
 
-      final int count = layer.currentIndex.clamp(0, layer.history.length);
-      int startIndex = 0;
-      for (int j = count - 1; j >= 0; j--) {
-        if (layer.history[j] is SmudgeContent) {
-          startIndex = j;
-          break;
-        }
-      }
-      for (int j = startIndex; j < count; j++) {
-        layer.history[j].draw(canvas, size, true);
-      }
-
+      layer.drawHistory(canvas, size, true);
       canvas.restore();
     }
 
@@ -1101,7 +1079,7 @@ class DrawingController extends ChangeNotifier {
         image: filledImage,
         paint: drawConfig.value.paint.copyWith(),
       );
-      insertFillContent(content);
+      addContent(content);
     }
   }
 
@@ -1228,17 +1206,7 @@ class DrawingController extends ChangeNotifier {
           ..color = Colors.white.withValues(alpha: layer.opacity),
       );
 
-      final int count = layer.currentIndex.clamp(0, layer.history.length);
-      int startIndex = 0;
-      for (int j = count - 1; j >= 0; j--) {
-        if (layer.history[j] is SmudgeContent) {
-          startIndex = j;
-          break;
-        }
-      }
-      for (int j = startIndex; j < count; j++) {
-        layer.history[j].draw(canvas, size, false);
-      }
+      layer.drawHistory(canvas, size, false);
 
       // If this is the active layer and we are erasing, apply it here
       if (layer == activeLayer.value && eraserContent != null) {
@@ -1326,17 +1294,7 @@ class DrawingController extends ChangeNotifier {
           ..color = Colors.white.withValues(alpha: layer.opacity)
       );
       
-      final int count = layer.currentIndex.clamp(0, layer.history.length);
-      int startIndex = 0;
-      for (int j = count - 1; j >= 0; j--) {
-        if (layer.history[j] is SmudgeContent) {
-          startIndex = j;
-          break;
-        }
-      }
-      for (int j = startIndex; j < count; j++) {
-        layer.history[j].draw(canvas, size, false);
-      }
+      layer.drawHistory(canvas, size, false);
 
       // If this is the active layer, apply any active drawing or eraser
       if (layer == activeLayer) {

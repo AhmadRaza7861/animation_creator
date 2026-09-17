@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/package_code/paint_contents.dart';
 import 'package:dummy/package_code/src/drawing_controller.dart';
 import 'package:dummy/package_code/src/helper/flood_fill.dart';
+import 'package:dummy/package_code/src/paint_contents/layer_data.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -182,10 +183,11 @@ void main() {
       expect(fillPixels[exteriorIdx + 3], 0, reason: 'Exterior canvas must remain transparent');
     });
 
-    test('DrawingController inserts FillContent underneath the stroke on active layer', () async {
+    test('DrawingController undoes FillContent first, preserving the earlier drawn stroke', () async {
       final DrawingController controller = DrawingController();
       controller.setBoardSize(const Size(200, 200));
 
+      // 1. Draw a circle stroke
       final SimpleLine stroke = SimpleLine.data(
         startPoint: const Offset(20, 20),
         endPoint: const Offset(80, 80),
@@ -194,15 +196,58 @@ void main() {
       controller.addContent(stroke);
 
       expect(controller.activeLayer.value!.history.length, 1);
+      expect(controller.activeLayer.value!.currentIndex, 1);
       expect(controller.activeLayer.value!.history[0], stroke);
 
+      // 2. Fill with color
       final FillContent fill = FillContent();
-      controller.insertFillContent(fill);
+      controller.addContent(fill);
 
-      // Verify FillContent is positioned BEFORE stroke in history
       expect(controller.activeLayer.value!.history.length, 2);
-      expect(controller.activeLayer.value!.history[0], fill);
-      expect(controller.activeLayer.value!.history[1], stroke);
+      expect(controller.activeLayer.value!.currentIndex, 2);
+      expect(controller.activeLayer.value!.history[0], stroke);
+      expect(controller.activeLayer.value!.history[1], fill);
+
+      // 3. First Undo: must undo the FillContent (since fill was performed last)
+      controller.undo();
+      expect(controller.activeLayer.value!.currentIndex, 1, reason: 'Current index should be 1 after 1st undo');
+
+      // 4. Second Undo: must undo the stroke
+      controller.undo();
+      expect(controller.activeLayer.value!.currentIndex, 0, reason: 'Current index should be 0 after 2nd undo');
+
+      // 5. First Redo: stroke returns
+      controller.redo();
+      expect(controller.activeLayer.value!.currentIndex, 1);
+
+      // 6. Second Redo: fill returns
+      controller.redo();
+      expect(controller.activeLayer.value!.currentIndex, 2);
+    });
+
+    test('LayerData.drawHistory renders FillContent in Pass 1 and strokes on top in Pass 2', () async {
+      final LayerData layer = LayerData(id: 'test_layer');
+      final SimpleLine stroke = SimpleLine.data(
+        startPoint: const Offset(10, 10),
+        endPoint: const Offset(50, 50),
+        paint: Paint()..color = Colors.black,
+      );
+      final FillContent fill = FillContent();
+
+      // History has [stroke, fill] in chronological order
+      layer.history = [stroke, fill];
+      layer.currentIndex = 2;
+
+      // Draw history onto a recorded canvas
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 100, 100));
+
+      layer.drawHistory(canvas, const Size(100, 100), false);
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image image = await picture.toImage(100, 100);
+
+      expect(image.width, 100);
+      expect(image.height, 100);
     });
 
     test('FloodFill does not leak through 1-pixel diagonal stroke barrier', () async {

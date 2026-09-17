@@ -269,10 +269,7 @@ class _UpPainter extends CustomPainter {
         smudge.draw(canvas, size, false);
       } else {
         // Fallback: draw history until live image is ready
-        final int count = activeLayer.currentIndex.clamp(0, activeLayer.history.length);
-        for (int j = 0; j < count; j++) {
-          activeLayer.history[j].draw(canvas, size, false);
-        }
+        activeLayer.drawHistory(canvas, size, false);
       }
 
       canvas.restore();
@@ -288,17 +285,7 @@ class _UpPainter extends CustomPainter {
           ..color = Colors.white.withValues(alpha: activeLayer.opacity),
       );
 
-      final int count = activeLayer.currentIndex.clamp(0, activeLayer.history.length);
-      int startIndex = 0;
-      for (int j = count - 1; j >= 0; j--) {
-        if (activeLayer.history[j] is SmudgeContent) {
-          startIndex = j;
-          break;
-        }
-      }
-      for (int j = startIndex; j < count; j++) {
-        activeLayer.history[j].draw(canvas, size, false);
-      }
+      activeLayer.drawHistory(canvas, size, false);
 
       if (controller.eraserContent != null) {
         controller.eraserContent?.draw(canvas, size, false);
@@ -403,17 +390,7 @@ class _DeepPainter extends CustomPainter {
           ..blendMode = layer.blendMode
           ..color = Colors.white.withOpacity(layer.opacity),
       );
-      final int count = layer.currentIndex.clamp(0, layer.history.length);
-      int startIndex = 0;
-      for (int j = count - 1; j >= 0; j--) {
-        if (layer.history[j] is SmudgeContent) {
-          startIndex = j;
-          break;
-        }
-      }
-      for (int j = startIndex; j < count; j++) {
-        layer.history[j].draw(canvas, size, true);
-      }
+      layer.drawHistory(canvas, size, true);
       canvas.restore();
     }
 
@@ -505,18 +482,7 @@ class _DeepPainter extends CustomPainter {
           ..color = Colors.white.withValues(alpha: layer.opacity)
       );
       
-      final int count = layer.currentIndex.clamp(0, layer.history.length);
-      int startIndex = 0;
-      for (int j = count - 1; j >= 0; j--) {
-        if (layer.history[j] is SmudgeContent) {
-          startIndex = j;
-          break;
-        }
-      }
-      for (int j = startIndex; j < count; j++) {
-        layer.history[j].draw(canvas, size, true);
-        layer.history[j].draw(tempCanvas, size, true);
-      }
+      layer.drawHistory(canvas, size, true, tempCanvas);
       
       canvas.restore();
       tempCanvas.restore();

@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import 'fill.dart';
 import 'paint_content.dart';
+import 'smudge.dart';
 
 /// Represents a single drawing layer.
 class LayerData {
@@ -32,6 +34,43 @@ class LayerData {
   
   List<PaintContent> history;
   int currentIndex;
+
+  /// Draws the layer history onto the canvas.
+  /// Fills are rendered first in pass 1 so that strokes/lines render cleanly on top.
+  void drawHistory(Canvas canvas, Size size, bool deeper, [Canvas? tempCanvas]) {
+    final int count = currentIndex.clamp(0, history.length);
+    if (count == 0) return;
+
+    int startIndex = 0;
+    for (int j = count - 1; j >= 0; j--) {
+      if (history[j] is SmudgeContent) {
+        startIndex = j;
+        break;
+      }
+    }
+
+    // Pass 1: Draw all FillContent items first (underneath strokes)
+    for (int j = startIndex; j < count; j++) {
+      final item = history[j];
+      if (item is FillContent) {
+        item.draw(canvas, size, deeper);
+        if (tempCanvas != null) {
+          item.draw(tempCanvas, size, deeper);
+        }
+      }
+    }
+
+    // Pass 2: Draw all non-fill items (strokes, shapes, lines, etc.) on top
+    for (int j = startIndex; j < count; j++) {
+      final item = history[j];
+      if (item is! FillContent) {
+        item.draw(canvas, size, deeper);
+        if (tempCanvas != null) {
+          item.draw(tempCanvas, size, deeper);
+        }
+      }
+    }
+  }
 
   LayerData copyWith({
     String? id,
