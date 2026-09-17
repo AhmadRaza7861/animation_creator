@@ -1154,9 +1154,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                     valueListenable: controller.drawingController.drawConfig,
                     builder: (context, config, child) {
                       final showSize =
-                          config.contentType != Lasso &&
-                          config.contentType != BlurContent &&
-                          config.contentType != SmudgeContent;
+                          config.contentType != Lasso;
                       if (!showSize) return const SizedBox.shrink();
 
                       return MenuAnchor(

@@ -116,7 +116,7 @@ class _PainterState extends State<Painter> {
         _lastTouchTime = now;
       }
 
-      widget.drawingController.startDraw(pde.localPosition);
+      widget.drawingController.startDraw(pde.localPosition, pde.pressure);
     }
     
     widget.onPointerDown?.call(pde);
@@ -138,7 +138,7 @@ class _PainterState extends State<Painter> {
       return;
     }
 
-    widget.drawingController.drawing(pme.localPosition);
+    widget.drawingController.drawing(pme.localPosition, pme.pressure);
     widget.onPointerMove?.call(pme);
   }
 
@@ -151,7 +151,7 @@ class _PainterState extends State<Painter> {
     }
 
     if (!widget.drawingController.isDrawingValidContent || widget.drawingController.startPoint == pue.localPosition) {
-      widget.drawingController.drawing(pue.localPosition);
+      widget.drawingController.drawing(pue.localPosition, pue.pressure);
     }
 
     widget.drawingController.endDraw();
@@ -248,11 +248,36 @@ class _UpPainter extends CustomPainter {
     }
 
     final PaintContent? activeDrawing = controller.drawingContent;
+    final bool isSmudgeActive = activeDrawing is SmudgeContent;
     final bool isModifierActive = controller.eraserContent != null ||
-        (activeDrawing is BlurContent || activeDrawing is SmudgeContent);
+        (activeDrawing is BlurContent || isSmudgeActive);
 
-    if (isModifierActive) {
-      // 橡皮擦/模糊/涂抹模式：只绘制活跃图层（带修改效果）
+    if (isSmudgeActive) {
+      // 涂抹模式：SmudgeContent 已持有完整的修改后图层像素，直接渲染无需叠加未涂抹历史
+      final activeLayer = controller.activeLayer.value;
+      if (activeLayer == null || !activeLayer.isVisible) return;
+
+      canvas.saveLayer(
+        Offset.zero & size,
+        Paint()
+          ..blendMode = activeLayer.blendMode
+          ..color = Colors.white.withValues(alpha: activeLayer.opacity),
+      );
+
+      final SmudgeContent smudge = activeDrawing as SmudgeContent;
+      if (smudge.liveImage != null || smudge.image != null) {
+        smudge.draw(canvas, size, false);
+      } else {
+        // Fallback: draw history until live image is ready
+        final int count = activeLayer.currentIndex.clamp(0, activeLayer.history.length);
+        for (int j = 0; j < count; j++) {
+          activeLayer.history[j].draw(canvas, size, false);
+        }
+      }
+
+      canvas.restore();
+    } else if (isModifierActive) {
+      // 橡皮擦/模糊模式：绘制活跃图层历史 + 叠加修改效果
       final activeLayer = controller.activeLayer.value;
       if (activeLayer == null || !activeLayer.isVisible) return;
 
@@ -264,7 +289,14 @@ class _UpPainter extends CustomPainter {
       );
 
       final int count = activeLayer.currentIndex.clamp(0, activeLayer.history.length);
-      for (int j = 0; j < count; j++) {
+      int startIndex = 0;
+      for (int j = count - 1; j >= 0; j--) {
+        if (activeLayer.history[j] is SmudgeContent) {
+          startIndex = j;
+          break;
+        }
+      }
+      for (int j = startIndex; j < count; j++) {
         activeLayer.history[j].draw(canvas, size, false);
       }
 
@@ -372,7 +404,14 @@ class _DeepPainter extends CustomPainter {
           ..color = Colors.white.withOpacity(layer.opacity),
       );
       final int count = layer.currentIndex.clamp(0, layer.history.length);
-      for (int j = 0; j < count; j++) {
+      int startIndex = 0;
+      for (int j = count - 1; j >= 0; j--) {
+        if (layer.history[j] is SmudgeContent) {
+          startIndex = j;
+          break;
+        }
+      }
+      for (int j = startIndex; j < count; j++) {
         layer.history[j].draw(canvas, size, true);
       }
       canvas.restore();
@@ -467,7 +506,14 @@ class _DeepPainter extends CustomPainter {
       );
       
       final int count = layer.currentIndex.clamp(0, layer.history.length);
-      for (int j = 0; j < count; j++) {
+      int startIndex = 0;
+      for (int j = count - 1; j >= 0; j--) {
+        if (layer.history[j] is SmudgeContent) {
+          startIndex = j;
+          break;
+        }
+      }
+      for (int j = startIndex; j < count; j++) {
         layer.history[j].draw(canvas, size, true);
         layer.history[j].draw(tempCanvas, size, true);
       }

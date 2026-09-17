@@ -458,6 +458,62 @@ class DrawingController extends ChangeNotifier {
   int? cachedRgbaWidth;
   int? cachedRgbaHeight;
 
+  /// 清除栅格与图层快照缓存
+  void _invalidateRasterCache() {
+    cachedImage = null;
+    cachedRgbaData = null;
+    cachedRgbaWidth = null;
+    cachedRgbaHeight = null;
+  }
+
+  /// 同步生成当前活跃图层的快照图片（用于涂抹工具）
+  ui.Image? generateActiveLayerSnapshotSync([Size? customSize]) {
+    final Size? size = customSize ?? drawConfig.value.size;
+    if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0) return null;
+    final double pixelRatio = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+    final int targetWidth = (size.width * pixelRatio).round();
+    final int targetHeight = (size.height * pixelRatio).round();
+    if (targetWidth <= 0 || targetHeight <= 0) return null;
+
+    final LayerData? active = activeLayer.value;
+    if (active == null || !active.isVisible) return null;
+
+    final int count = active.currentIndex.clamp(0, active.history.length);
+    if (count == 0) {
+      return generateSnapshotSync(customSize);
+    }
+
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas tempCanvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, targetWidth.toDouble(), targetHeight.toDouble()),
+    );
+    tempCanvas.scale(pixelRatio);
+
+    tempCanvas.saveLayer(
+      Offset.zero & size,
+      Paint()
+        ..blendMode = active.blendMode
+        ..color = Colors.white.withValues(alpha: active.opacity),
+    );
+
+    int startIndex = 0;
+    for (int j = count - 1; j >= 0; j--) {
+      if (active.history[j] is SmudgeContent) {
+        startIndex = j;
+        break;
+      }
+    }
+    for (int j = startIndex; j < count; j++) {
+      active.history[j].draw(tempCanvas, size, true);
+    }
+
+    tempCanvas.restore();
+
+    final ui.Picture picture = recorder.endRecording();
+    return picture.toImageSync(targetWidth, targetHeight);
+  }
+
   /// 同步生成当前画板的快照图片（0ms延迟，用于模糊和涂抹工具）
   ui.Image? generateSnapshotSync([Size? customSize]) {
     final Size? size = customSize ?? drawConfig.value.size;
@@ -488,7 +544,14 @@ class DrawingController extends ChangeNotifier {
       );
 
       final int count = layer.currentIndex.clamp(0, layer.history.length);
-      for (int j = 0; j < count; j++) {
+      int startIndex = 0;
+      for (int j = count - 1; j >= 0; j--) {
+        if (layer.history[j] is SmudgeContent) {
+          startIndex = j;
+          break;
+        }
+      }
+      for (int j = startIndex; j < count; j++) {
         layer.history[j].draw(tempCanvas, size, true);
       }
 
@@ -504,7 +567,8 @@ class DrawingController extends ChangeNotifier {
   /// 预先准备画板快照（当切换到模糊/涂抹工具时调用）
   void prepareSnapshot() {
     if (drawConfig.value.size != null) {
-      final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
+      final ui.Image? snapshot = generateActiveLayerSnapshotSync(drawConfig.value.size) ??
+          generateSnapshotSync(drawConfig.value.size);
       if (snapshot != null) {
         cachedImage = snapshot;
         snapshot.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
@@ -715,7 +779,7 @@ class DrawingController extends ChangeNotifier {
     }
     layer.history.add(content);
     layer.currentIndex++;
-    cachedImage = null;
+    _invalidateRasterCache();
     _refreshDeep();
     updateSnapshot();
     notifyListeners();
@@ -741,7 +805,7 @@ class DrawingController extends ChangeNotifier {
 
     layer.history.insert(insertIndex, content);
     layer.currentIndex++;
-    cachedImage = null;
+    _invalidateRasterCache();
     _refreshDeep();
     updateSnapshot();
     notifyListeners();
@@ -756,7 +820,7 @@ class DrawingController extends ChangeNotifier {
 
     layer.history.insert(0, content);
     layer.currentIndex++;
-    cachedImage = null;
+    _invalidateRasterCache();
     _refreshDeep();
     updateSnapshot();
     notifyListeners();
@@ -821,7 +885,7 @@ class DrawingController extends ChangeNotifier {
     activeLayer.value = drawingLayer;
 
     // Refresh rendering and invalidate caches
-    cachedImage = null;
+    _invalidateRasterCache();
     _refreshDeep();
     updateSnapshot();
     notifyListeners();
@@ -840,7 +904,7 @@ class DrawingController extends ChangeNotifier {
     }
     layer.history.addAll(contents);
     layer.currentIndex += contents.length;
-    cachedImage = null;
+    _invalidateRasterCache();
     _refreshDeep();
     updateSnapshot();
     notifyListeners();
@@ -863,7 +927,7 @@ class DrawingController extends ChangeNotifier {
     layer.history.removeWhere((content) => contents.contains(content));
     
     layer.currentIndex = layer.history.length;
-    cachedImage = null;
+    _invalidateRasterCache();
     _refreshDeep();
     updateSnapshot();
     notifyListeners();
@@ -881,7 +945,7 @@ class DrawingController extends ChangeNotifier {
   /// 开始绘制
   ///
   /// Start drawing
-  void startDraw(Offset startPointRaw) {
+  void startDraw(Offset startPointRaw, [double? pressure]) {
     if (activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
 
     if (activeLayer.value!.currentIndex == 0 && _paintContent is Eraser) {
@@ -929,27 +993,25 @@ class DrawingController extends ChangeNotifier {
       newContent = _paintContent.copy();
       final smudge = newContent as SmudgeContent;
       smudge.strength = drawConfig.value.strength;
-      smudge.paint = drawConfig.value.paint;
-      smudge.onRepaint = _refresh;
-      if (drawConfig.value.size != null) {
-        final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
+      smudge.paint = drawConfig.value.paint.copyWith();
+      smudge.onRepaint = () {
+        _refresh();
+        _refreshDeep();
+        updateSnapshot();
+      };
+      final Size? canvasSize = drawConfig.value.size;
+      if (canvasSize != null) {
+        smudge.canvasSize = canvasSize;
+        final ui.Image? snapshot = generateActiveLayerSnapshotSync(canvasSize) ??
+            generateSnapshotSync(canvasSize);
         if (snapshot != null) {
-          smudge.setImageData(snapshot);
+          smudge.setImageData(snapshot, canvasSize);
           if (cachedRgbaData != null && cachedRgbaWidth == snapshot.width && cachedRgbaHeight == snapshot.height) {
-            smudge.setRgbaData(cachedRgbaData!, cachedRgbaWidth!, cachedRgbaHeight!);
+            smudge.setRgbaData(cachedRgbaData!, cachedRgbaWidth!, cachedRgbaHeight!, canvasSize);
           }
-          snapshot.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
-            if (data != null) {
-              cachedRgbaData = data.buffer.asUint8List();
-              cachedRgbaWidth = snapshot.width;
-              cachedRgbaHeight = snapshot.height;
-              smudge.setRgbaData(cachedRgbaData!, cachedRgbaWidth!, cachedRgbaHeight!);
-              _refresh();
-            }
-          });
         }
       }
-      smudge.startDraw(startPoint);
+      smudge.startDrawWithPressure(startPoint, pressure ?? 1.0);
       drawingContent = smudge;
       cachedImage = null;
       _refresh();
@@ -1008,7 +1070,14 @@ class DrawingController extends ChangeNotifier {
       );
 
       final int count = layer.currentIndex.clamp(0, layer.history.length);
-      for (int j = 0; j < count; j++) {
+      int startIndex = 0;
+      for (int j = count - 1; j >= 0; j--) {
+        if (layer.history[j] is SmudgeContent) {
+          startIndex = j;
+          break;
+        }
+      }
+      for (int j = startIndex; j < count; j++) {
         layer.history[j].draw(canvas, size, true);
       }
 
@@ -1160,7 +1229,14 @@ class DrawingController extends ChangeNotifier {
       );
 
       final int count = layer.currentIndex.clamp(0, layer.history.length);
-      for (int j = 0; j < count; j++) {
+      int startIndex = 0;
+      for (int j = count - 1; j >= 0; j--) {
+        if (layer.history[j] is SmudgeContent) {
+          startIndex = j;
+          break;
+        }
+      }
+      for (int j = startIndex; j < count; j++) {
         layer.history[j].draw(canvas, size, false);
       }
 
@@ -1251,7 +1327,14 @@ class DrawingController extends ChangeNotifier {
       );
       
       final int count = layer.currentIndex.clamp(0, layer.history.length);
-      for (int j = 0; j < count; j++) {
+      int startIndex = 0;
+      for (int j = count - 1; j >= 0; j--) {
+        if (layer.history[j] is SmudgeContent) {
+          startIndex = j;
+          break;
+        }
+      }
+      for (int j = startIndex; j < count; j++) {
         layer.history[j].draw(canvas, size, false);
       }
 
@@ -1310,7 +1393,7 @@ class DrawingController extends ChangeNotifier {
   /// 正在绘制（手指移动过程）
   ///
   /// Drawing in progress (finger moving process)
-  void drawing(Offset nowPaintRaw) {
+  void drawing(Offset nowPaintRaw, [double? pressure]) {
     if (!hasPaintingContent) {
       return;
     }
@@ -1323,6 +1406,8 @@ class DrawingController extends ChangeNotifier {
     for (final Offset pt in route) {
       if (eraserContent != null) {
         eraserContent?.drawing(pt);
+      } else if (drawingContent is SmudgeContent) {
+        (drawingContent as SmudgeContent).drawingWithPressure(pt, pressure ?? 1.0);
       } else {
         drawingContent?.drawing(pt);
       }
@@ -1385,16 +1470,30 @@ class DrawingController extends ChangeNotifier {
           intercepted = interceptDraw!(drawingContent!);
         }
 
+        final bool isSmudge = drawingContent is SmudgeContent;
         if (!intercepted) {
+          if (drawingContent is SmudgeContent) {
+            final smudge = drawingContent as SmudgeContent;
+            smudge.finalizeStroke();
+            if (smudge.rgbaData != null && smudge.rgbaWidth != null && smudge.rgbaHeight != null) {
+              cachedRgbaData = Uint8List.fromList(smudge.rgbaData!);
+              cachedRgbaWidth = smudge.rgbaWidth;
+              cachedRgbaHeight = smudge.rgbaHeight;
+            }
+          }
           currentLayer.history.add(drawingContent!);
           currentLayer.currentIndex = currentLayer.history.length;
         }
         drawingContent = null;
-      }
 
-      // 修剪历史记录，防止内存无限增长
-      _trimHistoryIfNeeded(currentLayer);
-      cachedImage = null; // Invalidate cache so it rebuilds with the new content
+        // 修剪历史记录，防止内存无限增长
+        _trimHistoryIfNeeded(currentLayer);
+        if (!isSmudge) {
+          _invalidateRasterCache();
+        } else {
+          cachedImage = null;
+        }
+      }
     } else {
       eraserContent = null;
       drawingContent = null;
@@ -1414,7 +1513,7 @@ class DrawingController extends ChangeNotifier {
       final int removeCount = layer.history.length - maxHistorySteps;
       layer.history.removeRange(0, removeCount);
       layer.currentIndex = layer.history.length;
-      cachedImage = null; // 清除缓存，因为历史已改变 / Clear cache as history has changed
+      _invalidateRasterCache();
     }
   }
 
@@ -1429,7 +1528,7 @@ class DrawingController extends ChangeNotifier {
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return;
     
-    cachedImage = null;
+    _invalidateRasterCache();
     if (layer.currentIndex > 0) {
       layer.currentIndex = layer.currentIndex - 1;
       _refreshDeep();
@@ -1462,7 +1561,7 @@ class DrawingController extends ChangeNotifier {
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return;
     
-    cachedImage = null;
+    _invalidateRasterCache();
     if (layer.currentIndex < layer.history.length) {
       layer.currentIndex = layer.currentIndex + 1;
       _refreshDeep();
