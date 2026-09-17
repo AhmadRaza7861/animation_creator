@@ -46,6 +46,7 @@ class DrawConfig {
     this.strokeJoin = StrokeJoin.round,
     this.strokeWidth = 10,
     this.strength = 0.5,
+    this.tolerance = 0.15,
     this.style = PaintingStyle.stroke,
   });
 
@@ -67,6 +68,7 @@ class DrawConfig {
     this.strokeJoin = StrokeJoin.round,
     this.strokeWidth = 10,
     this.strength = 0.5,
+    this.tolerance = 0.15,
     this.style = PaintingStyle.stroke,
   });
 
@@ -155,6 +157,11 @@ class DrawConfig {
   /// Strength parameter (for Smudge/Blur tool intensity)
   final double strength;
 
+  /// 容差参数（用于油漆桶工具的边界检测）
+  ///
+  /// Color tolerance parameter (for Paint Bucket boundary detection)
+  final double tolerance;
+
   /// 绘制样式（填充或描边）
   ///
   /// Painting style (fill or stroke)
@@ -193,6 +200,7 @@ class DrawConfig {
     StrokeJoin? strokeJoin,
     double? strokeWidth,
     double? strength,
+    double? tolerance,
     PaintingStyle? style,
     int? angle,
     int? fingerCount,
@@ -214,6 +222,7 @@ class DrawConfig {
       strokeJoin: strokeJoin ?? this.strokeJoin,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       strength: strength ?? this.strength,
+      tolerance: tolerance ?? this.tolerance,
       style: style ?? this.style,
       fingerCount: fingerCount ?? this.fingerCount,
       size: size ?? this.size,
@@ -257,6 +266,7 @@ class GlobalToolState extends ChangeNotifier {
     StrokeJoin? strokeJoin,
     double? strokeWidth,
     double? strength,
+    double? tolerance,
     PaintingStyle? style,
   }) {
     if (strokeWidth != null) {
@@ -280,6 +290,7 @@ class GlobalToolState extends ChangeNotifier {
       strokeJoin: strokeJoin,
       strokeWidth: strokeWidth,
       strength: strength,
+      tolerance: tolerance,
       style: style,
     );
   }
@@ -662,6 +673,7 @@ class DrawingController extends ChangeNotifier {
     double? strokeMiterLimit,
     double? strokeWidth,
     double? strength,
+    double? tolerance,
     PaintingStyle? style,
   }) {
     GlobalToolState.instance.setStyle(
@@ -678,6 +690,7 @@ class DrawingController extends ChangeNotifier {
       strokeJoin: strokeJoin,
       strokeWidth: strokeWidth,
       strength: strength,
+      tolerance: tolerance,
       style: style,
     );
   }
@@ -701,6 +714,32 @@ class DrawingController extends ChangeNotifier {
       layer.history.removeRange(layer.currentIndex, hisLen);
     }
     layer.history.add(content);
+    layer.currentIndex++;
+    cachedImage = null;
+    _refreshDeep();
+    updateSnapshot();
+    notifyListeners();
+  }
+
+  /// 将填充内容插入到线条下方（保持线条在填充层之上）
+  ///
+  /// Insert fill content underneath stroke outlines on the active layer
+  void insertFillContent(FillContent content) {
+    if (activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
+    final LayerData layer = activeLayer.value!;
+
+    final int hisLen = layer.history.length;
+    if (hisLen > layer.currentIndex) {
+      layer.history.removeRange(layer.currentIndex, hisLen);
+    }
+
+    // Find the insert position: before non-fill drawing contents (so strokes stay on top)
+    int insertIndex = layer.currentIndex;
+    while (insertIndex > 0 && layer.history[insertIndex - 1] is! FillContent) {
+      insertIndex--;
+    }
+
+    layer.history.insert(insertIndex, content);
     layer.currentIndex++;
     cachedImage = null;
     _refreshDeep();
@@ -985,7 +1024,7 @@ class DrawingController extends ChangeNotifier {
       image: snapshotImage,
       startPoint: startPoint,
       fillColor: drawConfig.value.color,
-      tolerance: 0.15,
+      tolerance: drawConfig.value.tolerance,
     );
 
     if (filledImage != null) {
@@ -993,7 +1032,7 @@ class DrawingController extends ChangeNotifier {
         image: filledImage,
         paint: drawConfig.value.paint.copyWith(),
       );
-      addContent(content);
+      insertFillContent(content);
     }
   }
 
