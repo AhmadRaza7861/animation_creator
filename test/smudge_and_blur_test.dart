@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/package_code/src/drawing_controller.dart';
 import 'package:dummy/package_code/src/paint_contents/blur.dart';
 import 'package:dummy/package_code/src/paint_contents/smudge.dart';
-import 'package:dummy/package_code/src/paint_contents/smooth_line.dart';
 import 'package:dummy/package_code/src/paint_contents/simple_line.dart';
 import 'package:dummy/package_code/src/paint_contents/layer_data.dart';
 
