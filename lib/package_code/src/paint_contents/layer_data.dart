@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import 'blur.dart';
 import 'fill.dart';
 import 'paint_content.dart';
 import 'smudge.dart';
@@ -36,29 +37,29 @@ class LayerData {
   int currentIndex;
 
   /// Draws the layer history onto the canvas.
-  /// If a SmudgeContent is present, it is rendered first as the base raster state,
+  /// If a SmudgeContent or BlurContent is present, it is rendered first as the base raster state,
   /// followed by subsequent fills (pass 1) and non-fill strokes (pass 2).
   void drawHistory(Canvas canvas, Size size, bool deeper, [Canvas? tempCanvas]) {
     final int count = currentIndex.clamp(0, history.length);
     if (count == 0) return;
 
-    int smudgeIndex = -1;
+    int rasterIndex = -1;
     for (int j = count - 1; j >= 0; j--) {
-      if (history[j] is SmudgeContent) {
-        smudgeIndex = j;
+      if (history[j] is SmudgeContent || history[j] is BlurContent) {
+        rasterIndex = j;
         break;
       }
     }
 
-    if (smudgeIndex >= 0) {
-      // Draw the base smudge raster state first
-      history[smudgeIndex].draw(canvas, size, deeper);
+    if (rasterIndex >= 0) {
+      // Draw the base raster state first (Smudge or Blur)
+      history[rasterIndex].draw(canvas, size, deeper);
       if (tempCanvas != null) {
-        history[smudgeIndex].draw(tempCanvas, size, deeper);
+        history[rasterIndex].draw(tempCanvas, size, deeper);
       }
 
       // Pass 1: Draw subsequent FillContent items
-      for (int j = smudgeIndex + 1; j < count; j++) {
+      for (int j = rasterIndex + 1; j < count; j++) {
         final item = history[j];
         if (item is FillContent) {
           item.draw(canvas, size, deeper);
@@ -69,7 +70,7 @@ class LayerData {
       }
 
       // Pass 2: Draw subsequent non-fill items (strokes, shapes, lines, etc.)
-      for (int j = smudgeIndex + 1; j < count; j++) {
+      for (int j = rasterIndex + 1; j < count; j++) {
         final item = history[j];
         if (item is! FillContent) {
           item.draw(canvas, size, deeper);

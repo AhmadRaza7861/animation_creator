@@ -408,6 +408,9 @@ class EditorController extends ChangeNotifier {
 
   set globalBackground(CanvasBackground bg) {
     _globalBackground = bg;
+    for (final c in _canvases) {
+      c.prepareSnapshot();
+    }
     markDirty();
     notifyListeners();
   }
@@ -633,6 +636,7 @@ class EditorController extends ChangeNotifier {
           for (var controller in _canvases) {
             controller.forceRefreshLayers();
             controller.updateSnapshot(includeBackground: false);
+            controller.prepareSnapshot();
           }
         });
       }
@@ -920,6 +924,7 @@ class EditorController extends ChangeNotifier {
 
           if (content is BlurContent) {
             content.image = decodedImage;
+            content.setImageData(decodedImage);
           } else if (content is SmudgeContent) {
             content.image = decodedImage;
             content.setImageData(decodedImage);
@@ -976,6 +981,7 @@ class EditorController extends ChangeNotifier {
   }
 
   void _setupCanvasController(DrawingController controller) {
+    controller.backgroundSnapshotProvider = () => _globalBackground.image;
     controller.drawConfig.addListener(_onDrawConfigChanged);
     controller.interceptDraw = _createInterceptDraw(controller);
     controller.activeOverlayPainter = (canvas, size) {

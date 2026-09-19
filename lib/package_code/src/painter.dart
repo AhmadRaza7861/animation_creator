@@ -249,11 +249,12 @@ class _UpPainter extends CustomPainter {
 
     final PaintContent? activeDrawing = controller.drawingContent;
     final bool isSmudgeActive = activeDrawing is SmudgeContent;
-    final bool isModifierActive = controller.eraserContent != null ||
-        (activeDrawing is BlurContent || isSmudgeActive);
+    final bool isBlurActive = activeDrawing is BlurContent;
+    final bool isRasterModifierActive = isSmudgeActive || isBlurActive;
+    final bool isModifierActive = controller.eraserContent != null || isRasterModifierActive;
 
-    if (isSmudgeActive) {
-      // 涂抹模式：SmudgeContent 已持有完整的修改后图层像素，直接渲染无需叠加未涂抹历史
+    if (isRasterModifierActive) {
+      // 涂抹/模糊模式：SmudgeContent / BlurContent 已持有完整的修改后图层像素，直接渲染无需叠加未修改历史
       final activeLayer = controller.activeLayer.value;
       if (activeLayer == null || !activeLayer.isVisible) return;
 
@@ -264,17 +265,27 @@ class _UpPainter extends CustomPainter {
           ..color = Colors.white.withValues(alpha: activeLayer.opacity),
       );
 
-      final SmudgeContent smudge = activeDrawing as SmudgeContent;
-      if (smudge.liveImage != null || smudge.image != null) {
-        smudge.draw(canvas, size, false);
-      } else {
-        // Fallback: draw history until live image is ready
-        activeLayer.drawHistory(canvas, size, false);
+      if (isSmudgeActive) {
+        final SmudgeContent smudge = activeDrawing as SmudgeContent;
+        if (smudge.liveImage != null || smudge.image != null) {
+          smudge.draw(canvas, size, false);
+        } else {
+          // Fallback: draw history until live image is ready
+          activeLayer.drawHistory(canvas, size, false);
+        }
+      } else if (isBlurActive) {
+        final BlurContent blur = activeDrawing as BlurContent;
+        if (blur.liveImage != null || blur.image != null) {
+          blur.draw(canvas, size, false);
+        } else {
+          // Fallback: draw history until live image is ready
+          activeLayer.drawHistory(canvas, size, false);
+        }
       }
 
       canvas.restore();
     } else if (isModifierActive) {
-      // 橡皮擦/模糊模式：绘制活跃图层历史 + 叠加修改效果
+      // 橡皮擦模式：绘制活跃图层历史 + 叠加修改效果
       final activeLayer = controller.activeLayer.value;
       if (activeLayer == null || !activeLayer.isVisible) return;
 

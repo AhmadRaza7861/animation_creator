@@ -466,7 +466,16 @@ class DrawingController extends ChangeNotifier {
     cachedRgbaHeight = null;
   }
 
-  /// 同步生成当前活跃图层的快照图片（用于涂抹工具）
+  /// Callback to obtain the canvas background image/template if present
+  ui.Image? Function()? backgroundSnapshotProvider;
+
+  /// Optional background image for the board
+  ui.Image? backgroundImage;
+
+  /// Opacity for the background image
+  double backgroundImageOpacity = 1.0;
+
+  /// 同步生成当前活跃图层的快照图片（用于涂抹/模糊工具）
   ui.Image? generateActiveLayerSnapshotSync([Size? customSize]) {
     final Size? size = customSize ?? drawConfig.value.size;
     if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0) return null;
@@ -479,7 +488,8 @@ class DrawingController extends ChangeNotifier {
     if (active == null || !active.isVisible) return null;
 
     final int count = active.currentIndex.clamp(0, active.history.length);
-    if (count == 0) {
+    final ui.Image? bgImg = backgroundSnapshotProvider?.call() ?? backgroundImage;
+    if (count == 0 && bgImg == null) {
       return null;
     }
 
@@ -496,6 +506,15 @@ class DrawingController extends ChangeNotifier {
         ..blendMode = active.blendMode
         ..color = Colors.white.withValues(alpha: active.opacity),
     );
+
+    if (layers.isNotEmpty && active == layers.last && bgImg != null) {
+      paintImage(
+        canvas: tempCanvas,
+        rect: Offset.zero & size,
+        image: bgImg,
+        fit: BoxFit.cover,
+      );
+    }
 
     active.drawHistory(tempCanvas, size, true);
 
@@ -522,6 +541,21 @@ class DrawingController extends ChangeNotifier {
     tempCanvas.scale(pixelRatio);
 
     tempCanvas.saveLayer(Offset.zero & size, Paint());
+
+    final ui.Image? bgImg = backgroundSnapshotProvider?.call() ?? backgroundImage;
+    if (bgImg != null) {
+      tempCanvas.saveLayer(
+        Offset.zero & size,
+        Paint()..color = Colors.white.withValues(alpha: backgroundImageOpacity),
+      );
+      paintImage(
+        canvas: tempCanvas,
+        rect: Offset.zero & size,
+        image: bgImg,
+        fit: BoxFit.cover,
+      );
+      tempCanvas.restore();
+    }
 
     for (int i = layers.length - 1; i >= 0; i--) {
       final layer = layers[i];
@@ -957,14 +991,23 @@ class DrawingController extends ChangeNotifier {
       newContent = _paintContent.copy();
       final blur = newContent as BlurContent;
       blur.strength = drawConfig.value.strength;
-      blur.paint = drawConfig.value.paint;
-      if (drawConfig.value.size != null) {
-        final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
+      blur.paint = drawConfig.value.paint.copyWith();
+      blur.onRepaint = () {
+        _refresh();
+      };
+      final Size? canvasSize = drawConfig.value.size;
+      if (canvasSize != null) {
+        blur.canvasSize = canvasSize;
+        final ui.Image? snapshot = generateActiveLayerSnapshotSync(canvasSize) ??
+            generateSnapshotSync(canvasSize);
         if (snapshot != null) {
-          blur.setImageData(snapshot);
+          blur.setImageData(snapshot, canvasSize);
+          if (cachedRgbaData != null && cachedRgbaWidth == snapshot.width && cachedRgbaHeight == snapshot.height) {
+            blur.setRgbaData(cachedRgbaData!, cachedRgbaWidth!, cachedRgbaHeight!, canvasSize);
+          }
         }
       }
-      blur.startDraw(startPoint);
+      blur.startDrawWithPressure(startPoint, pressure ?? 1.0);
       drawingContent = blur;
       cachedImage = null;
       _refresh();
@@ -1355,6 +1398,8 @@ class DrawingController extends ChangeNotifier {
         eraserContent?.drawing(pt);
       } else if (drawingContent is SmudgeContent) {
         (drawingContent as SmudgeContent).drawingWithPressure(pt, pressure ?? 1.0);
+      } else if (drawingContent is BlurContent) {
+        (drawingContent as BlurContent).drawingWithPressure(pt, pressure ?? 1.0);
       } else {
         drawingContent?.drawing(pt);
       }
@@ -1418,6 +1463,7 @@ class DrawingController extends ChangeNotifier {
         }
 
         final bool isSmudge = drawingContent is SmudgeContent;
+        final bool isBlur = drawingContent is BlurContent;
         if (!intercepted) {
           if (drawingContent is SmudgeContent) {
             final smudge = drawingContent as SmudgeContent;
@@ -1427,6 +1473,14 @@ class DrawingController extends ChangeNotifier {
               cachedRgbaWidth = smudge.rgbaWidth;
               cachedRgbaHeight = smudge.rgbaHeight;
             }
+          } else if (drawingContent is BlurContent) {
+            final blur = drawingContent as BlurContent;
+            blur.commitSnapshot();
+            if (blur.rgbaData != null && blur.rgbaWidth != null && blur.rgbaHeight != null) {
+              cachedRgbaData = Uint8List.fromList(blur.rgbaData!);
+              cachedRgbaWidth = blur.rgbaWidth;
+              cachedRgbaHeight = blur.rgbaHeight;
+            }
           }
           currentLayer.history.add(drawingContent!);
           currentLayer.currentIndex = currentLayer.history.length;
@@ -1435,7 +1489,7 @@ class DrawingController extends ChangeNotifier {
 
         // 修剪历史记录，防止内存无限增长
         _trimHistoryIfNeeded(currentLayer);
-        if (!isSmudge) {
+        if (!isSmudge && !isBlur) {
           _invalidateRasterCache();
         } else {
           cachedImage = null;
