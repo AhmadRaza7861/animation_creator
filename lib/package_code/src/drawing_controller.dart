@@ -480,7 +480,7 @@ class DrawingController extends ChangeNotifier {
 
     final int count = active.currentIndex.clamp(0, active.history.length);
     if (count == 0) {
-      return generateSnapshotSync(customSize);
+      return null;
     }
 
     final ui.PictureRecorder recorder = ui.PictureRecorder();
@@ -497,16 +497,7 @@ class DrawingController extends ChangeNotifier {
         ..color = Colors.white.withValues(alpha: active.opacity),
     );
 
-    int startIndex = 0;
-    for (int j = count - 1; j >= 0; j--) {
-      if (active.history[j] is SmudgeContent) {
-        startIndex = j;
-        break;
-      }
-    }
-    for (int j = startIndex; j < count; j++) {
-      active.history[j].draw(tempCanvas, size, true);
-    }
+    active.drawHistory(tempCanvas, size, true);
 
     tempCanvas.restore();
 
@@ -985,8 +976,6 @@ class DrawingController extends ChangeNotifier {
       smudge.paint = drawConfig.value.paint.copyWith();
       smudge.onRepaint = () {
         _refresh();
-        _refreshDeep();
-        updateSnapshot();
       };
       final Size? canvasSize = drawConfig.value.size;
       if (canvasSize != null) {

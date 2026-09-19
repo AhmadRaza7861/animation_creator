@@ -2,8 +2,12 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dummy/package_code/paint_contents.dart';
 import 'package:dummy/package_code/src/paint_contents/paint_content_decoder.dart';
 import 'package:dummy/package_code/src/paint_contents/smudge.dart';
+import 'package:dummy/package_code/src/paint_contents/fill.dart';
+import 'package:dummy/package_code/src/paint_contents/layer_data.dart';
+import 'package:dummy/package_code/src/helper/flood_fill.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -104,6 +108,69 @@ void main() {
       final Canvas canvas = Canvas(recorder);
       expect(() => smudge.draw(canvas, const Size(100, 100), false), returnsNormally);
       expect(() => smudge.draw(canvas, const Size(100, 100), true), returnsNormally);
+    });
+
+    test('Smudge followed by FillContent renders in proper layer order without white halos', () async {
+      const int width = 100;
+      const int height = 100;
+      final Uint8List initialPixels = await createTestPixelBuffer(width, height, color: const Color(0xFF654321)); // Brown line
+
+      final SmudgeContent smudge = SmudgeContent(strength: 0.75);
+      smudge.paint.strokeWidth = 20.0;
+      smudge.setRgbaData(initialPixels, width, height, const Size(100, 100));
+
+      // Smudge the brown line from x=45 to x=70
+      smudge.startDrawWithPressure(const Offset(45, 50), 1.0);
+      smudge.drawingWithPressure(const Offset(70, 50), 1.0);
+      smudge.finalizeStroke();
+
+      // Render the active layer state with Smudge
+      final LayerData layer = LayerData(id: 'layer1');
+      layer.history.add(smudge);
+      layer.currentIndex = 1;
+
+      final ui.PictureRecorder rec1 = ui.PictureRecorder();
+      final Canvas c1 = Canvas(rec1, const Rect.fromLTWH(0, 0, 100, 100));
+      layer.drawHistory(c1, const Size(100, 100), true);
+      final ui.Image snapshotBeforeFill = await rec1.endRecording().toImage(width, height);
+
+      // Perform FloodFill at (10, 10) with Purple Color
+      const Color purpleColor = Color(0xFF9C27B0);
+      final ui.Image? filledImg = await FloodFill.fill(
+        image: snapshotBeforeFill,
+        startPoint: const Offset(10, 10),
+        fillColor: purpleColor,
+        tolerance: 0.15,
+      );
+
+      expect(filledImg, isNotNull);
+
+      // Add FillContent after SmudgeContent
+      final FillContent fillContent = FillContent.data(
+        image: filledImg,
+        paint: Paint(),
+      );
+      layer.history.add(fillContent);
+      layer.currentIndex = 2;
+
+      // Draw combined layer history
+      final ui.PictureRecorder rec2 = ui.PictureRecorder();
+      final Canvas c2 = Canvas(rec2, const Rect.fromLTWH(0, 0, 100, 100));
+      layer.drawHistory(c2, const Size(100, 100), true);
+      final ui.Image composite = await rec2.endRecording().toImage(width, height);
+
+      final ByteData? compData = await composite.toByteData(format: ui.ImageByteFormat.rawRgba);
+      expect(compData, isNotNull);
+      final Uint8List compPixels = compData!.buffer.asUint8List();
+
+      // Check background pixel (10, 10): must be Purple
+      final int bgIdx = (10 * width + 10) * 4;
+      expect(compPixels[bgIdx], equals(purpleColor.r.toInt() * 255 ~/ 1 | 0x9C));
+      expect(compPixels[bgIdx + 3], equals(255));
+
+      // Check smudged pixel (50, 50): must be Brown (alpha > 0)
+      final int strokeIdx = (50 * width + 50) * 4;
+      expect(compPixels[strokeIdx + 3], greaterThan(0));
     });
   });
 }

@@ -922,6 +922,7 @@ class EditorController extends ChangeNotifier {
             content.image = decodedImage;
           } else if (content is SmudgeContent) {
             content.image = decodedImage;
+            content.setImageData(decodedImage);
           } else if (content is FillContent) {
             content.image = decodedImage;
           }
