@@ -193,5 +193,33 @@ void main() {
       // At 240px scroll offset, time is 2000ms. At 12 fps, frame is 24 (or clamped to 23).
       expect(lastUpdatedFrame, greaterThan(10));
     });
+
+    testWidgets('Dragging audio clip near viewport edge automatically auto-scrolls the timeline horizontally', (tester) async {
+      await pumpStudio(tester);
+
+      final clipFinder = find.byKey(const ValueKey('clip_pos_clip_t2'));
+      expect(clipFinder, findsOneWidget);
+
+      final initialStartOffsetMs = clip2.startOffsetMs;
+      final initialCenter = tester.getCenter(clipFinder);
+
+      // Start drag gesture on clip2
+      final gesture = await tester.startGesture(initialCenter);
+      // Move gesture towards right edge of viewport (e.g. x = 1380px on 1400px width window)
+      await gesture.moveTo(Offset(1380, initialCenter.dy));
+      await tester.pump();
+
+      // Pump several frames to let the 16ms periodic auto-scroll timer run
+      for (int i = 0; i < 15; i++) {
+        await tester.pump(const Duration(milliseconds: 32));
+      }
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Clip2 startOffsetMs should have significantly increased due to auto-scrolling
+      expect(clip2.startOffsetMs, greaterThan(initialStartOffsetMs + 1000));
+      expect(lastUpdatedState, isNotNull);
+    });
   });
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:file_picker/file_picker.dart';
@@ -72,10 +73,22 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
   bool _hasMovedClip = false;
 
   // Pointer drag tracking for trim handles
+  String? _draggingTrimClipId;
+  String? _draggingTrimType;
   double _handleStartPointerX = 0.0;
   int _handleStartTrimStartMs = 0;
   int _handleStartTrimEndMs = 0;
   int _handleStartOffsetMs = 0;
+
+  // GlobalKey for measuring timeline viewport bounds during auto-scrolling
+  final GlobalKey _timelineViewportKey = GlobalKey();
+
+  // Edge auto-scrolling state when dragging timeline clips / handles
+  Timer? _autoScrollTimer;
+  double _autoScrollVelocity = 0.0;
+  double _lastPointerGlobalX = 0.0;
+  double _lastPointerGlobalY = 0.0;
+  double _dragStartScrollOffset = 0.0;
 
   bool _isProgrammaticScrolling = false;
   bool _isUserScrubbing = false;
@@ -161,6 +174,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
 
   @override
   void dispose() {
+    _stopAutoScroll();
     _playbackService.dispose();
     _horizontalScrollController.dispose();
     _frameScrollController.dispose();
@@ -173,6 +187,165 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     _clipRevisionNotifier.dispose();
     _isDraggingTimelineObjectNotifier.dispose();
     super.dispose();
+  }
+
+  void _checkEdgeAutoScroll(Offset globalPosition) {
+    _lastPointerGlobalX = globalPosition.dx;
+    _lastPointerGlobalY = globalPosition.dy;
+
+    final RenderBox? box = _timelineViewportKey.currentContext?.findRenderObject() as RenderBox?;
+    double localX = 0.0;
+    double viewportWidth = 300.0;
+
+    if (box != null && box.hasSize) {
+      final localPos = box.globalToLocal(globalPosition);
+      localX = localPos.dx;
+      viewportWidth = box.size.width;
+    } else {
+      localX = globalPosition.dx - 58.0;
+      viewportWidth = MediaQuery.of(context).size.width - 58.0;
+    }
+
+    const double edgeThreshold = 60.0;
+
+    // Right Edge Zone: auto-scroll forward (right)
+    if (localX > viewportWidth - edgeThreshold) {
+      final double distanceIntoEdge = (localX - (viewportWidth - edgeThreshold)).clamp(0.0, edgeThreshold * 2);
+      final double intensity = (distanceIntoEdge / edgeThreshold).clamp(0.2, 3.0);
+      final double velocity = 150.0 + (intensity * 350.0);
+      _startAutoScroll(velocity);
+    }
+    // Left Edge Zone: auto-scroll backward (left)
+    else if (localX < edgeThreshold) {
+      final double distanceIntoEdge = (edgeThreshold - localX).clamp(0.0, edgeThreshold * 2);
+      final double intensity = (distanceIntoEdge / edgeThreshold).clamp(0.2, 3.0);
+      final double velocity = -(150.0 + (intensity * 350.0));
+      _startAutoScroll(velocity);
+    }
+    // Middle Zone: stop auto-scrolling
+    else {
+      _stopAutoScroll();
+    }
+  }
+
+  void _startAutoScroll(double velocity) {
+    _autoScrollVelocity = velocity;
+    if (_autoScrollTimer != null && _autoScrollTimer!.isActive) return;
+
+    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+      if (!_isDraggingTimelineObjectNotifier.value || !_horizontalScrollController.hasClients) {
+        _stopAutoScroll();
+        return;
+      }
+
+      final double maxScroll = _horizontalScrollController.position.maxScrollExtent;
+      final double currentOffset = _horizontalScrollController.offset;
+      final double scrollDelta = _autoScrollVelocity * 0.016;
+      final double newOffset = (currentOffset + scrollDelta).clamp(0.0, maxScroll);
+
+      if ((newOffset - currentOffset).abs() > 0.01) {
+        _isProgrammaticScrolling = true;
+        _horizontalScrollController.jumpTo(newOffset);
+        _isProgrammaticScrolling = false;
+
+        if (_draggingClipId != null) {
+          _updateDraggingClipPosition();
+        } else if (_draggingTrimClipId != null && _draggingTrimType != null) {
+          _updateDraggingTrimHandle();
+        }
+      } else if ((_autoScrollVelocity > 0 && currentOffset >= maxScroll) ||
+                 (_autoScrollVelocity < 0 && currentOffset <= 0.0)) {
+        _stopAutoScroll();
+      }
+    });
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+    _autoScrollVelocity = 0.0;
+  }
+
+  void _updateDraggingClipPosition() {
+    final activeClipId = _draggingClipId;
+    if (activeClipId == null) return;
+    final targetClip = widget.audioState.findClip(activeClipId);
+    if (targetClip == null) return;
+
+    final double currentScrollOffset = _horizontalScrollController.hasClients
+        ? _horizontalScrollController.offset
+        : 0.0;
+    final double scrollDelta = currentScrollOffset - _dragStartScrollOffset;
+    final double dx = _lastPointerGlobalX - _dragStartPointerX;
+    final double dy = _lastPointerGlobalY - _dragStartPointerY;
+
+    if (!_hasMovedClip && dx.abs() < 3.0 && dy.abs() < 3.0) {
+      return;
+    }
+    _hasMovedClip = true;
+
+    // 1. Vertical movement across tracks (Track 1 to Track N)
+    final int trackShift = (dy / _trackHeight).round();
+    final int rawTargetIdx = _dragStartClipTrack + trackShift;
+
+    // Auto-expand track if dragged downwards past the bottom track!
+    if (rawTargetIdx >= widget.audioState.tracks.length && widget.audioState.tracks.length < 12) {
+      widget.audioState.addTrack();
+    }
+
+    final int targetTrackIdx = rawTargetIdx.clamp(0, widget.audioState.tracks.length - 1);
+
+    if (targetTrackIdx != targetClip.trackIndex &&
+        !widget.audioState.tracks[targetTrackIdx].isLocked) {
+      widget.audioState.tracks[targetClip.trackIndex].clips.removeWhere((c) => c.id == targetClip.id);
+      targetClip.trackIndex = targetTrackIdx;
+      widget.audioState.tracks[targetTrackIdx].clips.add(targetClip);
+      _selectedTrackIndexNotifier.value = targetTrackIdx;
+    }
+
+    // 2. Horizontal movement in time (Left / Right) with auto-scroll delta
+    final double totalDistancePx = dx + scrollDelta;
+    final int rawOffsetMs = (_dragStartClipOffsetMs +
+            ((totalDistancePx / _pixelsPerSecond) * 1000).round())
+        .clamp(0, _maxTimelineMs);
+
+    final currentTrack = widget.audioState.tracks[targetClip.trackIndex];
+    final int snappedOffsetMs = currentTrack.findMagneticSnapOffset(
+      targetClip,
+      rawOffsetMs,
+      snapThresholdMs: 40,
+      playheadMs: _positionNotifier.value,
+    );
+    final int safeOffsetMs = currentTrack.clampOffsetToPreventOverlap(targetClip, snappedOffsetMs);
+    targetClip.startOffsetMs = safeOffsetMs;
+
+    _clipRevisionNotifier.value++;
+  }
+
+  void _updateDraggingTrimHandle() {
+    final clipId = _draggingTrimClipId;
+    final type = _draggingTrimType;
+    if (clipId == null || type == null) return;
+    final clip = widget.audioState.findClip(clipId);
+    if (clip == null) return;
+
+    final double currentScrollOffset = _horizontalScrollController.hasClients
+        ? _horizontalScrollController.offset
+        : 0.0;
+    final double scrollDelta = currentScrollOffset - _dragStartScrollOffset;
+    final double dx = (_lastPointerGlobalX - _handleStartPointerX) + scrollDelta;
+    final int deltaMs = ((dx / _pixelsPerSecond) * 1000).round();
+
+    if (type == 'left') {
+      final int newTrimStart = (_handleStartTrimStartMs + deltaMs).clamp(0, clip.trimEndMs - 200);
+      final int actualShift = newTrimStart - _handleStartTrimStartMs;
+      clip.trimStartMs = newTrimStart;
+      clip.startOffsetMs = (_handleStartOffsetMs + actualShift).clamp(0, _maxTimelineMs);
+    } else if (type == 'right') {
+      clip.trimEndMs = (_handleStartTrimEndMs + deltaMs).clamp(clip.trimStartMs + 200, clip.durationMs);
+    }
+
+    _clipRevisionNotifier.value++;
   }
 
   String _formatTimecode(int ms) {
@@ -1981,15 +2154,17 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
 
                 // Right Column: Main Multi-Track Scrollable Timeline Lanes with Fixed Center Playhead
                 Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final double viewportWidth = constraints.maxWidth;
-                      final double halfViewportWidth = viewportWidth / 2.0;
-                      final double totalContentWidth = timelineWidth + viewportWidth;
+                  child: Container(
+                    key: _timelineViewportKey,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double viewportWidth = constraints.maxWidth;
+                        final double halfViewportWidth = viewportWidth / 2.0;
+                        final double totalContentWidth = timelineWidth + viewportWidth;
 
-                      return Stack(
-                        clipBehavior: Clip.none,
-                        children: [
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
                           Listener(
                             onPointerDown: (_) {
                               if (!_isPlayingNotifier.value && !_isDraggingTimelineObjectNotifier.value) {
@@ -2214,13 +2389,21 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                                               _selectedClipIdNotifier.value = clip.id;
                                                                               if (track.isLocked) return;
                                                                               _draggingClipId = clip.id;
+                                                                              _draggingTrimClipId = null;
+                                                                              _draggingTrimType = null;
                                                                               _isDraggingTimelineObjectNotifier.value =
                                                                                   true;
                                                                               _dragStartPointerX = event.position.dx;
                                                                               _dragStartPointerY = event.position.dy;
+                                                                              _lastPointerGlobalX = event.position.dx;
+                                                                              _lastPointerGlobalY = event.position.dy;
                                                                               _dragStartClipOffsetMs =
                                                                                   clip.startOffsetMs;
                                                                               _dragStartClipTrack = clip.trackIndex;
+                                                                              _dragStartScrollOffset =
+                                                                                  _horizontalScrollController.hasClients
+                                                                                      ? _horizontalScrollController.offset
+                                                                                      : 0.0;
                                                                               _hasMovedClip = false;
                                                                             },
                                                                             onPointerMove: (event) {
@@ -2229,69 +2412,11 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                                                       .value) {
                                                                                 return;
                                                                               }
-                                                                              final activeClipId =
-                                                                                  _draggingClipId ?? clip.id;
-                                                                              final targetClip =
-                                                                                  widget.audioState.findClip(activeClipId) ?? clip;
-                                                                              final double dx =
-                                                                                  event.position.dx - _dragStartPointerX;
-                                                                              final double dy =
-                                                                                  event.position.dy - _dragStartPointerY;
-                                                                              if (!_hasMovedClip &&
-                                                                                  dx.abs() < 3.0 &&
-                                                                                  dy.abs() < 3.0) {
-                                                                                return;
-                                                                              }
-                                                                              _hasMovedClip = true;
-
-                                                                              // 1. Vertical movement across tracks (Track 1 to Track N)
-                                                                              final int trackShift =
-                                                                                  (dy / trackHeight).round();
-                                                                              final int rawTargetIdx =
-                                                                                  _dragStartClipTrack + trackShift;
-
-                                                                              // Auto-expand track if dragged downwards past the bottom track!
-                                                                              if (rawTargetIdx >=
-                                                                                      widget.audioState.tracks.length &&
-                                                                                  widget.audioState.tracks.length < 12) {
-                                                                                widget.audioState.addTrack();
-                                                                              }
-
-                                                                              final int targetTrackIdx = rawTargetIdx.clamp(
-                                                                                  0,
-                                                                                  widget.audioState.tracks.length - 1);
-
-                                                                              if (targetTrackIdx != targetClip.trackIndex &&
-                                                                                  !widget.audioState.tracks[targetTrackIdx].isLocked) {
-                                                                                widget.audioState.tracks[targetClip.trackIndex].clips
-                                                                                    .removeWhere((c) => c.id == targetClip.id);
-                                                                                targetClip.trackIndex = targetTrackIdx;
-                                                                                widget.audioState.tracks[targetTrackIdx].clips.add(targetClip);
-                                                                                _selectedTrackIndexNotifier.value = targetTrackIdx;
-                                                                              }
-
-                                                                              // 2. Horizontal movement in time (Left / Right) without jumping
-                                                                              final int rawOffsetMs = (_dragStartClipOffsetMs +
-                                                                                      ((dx / _pixelsPerSecond) * 1000).round())
-                                                                                  .clamp(0, _maxTimelineMs);
-
-                                                                              final currentTrack =
-                                                                                  widget.audioState.tracks[targetClip.trackIndex];
-                                                                              final int snappedOffsetMs =
-                                                                                  currentTrack.findMagneticSnapOffset(
-                                                                                targetClip,
-                                                                                rawOffsetMs,
-                                                                                snapThresholdMs: 40,
-                                                                                playheadMs: _positionNotifier.value,
-                                                                              );
-                                                                              final int safeOffsetMs =
-                                                                                  currentTrack.clampOffsetToPreventOverlap(
-                                                                                      targetClip, snappedOffsetMs);
-                                                                              targetClip.startOffsetMs = safeOffsetMs;
-
-                                                                              _clipRevisionNotifier.value++;
+                                                                              _checkEdgeAutoScroll(event.position);
+                                                                              _updateDraggingClipPosition();
                                                                             },
                                                                             onPointerUp: (event) {
+                                                                              _stopAutoScroll();
                                                                               if (_isDraggingTimelineObjectNotifier.value) {
                                                                                 _isDraggingTimelineObjectNotifier.value = false;
                                                                                 final activeClipId = _draggingClipId ?? clip.id;
@@ -2307,6 +2432,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                                               }
                                                                             },
                                                                             onPointerCancel: (event) {
+                                                                              _stopAutoScroll();
                                                                               if (_isDraggingTimelineObjectNotifier.value) {
                                                                                 _isDraggingTimelineObjectNotifier.value = false;
                                                                                 final activeClipId = _draggingClipId ?? clip.id;
@@ -2440,29 +2566,37 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                                               behavior: HitTestBehavior.opaque,
                                                                               onPointerDown: (event) {
                                                                                 _isDraggingTimelineObjectNotifier.value = true;
+                                                                                _draggingTrimClipId = clip.id;
+                                                                                _draggingTrimType = 'left';
+                                                                                _draggingClipId = null;
                                                                                 _handleStartPointerX = event.position.dx;
+                                                                                _lastPointerGlobalX = event.position.dx;
+                                                                                _lastPointerGlobalY = event.position.dy;
                                                                                 _handleStartTrimStartMs = clip.trimStartMs;
                                                                                 _handleStartOffsetMs = clip.startOffsetMs;
                                                                                 _handleStartTrimEndMs = clip.trimEndMs;
+                                                                                _dragStartScrollOffset =
+                                                                                    _horizontalScrollController.hasClients
+                                                                                        ? _horizontalScrollController.offset
+                                                                                        : 0.0;
                                                                               },
                                                                               onPointerMove: (event) {
-                                                                                final double dx = event.position.dx - _handleStartPointerX;
-                                                                                final int deltaMs = ((dx / _pixelsPerSecond) * 1000).round();
-                                                                                final int newTrimStart = (_handleStartTrimStartMs + deltaMs)
-                                                                                    .clamp(0, clip.trimEndMs - 200);
-                                                                                final int actualShift = newTrimStart - _handleStartTrimStartMs;
-                                                                                clip.trimStartMs = newTrimStart;
-                                                                                clip.startOffsetMs =
-                                                                                    (_handleStartOffsetMs + actualShift).clamp(0, _maxTimelineMs);
-                                                                                _clipRevisionNotifier.value++;
+                                                                                _checkEdgeAutoScroll(event.position);
+                                                                                _updateDraggingTrimHandle();
                                                                               },
                                                                               onPointerUp: (event) {
+                                                                                _stopAutoScroll();
+                                                                                _draggingTrimClipId = null;
+                                                                                _draggingTrimType = null;
                                                                                 if (_isDraggingTimelineObjectNotifier.value) {
                                                                                   _isDraggingTimelineObjectNotifier.value = false;
                                                                                   widget.onAudioStateChanged(widget.audioState);
                                                                                 }
                                                                               },
                                                                               onPointerCancel: (event) {
+                                                                                _stopAutoScroll();
+                                                                                _draggingTrimClipId = null;
+                                                                                _draggingTrimType = null;
                                                                                 if (_isDraggingTimelineObjectNotifier.value) {
                                                                                   _isDraggingTimelineObjectNotifier.value = false;
                                                                                   widget.onAudioStateChanged(widget.audioState);
@@ -2503,23 +2637,35 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                                               behavior: HitTestBehavior.opaque,
                                                                               onPointerDown: (event) {
                                                                                 _isDraggingTimelineObjectNotifier.value = true;
+                                                                                _draggingTrimClipId = clip.id;
+                                                                                _draggingTrimType = 'right';
+                                                                                _draggingClipId = null;
                                                                                 _handleStartPointerX = event.position.dx;
+                                                                                _lastPointerGlobalX = event.position.dx;
+                                                                                _lastPointerGlobalY = event.position.dy;
                                                                                 _handleStartTrimEndMs = clip.trimEndMs;
+                                                                                _dragStartScrollOffset =
+                                                                                    _horizontalScrollController.hasClients
+                                                                                        ? _horizontalScrollController.offset
+                                                                                        : 0.0;
                                                                               },
                                                                               onPointerMove: (event) {
-                                                                                final double dx = event.position.dx - _handleStartPointerX;
-                                                                                final int deltaMs = ((dx / _pixelsPerSecond) * 1000).round();
-                                                                                clip.trimEndMs = (_handleStartTrimEndMs + deltaMs)
-                                                                                    .clamp(clip.trimStartMs + 200, clip.durationMs);
-                                                                                _clipRevisionNotifier.value++;
+                                                                                _checkEdgeAutoScroll(event.position);
+                                                                                _updateDraggingTrimHandle();
                                                                               },
                                                                               onPointerUp: (event) {
+                                                                                _stopAutoScroll();
+                                                                                _draggingTrimClipId = null;
+                                                                                _draggingTrimType = null;
                                                                                 if (_isDraggingTimelineObjectNotifier.value) {
                                                                                   _isDraggingTimelineObjectNotifier.value = false;
                                                                                   widget.onAudioStateChanged(widget.audioState);
                                                                                 }
                                                                               },
                                                                               onPointerCancel: (event) {
+                                                                                _stopAutoScroll();
+                                                                                _draggingTrimClipId = null;
+                                                                                _draggingTrimType = null;
                                                                                 if (_isDraggingTimelineObjectNotifier.value) {
                                                                                   _isDraggingTimelineObjectNotifier.value = false;
                                                                                   widget.onAudioStateChanged(widget.audioState);
@@ -2602,6 +2748,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                     },
                   ),
                 ),
+              ),
               ],
             ),
           ),
