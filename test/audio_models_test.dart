@@ -7,6 +7,7 @@ import 'package:dummy/features/audio/services/audio_library_service.dart';
 import 'package:dummy/features/audio/services/voice_maker_service.dart';
 import 'package:dummy/features/projects/data/project_repository.dart';
 import 'package:dummy/features/editor/presentation/controllers/editor_controller.dart';
+import 'package:dummy/package_code/src/paint_contents/simple_line.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -367,6 +368,25 @@ void main() {
       // Changing FPS from 9 to 12 should auto-expand frames to 5s * 12 fps = 60 frames
       controller.fps = 12;
       expect(controller.canvases.length, 60);
+
+      // Now test deleting audio:
+      // Remove the second clip (now duration is 3000ms -> at 12 fps, ceil(3 * 12) = 36 frames)
+      state.tracks[0].clips.removeLast();
+      final removeDelta = controller.updateAudioState(state, autoAddFrames: true, autoRemoveFrames: true);
+      expect(removeDelta, -24); // 60 - 36 = 24 empty frames removed
+      expect(controller.canvases.length, 36);
+
+      // Draw something on frame index 5 (6th frame)
+      controller.canvases[5].layers.first.history.add(SimpleLine());
+      controller.canvases[5].layers.first.currentIndex = 1;
+
+      // Delete the remaining audio clip (state is now empty, 0ms)
+      state.tracks[0].clips.clear();
+      final removeDelta2 = controller.updateAudioState(state, autoAddFrames: true, autoRemoveFrames: true);
+      // It should trim trailing empty frames down to frame 5 (i.e. keep frames 0..5 = 6 frames)
+      expect(removeDelta2, -30); // 36 - 6 = 30 empty frames removed
+      expect(controller.canvases.length, 6);
+      expect(controller.canvases[5].layers.first.history.isNotEmpty, isTrue);
 
       controller.dispose();
     });

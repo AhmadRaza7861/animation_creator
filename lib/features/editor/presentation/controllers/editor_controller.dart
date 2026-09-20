@@ -156,18 +156,43 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Automatically ensures that the project has enough frames to cover the complete duration
-  /// of all active audio tracks and clips.
-  /// Returns the number of frames added.
-  int ensureFramesForAudio({bool notify = true}) {
-    final int maxMs = _audioState.maxDurationMs;
-    if (maxMs <= 0) return 0;
+  /// Checks if a canvas has any drawings, text, stickers, or custom background.
+  bool isCanvasEmpty(DrawingController canvas, {int? canvasIndex}) {
+    if (canvas.backgroundImage != null) return false;
+    if (_activeSticker != null && canvasIndex != null && canvasIndex == _currentIndex) return false;
+    for (final layer in canvas.layers) {
+      final int validCount = layer.currentIndex.clamp(0, layer.history.length);
+      for (int i = 0; i < validCount; i++) {
+        final content = layer.history[i];
+        if (content is! EmptyContent) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
+  /// Automatically synchronizes project frames with the active audio duration:
+  /// - If audio is added or lengthened: adds empty frames to match audio duration.
+  /// - If audio is deleted, trimmed, or shortened: trims trailing empty frames down to
+  ///   the new audio duration or minimum project frames (never deleting frames that have drawings).
+  ///
+  /// Returns:
+  /// - Positive integer (> 0): number of frames added
+  /// - Negative integer (< 0): number of trailing empty frames removed
+  /// - 0: frame count remained unchanged
+  int syncFramesWithAudio({
+    bool autoAddFrames = true,
+    bool autoRemoveFrames = true,
+    bool notify = true,
+  }) {
+    final int maxMs = _audioState.maxDurationMs;
     final int effectiveFps = _fps > 0 ? _fps : 9;
-    final int requiredFrames = ((maxMs / 1000.0) * effectiveFps).ceil();
+    final int requiredFrames = maxMs > 0 ? ((maxMs / 1000.0) * effectiveFps).ceil() : 0;
     final int currentFrames = _canvases.length;
 
-    if (requiredFrames > currentFrames) {
+    // 1. Audio requires more frames -> Add frames
+    if (autoAddFrames && requiredFrames > currentFrames) {
       final int framesToAdd = requiredFrames - currentFrames;
       for (int i = 0; i < framesToAdd; i++) {
         final controller = DrawingController();
@@ -185,18 +210,69 @@ class EditorController extends ChangeNotifier {
       }
       return framesToAdd;
     }
+
+    // 2. Audio duration was reduced or audio was deleted -> Remove trailing empty frames
+    if (autoRemoveFrames && currentFrames > 1) {
+      final int minFrames = (_templateFrameCount != null && _templateFrameCount! > 0)
+          ? _templateFrameCount!
+          : 1;
+      final int targetMinFrames = requiredFrames > minFrames ? requiredFrames : minFrames;
+
+      int removedFrames = 0;
+      // Trim empty frames from the end backwards
+      while (_canvases.length > targetMinFrames) {
+        final int lastIdx = _canvases.length - 1;
+        final DrawingController lastCanvas = _canvases[lastIdx];
+        if (isCanvasEmpty(lastCanvas, canvasIndex: lastIdx)) {
+          final removed = _canvases.removeLast();
+          removed.drawConfig.removeListener(_onDrawConfigChanged);
+          removed.dispose();
+          if (_thumbnails.isNotEmpty) {
+            _thumbnails.removeLast();
+          }
+          removedFrames++;
+        } else {
+          // Hit a frame with user drawings/content -> Stop trimming
+          break;
+        }
+      }
+
+      if (removedFrames > 0) {
+        if (_currentIndex >= _canvases.length) {
+          _currentIndex = _canvases.length - 1;
+        }
+        markDirty();
+        if (notify) {
+          notifyListeners();
+        }
+        return -removedFrames;
+      }
+    }
+
     return 0;
   }
 
-  int updateAudioState(AudioProjectState newState, {bool autoAddFrames = true}) {
+  /// Automatically ensures that the project has enough frames to cover the complete duration
+  /// of all active audio tracks and clips.
+  /// Returns the number of frames added.
+  int ensureFramesForAudio({bool notify = true}) {
+    return syncFramesWithAudio(autoAddFrames: true, autoRemoveFrames: false, notify: notify);
+  }
+
+  int updateAudioState(
+    AudioProjectState newState, {
+    bool autoAddFrames = true,
+    bool autoRemoveFrames = true,
+  }) {
     _audioState = newState;
-    int addedFrames = 0;
-    if (autoAddFrames) {
-      addedFrames = ensureFramesForAudio(notify: false);
-    }
+    final int frameDelta = syncFramesWithAudio(
+      autoAddFrames: autoAddFrames,
+      autoRemoveFrames: autoRemoveFrames,
+      notify: false,
+    );
     markDirty();
     notifyListeners();
-    return addedFrames;
+    return frameDelta;
   }
 
   Object? _undoneSticker;
@@ -528,7 +604,7 @@ class EditorController extends ChangeNotifier {
   set fps(int value) {
     _fps = value;
     if (_audioState.isNotEmpty) {
-      ensureFramesForAudio(notify: false);
+      syncFramesWithAudio(autoAddFrames: true, autoRemoveFrames: true, notify: false);
     }
     markDirty();
     notifyListeners();

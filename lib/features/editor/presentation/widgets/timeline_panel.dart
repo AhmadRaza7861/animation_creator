@@ -40,10 +40,22 @@ class TimelinePanel extends ConsumerWidget {
           controller.addFrame();
         },
         onAudioStateChanged: (updated) {
-          final added = controller.updateAudioState(updated, autoAddFrames: true);
-          if (added > 0) {
+          final delta = controller.updateAudioState(
+            updated,
+            autoAddFrames: true,
+            autoRemoveFrames: true,
+          );
+          if (delta > 0) {
             Fluttertoast.showToast(
-              msg: 'Added $added frames to match audio duration (${controller.canvases.length} total)',
+              msg: 'Added $delta frames to match audio duration (${controller.canvases.length} total)',
+              backgroundColor: const Color(0xFFFF9318),
+              textColor: Colors.white,
+              toastLength: Toast.LENGTH_SHORT,
+            );
+          } else if (delta < 0) {
+            final removed = -delta;
+            Fluttertoast.showToast(
+              msg: 'Removed $removed empty frame${removed > 1 ? "s" : ""} (${controller.canvases.length} total)',
               backgroundColor: const Color(0xFFFF9318),
               textColor: Colors.white,
               toastLength: Toast.LENGTH_SHORT,
