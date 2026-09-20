@@ -1,42 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:dummy/core/constants/app_colors.dart';
 
 class CustomDialogTheme {
-  CustomDialogTheme._(); // Private constructor to prevent instantiation
+  CustomDialogTheme._();
 
   static final lightDialogTheme = DialogThemeData(
-    shadowColor: Colors.transparent,
+    shadowColor: Colors.black.withValues(alpha: 0.15),
+    elevation: 8,
     surfaceTintColor: Colors.transparent,
     backgroundColor: Colors.white,
     titleTextStyle: const TextStyle(
-      color: Colors.black,
-      fontSize: 20.0,
-      fontWeight: FontWeight.bold,
+      color: ColorConstants.darkText,
+      fontSize: 18.0,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
     ),
     contentTextStyle: const TextStyle(
-      color: Colors.black,
-      fontSize: 16.0,
+      color: ColorConstants.mediumText,
+      fontSize: 14.0,
+      fontWeight: FontWeight.w400,
     ),
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10.0),
+      borderRadius: BorderRadius.circular(18.0),
     ),
   );
 
   static final darkDialogTheme = DialogThemeData(
-    shadowColor: Colors.transparent,
+    shadowColor: Colors.black.withValues(alpha: 0.3),
+    elevation: 8,
     surfaceTintColor: Colors.transparent,
-    backgroundColor:Color(0xFF1C1D21),
-    //const Color(0xFF1C1D21),
+    backgroundColor: const Color(0xFF1E293B),
     titleTextStyle: const TextStyle(
       color: Colors.white,
-      fontSize: 20.0,
-      fontWeight: FontWeight.bold,
+      fontSize: 18.0,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
     ),
     contentTextStyle: const TextStyle(
-      color: Colors.white,
-      fontSize: 16.0,
+      color: Color(0xFF94A3B8),
+      fontSize: 14.0,
+      fontWeight: FontWeight.w400,
     ),
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10.0),
+      borderRadius: BorderRadius.circular(18.0),
     ),
   );
 }

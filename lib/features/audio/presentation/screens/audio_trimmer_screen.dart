@@ -39,10 +39,45 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.initialTitle ?? widget.clip.title);
+    _titleController = TextEditingController(
+      text: widget.initialTitle ?? widget.clip.title,
+    );
     _trimStartMs = widget.clip.trimStartMs;
-    _trimEndMs = widget.clip.trimEndMs > 0 ? widget.clip.trimEndMs : widget.clip.durationMs;
+    _trimEndMs =
+        widget.clip.trimEndMs > 0
+            ? widget.clip.trimEndMs
+            : widget.clip.durationMs;
     _currentScrubberMs = _trimStartMs;
+
+    _ensureAccurateDuration();
+  }
+
+  void _ensureAccurateDuration() async {
+    if (widget.clip.filePath.isNotEmpty &&
+        (widget.clip.durationMs <= 0 ||
+            widget.clip.waveformSamples.isEmpty ||
+            widget.clip.durationMs == 3000)) {
+      final actualDur = await AudioPlaybackService.getAudioDurationMs(
+        widget.clip.filePath,
+      );
+      List<double> samples = widget.clip.waveformSamples;
+      if (samples.isEmpty || samples.length <= 10) {
+        samples = await AudioPlaybackService.extractWaveform(
+          widget.clip.filePath,
+        );
+      }
+      if (mounted && actualDur > 0) {
+        setState(() {
+          final bool wasFullTrim =
+              _trimEndMs == widget.clip.durationMs || _trimEndMs <= 0;
+          widget.clip.durationMs = actualDur;
+          widget.clip.waveformSamples = samples;
+          if (wasFullTrim || _trimEndMs > actualDur) {
+            _trimEndMs = actualDur;
+          }
+        });
+      }
+    }
   }
 
   @override
@@ -67,9 +102,28 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.$tenths';
   }
 
+  void _startScrubberTimer() {
+    _scrubberTimer?.cancel();
+    _scrubberTimer = Timer.periodic(const Duration(milliseconds: 33), (timer) {
+      if (!_isPlaying || !mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _currentScrubberMs += 33;
+        if (_currentScrubberMs >= _trimEndMs) {
+          _isPlaying = false;
+          _currentScrubberMs = _trimStartMs;
+          _playbackService.stopSingleClip();
+          timer.cancel();
+        }
+      });
+    });
+  }
+
   void _togglePlayPause() async {
     if (_isPlaying) {
-      await _playbackService.pause();
+      await _playbackService.pauseSingleClip();
       _scrubberTimer?.cancel();
       setState(() {
         _isPlaying = false;
@@ -84,44 +138,38 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
       });
 
       final previewClip = widget.clip.copyWith(
-        trimStartMs: _currentScrubberMs,
+        trimStartMs: _trimStartMs,
         trimEndMs: _trimEndMs,
       );
 
-      await _playbackService.playSingleClip(previewClip, onComplete: () {
-        if (mounted) {
-          setState(() {
-            _isPlaying = false;
-            _currentScrubberMs = _trimStartMs;
-          });
-        }
-      });
-
-      _scrubberTimer?.cancel();
-      _scrubberTimer = Timer.periodic(const Duration(milliseconds: 33), (timer) {
-        if (!_isPlaying || !mounted) {
-          timer.cancel();
-          return;
-        }
-        setState(() {
-          _currentScrubberMs += 33;
-          if (_currentScrubberMs >= _trimEndMs) {
-            _isPlaying = false;
-            _currentScrubberMs = _trimStartMs;
-            timer.cancel();
+      await _playbackService.playSingleClip(
+        previewClip,
+        customStartMs: _currentScrubberMs,
+        onComplete: () {
+          if (mounted) {
+            _scrubberTimer?.cancel();
+            setState(() {
+              _isPlaying = false;
+              _currentScrubberMs = _trimStartMs;
+            });
           }
-        });
-      });
+        },
+      );
+
+      _startScrubberTimer();
     }
   }
 
   void _seekTo(int targetMs) {
-    _scrubberTimer?.cancel();
-    _playbackService.stopAll();
+    final int clamped = targetMs.clamp(_trimStartMs, _trimEndMs);
     setState(() {
-      _isPlaying = false;
-      _currentScrubberMs = targetMs.clamp(_trimStartMs, _trimEndMs);
+      _currentScrubberMs = clamped;
     });
+
+    if (_isPlaying) {
+      _playbackService.seekSingleClip(clamped);
+      _startScrubberTimer();
+    }
   }
 
   void _step(int direction, int totalDuration) {
@@ -184,19 +232,13 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                       return GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onPanDown: (details) {
-                          _scrubberTimer?.cancel();
-                          if (_isPlaying) {
-                            _playbackService.stopAll();
-                            _isPlaying = false;
-                          }
-
                           final double touchX = details.localPosition.dx;
                           final double leftHandleX = width * leftFraction;
                           final double rightHandleX = width * rightFraction;
                           final double needleX = width * (_currentScrubberMs / totalDuration);
 
                           const double handleHitRadius = 44.0; // Wide 88px touch radius
-                          const double needleHitRadius = 24.0;
+                          const double needleHitRadius = 28.0;
 
                           final double distToLeft = (touchX - leftHandleX).abs();
                           final double distToRight = (touchX - rightHandleX).abs();
@@ -209,13 +251,11 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                           } else if (distToNeedle <= needleHitRadius) {
                             _activeDragTarget = _TrimmerDragTarget.scrubber;
                           } else {
-                            // Touch anywhere on the waveform instantly seeks and scrubs
+                            // Touch anywhere on the waveform instantly seeks and scrubs without stopping audio
                             _activeDragTarget = _TrimmerDragTarget.scrubber;
                             final double fraction = (touchX / width).clamp(0.0, 1.0);
                             final int targetMs = (fraction * totalDuration).round().clamp(_trimStartMs, _trimEndMs);
-                            setState(() {
-                              _currentScrubberMs = targetMs;
-                            });
+                            _seekTo(targetMs);
                           }
                         },
                         onPanUpdate: (details) {
@@ -224,23 +264,33 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                           final double touchX = details.localPosition.dx;
                           const int minDurationMs = 100;
 
-                          setState(() {
-                            if (_activeDragTarget == _TrimmerDragTarget.leftHandle) {
-                              final double maxAllowedX = width * ((_trimEndMs - minDurationMs) / totalDuration);
-                              final double clampedX = touchX.clamp(0.0, maxAllowedX.clamp(0.0, width));
-                              _trimStartMs = ((clampedX / width) * totalDuration).round().clamp(0, _trimEndMs - minDurationMs);
+                          if (_activeDragTarget == _TrimmerDragTarget.leftHandle) {
+                            final double maxAllowedX = width * ((_trimEndMs - minDurationMs) / totalDuration);
+                            final double clampedX = touchX.clamp(0.0, maxAllowedX.clamp(0.0, width));
+                            final int newStart = ((clampedX / width) * totalDuration).round().clamp(0, _trimEndMs - minDurationMs);
+                            setState(() {
+                              _trimStartMs = newStart;
                               _currentScrubberMs = _currentScrubberMs.clamp(_trimStartMs, _trimEndMs);
-                            } else if (_activeDragTarget == _TrimmerDragTarget.rightHandle) {
-                              final double minAllowedX = width * ((_trimStartMs + minDurationMs) / totalDuration);
-                              final double clampedX = touchX.clamp(minAllowedX.clamp(0.0, width), width);
-                              _trimEndMs = ((clampedX / width) * totalDuration).round().clamp(_trimStartMs + minDurationMs, totalDuration);
-                              _currentScrubberMs = _currentScrubberMs.clamp(_trimStartMs, _trimEndMs);
-                            } else if (_activeDragTarget == _TrimmerDragTarget.scrubber) {
-                              final double fraction = (touchX / width).clamp(0.0, 1.0);
-                              final int targetMs = (fraction * totalDuration).round();
-                              _currentScrubberMs = targetMs.clamp(_trimStartMs, _trimEndMs);
+                            });
+                            if (_isPlaying) {
+                              _playbackService.seekSingleClip(_currentScrubberMs);
                             }
-                          });
+                          } else if (_activeDragTarget == _TrimmerDragTarget.rightHandle) {
+                            final double minAllowedX = width * ((_trimStartMs + minDurationMs) / totalDuration);
+                            final double clampedX = touchX.clamp(minAllowedX.clamp(0.0, width), width);
+                            final int newEnd = ((clampedX / width) * totalDuration).round().clamp(_trimStartMs + minDurationMs, totalDuration);
+                            setState(() {
+                              _trimEndMs = newEnd;
+                              _currentScrubberMs = _currentScrubberMs.clamp(_trimStartMs, _trimEndMs);
+                            });
+                            if (_isPlaying) {
+                              _playbackService.seekSingleClip(_currentScrubberMs);
+                            }
+                          } else if (_activeDragTarget == _TrimmerDragTarget.scrubber) {
+                            final double fraction = (touchX / width).clamp(0.0, 1.0);
+                            final int targetMs = (fraction * totalDuration).round();
+                            _seekTo(targetMs);
+                          }
                         },
                         onPanEnd: (_) {
                           _activeDragTarget = _TrimmerDragTarget.none;
@@ -472,8 +522,10 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                       title: _titleController.text.trim().isNotEmpty
                           ? _titleController.text.trim()
                           : widget.clip.title,
+                      durationMs: widget.clip.durationMs,
                       trimStartMs: _trimStartMs,
                       trimEndMs: _trimEndMs,
+                      waveformSamples: widget.clip.waveformSamples,
                       fadeInMs: widget.clip.fadeInMs,
                       fadeOutMs: widget.clip.fadeOutMs,
                     );
@@ -528,16 +580,17 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: List.generate(5, (index) {
           final int timeAtPoint = ((index / 4) * totalMs).round();
-          final int seconds = timeAtPoint ~/ 1000;
+          final int minutes = timeAtPoint ~/ 60000;
+          final int seconds = (timeAtPoint % 60000) ~/ 1000;
           final int millis = (timeAtPoint % 1000) ~/ 100;
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 6.0),
             child: Text(
-              '00:${seconds.toString().padLeft(2, '0')}.$millis',
+              '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.$millis',
               style: TextStyle(
                 fontSize: 10,
-                color: Colors.black.withValues(alpha: 0.4),
-                fontWeight: FontWeight.w500,
+                color: Colors.black.withValues(alpha: 0.45),
+                fontWeight: FontWeight.w600,
               ),
             ),
           );

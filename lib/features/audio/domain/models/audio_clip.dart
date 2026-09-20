@@ -33,8 +33,13 @@ class AudioClip {
         trimEndMs = trimEndMs ?? durationMs,
         waveformSamples = waveformSamples ?? _generateDefaultWaveform();
 
-  int get endOffsetMs => startOffsetMs + (trimEndMs - trimStartMs);
-  int get trimmedDurationMs => (trimEndMs - trimStartMs).clamp(0, durationMs);
+  int get trimmedDurationMs {
+    final int raw = trimEndMs - trimStartMs;
+    final int effectiveMax = durationMs > 0 ? (durationMs >= raw ? durationMs : raw) : raw;
+    return raw.clamp(0, effectiveMax > 0 ? effectiveMax : 0);
+  }
+
+  int get endOffsetMs => startOffsetMs + trimmedDurationMs;
 
   /// Fraction of trimmed duration occupied by fade-in (0.0 to 1.0)
   double get fadeInFraction {
@@ -148,12 +153,18 @@ class AudioClip {
     );
   }
 
-  static List<double> _generateDefaultWaveform({int count = 60}) {
-    // Generate an aesthetically natural default waveform
+  static List<double> generateDefaultWaveform({int count = 80, String? seed}) {
+    final int hash = seed != null && seed.isNotEmpty ? seed.hashCode : 42;
     return List.generate(count, (index) {
-      final double normalized = index / count;
-      final double sinVal = (normalized * 3.14159 * 4).abs();
-      return (0.2 + 0.6 * (sinVal % 1.0)).clamp(0.1, 1.0);
+      final double t = index / count;
+      final double sin1 = ((t * 8.0 * 3.14159) + (hash % 17)).abs();
+      final double sin2 = ((t * 19.0 * 3.14159) + (hash % 31)).abs();
+      final double sin3 = ((t * 37.0 * 3.14159) + (hash % 7)).abs();
+      final double combined = 0.22 + 0.38 * (sin1 % 1.0) + 0.25 * (sin2 % 1.0) + 0.15 * (sin3 % 1.0);
+      return combined.clamp(0.1, 0.95);
     });
   }
+
+  static List<double> _generateDefaultWaveform({int count = 80}) =>
+      generateDefaultWaveform(count: count);
 }

@@ -41,7 +41,7 @@ class WaveformPainter extends CustomPainter {
     final double centerY = size.height / 2;
     final double maxBarHeight = size.height * 0.88;
     final double step = barWidth + barGap;
-    final int numBars = (size.width / step).floor().clamp(1, 400);
+    final int numBars = (size.width / step).floor().clamp(1, 10000);
 
     for (int i = 0; i < numBars; i++) {
       final double x = i * step + barWidth / 2;

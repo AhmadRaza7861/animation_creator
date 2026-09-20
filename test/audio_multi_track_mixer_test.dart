@@ -1,13 +1,15 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/features/audio/domain/models/audio_clip.dart';
-import 'package:dummy/features/audio/domain/models/audio_track.dart';
 import 'package:dummy/features/audio/domain/models/audio_project_state.dart';
 import 'package:dummy/features/audio/services/audio_library_service.dart';
 import 'package:dummy/features/audio/services/audio_playback_service.dart';
 import 'package:dummy/features/editor/services/movie_export_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('AudioClip Domain & Fade Tests', () {
     test('Calculates fade fractions accurately', () {
       final clip = AudioClip(
@@ -339,6 +341,95 @@ void main() {
       expect(await mixFile.length(), greaterThan(1000));
 
       await tempDir.delete(recursive: true);
+    });
+
+    test('AudioProjectState active clips queries accurately identify clips during timeline scrubbing', () {
+      final state = AudioProjectState();
+      state.addClip(
+        AudioClip(
+          id: 'clip_t0',
+          title: 'Track 0 Clip',
+          filePath: '/mock/t0.mp3',
+          trackIndex: 0,
+          startOffsetMs: 1000,
+          durationMs: 4000,
+        ),
+      );
+      state.addClip(
+        AudioClip(
+          id: 'clip_t1',
+          title: 'Track 1 Clip',
+          filePath: '/mock/t1.mp3',
+          trackIndex: 1,
+          startOffsetMs: 3000,
+          durationMs: 3000,
+        ),
+      );
+
+      // At 500ms -> No active clips
+      expect(state.getActiveClipsAt(500), isEmpty);
+
+      // At 2000ms -> Clip 1 active
+      final at2000 = state.getActiveClipsAt(2000);
+      expect(at2000.length, 1);
+      expect(at2000.first.id, 'clip_t0');
+
+      // At 3500ms -> Both Clip 1 and Clip 2 active
+      final at3500 = state.getActiveClipsAt(3500);
+      expect(at3500.length, 2);
+
+      // At 5500ms -> Only Clip 2 active
+      final at5500 = state.getActiveClipsAt(5500);
+      expect(at5500.length, 1);
+      expect(at5500.first.id, 'clip_t1');
+
+      // At 7000ms -> No active clips
+      expect(state.getActiveClipsAt(7000), isEmpty);
+    });
+
+    test('AudioPlaybackService scrubAt and stopScrub execute cleanly without errors', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('xyz.luan/audioplayers.global'),
+        (MethodCall call) async => 1,
+      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('xyz.luan/audioplayers'),
+        (MethodCall call) async => 1,
+      );
+
+      final service = AudioPlaybackService();
+      final state = AudioProjectState();
+      state.addClip(
+        AudioClip(
+          id: 'clip_scrub',
+          title: 'Scrub Test',
+          filePath: 'assets/audio/click.mp3',
+          trackIndex: 0,
+          startOffsetMs: 500,
+          durationMs: 3000,
+        ),
+      );
+
+      // Scrub before clip
+      await service.scrubAt(200, state);
+      expect(service.isScrubbing, isTrue);
+
+      // Scrub inside clip
+      await service.scrubAt(1000, state);
+      expect(service.isScrubbing, isTrue);
+
+      // Scrub rapidly forward
+      await service.scrubAt(1200, state);
+      await service.scrubAt(1500, state);
+      expect(service.isScrubbing, isTrue);
+
+      // Stop scrubbing -> immediate silence
+      await service.stopScrub();
+      expect(service.isScrubbing, isFalse);
+
+      service.dispose();
     });
   });
 }

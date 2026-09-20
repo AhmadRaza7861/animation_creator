@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:dummy/core/constants/app_colors.dart';
 
 class CustomTextSelectionTheme {
-  CustomTextSelectionTheme._(); // Private constructor
+  CustomTextSelectionTheme._();
 
-  static  TextSelectionThemeData lightTextSelectionTheme = TextSelectionThemeData(
-    cursorColor: Color(0xFF0EA9AB),
-    selectionColor: Color(0xFFE2F6F6),
-    selectionHandleColor: Color(0xFF0EA9AB),
+  static const TextSelectionThemeData lightTextSelectionTheme = TextSelectionThemeData(
+    cursorColor: ColorConstants.primary,
+    selectionColor: Color(0x33FF9318),
+    selectionHandleColor: ColorConstants.primary,
   );
 
-  static  TextSelectionThemeData darkTextSelectionTheme = TextSelectionThemeData(
-    cursorColor: Color(0xFF0EA9AB),
-    selectionColor: Color(0xFF0EA9AB),
-    selectionHandleColor: Color(0xFF0EA9AB),
+  static const TextSelectionThemeData darkTextSelectionTheme = TextSelectionThemeData(
+    cursorColor: ColorConstants.primary,
+    selectionColor: Color(0x4DFF9318),
+    selectionHandleColor: ColorConstants.primary,
   );
 }

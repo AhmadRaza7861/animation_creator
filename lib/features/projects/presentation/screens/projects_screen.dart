@@ -1371,7 +1371,7 @@ class CurvedScoopBottomNavBar extends StatelessWidget {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final Color itemColor = isSelected ? ColorConstants.text_color : ColorConstants.un_select_color;
+    final Color itemColor = isSelected ? ColorConstants.primary : ColorConstants.un_select_color;
 
     return InkWell(
       onTap: onTap,

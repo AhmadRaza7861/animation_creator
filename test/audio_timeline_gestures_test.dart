@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/features/audio/domain/models/audio_clip.dart';
-import 'package:dummy/features/audio/domain/models/audio_track.dart';
 import 'package:dummy/features/audio/domain/models/audio_project_state.dart';
 import 'package:dummy/features/audio/presentation/widgets/audio_timeline_studio.dart';
 
@@ -13,6 +12,7 @@ void main() {
     late AudioClip clip1;
     late AudioClip clip2;
     AudioProjectState? lastUpdatedState;
+    int lastUpdatedFrame = 0;
 
     setUp(() {
       audioState = AudioProjectState();
@@ -42,35 +42,45 @@ void main() {
       clip1 = audioState.findClip('clip_t1')!;
       clip2 = audioState.findClip('clip_t2')!;
       lastUpdatedState = null;
+      lastUpdatedFrame = 0;
     });
 
-    Widget createTestWidget() {
-      return MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            width: 800,
-            height: 400,
-            child: AudioTimelineStudio(
-              audioState: audioState,
-              currentFrameIndex: 0,
-              totalFrames: 24,
-              fps: 12,
-              frameThumbnails: const [],
-              onToggleAudioMode: () {},
-              onFrameSelected: (_) {},
-              onAddFrame: () {},
-              onAudioStateChanged: (updated) {
-                lastUpdatedState = updated;
-              },
+    Future<void> pumpStudio(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 1400,
+              height: 400,
+              child: AudioTimelineStudio(
+                audioState: audioState,
+                currentFrameIndex: 0,
+                totalFrames: 24,
+                fps: 12,
+                frameThumbnails: const [],
+                onToggleAudioMode: () {},
+                onFrameSelected: (frameIdx) {
+                  lastUpdatedFrame = frameIdx;
+                },
+                onAddFrame: () {},
+                onAudioStateChanged: (updated) {
+                  lastUpdatedState = updated;
+                },
+              ),
             ),
           ),
         ),
       );
+      await tester.pump();
     }
 
     testWidgets('Renders tracks and clips accurately', (tester) async {
-      await tester.pumpWidget(createTestWidget());
-      await tester.pump();
+      await pumpStudio(tester);
 
       expect(find.text('Voiceover 1'), findsOneWidget);
       expect(find.text('Background Music'), findsOneWidget);
@@ -79,8 +89,7 @@ void main() {
     });
 
     testWidgets('Dragging audio clip horizontally (left/right) moves startOffsetMs', (tester) async {
-      await tester.pumpWidget(createTestWidget());
-      await tester.pump();
+      await pumpStudio(tester);
 
       final clipFinder = find.byKey(const ValueKey('clip_pos_clip_t1'));
       expect(clipFinder, findsOneWidget);
@@ -110,8 +119,7 @@ void main() {
     });
 
     testWidgets('Dragging audio clip vertically moves it down to Track 2 and up to Track 1', (tester) async {
-      await tester.pumpWidget(createTestWidget());
-      await tester.pump();
+      await pumpStudio(tester);
 
       final clipFinder = find.byKey(const ValueKey('clip_pos_clip_t1'));
       expect(clipFinder, findsOneWidget);
@@ -133,8 +141,7 @@ void main() {
     });
 
     testWidgets('Left and Right trim handles resize trimmed duration', (tester) async {
-      await tester.pumpWidget(createTestWidget());
-      await tester.pump();
+      await pumpStudio(tester);
 
       // Tap on clip1 to select it and reveal orange trim handles
       final clipFinder = find.byKey(const ValueKey('clip_pos_clip_t1'));
@@ -142,10 +149,7 @@ void main() {
       await tester.pump();
 
       final leftHandle = find.byKey(const ValueKey('clip_trim_left_clip_t1'));
-      final rightHandle = find.byKey(const ValueKey('clip_trim_right_clip_t1'));
-
       expect(leftHandle, findsOneWidget);
-      expect(rightHandle, findsOneWidget);
 
       // 1. Drag Left Trim Handle to the right by 24px (200ms)
       final leftCenter = tester.getCenter(leftHandle);
@@ -158,7 +162,9 @@ void main() {
       expect(clip1.trimStartMs, closeTo(200, 50));
 
       // 2. Drag Right Trim Handle to the left by 60px (500ms)
-      final rightCenter = tester.getCenter(rightHandle);
+      final rightHandleUpdated = find.byKey(const ValueKey('clip_trim_right_clip_t1'));
+      expect(rightHandleUpdated, findsOneWidget);
+      final rightCenter = tester.getCenter(rightHandleUpdated);
       final rightGesture = await tester.startGesture(rightCenter);
       await rightGesture.moveBy(const Offset(-60, 0));
       await tester.pump();
@@ -166,6 +172,26 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(clip1.trimEndMs, closeTo(3500, 50));
+    });
+
+    testWidgets('Horizontal finger scrubbing smoothly advances timeline and active frame', (tester) async {
+      await pumpStudio(tester);
+
+      // Verify initial frame is frame 0
+      expect(lastUpdatedFrame, 0);
+
+      // Target the horizontal timeline SingleChildScrollView
+      final horizontalScrollFinder = find.byWidgetPredicate(
+        (w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal,
+      );
+      expect(horizontalScrollFinder, findsOneWidget);
+
+      // Drag horizontally along the timeline to scrub forward by 240px (2.0 seconds at 120px/s)
+      await tester.drag(horizontalScrollFinder, const Offset(-240, 0));
+      await tester.pumpAndSettle();
+
+      // At 240px scroll offset, time is 2000ms. At 12 fps, frame is 24 (or clamped to 23).
+      expect(lastUpdatedFrame, greaterThan(10));
     });
   });
 }

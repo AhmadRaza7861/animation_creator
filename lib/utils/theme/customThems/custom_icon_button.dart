@@ -1,55 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:dummy/core/constants/app_colors.dart';
 
 class CustomIconButtonTheme {
-  CustomIconButtonTheme._(); // Private constructor to prevent instantiation
+  CustomIconButtonTheme._();
 
   static final lightIconButtonTheme = IconButtonThemeData(
     style: ButtonStyle(
-      backgroundColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
-          return Colors.grey.shade300;
-        } else if (states.contains(WidgetState.pressed)) {
-          return Colors.blue.shade200;
-        }
-        return Colors.white;
-      }),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return Colors.grey;
+          return ColorConstants.lightText;
         } else if (states.contains(WidgetState.pressed)) {
-          return Colors.blue;
+          return ColorConstants.primary;
         }
-        return Colors.black;
+        return ColorConstants.darkText;
       }),
       overlayColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.pressed)) {
-          return Colors.blue.withOpacity(0.5);
+          return ColorConstants.primary.withValues(alpha: 0.12);
         }
         return null;
       }),
     ),
   );
+
   static final darkIconButtonTheme = IconButtonThemeData(
     style: ButtonStyle(
-      backgroundColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
-          return Colors.grey.shade800;
-        } else if (states.contains(WidgetState.pressed)) {
-          return Colors.transparent;
-        }
-        return Colors.black;
-      }),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return Colors.grey;
+          return const Color(0xFF64748B);
         } else if (states.contains(WidgetState.pressed)) {
-          return Colors.transparent;
+          return ColorConstants.primary;
         }
-        return Colors.transparent;
+        return Colors.white;
       }),
       overlayColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.pressed)) {
-          return Colors.transparent;
+          return ColorConstants.primary.withValues(alpha: 0.15);
         }
         return null;
       }),

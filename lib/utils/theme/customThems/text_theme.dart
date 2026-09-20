@@ -1,61 +1,118 @@
 import 'package:flutter/material.dart';
+import 'package:dummy/core/constants/app_colors.dart';
 
 class CustomTextTheme {
-  CustomTextTheme._(); // Private constructor to prevent instantiation
+  CustomTextTheme._();
 
   static const lightTextTheme = TextTheme(
-    titleLarge: TextStyle(
-      color: Color(0xFF323D59),
+    headlineLarge: TextStyle(
+      color: ColorConstants.darkText,
+      fontWeight: FontWeight.w800,
+      fontSize: 24,
+      letterSpacing: -0.5,
+    ),
+    headlineMedium: TextStyle(
+      color: ColorConstants.darkText,
       fontWeight: FontWeight.w700,
       fontSize: 20,
+      letterSpacing: -0.3,
+    ),
+    titleLarge: TextStyle(
+      color: ColorConstants.darkText,
+      fontWeight: FontWeight.w700,
+      fontSize: 18,
+      letterSpacing: -0.2,
     ),
     titleMedium: TextStyle(
-      color: Color(0xFF323D59),
-      fontWeight: FontWeight.w500,
-      fontSize: 18,
+      color: ColorConstants.darkText,
+      fontWeight: FontWeight.w600,
+      fontSize: 16,
     ),
     titleSmall: TextStyle(
-      color: Color(0xFF323D59),
-      fontWeight: FontWeight.w400,
-      fontSize: 16,
-    ),
-    labelLarge: TextStyle(
-      color: Color(0xFF323D59),
-      fontWeight: FontWeight.w400,
-      fontSize: 16,
+      color: ColorConstants.mediumText,
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
     ),
     bodyLarge: TextStyle(
-      color: Color(0xFF323D59),
-      fontWeight: FontWeight.w400,
-      fontSize: 16,
+      color: ColorConstants.darkText,
+      fontWeight: FontWeight.w500,
+      fontSize: 15,
     ),
-    bodyMedium:  TextStyle(
-      color: Color(0xFF323D59),
+    bodyMedium: TextStyle(
+      color: ColorConstants.mediumText,
       fontWeight: FontWeight.w400,
-      fontSize: 16,
+      fontSize: 14,
+    ),
+    bodySmall: TextStyle(
+      color: ColorConstants.lightText,
+      fontWeight: FontWeight.w400,
+      fontSize: 12,
+    ),
+    labelLarge: TextStyle(
+      color: ColorConstants.darkText,
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+    ),
+    labelMedium: TextStyle(
+      color: ColorConstants.mediumText,
+      fontWeight: FontWeight.w500,
+      fontSize: 12,
+    ),
+    labelSmall: TextStyle(
+      color: ColorConstants.lightText,
+      fontWeight: FontWeight.w500,
+      fontSize: 10,
     ),
   );
+
   static const darkTextTheme = TextTheme(
-    titleLarge: TextStyle(
+    headlineLarge: TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w800,
+      fontSize: 24,
+      letterSpacing: -0.5,
+    ),
+    headlineMedium: TextStyle(
       color: Colors.white,
       fontWeight: FontWeight.w700,
       fontSize: 20,
+      letterSpacing: -0.3,
+    ),
+    titleLarge: TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w700,
+      fontSize: 18,
+      letterSpacing: -0.2,
     ),
     titleMedium: TextStyle(
-      color: Color(0xFFAAB3BF),
-      fontWeight: FontWeight.w500,
-      fontSize: 18,
+      color: Colors.white,
+      fontWeight: FontWeight.w600,
+      fontSize: 16,
     ),
     titleSmall: TextStyle(
+      color: Color(0xFF94A3B8),
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+    ),
+    bodyLarge: TextStyle(
       color: Colors.white,
-      //Color(0xFF2E81B7),
+      fontWeight: FontWeight.w500,
+      fontSize: 15,
+    ),
+    bodyMedium: TextStyle(
+      color: Color(0xFF94A3B8),
       fontWeight: FontWeight.w400,
-      fontSize: 16,
+      fontSize: 14,
+    ),
+    bodySmall: TextStyle(
+      color: Color(0xFF64748B),
+      fontWeight: FontWeight.w400,
+      fontSize: 12,
     ),
     labelLarge: TextStyle(
       color: Colors.white,
-      fontWeight: FontWeight.w400,
-      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
     ),
   );
 }

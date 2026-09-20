@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dummy/core/constants/app_colors.dart';
 
 enum AudioAddSource {
   voiceMaker,
@@ -23,6 +24,7 @@ class AddAudioBottomSheet extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => AddAudioBottomSheet(
         defaultTrackIndex: defaultTrackIndex,
       ),
@@ -36,72 +38,77 @@ class AddAudioBottomSheet extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drag handle pill
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(2),
+        top: false,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle pill
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
 
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
-              child: Text(
-                'Add Audio to Animation',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1E1E24),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                child: Text(
+                  'Add Audio to Animation',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: ColorConstants.darkText,
+                    letterSpacing: -0.3,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Option 1: Voice maker
-            _buildOptionTile(
-              icon: Icons.record_voice_over_rounded,
-              title: 'Voice maker',
-              subtitle: 'Generate animated character voices & speech',
-              onTap: () => Navigator.pop(context, AudioAddSource.voiceMaker),
-            ),
+              // Option 1: Voice maker
+              _buildOptionTile(
+                icon: Icons.record_voice_over_rounded,
+                title: 'Voice maker',
+                subtitle: 'Generate animated character voices & speech',
+                onTap: () => Navigator.pop(context, AudioAddSource.voiceMaker),
+              ),
 
-            // Option 2: Audio Library
-            _buildOptionTile(
-              icon: Icons.library_music_rounded,
-              title: 'Audio Library',
-              subtitle: 'Sound effects, cartoon boings, whooshes & loops',
-              onTap: () => Navigator.pop(context, AudioAddSource.library),
-            ),
+              // Option 2: Audio Library
+              _buildOptionTile(
+                icon: Icons.library_music_rounded,
+                title: 'Audio Library',
+                subtitle: 'Sound effects, cartoon boings, whooshes & loops',
+                onTap: () => Navigator.pop(context, AudioAddSource.library),
+              ),
 
-            // Option 3: Audio Recorder
-            _buildOptionTile(
-              icon: Icons.mic_rounded,
-              title: 'Audio Recorder',
-              subtitle: 'Record voice-overs directly with microphone',
-              onTap: () => Navigator.pop(context, AudioAddSource.recorder),
-            ),
+              // Option 3: Audio Recorder
+              _buildOptionTile(
+                icon: Icons.mic_rounded,
+                title: 'Audio Recorder',
+                subtitle: 'Record voice-overs directly with microphone',
+                onTap: () => Navigator.pop(context, AudioAddSource.recorder),
+              ),
 
-            // Option 4: Add Audio (File Picker)
-            _buildOptionTile(
-              icon: Icons.audio_file_rounded,
-              title: 'Add Audio',
-              subtitle: 'Import MP3, WAV, AAC from device storage',
-              onTap: () => Navigator.pop(context, AudioAddSource.filePicker),
-            ),
+              // Option 4: Add Audio (File Picker)
+              _buildOptionTile(
+                icon: Icons.audio_file_rounded,
+                title: 'Add Audio',
+                subtitle: 'Import MP3, WAV, AAC from device storage',
+                onTap: () => Navigator.pop(context, AudioAddSource.filePicker),
+              ),
 
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -116,23 +123,31 @@ class AddAudioBottomSheet extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: const Color(0xFFF9F9FB),
-        borderRadius: BorderRadius.circular(14),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 46,
+                  height: 46,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF4E8),
-                    borderRadius: BorderRadius.circular(12),
+                    color: ColorConstants.primaryLight,
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(
+                      color: ColorConstants.primary.withValues(alpha: 0.15),
+                      width: 1,
+                    ),
                   ),
-                  child: Icon(icon, color: const Color(0xFFFF9318), size: 24),
+                  child: Icon(
+                    icon,
+                    color: ColorConstants.primary,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -144,24 +159,24 @@ class AddAudioBottomSheet extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E1E24),
+                          color: ColorConstants.darkText,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         subtitle,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.black.withValues(alpha: 0.5),
+                          color: ColorConstants.mediumText,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(
+                const Icon(
                   Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: Colors.black.withValues(alpha: 0.25),
+                  size: 15,
+                  color: ColorConstants.lightText,
                 ),
               ],
             ),

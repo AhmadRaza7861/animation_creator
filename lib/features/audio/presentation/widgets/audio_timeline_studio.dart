@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../domain/models/audio_clip.dart';
 import '../../domain/models/audio_project_state.dart';
@@ -76,9 +77,8 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
   int _handleStartTrimEndMs = 0;
   int _handleStartOffsetMs = 0;
 
-  // Pointer drag tracking for scrubber needle
-  double _scrubberStartPointerX = 0.0;
-  int _scrubberStartPosMs = 0;
+  bool _isProgrammaticScrolling = false;
+  bool _isUserScrubbing = false;
 
   @override
   void initState() {
@@ -109,16 +109,23 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
 
     // Pre-warm audio clips in the background so playback starts instantaneously
     _playbackService.prewarmState(widget.audioState);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncHorizontalScrollToPos(initialPos);
+    });
   }
 
   @override
   void didUpdateWidget(covariant AudioTimelineStudio oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_isPlayingNotifier.value && oldWidget.currentFrameIndex != widget.currentFrameIndex) {
-      final targetMs = (widget.currentFrameIndex / (widget.fps > 0 ? widget.fps : 9) * 1000).round();
-      _positionNotifier.value = targetMs;
-      _lastDispatchedFrame = widget.currentFrameIndex;
-      _scrollToActiveFrame(widget.currentFrameIndex);
+    if (!_isPlayingNotifier.value && !_isUserScrubbing && oldWidget.currentFrameIndex != widget.currentFrameIndex) {
+      if (widget.currentFrameIndex != _lastDispatchedFrame) {
+        final targetMs = (widget.currentFrameIndex / (widget.fps > 0 ? widget.fps : 9) * 1000).round();
+        _positionNotifier.value = targetMs;
+        _lastDispatchedFrame = widget.currentFrameIndex;
+        _scrollToActiveFrame(widget.currentFrameIndex);
+        _syncHorizontalScrollToPos(targetMs);
+      }
     }
     if (oldWidget.totalFrames != widget.totalFrames || oldWidget.audioState != widget.audioState) {
       _clipRevisionNotifier.value++;
@@ -126,15 +133,29 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     }
   }
 
-  void _scrollToActiveFrame(int frameIdx) {
+  void _syncHorizontalScrollToPos(int posMs) {
+    if (_horizontalScrollController.hasClients) {
+      _isProgrammaticScrolling = true;
+      final double targetOffset = (posMs / 1000.0) * _pixelsPerSecond;
+      final double maxExtent = _horizontalScrollController.position.maxScrollExtent;
+      _horizontalScrollController.jumpTo(targetOffset.clamp(0.0, maxExtent));
+      _isProgrammaticScrolling = false;
+    }
+  }
+
+  void _scrollToActiveFrame(int frameIdx, {bool isUserDragging = false}) {
     if (_frameScrollController.hasClients) {
       final double targetOffset = (frameIdx * 56.0) - 100.0;
       final double clampedOffset = targetOffset.clamp(0.0, _frameScrollController.position.maxScrollExtent);
-      _frameScrollController.animateTo(
-        clampedOffset,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-      );
+      if (isUserDragging) {
+        _frameScrollController.jumpTo(clampedOffset);
+      } else {
+        _frameScrollController.animateTo(
+          clampedOffset,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+        );
+      }
     }
   }
 
@@ -175,6 +196,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     } else {
       if (_positionNotifier.value >= _maxTimelineMs - 50) {
         _positionNotifier.value = 0;
+        _syncHorizontalScrollToPos(0);
       }
       _isPlayingNotifier.value = true;
 
@@ -192,6 +214,8 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
             widget.onFrameSelected(frameIdx);
             _scrollToActiveFrame(frameIdx);
           }
+
+          _syncHorizontalScrollToPos(posMs);
         },
         onPlaybackComplete: () {
           if (!mounted) return;
@@ -200,6 +224,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
           _lastDispatchedFrame = 0;
           widget.onFrameSelected(0);
           _scrollToActiveFrame(0);
+          _syncHorizontalScrollToPos(0);
         },
       );
     }
@@ -215,6 +240,8 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       widget.onFrameSelected(frameIdx);
       _scrollToActiveFrame(frameIdx);
     }
+
+    _syncHorizontalScrollToPos(clamped);
 
     if (_isPlayingNotifier.value) {
       _playbackService.seekTo(clamped, widget.audioState);
@@ -295,6 +322,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       _selectedTrackIndexNotifier.value = track;
       _clipRevisionNotifier.value++;
       widget.onAudioStateChanged(widget.audioState);
+      _seekTo(placedClip.startOffsetMs);
     }
   }
 
@@ -308,12 +336,25 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       if (result.isNotEmpty && result.first.path != null && mounted) {
         final pickedFile = result.first;
         final file = File(pickedFile.path!);
+
+        // 1. Detect actual file duration and extract waveform envelope
+        final int durationMs = await AudioPlaybackService.getAudioDurationMs(
+          file.path,
+        );
+        final List<double> waveform =
+            await AudioPlaybackService.extractWaveform(file.path);
+
         final clip = AudioClip(
           title: pickedFile.name.split('.').first,
           filePath: file.path,
           trackIndex: targetTrackIndex,
-          durationMs: 3000,
+          durationMs: durationMs,
+          trimStartMs: 0,
+          trimEndMs: durationMs,
+          waveformSamples: waveform,
         );
+
+        if (!mounted) return null;
 
         return await Navigator.push<AudioClip>(
           context,
@@ -339,6 +380,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     if (updated != null && mounted) {
       widget.audioState.updateClip(updated);
       _clipRevisionNotifier.value++;
+      _playbackService.updateLiveState(widget.audioState);
       widget.onAudioStateChanged(widget.audioState);
     }
   }
@@ -347,6 +389,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     widget.audioState.removeClip(clip.id);
     _selectedClipIdNotifier.value = null;
     _clipRevisionNotifier.value++;
+    _playbackService.updateLiveState(widget.audioState);
     widget.onAudioStateChanged(widget.audioState);
   }
 
@@ -395,6 +438,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     widget.audioState.addClip(newClip, targetTrackIndex: clip.trackIndex);
     _selectedClipIdNotifier.value = newClip.id;
     _clipRevisionNotifier.value++;
+    _playbackService.updateLiveState(widget.audioState);
     widget.onAudioStateChanged(widget.audioState);
 
     Fluttertoast.showToast(
@@ -428,6 +472,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
     widget.audioState.addClip(newClip, targetTrackIndex: clip.trackIndex);
     _selectedClipIdNotifier.value = newClip.id;
     _clipRevisionNotifier.value++;
+    _playbackService.updateLiveState(widget.audioState);
     widget.onAudioStateChanged(widget.audioState);
 
     Fluttertoast.showToast(
@@ -1251,6 +1296,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                         _selectedTrackIndexNotifier.value = (_selectedTrackIndexNotifier.value - 1).clamp(0, widget.audioState.tracks.length - 1);
                         _selectedClipIdNotifier.value = null;
                         _clipRevisionNotifier.value++;
+                        _playbackService.updateLiveState(widget.audioState);
                         widget.onAudioStateChanged(widget.audioState);
                         Fluttertoast.showToast(msg: 'Track deleted');
                       }
@@ -1760,22 +1806,20 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
 
                       // Vertically Scrollable Track Headers
                       Expanded(
-                        child: ValueListenableBuilder<bool>(
-                          valueListenable: _isDraggingTimelineObjectNotifier,
-                          builder: (context, isDraggingObject, _) {
-                            return ValueListenableBuilder<int>(
-                              valueListenable: _clipRevisionNotifier,
-                              builder: (context, revision, child) {
-                                return ValueListenableBuilder<int>(
-                                  valueListenable: _selectedTrackIndexNotifier,
-                                  builder: (context, selectedTrack, child) {
-                                    return SingleChildScrollView(
-                                      controller: _leftHeadersVerticalScrollController,
-                                      physics: isDraggingObject
-                                          ? const NeverScrollableScrollPhysics()
-                                          : const BouncingScrollPhysics(),
-                                      child: Column(
-                                        children: [
+                        child: SingleChildScrollView(
+                          controller: _leftHeadersVerticalScrollController,
+                          physics: _TimelineStudioScrollPhysics(
+                            isDraggingObject: _isDraggingTimelineObjectNotifier,
+                          ),
+                          child: AnimatedBuilder(
+                            animation: Listenable.merge([
+                              _clipRevisionNotifier,
+                              _selectedTrackIndexNotifier,
+                            ]),
+                            builder: (context, _) {
+                              final selectedTrack = _selectedTrackIndexNotifier.value;
+                              return Column(
+                                children: [
                                           ...List.generate(widget.audioState.tracks.length, (trackIdx) {
                                             final track = widget.audioState.tracks[trackIdx];
                                             final isSelected = selectedTrack == trackIdx;
@@ -1818,668 +1862,742 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                                         ),
                                                       ),
                                                     ),
-                                                    const SizedBox(height: 2),
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.center,
-                                                      children: [
-                                                        // Solo toggle button
-                                                        GestureDetector(
-                                                          onTap: () {
-                                                            widget.audioState.toggleSolo(trackIdx);
-                                                            _clipRevisionNotifier.value++;
-                                                            widget.onAudioStateChanged(widget.audioState);
-                                                            _playbackService.updateLiveVolumes(widget.audioState);
-                                                          },
-                                                          child: Container(
-                                                            width: 13,
-                                                            height: 13,
-                                                            decoration: BoxDecoration(
-                                                              color: track.isSolo ? const Color(0xFFFFB300) : Colors.transparent,
-                                                              borderRadius: BorderRadius.circular(2),
-                                                              border: Border.all(
-                                                                color: track.isSolo ? const Color(0xFFFFB300) : const Color(0xFFC0C1CA),
-                                                                width: 0.8,
-                                                              ),
-                                                            ),
-                                                            child: Center(
-                                                              child: Text(
-                                                                'S',
-                                                                style: TextStyle(
-                                                                  fontSize: 7.5,
-                                                                  fontWeight: FontWeight.w900,
-                                                                  color: track.isSolo ? Colors.white : const Color(0xFF6B6E7B),
-                                                                  height: 1.0,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(width: 2),
-                                                        // Mute button
-                                                        GestureDetector(
-                                                          onTap: () {
-                                                            widget.audioState.toggleMute(trackIdx);
-                                                            _clipRevisionNotifier.value++;
-                                                            widget.onAudioStateChanged(widget.audioState);
-                                                            _playbackService.updateLiveVolumes(widget.audioState);
-                                                          },
-                                                          child: Icon(
-                                                            track.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                                                            size: 13,
-                                                            color: track.isMuted
-                                                                ? Colors.red
-                                                                : (isSelected ? const Color(0xFFFF9318) : const Color(0xFF6B6E7B)),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(width: 2),
-                                                        // Lock button
-                                                        GestureDetector(
-                                                          onTap: () {
-                                                            widget.audioState.toggleLock(trackIdx);
-                                                            _clipRevisionNotifier.value++;
-                                                            widget.onAudioStateChanged(widget.audioState);
-                                                          },
-                                                          child: Icon(
-                                                            track.isLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
-                                                            size: 13,
-                                                            color: track.isLocked
-                                                                ? const Color(0xFFFF9800)
-                                                                : (isSelected ? const Color(0xFFFF9318) : const Color(0xFF9E9EA7)),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          }),
-
-                                          // Bottom "+ Track" button at the end of track headers list
-                                          InkWell(
-                                            onTap: _addNewTrack,
-                                            child: Container(
-                                              height: 38,
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xFFF5F6F9),
-                                                border: Border(
-                                                  bottom: BorderSide(color: Color(0xFFEBEBF0), width: 1),
-                                                ),
-                                              ),
-                                              child: const Center(
-                                                child: Row(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(Icons.add_rounded, size: 14, color: Color(0xFFFF9318)),
-                                                    SizedBox(width: 2),
-                                                    Text(
-                                                      'Add',
-                                                      style: TextStyle(
-                                                        fontSize: 9.5,
-                                                        fontWeight: FontWeight.w700,
-                                                        color: Color(0xFFFF9318),
+                                            const SizedBox(height: 2),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                // Solo toggle button
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    widget.audioState.toggleSolo(trackIdx);
+                                                    _clipRevisionNotifier.value++;
+                                                    widget.onAudioStateChanged(widget.audioState);
+                                                    _playbackService.updateLiveVolumes(widget.audioState);
+                                                  },
+                                                  child: Container(
+                                                    width: 13,
+                                                    height: 13,
+                                                    decoration: BoxDecoration(
+                                                      color: track.isSolo ? const Color(0xFFFFB300) : Colors.transparent,
+                                                      borderRadius: BorderRadius.circular(2),
+                                                      border: Border.all(
+                                                        color: track.isSolo ? const Color(0xFFFFB300) : const Color(0xFFC0C1CA),
+                                                        width: 0.8,
                                                       ),
                                                     ),
-                                                  ],
+                                                    child: Center(
+                                                      child: Text(
+                                                        'S',
+                                                        style: TextStyle(
+                                                          fontSize: 7.5,
+                                                          fontWeight: FontWeight.w900,
+                                                          color: track.isSolo ? Colors.white : const Color(0xFF6B6E7B),
+                                                          height: 1.0,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
+                                                const SizedBox(width: 2),
+                                                // Mute button
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    widget.audioState.toggleMute(trackIdx);
+                                                    _clipRevisionNotifier.value++;
+                                                    widget.onAudioStateChanged(widget.audioState);
+                                                    _playbackService.updateLiveVolumes(widget.audioState);
+                                                  },
+                                                  child: Icon(
+                                                    track.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                                                    size: 13,
+                                                    color: track.isMuted
+                                                        ? Colors.red
+                                                        : (isSelected ? const Color(0xFFFF9318) : const Color(0xFF6B6E7B)),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 2),
+                                                // Lock button
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    widget.audioState.toggleLock(trackIdx);
+                                                    _clipRevisionNotifier.value++;
+                                                    widget.onAudioStateChanged(widget.audioState);
+                                                  },
+                                                  child: Icon(
+                                                    track.isLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
+                                                    size: 13,
+                                                    color: track.isLocked
+                                                        ? const Color(0xFFFF9800)
+                                                        : (isSelected ? const Color(0xFFFF9318) : const Color(0xFF9E9EA7)),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     );
-                                  },
-                                );
-                              },
-                            );
-                          },
+                                  }),
+
+                                  // Bottom "+ Track" button at the end of track headers list
+                                  InkWell(
+                                    onTap: _addNewTrack,
+                                    child: Container(
+                                      height: 38,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF5F6F9),
+                                        border: Border(
+                                          bottom: BorderSide(color: Color(0xFFEBEBF0), width: 1),
+                                        ),
+                                      ),
+                                      child: const Center(
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.add_rounded, size: 14, color: Color(0xFFFF9318)),
+                                            SizedBox(width: 2),
+                                            Text(
+                                              'Add',
+                                              style: TextStyle(
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFFFF9318),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                // Right Column: Main Multi-Track Scrollable Timeline Lanes
+                // Right Column: Main Multi-Track Scrollable Timeline Lanes with Fixed Center Playhead
                 Expanded(
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: _isDraggingTimelineObjectNotifier,
-                    builder: (context, isDraggingObject, _) {
-                      return SingleChildScrollView(
-                        controller: _horizontalScrollController,
-                        scrollDirection: Axis.horizontal,
-                        physics: isDraggingObject
-                            ? const NeverScrollableScrollPhysics()
-                            : const BouncingScrollPhysics(),
-                        child: SizedBox(
-                          width: timelineWidth + 120,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 1. Time Ruler along the top (Cached in RepaintBoundary, Fixed height 28)
-                              SizedBox(
-                                height: 28,
-                                width: timelineWidth + 120,
-                                child: RepaintBoundary(
-                                  child: _buildTimeRuler(timelineWidth),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final double viewportWidth = constraints.maxWidth;
+                      final double halfViewportWidth = viewportWidth / 2.0;
+                      final double totalContentWidth = timelineWidth + viewportWidth;
+
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Listener(
+                            onPointerDown: (_) {
+                              if (!_isPlayingNotifier.value && !_isDraggingTimelineObjectNotifier.value) {
+                                _isUserScrubbing = true;
+                              }
+                            },
+                            onPointerUp: (_) {
+                              _isUserScrubbing = false;
+                              if (!_isPlayingNotifier.value) {
+                                _playbackService.stopScrub();
+                              }
+                            },
+                            onPointerCancel: (_) {
+                              _isUserScrubbing = false;
+                              if (!_isPlayingNotifier.value) {
+                                _playbackService.stopScrub();
+                              }
+                            },
+                            child: NotificationListener<ScrollNotification>(
+                              onNotification: (notification) {
+                                if (_isProgrammaticScrolling || _isDraggingTimelineObjectNotifier.value) {
+                                  return false;
+                                }
+                                if (notification is ScrollStartNotification) {
+                                  if (notification.dragDetails != null) {
+                                    _isUserScrubbing = true;
+                                  }
+                                } else if (notification is ScrollUpdateNotification) {
+                                  if (notification.dragDetails != null) {
+                                    _isUserScrubbing = true;
+                                  }
+                                  final double offset = notification.metrics.pixels;
+                                  final int newPosMs =
+                                      ((offset / _pixelsPerSecond) * 1000).round().clamp(0, _maxTimelineMs);
+                                  _positionNotifier.value = newPosMs;
+                                  final int frameIdx =
+                                      ((newPosMs / 1000.0) * widget.fps).floor().clamp(0, widget.totalFrames - 1);
+                                  if (frameIdx != _lastDispatchedFrame && frameIdx != widget.currentFrameIndex) {
+                                    _lastDispatchedFrame = frameIdx;
+                                    widget.onFrameSelected(frameIdx);
+                                    _scrollToActiveFrame(frameIdx, isUserDragging: true);
+                                  }
+
+                                  // Real-time audio scrub playback as finger moves across timeline
+                                  if (!_isPlayingNotifier.value) {
+                                    _playbackService.scrubAt(newPosMs, widget.audioState);
+                                  }
+                                } else if (notification is ScrollEndNotification) {
+                                  _isUserScrubbing = false;
+                                  if (_isPlayingNotifier.value) {
+                                    _playbackService.seekTo(_positionNotifier.value, widget.audioState);
+                                  } else {
+                                    _playbackService.stopScrub();
+                                  }
+                                } else if (notification is UserScrollNotification) {
+                                  if (notification.direction == ScrollDirection.idle) {
+                                    _isUserScrubbing = false;
+                                    if (!_isPlayingNotifier.value) {
+                                      _playbackService.stopScrub();
+                                    }
+                                  }
+                                }
+                                return false;
+                              },
+                              child: SingleChildScrollView(
+                                controller: _horizontalScrollController,
+                                scrollDirection: Axis.horizontal,
+                                physics: _TimelineStudioScrollPhysics(
+                                  isDraggingObject: _isDraggingTimelineObjectNotifier,
                                 ),
-                              ),
+                                child: Container(
+                                width: totalContentWidth,
+                                padding: EdgeInsets.symmetric(horizontal: halfViewportWidth),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 1. Time Ruler along the top (Cached in RepaintBoundary, Fixed height 28)
+                                  SizedBox(
+                                    height: 28,
+                                    width: timelineWidth,
+                                    child: RepaintBoundary(
+                                      child: _buildTimeRuler(timelineWidth),
+                                    ),
+                                  ),
 
-                              // 2. Track Grid Lanes & Clips (Scrollable vertically with synced controller)
-                              Expanded(
-                                child: ValueListenableBuilder<int>(
-                                  valueListenable: _clipRevisionNotifier,
-                                  builder: (context, revision, _) {
-                                    final double lanesTotalHeight = (widget.audioState.tracks.length * _trackHeight) + 38.0;
-
-                                    return SingleChildScrollView(
+                                  // 2. Track Grid Lanes & Clips (Scrollable vertically with synced controller)
+                                  Expanded(
+                                    child: SingleChildScrollView(
                                       controller: _lanesVerticalScrollController,
                                       scrollDirection: Axis.vertical,
-                                      physics: isDraggingObject
-                                          ? const NeverScrollableScrollPhysics()
-                                          : const BouncingScrollPhysics(),
-                                      child: SizedBox(
-                                        height: lanesTotalHeight,
-                                        width: timelineWidth + 120,
-                                        child: Stack(
-                                          clipBehavior: Clip.none,
-                                          children: [
-                                            // Track Grid Lines & Background Tap/DoubleTap Areas
-                                            Positioned.fill(
-                                              child: RepaintBoundary(
-                                                child: ValueListenableBuilder<int>(
-                                                  valueListenable: _selectedTrackIndexNotifier,
-                                                  builder: (context, selectedTrack, _) {
-                                                    return Column(
-                                                      children: [
-                                                        ...List.generate(widget.audioState.tracks.length, (trackIdx) {
-                                                          final isSelected = selectedTrack == trackIdx;
+                                      physics: _TimelineStudioScrollPhysics(
+                                        isDraggingObject: _isDraggingTimelineObjectNotifier,
+                                      ),
+                                      child: AnimatedBuilder(
+                                        animation: _clipRevisionNotifier,
+                                        builder: (context, _) {
+                                          final double lanesTotalHeight =
+                                              (widget.audioState.tracks.length * _trackHeight) + 38.0;
 
-                                                          return SizedBox(
-                                                            height: _trackHeight,
-                                                            child: GestureDetector(
-                                                              behavior: HitTestBehavior.opaque,
-                                                              onTapDown: (details) {
-                                                                _selectedTrackIndexNotifier.value = trackIdx;
-                                                                _selectedClipIdNotifier.value = null;
-                                                                final double tapX = details.localPosition.dx;
-                                                                final int targetMs = ((tapX / _pixelsPerSecond) * 1000)
-                                                                    .round()
-                                                                    .clamp(0, _maxTimelineMs);
-                                                                _seekTo(targetMs);
-                                                              },
-                                                              onDoubleTapDown: (details) {
-                                                                final double tapX = details.localPosition.dx;
-                                                                final int targetMs = ((tapX / _pixelsPerSecond) * 1000)
-                                                                    .round()
-                                                                    .clamp(0, _maxTimelineMs);
-                                                                _openAddAudioMenu(
-                                                                    targetTrackIndex: trackIdx, targetPositionMs: targetMs);
-                                                              },
-                                                              child: Container(
-                                                                decoration: BoxDecoration(
-                                                                  color: isSelected ? const Color(0xFFFFFDF8) : Colors.white,
-                                                                  border: const Border(
-                                                                    bottom:
-                                                                        BorderSide(color: Color(0xFFEBEBF0), width: 1),
+                                          return SizedBox(
+                                            height: lanesTotalHeight,
+                                            width: timelineWidth,
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                    // Track Grid Lines & Background Tap/DoubleTap Areas
+                                                    Positioned.fill(
+                                                      child: RepaintBoundary(
+                                                        child: ValueListenableBuilder<int>(
+                                                          valueListenable: _selectedTrackIndexNotifier,
+                                                          builder: (context, selectedTrack, _) {
+                                                            return Column(
+                                                              children: [
+                                                                ...List.generate(widget.audioState.tracks.length,
+                                                                    (trackIdx) {
+                                                                  final isSelected = selectedTrack == trackIdx;
+
+                                                                  return SizedBox(
+                                                                    height: _trackHeight,
+                                                                    child: GestureDetector(
+                                                                      behavior: HitTestBehavior.opaque,
+                                                                      onTap: () {
+                                                                        _selectedTrackIndexNotifier.value = trackIdx;
+                                                                        _selectedClipIdNotifier.value = null;
+                                                                      },
+                                                                      onTapUp: (details) {
+                                                                        _selectedTrackIndexNotifier.value = trackIdx;
+                                                                        _selectedClipIdNotifier.value = null;
+                                                                        final double tapX = details.localPosition.dx;
+                                                                        final int targetMs =
+                                                                            ((tapX / _pixelsPerSecond) * 1000)
+                                                                                .round()
+                                                                                .clamp(0, _maxTimelineMs);
+                                                                        _seekTo(targetMs);
+                                                                      },
+                                                                        onDoubleTapDown: (details) {
+                                                                          final double tapX = details.localPosition.dx;
+                                                                          final int targetMs =
+                                                                              ((tapX / _pixelsPerSecond) * 1000)
+                                                                                  .round()
+                                                                                  .clamp(0, _maxTimelineMs);
+                                                                          _openAddAudioMenu(
+                                                                              targetTrackIndex: trackIdx,
+                                                                              targetPositionMs: targetMs);
+                                                                        },
+                                                                        child: Container(
+                                                                          decoration: BoxDecoration(
+                                                                            color: isSelected
+                                                                                ? const Color(0xFFFFFDF8)
+                                                                                : Colors.white,
+                                                                            border: const Border(
+                                                                              bottom: BorderSide(
+                                                                                  color: Color(0xFFEBEBF0), width: 1),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                  }),
+                                                                  // Bottom empty lane aligned with "+ Add Track"
+                                                                  Container(
+                                                                    height: 38,
+                                                                    decoration: const BoxDecoration(
+                                                                      color: Color(0xFFFAFAFC),
+                                                                      border: Border(
+                                                                        bottom: BorderSide(
+                                                                            color: Color(0xFFEBEBF0), width: 1),
+                                                                      ),
+                                                                    ),
                                                                   ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }),
-                                                        // Bottom empty lane aligned with "+ Add Track"
-                                                        Container(
-                                                          height: 38,
-                                                          decoration: const BoxDecoration(
-                                                            color: Color(0xFFFAFAFC),
-                                                            border: Border(
-                                                              bottom: BorderSide(color: Color(0xFFEBEBF0), width: 1),
-                                                            ),
+                                                                ],
+                                                              );
+                                                            },
                                                           ),
                                                         ),
-                                                      ],
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                            ),
+                                                      ),
 
-                                            // Render Audio Clips across all tracks
-                                            ValueListenableBuilder<String?>(
-                                              valueListenable: _selectedClipIdNotifier,
-                                              builder: (context, selectedClipId, _) {
-                                                return Stack(
-                                                  clipBehavior: Clip.none,
-                                                  children: widget.audioState.tracks.expand((track) {
-                                                    final int trackIdx = track.index;
-                                                    const double trackHeight = _trackHeight;
-
-                                                    return track.clips.map((clip) {
-                                                      final double clipX =
-                                                          (clip.startOffsetMs / 1000.0) * _pixelsPerSecond;
-                                                      final double clipWidth = ((clip.trimmedDurationMs / 1000.0) *
-                                                              _pixelsPerSecond)
-                                                          .clamp(52.0, 4000.0);
-                                                      final double clipY = trackIdx * trackHeight;
-                                                      final bool isClipSelected = selectedClipId == clip.id;
-                                                      final double handleWidth = clipWidth < 68.0 ? 11.0 : 14.0;
-                                                      final double contentPaddingH =
-                                                          isClipSelected ? (handleWidth + 2.0) : 5.0;
-
-                                                      return Positioned(
-                                                        key: ValueKey('clip_pos_${clip.id}'),
-                                                        left: clipX,
-                                                        top: clipY + 3,
-                                                        width: clipWidth,
-                                                        height: trackHeight - 6,
-                                                        child: RepaintBoundary(
-                                                          child: Stack(
+                                                      // Render Audio Clips across all tracks
+                                                      AnimatedBuilder(
+                                                        animation: Listenable.merge([
+                                                          _selectedClipIdNotifier,
+                                                          _clipRevisionNotifier,
+                                                        ]),
+                                                        builder: (context, _) {
+                                                          final selectedClipId = _selectedClipIdNotifier.value;
+                                                          return Stack(
                                                             clipBehavior: Clip.none,
-                                                            children: [
-                                                              // Main Clip Body (Handles 2D drag & taps)
-                                                              Positioned.fill(
-                                                                child: Listener(
-                                                                  behavior: HitTestBehavior.opaque,
-                                                                  onPointerDown: (event) {
-                                                                    _selectedTrackIndexNotifier.value = trackIdx;
-                                                                    _selectedClipIdNotifier.value = clip.id;
-                                                                    if (track.isLocked) return;
-                                                                    _draggingClipId = clip.id;
-                                                                    _isDraggingTimelineObjectNotifier.value = true;
-                                                                    _dragStartPointerX = event.position.dx;
-                                                                    _dragStartPointerY = event.position.dy;
-                                                                    _dragStartClipOffsetMs = clip.startOffsetMs;
-                                                                    _dragStartClipTrack = clip.trackIndex;
-                                                                    _hasMovedClip = false;
-                                                                  },
-                                                                  onPointerMove: (event) {
-                                                                    if (track.isLocked ||
-                                                                        !_isDraggingTimelineObjectNotifier.value) {
-                                                                      return;
-                                                                    }
-                                                                    final activeClipId = _draggingClipId ?? clip.id;
-                                                                    final targetClip =
-                                                                        widget.audioState.findClip(activeClipId) ?? clip;
-                                                                    final double dx = event.position.dx - _dragStartPointerX;
-                                                                    final double dy = event.position.dy - _dragStartPointerY;
-                                                                    if (!_hasMovedClip &&
-                                                                        dx.abs() < 3.0 &&
-                                                                        dy.abs() < 3.0) {
-                                                                      return;
-                                                                    }
-                                                                    _hasMovedClip = true;
+                                                            children: widget.audioState.tracks.expand((track) {
+                                                              final int trackIdx = track.index;
+                                                              const double trackHeight = _trackHeight;
 
-                                                                    // 1. Vertical movement across tracks (Track 1 to Track N)
-                                                                    final int trackShift = (dy / trackHeight).round();
-                                                                    final int rawTargetIdx = _dragStartClipTrack + trackShift;
+                                                              return track.clips.map((clip) {
+                                                                final double clipX =
+                                                                    (clip.startOffsetMs / 1000.0) * _pixelsPerSecond;
+                                                                final double clipWidth = ((clip.trimmedDurationMs / 1000.0) *
+                                                                        _pixelsPerSecond)
+                                                                    .clamp(32.0, double.infinity);
+                                                                final double clipY = trackIdx * trackHeight;
+                                                                final bool isClipSelected = selectedClipId == clip.id;
+                                                                final double handleWidth =
+                                                                    clipWidth < 68.0 ? 11.0 : 14.0;
+                                                                final double contentPaddingH =
+                                                                    isClipSelected ? (handleWidth + 2.0) : 5.0;
 
-                                                                    // Auto-expand track if dragged downwards past the bottom track!
-                                                                    if (rawTargetIdx >= widget.audioState.tracks.length &&
-                                                                        widget.audioState.tracks.length < 12) {
-                                                                      widget.audioState.addTrack();
-                                                                    }
+                                                                return Positioned(
+                                                                  key: ValueKey('clip_pos_${clip.id}'),
+                                                                  left: clipX,
+                                                                  top: clipY + 3,
+                                                                  width: clipWidth,
+                                                                  height: trackHeight - 6,
+                                                                  child: RepaintBoundary(
+                                                                    child: Stack(
+                                                                      clipBehavior: Clip.none,
+                                                                      children: [
+                                                                        // Main Clip Body (Handles 2D drag & taps)
+                                                                        Positioned.fill(
+                                                                          child: Listener(
+                                                                            behavior: HitTestBehavior.opaque,
+                                                                            onPointerDown: (event) {
+                                                                              _selectedTrackIndexNotifier.value =
+                                                                                  trackIdx;
+                                                                              _selectedClipIdNotifier.value = clip.id;
+                                                                              if (track.isLocked) return;
+                                                                              _draggingClipId = clip.id;
+                                                                              _isDraggingTimelineObjectNotifier.value =
+                                                                                  true;
+                                                                              _dragStartPointerX = event.position.dx;
+                                                                              _dragStartPointerY = event.position.dy;
+                                                                              _dragStartClipOffsetMs =
+                                                                                  clip.startOffsetMs;
+                                                                              _dragStartClipTrack = clip.trackIndex;
+                                                                              _hasMovedClip = false;
+                                                                            },
+                                                                            onPointerMove: (event) {
+                                                                              if (track.isLocked ||
+                                                                                  !_isDraggingTimelineObjectNotifier
+                                                                                      .value) {
+                                                                                return;
+                                                                              }
+                                                                              final activeClipId =
+                                                                                  _draggingClipId ?? clip.id;
+                                                                              final targetClip =
+                                                                                  widget.audioState.findClip(activeClipId) ?? clip;
+                                                                              final double dx =
+                                                                                  event.position.dx - _dragStartPointerX;
+                                                                              final double dy =
+                                                                                  event.position.dy - _dragStartPointerY;
+                                                                              if (!_hasMovedClip &&
+                                                                                  dx.abs() < 3.0 &&
+                                                                                  dy.abs() < 3.0) {
+                                                                                return;
+                                                                              }
+                                                                              _hasMovedClip = true;
 
-                                                                    final int targetTrackIdx = rawTargetIdx.clamp(
-                                                                        0, widget.audioState.tracks.length - 1);
+                                                                              // 1. Vertical movement across tracks (Track 1 to Track N)
+                                                                              final int trackShift =
+                                                                                  (dy / trackHeight).round();
+                                                                              final int rawTargetIdx =
+                                                                                  _dragStartClipTrack + trackShift;
 
-                                                                    if (targetTrackIdx != targetClip.trackIndex &&
-                                                                        !widget.audioState.tracks[targetTrackIdx].isLocked) {
-                                                                      widget.audioState.tracks[targetClip.trackIndex].clips
-                                                                          .removeWhere((c) => c.id == targetClip.id);
-                                                                      targetClip.trackIndex = targetTrackIdx;
-                                                                      widget.audioState.tracks[targetTrackIdx].clips.add(targetClip);
-                                                                      _selectedTrackIndexNotifier.value = targetTrackIdx;
-                                                                    }
+                                                                              // Auto-expand track if dragged downwards past the bottom track!
+                                                                              if (rawTargetIdx >=
+                                                                                      widget.audioState.tracks.length &&
+                                                                                  widget.audioState.tracks.length < 12) {
+                                                                                widget.audioState.addTrack();
+                                                                              }
 
-                                                                    // 2. Horizontal movement in time (Left / Right) without jumping
-                                                                    final int rawOffsetMs = (_dragStartClipOffsetMs +
-                                                                            ((dx / _pixelsPerSecond) * 1000).round())
-                                                                        .clamp(0, _maxTimelineMs);
+                                                                              final int targetTrackIdx = rawTargetIdx.clamp(
+                                                                                  0,
+                                                                                  widget.audioState.tracks.length - 1);
 
-                                                                    final currentTrack =
-                                                                        widget.audioState.tracks[targetClip.trackIndex];
-                                                                    final int snappedOffsetMs =
-                                                                        currentTrack.findMagneticSnapOffset(
-                                                                      targetClip,
-                                                                      rawOffsetMs,
-                                                                      snapThresholdMs: 40,
-                                                                      playheadMs: _positionNotifier.value,
-                                                                    );
-                                                                    final int safeOffsetMs =
-                                                                        currentTrack.clampOffsetToPreventOverlap(
-                                                                            targetClip, snappedOffsetMs);
-                                                                    targetClip.startOffsetMs = safeOffsetMs;
+                                                                              if (targetTrackIdx != targetClip.trackIndex &&
+                                                                                  !widget.audioState.tracks[targetTrackIdx].isLocked) {
+                                                                                widget.audioState.tracks[targetClip.trackIndex].clips
+                                                                                    .removeWhere((c) => c.id == targetClip.id);
+                                                                                targetClip.trackIndex = targetTrackIdx;
+                                                                                widget.audioState.tracks[targetTrackIdx].clips.add(targetClip);
+                                                                                _selectedTrackIndexNotifier.value = targetTrackIdx;
+                                                                              }
 
-                                                                    _clipRevisionNotifier.value++;
-                                                                  },
-                                                                  onPointerUp: (event) {
-                                                                    if (_isDraggingTimelineObjectNotifier.value) {
-                                                                      _isDraggingTimelineObjectNotifier.value = false;
-                                                                      final activeClipId = _draggingClipId ?? clip.id;
-                                                                      final targetClip =
-                                                                          widget.audioState.findClip(activeClipId) ?? clip;
-                                                                      _draggingClipId = null;
-                                                                      if (_hasMovedClip) {
-                                                                        widget.audioState.tracks[targetClip.trackIndex]
-                                                                            .resolveOverlapForClip(targetClip);
-                                                                        _clipRevisionNotifier.value++;
-                                                                        widget.onAudioStateChanged(widget.audioState);
-                                                                      }
-                                                                    }
-                                                                  },
-                                                                  onPointerCancel: (event) {
-                                                                    if (_isDraggingTimelineObjectNotifier.value) {
-                                                                      _isDraggingTimelineObjectNotifier.value = false;
-                                                                      final activeClipId = _draggingClipId ?? clip.id;
-                                                                      final targetClip =
-                                                                          widget.audioState.findClip(activeClipId) ?? clip;
-                                                                      _draggingClipId = null;
-                                                                      if (_hasMovedClip) {
-                                                                        widget.audioState.tracks[targetClip.trackIndex]
-                                                                            .resolveOverlapForClip(targetClip);
-                                                                        _clipRevisionNotifier.value++;
-                                                                        widget.onAudioStateChanged(widget.audioState);
-                                                                      }
-                                                                    }
-                                                                  },
-                                                                  child: GestureDetector(
-                                                                    behavior: HitTestBehavior.translucent,
-                                                                    onTap: () {
-                                                                      _selectedTrackIndexNotifier.value = trackIdx;
-                                                                      _selectedClipIdNotifier.value = clip.id;
-                                                                    },
-                                                                    onDoubleTap: () => _editClip(clip),
-                                                                    onLongPress: () => _showClipOptionsMenu(clip),
-                                                                    child: Container(
-                                                                      clipBehavior: Clip.antiAlias,
-                                                                      decoration: BoxDecoration(
-                                                                        color: isClipSelected ? const Color(0xFFFFFDF8) : Colors.white,
-                                                                        borderRadius: BorderRadius.circular(8),
-                                                                        border: Border.all(
-                                                                          color: isClipSelected
-                                                                              ? const Color(0xFFFF9318)
-                                                                              : const Color(0xFFE2E3E8),
-                                                                          width: isClipSelected ? 1.8 : 1.0,
-                                                                        ),
-                                                                        boxShadow: [
-                                                                          BoxShadow(
-                                                                            color: isClipSelected
-                                                                                ? const Color(0xFFFF9318).withValues(alpha: 0.18)
-                                                                                : Colors.black.withValues(alpha: 0.04),
-                                                                            blurRadius: isClipSelected ? 6 : 3,
-                                                                            offset: const Offset(0, 1),
-                                                                          ),
-                                                                        ],
-                                                                      ),
-                                                                      child: Column(
-                                                                        mainAxisSize: MainAxisSize.max,
-                                                                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                                        children: [
-                                                                          // Title & Duration Header (Strict 14px constraint)
-                                                                          SizedBox(
-                                                                            height: 14,
-                                                                            child: Padding(
-                                                                              padding: EdgeInsets.symmetric(
-                                                                                horizontal: contentPaddingH,
-                                                                                vertical: 0.0,
-                                                                              ),
-                                                                              child: Row(
-                                                                                children: [
-                                                                                  Expanded(
-                                                                                    child: Text(
-                                                                                      clip.title,
-                                                                                      style: TextStyle(
-                                                                                        color: isClipSelected
-                                                                                            ? const Color(0xFFFF9318)
-                                                                                            : const Color(0xFF1E1E24),
-                                                                                        fontSize: 9.5,
-                                                                                        fontWeight: FontWeight.w700,
-                                                                                        height: 1.1,
-                                                                                      ),
-                                                                                      maxLines: 1,
-                                                                                      softWrap: false,
-                                                                                      overflow: TextOverflow.ellipsis,
-                                                                                    ),
+                                                                              // 2. Horizontal movement in time (Left / Right) without jumping
+                                                                              final int rawOffsetMs = (_dragStartClipOffsetMs +
+                                                                                      ((dx / _pixelsPerSecond) * 1000).round())
+                                                                                  .clamp(0, _maxTimelineMs);
+
+                                                                              final currentTrack =
+                                                                                  widget.audioState.tracks[targetClip.trackIndex];
+                                                                              final int snappedOffsetMs =
+                                                                                  currentTrack.findMagneticSnapOffset(
+                                                                                targetClip,
+                                                                                rawOffsetMs,
+                                                                                snapThresholdMs: 40,
+                                                                                playheadMs: _positionNotifier.value,
+                                                                              );
+                                                                              final int safeOffsetMs =
+                                                                                  currentTrack.clampOffsetToPreventOverlap(
+                                                                                      targetClip, snappedOffsetMs);
+                                                                              targetClip.startOffsetMs = safeOffsetMs;
+
+                                                                              _clipRevisionNotifier.value++;
+                                                                            },
+                                                                            onPointerUp: (event) {
+                                                                              if (_isDraggingTimelineObjectNotifier.value) {
+                                                                                _isDraggingTimelineObjectNotifier.value = false;
+                                                                                final activeClipId = _draggingClipId ?? clip.id;
+                                                                                final targetClip =
+                                                                                    widget.audioState.findClip(activeClipId) ?? clip;
+                                                                                _draggingClipId = null;
+                                                                                if (_hasMovedClip) {
+                                                                                  widget.audioState.tracks[targetClip.trackIndex]
+                                                                                      .resolveOverlapForClip(targetClip);
+                                                                                  _clipRevisionNotifier.value++;
+                                                                                  widget.onAudioStateChanged(widget.audioState);
+                                                                                }
+                                                                              }
+                                                                            },
+                                                                            onPointerCancel: (event) {
+                                                                              if (_isDraggingTimelineObjectNotifier.value) {
+                                                                                _isDraggingTimelineObjectNotifier.value = false;
+                                                                                final activeClipId = _draggingClipId ?? clip.id;
+                                                                                final targetClip =
+                                                                                    widget.audioState.findClip(activeClipId) ?? clip;
+                                                                                _draggingClipId = null;
+                                                                                if (_hasMovedClip) {
+                                                                                  widget.audioState.tracks[targetClip.trackIndex]
+                                                                                      .resolveOverlapForClip(targetClip);
+                                                                                  _clipRevisionNotifier.value++;
+                                                                                  widget.onAudioStateChanged(widget.audioState);
+                                                                                }
+                                                                              }
+                                                                            },
+                                                                            child: GestureDetector(
+                                                                              behavior: HitTestBehavior.translucent,
+                                                                              onTap: () {
+                                                                                _selectedTrackIndexNotifier.value = trackIdx;
+                                                                                _selectedClipIdNotifier.value = clip.id;
+                                                                              },
+                                                                              onDoubleTap: () => _editClip(clip),
+                                                                              onLongPress: () => _showClipOptionsMenu(clip),
+                                                                              child: Container(
+                                                                                clipBehavior: Clip.antiAlias,
+                                                                                decoration: BoxDecoration(
+                                                                                  color: isClipSelected ? const Color(0xFFFFFDF8) : Colors.white,
+                                                                                  borderRadius: BorderRadius.circular(8),
+                                                                                  border: Border.all(
+                                                                                    color: isClipSelected
+                                                                                        ? const Color(0xFFFF9318)
+                                                                                        : const Color(0xFFE2E3E8),
+                                                                                    width: isClipSelected ? 1.8 : 1.0,
                                                                                   ),
-                                                                                  if (isClipSelected && clipWidth >= 72.0) ...[
-                                                                                    const SizedBox(width: 4),
-                                                                                    Text(
-                                                                                      '${(clip.trimmedDurationMs / 1000).toStringAsFixed(1)}s',
-                                                                                      style: const TextStyle(
-                                                                                        color: Color(0xFFFF9318),
-                                                                                        fontSize: 8.5,
-                                                                                        fontWeight: FontWeight.w700,
-                                                                                        height: 1.1,
-                                                                                      ),
-                                                                                      maxLines: 1,
-                                                                                      softWrap: false,
+                                                                                  boxShadow: [
+                                                                                    BoxShadow(
+                                                                                      color: isClipSelected
+                                                                                          ? const Color(0xFFFF9318).withValues(alpha: 0.18)
+                                                                                          : Colors.black.withValues(alpha: 0.04),
+                                                                                      blurRadius: isClipSelected ? 6 : 3,
+                                                                                      offset: const Offset(0, 1),
                                                                                     ),
                                                                                   ],
+                                                                                ),
+                                                                                child: Column(
+                                                                                  mainAxisSize: MainAxisSize.max,
+                                                                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                                                  children: [
+                                                                                    // Title & Duration Header (Strict 14px constraint)
+                                                                                    SizedBox(
+                                                                                      height: 14,
+                                                                                      child: Padding(
+                                                                                        padding: EdgeInsets.symmetric(
+                                                                                          horizontal: contentPaddingH,
+                                                                                          vertical: 0.0,
+                                                                                        ),
+                                                                                        child: Row(
+                                                                                          children: [
+                                                                                            Expanded(
+                                                                                              child: Text(
+                                                                                                clip.title,
+                                                                                                style: TextStyle(
+                                                                                                  color: isClipSelected
+                                                                                                      ? const Color(0xFFFF9318)
+                                                                                                      : const Color(0xFF1E1E24),
+                                                                                                  fontSize: 9.5,
+                                                                                                  fontWeight: FontWeight.w700,
+                                                                                                  height: 1.1,
+                                                                                                ),
+                                                                                                maxLines: 1,
+                                                                                                softWrap: false,
+                                                                                                overflow: TextOverflow.ellipsis,
+                                                                                              ),
+                                                                                            ),
+                                                                                            if (isClipSelected && clipWidth >= 72.0) ...[
+                                                                                              const SizedBox(width: 4),
+                                                                                              Text(
+                                                                                                '${(clip.trimmedDurationMs / 1000).toStringAsFixed(1)}s',
+                                                                                                style: const TextStyle(
+                                                                                                  color: Color(0xFFFF9318),
+                                                                                                  fontSize: 8.5,
+                                                                                                  fontWeight: FontWeight.w700,
+                                                                                                  height: 1.1,
+                                                                                                ),
+                                                                                                maxLines: 1,
+                                                                                                softWrap: false,
+                                                                                              ),
+                                                                                            ],
+                                                                                          ],
+                                                                                        ),
+                                                                                    ),
+                                                                                  ),
+
+                                                                                  // Waveform Area
+                                                                                  Expanded(
+                                                                                    child: Padding(
+                                                                                      padding: EdgeInsets.symmetric(
+                                                                                        horizontal: contentPaddingH,
+                                                                                        vertical: 1.0,
+                                                                                      ),
+                                                                                      child: ClipRect(
+                                                                                        child: CustomPaint(
+                                                                                          painter: WaveformPainter(
+                                                                                            samples: clip.waveformSamples,
+                                                                                            waveColor: const Color(0xFFFF9318),
+                                                                                            playedColor: const Color(0xFFE07C0A),
+                                                                                            barWidth: 2.0,
+                                                                                            barGap: 1.0,
+                                                                                            fadeInFraction: clip.fadeInFraction,
+                                                                                            fadeOutFraction: clip.fadeOutFraction,
+                                                                                          ),
+                                                                                        ),
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
                                                                                 ],
                                                                               ),
                                                                             ),
                                                                           ),
-                                                                          // Center Waveform in rich primary orange
-                                                                          Expanded(
-                                                                            child: Padding(
-                                                                              padding: EdgeInsets.symmetric(
-                                                                                horizontal: contentPaddingH,
-                                                                                vertical: 1.0,
-                                                                              ),
-                                                                              child: ClipRect(
-                                                                                child: CustomPaint(
-                                                                                  painter: WaveformPainter(
-                                                                                    samples: clip.waveformSamples,
-                                                                                    waveColor: const Color(0xFFFF9318),
-                                                                                    playedColor: const Color(0xFFE07C0A),
-                                                                                    barWidth: 2.0,
-                                                                                    barGap: 1.0,
-                                                                                    fadeInFraction: clip.fadeInFraction,
-                                                                                    fadeOutFraction: clip.fadeOutFraction,
+                                                                          ),
+                                                                        ),
+
+                                                                        // Solid Orange Trim Handle - Left (Start Trim)
+                                                                        if (isClipSelected && !track.isLocked)
+                                                                          Positioned(
+                                                                            key: ValueKey('clip_trim_left_${clip.id}'),
+                                                                            left: 0,
+                                                                            top: 0,
+                                                                            bottom: 0,
+                                                                            width: handleWidth,
+                                                                            child: Listener(
+                                                                              behavior: HitTestBehavior.opaque,
+                                                                              onPointerDown: (event) {
+                                                                                _isDraggingTimelineObjectNotifier.value = true;
+                                                                                _handleStartPointerX = event.position.dx;
+                                                                                _handleStartTrimStartMs = clip.trimStartMs;
+                                                                                _handleStartOffsetMs = clip.startOffsetMs;
+                                                                                _handleStartTrimEndMs = clip.trimEndMs;
+                                                                              },
+                                                                              onPointerMove: (event) {
+                                                                                final double dx = event.position.dx - _handleStartPointerX;
+                                                                                final int deltaMs = ((dx / _pixelsPerSecond) * 1000).round();
+                                                                                final int newTrimStart = (_handleStartTrimStartMs + deltaMs)
+                                                                                    .clamp(0, clip.trimEndMs - 200);
+                                                                                final int actualShift = newTrimStart - _handleStartTrimStartMs;
+                                                                                clip.trimStartMs = newTrimStart;
+                                                                                clip.startOffsetMs =
+                                                                                    (_handleStartOffsetMs + actualShift).clamp(0, _maxTimelineMs);
+                                                                                _clipRevisionNotifier.value++;
+                                                                              },
+                                                                              onPointerUp: (event) {
+                                                                                if (_isDraggingTimelineObjectNotifier.value) {
+                                                                                  _isDraggingTimelineObjectNotifier.value = false;
+                                                                                  widget.onAudioStateChanged(widget.audioState);
+                                                                                }
+                                                                              },
+                                                                              onPointerCancel: (event) {
+                                                                                if (_isDraggingTimelineObjectNotifier.value) {
+                                                                                  _isDraggingTimelineObjectNotifier.value = false;
+                                                                                  widget.onAudioStateChanged(widget.audioState);
+                                                                                }
+                                                                              },
+                                                                              child: Container(
+                                                                                decoration: const BoxDecoration(
+                                                                                  color: Color(0xFFFF9318),
+                                                                                  borderRadius:
+                                                                                      BorderRadius.horizontal(left: Radius.circular(7)),
+                                                                                ),
+                                                                                child: Center(
+                                                                                  child: Row(
+                                                                                    mainAxisAlignment:
+                                                                                        MainAxisAlignment.center,
+                                                                                    children: [
+                                                                                      Container(width: 1.5, height: 14, color: Colors.white),
+                                                                                      if (handleWidth > 11) ...[
+                                                                                        const SizedBox(width: 2),
+                                                                                        Container(width: 1.5, height: 14, color: Colors.white),
+                                                                                      ],
+                                                                                    ],
                                                                                   ),
                                                                                 ),
                                                                               ),
                                                                             ),
                                                                           ),
-                                                                        ],
-                                                                      ),
+
+                                                                        // Solid Orange Trim Handle - Right (End Trim)
+                                                                        if (isClipSelected && !track.isLocked)
+                                                                          Positioned(
+                                                                            key: ValueKey('clip_trim_right_${clip.id}'),
+                                                                            right: 0,
+                                                                            top: 0,
+                                                                            bottom: 0,
+                                                                            width: handleWidth,
+                                                                            child: Listener(
+                                                                              behavior: HitTestBehavior.opaque,
+                                                                              onPointerDown: (event) {
+                                                                                _isDraggingTimelineObjectNotifier.value = true;
+                                                                                _handleStartPointerX = event.position.dx;
+                                                                                _handleStartTrimEndMs = clip.trimEndMs;
+                                                                              },
+                                                                              onPointerMove: (event) {
+                                                                                final double dx = event.position.dx - _handleStartPointerX;
+                                                                                final int deltaMs = ((dx / _pixelsPerSecond) * 1000).round();
+                                                                                clip.trimEndMs = (_handleStartTrimEndMs + deltaMs)
+                                                                                    .clamp(clip.trimStartMs + 200, clip.durationMs);
+                                                                                _clipRevisionNotifier.value++;
+                                                                              },
+                                                                              onPointerUp: (event) {
+                                                                                if (_isDraggingTimelineObjectNotifier.value) {
+                                                                                  _isDraggingTimelineObjectNotifier.value = false;
+                                                                                  widget.onAudioStateChanged(widget.audioState);
+                                                                                }
+                                                                              },
+                                                                              onPointerCancel: (event) {
+                                                                                if (_isDraggingTimelineObjectNotifier.value) {
+                                                                                  _isDraggingTimelineObjectNotifier.value = false;
+                                                                                  widget.onAudioStateChanged(widget.audioState);
+                                                                                }
+                                                                              },
+                                                                              child: Container(
+                                                                                decoration: const BoxDecoration(
+                                                                                  color: Color(0xFFFF9318),
+                                                                                  borderRadius:
+                                                                                      BorderRadius.horizontal(right: Radius.circular(7)),
+                                                                                ),
+                                                                                child: Center(
+                                                                                  child: Row(
+                                                                                    mainAxisAlignment:
+                                                                                        MainAxisAlignment.center,
+                                                                                    children: [
+                                                                                      Container(width: 1.5, height: 14, color: Colors.white),
+                                                                                      if (handleWidth > 11) ...[
+                                                                                        const SizedBox(width: 2),
+                                                                                        Container(width: 1.5, height: 14, color: Colors.white),
+                                                                                      ],
+                                                                                    ],
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                      ],
                                                                     ),
                                                                   ),
-                                                                ),
-                                                              ),
-
-                                                              // Solid Orange Trim Handle - Left (Start Trim)
-                                                              if (isClipSelected && !track.isLocked)
-                                                                Positioned(
-                                                                  key: ValueKey('clip_trim_left_${clip.id}'),
-                                                                  left: 0,
-                                                                  top: 0,
-                                                                  bottom: 0,
-                                                                  width: handleWidth,
-                                                                  child: Listener(
-                                                                    behavior: HitTestBehavior.opaque,
-                                                                    onPointerDown: (event) {
-                                                                      _isDraggingTimelineObjectNotifier.value = true;
-                                                                      _handleStartPointerX = event.position.dx;
-                                                                      _handleStartTrimStartMs = clip.trimStartMs;
-                                                                      _handleStartOffsetMs = clip.startOffsetMs;
-                                                                      _handleStartTrimEndMs = clip.trimEndMs;
-                                                                    },
-                                                                    onPointerMove: (event) {
-                                                                      final double dx = event.position.dx - _handleStartPointerX;
-                                                                      final int deltaMs = ((dx / _pixelsPerSecond) * 1000).round();
-                                                                      final int newTrimStart = (_handleStartTrimStartMs + deltaMs)
-                                                                          .clamp(0, clip.trimEndMs - 200);
-                                                                      final int actualShift = newTrimStart - _handleStartTrimStartMs;
-                                                                      clip.trimStartMs = newTrimStart;
-                                                                      clip.startOffsetMs =
-                                                                          (_handleStartOffsetMs + actualShift).clamp(0, _maxTimelineMs);
-                                                                      _clipRevisionNotifier.value++;
-                                                                    },
-                                                                    onPointerUp: (event) {
-                                                                      if (_isDraggingTimelineObjectNotifier.value) {
-                                                                        _isDraggingTimelineObjectNotifier.value = false;
-                                                                        widget.onAudioStateChanged(widget.audioState);
-                                                                      }
-                                                                    },
-                                                                    onPointerCancel: (event) {
-                                                                      if (_isDraggingTimelineObjectNotifier.value) {
-                                                                        _isDraggingTimelineObjectNotifier.value = false;
-                                                                        widget.onAudioStateChanged(widget.audioState);
-                                                                      }
-                                                                    },
-                                                                    child: Container(
-                                                                      decoration: const BoxDecoration(
-                                                                        color: Color(0xFFFF9318),
-                                                                        borderRadius:
-                                                                            BorderRadius.horizontal(left: Radius.circular(7)),
-                                                                      ),
-                                                                      child: Center(
-                                                                        child: Row(
-                                                                          mainAxisAlignment: MainAxisAlignment.center,
-                                                                          children: [
-                                                                            Container(width: 1.5, height: 14, color: Colors.white),
-                                                                            if (handleWidth > 11) ...[
-                                                                              const SizedBox(width: 2),
-                                                                              Container(width: 1.5, height: 14, color: Colors.white),
-                                                                            ],
-                                                                          ],
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ),
-
-                                                              // Solid Orange Trim Handle - Right (End Trim)
-                                                              if (isClipSelected && !track.isLocked)
-                                                                Positioned(
-                                                                  key: ValueKey('clip_trim_right_${clip.id}'),
-                                                                  right: 0,
-                                                                  top: 0,
-                                                                  bottom: 0,
-                                                                  width: handleWidth,
-                                                                  child: Listener(
-                                                                    behavior: HitTestBehavior.opaque,
-                                                                    onPointerDown: (event) {
-                                                                      _isDraggingTimelineObjectNotifier.value = true;
-                                                                      _handleStartPointerX = event.position.dx;
-                                                                      _handleStartTrimEndMs = clip.trimEndMs;
-                                                                    },
-                                                                    onPointerMove: (event) {
-                                                                      final double dx = event.position.dx - _handleStartPointerX;
-                                                                      final int deltaMs = ((dx / _pixelsPerSecond) * 1000).round();
-                                                                      clip.trimEndMs = (_handleStartTrimEndMs + deltaMs)
-                                                                          .clamp(clip.trimStartMs + 200, clip.durationMs);
-                                                                      _clipRevisionNotifier.value++;
-                                                                    },
-                                                                    onPointerUp: (event) {
-                                                                      if (_isDraggingTimelineObjectNotifier.value) {
-                                                                        _isDraggingTimelineObjectNotifier.value = false;
-                                                                        widget.onAudioStateChanged(widget.audioState);
-                                                                      }
-                                                                    },
-                                                                    onPointerCancel: (event) {
-                                                                      if (_isDraggingTimelineObjectNotifier.value) {
-                                                                        _isDraggingTimelineObjectNotifier.value = false;
-                                                                        widget.onAudioStateChanged(widget.audioState);
-                                                                      }
-                                                                    },
-                                                                    child: Container(
-                                                                      decoration: const BoxDecoration(
-                                                                        color: Color(0xFFFF9318),
-                                                                        borderRadius:
-                                                                            BorderRadius.horizontal(right: Radius.circular(7)),
-                                                                      ),
-                                                                      child: Center(
-                                                                        child: Row(
-                                                                          mainAxisAlignment: MainAxisAlignment.center,
-                                                                          children: [
-                                                                            Container(width: 1.5, height: 14, color: Colors.white),
-                                                                            if (handleWidth > 11) ...[
-                                                                              const SizedBox(width: 2),
-                                                                              Container(width: 1.5, height: 14, color: Colors.white),
-                                                                            ],
-                                                                          ],
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      );
-                                                    });
-                                                  }).toList(),
-                                                );
-                                              },
-                                            ),
-
-                                            // Playhead Scrubber Needle (Rebuilt ONLY via _positionNotifier)
-                                            ValueListenableBuilder<int>(
-                                              valueListenable: _positionNotifier,
-                                              builder: (context, posMs, _) {
-                                                final double playheadX = (posMs / 1000.0) * _pixelsPerSecond;
-
-                                                return Positioned(
-                                                  left: playheadX - 6,
-                                                  top: 0,
-                                                  bottom: 0,
-                                                  child: RepaintBoundary(
-                                                    child: Listener(
-                                                      behavior: HitTestBehavior.opaque,
-                                                      onPointerDown: (event) {
-                                                        _isDraggingTimelineObjectNotifier.value = true;
-                                                        _scrubberStartPointerX = event.position.dx;
-                                                        _scrubberStartPosMs = posMs;
-                                                      },
-                                                      onPointerMove: (event) {
-                                                        final double dx = event.position.dx - _scrubberStartPointerX;
-                                                        final int newMs =
-                                                            (_scrubberStartPosMs + ((dx / _pixelsPerSecond) * 1000).round())
-                                                                .clamp(0, _maxTimelineMs);
-                                                        _seekTo(newMs);
-                                                      },
-                                                      onPointerUp: (event) {
-                                                        _isDraggingTimelineObjectNotifier.value = false;
-                                                      },
-                                                      onPointerCancel: (event) {
-                                                        _isDraggingTimelineObjectNotifier.value = false;
-                                                      },
-                                                      child: SizedBox(
-                                                        width: 12,
-                                                        child: Column(
-                                                          children: [
-                                                            // Top Triangle Pointer Indicator
-                                                            CustomPaint(
-                                                              size: const Size(12, 10),
-                                                              painter: _PlayheadTrianglePainter(color: const Color(0xFFFF9318)),
-                                                            ),
-                                                            // Vertical Line Needle
-                                                            Expanded(
-                                                              child: Container(
-                                                                width: 2,
-                                                                color: const Color(0xFFFF9318),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
+                                                                );
+                                                              });
+                                                            }).toList(),
+                                                          );
+                                                        },
                                                       ),
-                                                    ),
+                                                    ],
                                                   ),
                                                 );
                                               },
                                             ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  },
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ],
+                            ),
+
+                          // Fixed Stationary Playhead Needle (Centered horizontally over timeline viewport)
+                          Positioned(
+                            left: halfViewportWidth - 6,
+                            top: 0,
+                            bottom: 0,
+                            child: IgnorePointer(
+                              child: SizedBox(
+                                width: 12,
+                                child: Column(
+                                  children: [
+                                    // Top Triangle Pointer Indicator (Pointing downwards ▼)
+                                    CustomPaint(
+                                      size: const Size(12, 10),
+                                      painter: _PlayheadTrianglePainter(color: const Color(0xFFFF4B72)),
+                                    ),
+                                    // Vertical Line Needle through Ruler and all Track Lanes
+                                    Expanded(
+                                      child: Container(
+                                        width: 2,
+                                        color: const Color(0xFFFF4B72),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       );
                     },
                   ),
@@ -2795,41 +2913,14 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
   }
 
   Widget _buildTimeRuler(double width) {
-    final int totalSeconds = (_maxTimelineMs / 1000.0).ceil();
-
     return Container(
       color: const Color(0xFFF9F9FB),
-      child: Stack(
-        children: List.generate(totalSeconds + 1, (sec) {
-          final double x = sec * _pixelsPerSecond;
-          return Positioned(
-            left: x,
-            top: 0,
-            bottom: 0,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  width: 1,
-                  height: 14,
-                  color: Colors.black.withValues(alpha: 0.25),
-                ),
-                const SizedBox(width: 4),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2.0),
-                  child: Text(
-                    '00:${sec.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black.withValues(alpha: 0.45),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
+      child: CustomPaint(
+        size: Size(width, 28),
+        painter: _RulerPainter(
+          maxTimelineMs: _maxTimelineMs,
+          pixelsPerSecond: _pixelsPerSecond,
+        ),
       ),
     );
   }
@@ -2889,6 +2980,60 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
   }
 }
 
+class _RulerPainter extends CustomPainter {
+  final int maxTimelineMs;
+  final double pixelsPerSecond;
+
+  _RulerPainter({required this.maxTimelineMs, required this.pixelsPerSecond});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint majorPaint = Paint()
+      ..color = const Color(0xFF9E9EA7)
+      ..strokeWidth = 1.0;
+
+    final Paint minorPaint = Paint()
+      ..color = const Color(0xFFDCDCE4)
+      ..strokeWidth = 1.0;
+
+    const textStyle = TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+      color: Color(0xFF7A7B86),
+    );
+
+    final int totalSeconds = (maxTimelineMs / 1000.0).ceil();
+    const int subDivisions = 5;
+
+    for (int sec = 0; sec <= totalSeconds; sec++) {
+      final double secX = sec * pixelsPerSecond;
+
+      // Major tick line
+      canvas.drawLine(Offset(secX, size.height - 14), Offset(secX, size.height), majorPaint);
+
+      // Major second label
+      final String label = '00:${sec.toString().padLeft(2, '0')}';
+      final TextPainter tp = TextPainter(
+        text: TextSpan(text: label, style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(secX + 4, size.height - 14));
+
+      // Minor sub-second tick marks between seconds
+      if (sec < totalSeconds) {
+        for (int sub = 1; sub < subDivisions; sub++) {
+          final double subX = secX + (sub * (pixelsPerSecond / subDivisions));
+          canvas.drawLine(Offset(subX, size.height - 6), Offset(subX, size.height), minorPaint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RulerPainter oldDelegate) =>
+      oldDelegate.maxTimelineMs != maxTimelineMs || oldDelegate.pixelsPerSecond != pixelsPerSecond;
+}
+
 class _PlayheadTrianglePainter extends CustomPainter {
   final Color color;
 
@@ -2906,5 +3051,36 @@ class _PlayheadTrianglePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _PlayheadTrianglePainter oldDelegate) => false;
+  bool shouldRepaint(covariant _PlayheadTrianglePainter oldDelegate) => oldDelegate.color != color;
 }
+
+class _TimelineStudioScrollPhysics extends ScrollPhysics {
+  final ValueNotifier<bool> isDraggingObject;
+
+  const _TimelineStudioScrollPhysics({
+    required this.isDraggingObject,
+    super.parent = const BouncingScrollPhysics(),
+  });
+
+  @override
+  _TimelineStudioScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _TimelineStudioScrollPhysics(
+      isDraggingObject: isDraggingObject,
+      parent: buildParent(ancestor),
+    );
+  }
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    if (isDraggingObject.value) return 0.0;
+    return super.applyPhysicsToUserOffset(position, offset);
+  }
+
+  @override
+  bool shouldAcceptUserOffset(ScrollMetrics position) {
+    if (isDraggingObject.value) return false;
+    return super.shouldAcceptUserOffset(position);
+  }
+}
+
+
