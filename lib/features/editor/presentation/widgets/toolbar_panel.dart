@@ -17,6 +17,7 @@ import '../controllers/editor_providers.dart';
 import '../screens/export/make_movie_screen.dart';
 import '../screens/video_trimming_screen.dart';
 import 'sticker_widgets/text_sticker_widget.dart';
+import 'sticker_widgets/shape_sticker_widget.dart';
 
 class ToolbarPanel extends ConsumerStatefulWidget {
   final String? projectId;
@@ -78,6 +79,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
 
     if (activeSticker is ActiveTextSticker) {
       return _buildTextStickerToolbar(activeSticker, controller);
+    } else if (activeSticker is ActiveShapeSticker && activeSticker.isLasso) {
+      return _buildLassoStickerToolbar(activeSticker, controller);
     } else if (controller.currentSubMenu == 'brush') {
       return _buildBrushSubMenu(controller);
     } else if (controller.currentSubMenu == 'shapes') {
@@ -85,6 +88,108 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     } else {
       return _buildBottomToolbar(controller);
     }
+  }
+
+  Widget _buildLassoStickerToolbar(
+    ActiveShapeSticker sticker,
+    EditorController controller,
+  ) {
+    final bool isPersp = sticker.transformMode == StickerTransformMode.perspective;
+
+    return Container(
+      height: 72,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              controller.stampActiveSticker();
+            },
+            child: Container(
+              width: 38,
+              height: 38,
+              margin: const EdgeInsets.only(left: 16, right: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F5F8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300, width: 1),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 16,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  _bottomSubToolItem(
+                    label: 'TRSF',
+                    icon: Icons.crop_free_rounded,
+                    isActive: !isPersp,
+                    onTap: () {
+                      controller.setShapeStickerTransformMode(StickerTransformMode.transform);
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _bottomSubToolItem(
+                    label: 'PERSP',
+                    icon: Icons.filter_tilt_shift_rounded,
+                    isActive: isPersp,
+                    onTap: () {
+                      controller.setShapeStickerTransformMode(StickerTransformMode.perspective);
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _bottomSubToolItem(
+                    label: 'Flip H',
+                    icon: Icons.flip_rounded,
+                    isActive: sticker.flipX,
+                    onTap: () => controller.flipActiveShapeStickerH(),
+                  ),
+                  const SizedBox(width: 4),
+                  _bottomSubToolItem(
+                    label: 'Flip V',
+                    icon: Icons.swap_vert_rounded,
+                    isActive: sticker.flipY,
+                    onTap: () => controller.flipActiveShapeStickerV(),
+                  ),
+                  const SizedBox(width: 4),
+                  _bottomSubToolItem(
+                    label: 'Duplicate',
+                    icon: Icons.copy_rounded,
+                    isActive: false,
+                    onTap: () => controller.duplicateActiveShapeSticker(),
+                  ),
+                  const SizedBox(width: 4),
+                  _bottomSubToolItem(
+                    label: 'Reset',
+                    icon: Icons.refresh_rounded,
+                    isActive: false,
+                    onTap: () => controller.resetActiveShapeSticker(),
+                  ),
+                  const SizedBox(width: 4),
+                  _bottomSubToolItem(
+                    label: 'Delete',
+                    icon: Icons.delete_outline_rounded,
+                    isActive: false,
+                    onTap: () => controller.deleteActiveSticker(),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildBottomToolbar(EditorController controller) {
@@ -350,12 +455,13 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
               controller.currentSubMenu = 'none';
             },
             child: Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               margin: const EdgeInsets.only(left: 16, right: 8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                shape: BoxShape.circle,
+                color: const Color(0xFFF4F5F8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300, width: 1),
               ),
               child: const Icon(
                 Icons.arrow_back_ios_new_rounded,
@@ -446,12 +552,13 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
               controller.currentSubMenu = 'none';
             },
             child: Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               margin: const EdgeInsets.only(left: 16, right: 8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                shape: BoxShape.circle,
+                color: const Color(0xFFF4F5F8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300, width: 1),
               ),
               child: const Icon(
                 Icons.arrow_back_ios_new_rounded,
@@ -533,6 +640,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
               ? activeColor.withValues(alpha: 0.12)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
+          border: isActive
+              ? Border.all(color: activeColor.withValues(alpha: 0.4), width: 1.0)
+              : Border.all(color: Colors.transparent, width: 1.0),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -570,59 +680,68 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
       height: 72,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade100, width: 1)),
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _bottomTextToolItem(
-            label: 'Edit Text',
-            icon: Icons.edit_rounded,
-            onTap: () => _editTextStickerContent(sticker, controller),
-          ),
-          _bottomTextToolItem(
-            label: 'Fonts',
-            icon: Icons.font_download_rounded,
-            onTap: () => _showFontSelectionSheet(sticker, controller),
-          ),
-          _bottomTextToolItem(
-            label: 'Format',
-            icon: Icons.format_size_rounded,
-            onTap: () => _showSizeOpacitySheet(sticker, controller),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bottomTextToolItem({
-    required String label,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 80,
-        height: 60,
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: ColorConstants.accent, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: ColorConstants.accent,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+          GestureDetector(
+            onTap: () {
+              controller.stampActiveSticker();
+            },
+            child: Container(
+              width: 38,
+              height: 38,
+              margin: const EdgeInsets.only(left: 16, right: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F5F8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300, width: 1),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 16,
+                color: Colors.black87,
               ),
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _bottomSubToolItem(
+                  label: 'Edit Text',
+                  icon: Icons.edit_rounded,
+                  isActive: false,
+                  onTap: () => _editTextStickerContent(sticker, controller),
+                ),
+                _bottomSubToolItem(
+                  label: 'Fonts',
+                  icon: Icons.font_download_rounded,
+                  isActive: false,
+                  onTap: () => _showFontSelectionSheet(sticker, controller),
+                ),
+                _bottomSubToolItem(
+                  label: 'Format',
+                  icon: Icons.format_size_rounded,
+                  isActive: false,
+                  onTap: () => _showSizeOpacitySheet(sticker, controller),
+                ),
+                _bottomSubToolItem(
+                  label: 'Flip H',
+                  icon: Icons.flip_rounded,
+                  isActive: sticker.flipX,
+                  onTap: () => controller.flipActiveTextStickerH(),
+                ),
+                _bottomSubToolItem(
+                  label: 'Delete',
+                  icon: Icons.delete_outline_rounded,
+                  isActive: false,
+                  onTap: () => controller.deleteActiveSticker(),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

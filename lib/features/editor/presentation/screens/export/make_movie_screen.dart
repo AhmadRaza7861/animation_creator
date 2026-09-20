@@ -78,6 +78,18 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
       badge: '1:1',
     ),
     OutputSizePreset(
+      label: 'Tablet / Presentation',
+      resolution: '1440 x 1080',
+      size: Size(1440, 1080),
+      badge: '4:3',
+    ),
+    OutputSizePreset(
+      label: 'Tablet Portrait',
+      resolution: '1080 x 1440',
+      size: Size(1080, 1440),
+      badge: '3:4',
+    ),
+    OutputSizePreset(
       label: 'Portrait Post',
       resolution: '1080 x 1350',
       size: Size(1080, 1350),
@@ -98,18 +110,57 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
     _selectedPreset = _matchPresetForAspectRatio(widget.projectAspectRatio);
   }
 
+  @override
+  void didUpdateWidget(covariant MakeMovieScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectAspectRatio != widget.projectAspectRatio) {
+      setState(() {
+        _selectedPreset = _matchPresetForAspectRatio(widget.projectAspectRatio);
+      });
+    }
+  }
+
   OutputSizePreset _matchPresetForAspectRatio(double? ar) {
-    if (ar == null) return _presets.first;
+    if (ar == null || ar <= 0) {
+      if (widget.canvases.isNotEmpty) {
+        final size = widget.canvases.first.drawConfig.value.size;
+        if (size != null && size.width > 0 && size.height > 0) {
+          ar = size.width / size.height;
+        }
+      }
+    }
+    if (ar == null || ar <= 0) return _presets.first;
+
+    if ((ar - (16.0 / 9.0)).abs() < 0.05) {
+      return _presets.first; // Full HD 1080p (16:9)
+    }
     if ((ar - (9.0 / 16.0)).abs() < 0.05) {
-      return _presets[2]; // 9:16
+      return _presets.firstWhere((p) => p.badge == '9:16');
     }
     if ((ar - 1.0).abs() < 0.05) {
-      return _presets[3]; // 1:1
+      return _presets.firstWhere((p) => p.badge == '1:1');
+    }
+    if ((ar - (4.0 / 3.0)).abs() < 0.05) {
+      return _presets.firstWhere((p) => p.badge == '4:3');
+    }
+    if ((ar - (3.0 / 4.0)).abs() < 0.05) {
+      return _presets.firstWhere((p) => p.badge == '3:4');
     }
     if ((ar - (4.0 / 5.0)).abs() < 0.05) {
-      return _presets[4]; // 4:5
+      return _presets.firstWhere((p) => p.badge == '4:5');
     }
-    return _presets.first; // Default 16:9
+
+    OutputSizePreset best = _presets.first;
+    double minDiff = double.infinity;
+    for (final preset in _presets) {
+      final double presetRatio = preset.size.width / preset.size.height;
+      final double diff = (presetRatio - ar).abs();
+      if (diff < minDiff) {
+        minDiff = diff;
+        best = preset;
+      }
+    }
+    return best;
   }
 
   @override
@@ -124,18 +175,10 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x1A0F172A),
-                blurRadius: 24,
-                offset: Offset(0, -6),
-              ),
-            ],
-          ),
+        return Material(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          clipBehavior: Clip.antiAlias,
           child: SafeArea(
             top: false,
             child: ConstrainedBox(
@@ -293,7 +336,7 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
           'Make Movie',
           style: TextStyle(
             color: ColorConstants.darkText,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

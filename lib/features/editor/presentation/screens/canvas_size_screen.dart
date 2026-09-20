@@ -166,12 +166,12 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
           ),
           const SizedBox(width: 8),
         ],
-        title:  Text(
+        title: Text(
           StringConstants.canvasSize,
-          style: TextStyle(
+          style: const TextStyle(
             color: ColorConstants.text_color,
             fontWeight: FontWeight.w700,
-            fontSize: 22,
+            fontSize: 18,
           ),
         ),
       ),

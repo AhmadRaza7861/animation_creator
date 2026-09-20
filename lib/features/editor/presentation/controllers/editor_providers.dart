@@ -6,7 +6,7 @@ final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
   return ProjectRepository();
 });
 
-final editorControllerProvider = ChangeNotifierProvider.family<EditorController, String?>((ref, projectId) {
+final editorControllerProvider = ChangeNotifierProvider.autoDispose.family<EditorController, String?>((ref, projectId) {
   final repo = ref.watch(projectRepositoryProvider);
   final controller = EditorController(repository: repo, projectId: projectId);
   return controller;

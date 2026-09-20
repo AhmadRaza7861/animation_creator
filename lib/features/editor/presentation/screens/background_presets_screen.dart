@@ -46,13 +46,12 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
       appBar: AppBar(
         elevation: 0,
         leading: const AppBackButton(),
-        title:  Text(
+        title: Text(
           StringConstants.background_presets,
-          //preset
-          style: TextStyle(
+          style: const TextStyle(
             color: ColorConstants.darkText,
             fontWeight: FontWeight.w700,
-            fontSize: 22,
+            fontSize: 18,
           ),
         ),
         centerTitle: true,

@@ -209,11 +209,11 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.white,
-        title:  Text(
+        title: Text(
           StringConstants.color_picker,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w700,
-            fontSize: 22,
+            fontSize: 18,
             color: ColorConstants.darkText,
           ),
         ),

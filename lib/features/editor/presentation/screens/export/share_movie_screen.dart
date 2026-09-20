@@ -180,7 +180,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
           'Export Ready',
           style: TextStyle(
             color: ColorConstants.darkText,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -130,7 +130,7 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
             'Exporting Animation',
             style: TextStyle(
               color: ColorConstants.darkText,
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),

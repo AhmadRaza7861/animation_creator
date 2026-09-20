@@ -46,7 +46,7 @@ class _FramesReorderScreenState extends State<FramesReorderScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Frames', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Frames', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: ColorConstants.background,
         foregroundColor: ColorConstants.darkText,
         elevation: 1,

@@ -18,12 +18,14 @@ class LayerData {
     this.blendMode = BlendMode.srcOver,
     List<PaintContent>? history,
     int currentIndex = 0,
+    int? sessionStartIndex,
   })  : history = history ?? <PaintContent>[],
         currentIndex = (currentIndex < 0)
             ? 0
             : (currentIndex > (history?.length ?? 0)
                 ? (history?.length ?? 0)
-                : currentIndex);
+                : currentIndex),
+        sessionStartIndex = (sessionStartIndex ?? 0).clamp(0, (history?.length ?? 0));
 
   final String id;
   String name;
@@ -35,6 +37,7 @@ class LayerData {
   
   List<PaintContent> history;
   int currentIndex;
+  int sessionStartIndex;
 
   /// Draws the layer history onto the canvas.
   /// If a SmudgeContent or BlurContent is present, it is rendered first as the base raster state,
@@ -114,9 +117,11 @@ class LayerData {
     BlendMode? blendMode,
     List<PaintContent>? history,
     int? currentIndex,
+    int? sessionStartIndex,
   }) {
     final List<PaintContent> newHistory = history ?? List.from(this.history);
     final int newIndex = currentIndex ?? this.currentIndex;
+    final int newSessionStartIndex = sessionStartIndex ?? this.sessionStartIndex;
     return LayerData(
       id: id ?? this.id,
       name: name ?? this.name,
@@ -127,6 +132,7 @@ class LayerData {
       blendMode: blendMode ?? this.blendMode,
       history: newHistory,
       currentIndex: newIndex.clamp(0, newHistory.length),
+      sessionStartIndex: newSessionStartIndex.clamp(0, newHistory.length),
     );
   }
 }

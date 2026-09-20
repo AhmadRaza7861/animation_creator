@@ -18,6 +18,7 @@ class ActiveTextSticker {
     this.textAlign = TextAlign.left,
     this.opacity = 1.0,
     this.fontFamily,
+    this.flipX = false,
   });
 
   final String id;
@@ -33,6 +34,13 @@ class ActiveTextSticker {
   TextAlign textAlign;
   double opacity;
   String? fontFamily;
+  bool flipX;
+
+  void resetAll() {
+    scale = 1.0;
+    rotation = 0.0;
+    flipX = false;
+  }
 }
 
 class TextStickerWidget extends StatefulWidget {
@@ -63,6 +71,7 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
   late Offset _offset;
   late double _scale;
   late double _rotation;
+  late bool _flipX;
 
   Offset _startOffset = Offset.zero;
   double _startScale = 1.0;
@@ -72,7 +81,6 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
   double _previousAngle = 0.0;
   double _previousDist = 0.0;
   final GlobalKey _centerKey = GlobalKey();
-  bool _flipX = false;
 
   @override
   void initState() {
@@ -80,18 +88,18 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
     _offset = widget.data.offset;
     _scale = widget.data.scale;
     _rotation = widget.data.rotation;
+    _flipX = widget.data.flipX;
   }
 
   @override
   void didUpdateWidget(covariant TextStickerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data.offset != oldWidget.data.offset ||
-        widget.data.scale != oldWidget.data.scale ||
-        widget.data.rotation != oldWidget.data.rotation) {
+    setState(() {
       _offset = widget.data.offset;
       _scale = widget.data.scale;
       _rotation = widget.data.rotation;
-    }
+      _flipX = widget.data.flipX;
+    });
   }
 
   Size _measureText(String text, TextStyle style, TextAlign textAlign) {
@@ -589,16 +597,6 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                   right: 0,
                   child: Center(
                     child: _buildRotateHandle(),
-                  ),
-                ),
-
-                // 5. Floating Action Bar at Bottom (Ultra-compact Flip + Delete)
-                Positioned(
-                  top: contentTop + h + 8,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _buildFloatingActionPill(),
                   ),
                 ),
               ],

@@ -80,7 +80,7 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
           style: TextStyle(
             color: ColorConstants.darkText,
             fontWeight: FontWeight.bold,
-            fontSize: 20,
+            fontSize: 18,
           ),
         ),
         backgroundColor: ColorConstants.background,

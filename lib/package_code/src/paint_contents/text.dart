@@ -21,6 +21,7 @@ class TextContent extends PaintContent {
     this.textAlign = TextAlign.left,
     this.opacity = 1.0,
     this.fontFamily,
+    this.flipX = false,
   });
 
   TextContent.data({
@@ -35,6 +36,7 @@ class TextContent extends PaintContent {
     this.textAlign = TextAlign.left,
     this.opacity = 1.0,
     this.fontFamily,
+    this.flipX = false,
     required Paint paint,
   }) : super.paint(paint);
 
@@ -53,6 +55,7 @@ class TextContent extends PaintContent {
           : TextAlign.left,
       opacity: (data['opacity'] as num?)?.toDouble() ?? 1.0,
       fontFamily: data['fontFamily'] as String?,
+      flipX: data['flipX'] as bool? ?? false,
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
     );
   }
@@ -88,6 +91,9 @@ class TextContent extends PaintContent {
 
   /// 字体
   String? fontFamily;
+
+  /// 水平翻转
+  bool flipX = false;
 
   /// 文本内容
   ///
@@ -128,7 +134,7 @@ class TextContent extends PaintContent {
 
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
-    canvas.scale(scale, scale);
+    canvas.scale(flipX ? -scale : scale, scale);
     canvas.rotate(rotation);
 
     // Draw centered on the offset
@@ -158,6 +164,7 @@ class TextContent extends PaintContent {
     textAlign: textAlign,
     opacity: opacity,
     fontFamily: fontFamily,
+    flipX: flipX,
     paint: paint.copyWith(),
   );
 
@@ -175,6 +182,7 @@ class TextContent extends PaintContent {
       'textAlign': textAlign.index,
       'opacity': opacity,
       'fontFamily': fontFamily,
+      'flipX': flipX,
       'paint': paint.toJson(),
     };
   }

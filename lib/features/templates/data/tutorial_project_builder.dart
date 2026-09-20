@@ -146,7 +146,7 @@ class TutorialProjectBuilder {
       'fps': fps,
       'projectName': title,
       'strokeWidth': 4.0,
-      'strokeColor': const Color(0xFFEF4444).toARGB32(),
+      'strokeColor': Colors.black.toARGB32(),
       'colorOpacity': 1.0,
       'exportType': 'Mp4',
       'enableStickers': true,

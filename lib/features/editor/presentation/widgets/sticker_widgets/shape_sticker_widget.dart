@@ -2,6 +2,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../package_code/paint_contents.dart';
+import '../../../../../package_code/src/paint_extension/quad_homography.dart';
+
+enum StickerTransformMode {
+  transform,
+  perspective,
+}
 
 class ActiveShapeSticker {
   ActiveShapeSticker({
@@ -11,6 +17,14 @@ class ActiveShapeSticker {
     this.offset = const Offset(100, 100),
     this.scale = 1.0,
     this.rotation = 0.0,
+    this.flipX = false,
+    this.flipY = false,
+    this.topLeftOffset = Offset.zero,
+    this.topRightOffset = Offset.zero,
+    this.bottomRightOffset = Offset.zero,
+    this.bottomLeftOffset = Offset.zero,
+    this.transformMode = StickerTransformMode.transform,
+    this.isLassoSelection = false,
   });
 
   final String id;
@@ -19,6 +33,34 @@ class ActiveShapeSticker {
   Offset offset;
   double scale;
   double rotation;
+  bool flipX;
+  bool flipY;
+  Offset topLeftOffset;
+  Offset topRightOffset;
+  Offset bottomRightOffset;
+  Offset bottomLeftOffset;
+  StickerTransformMode transformMode;
+  bool isLassoSelection;
+
+  bool get isLasso => isLassoSelection || content is ClippedHistoryContent;
+
+  bool get hasPerspectiveDistortion =>
+      topLeftOffset != Offset.zero ||
+      topRightOffset != Offset.zero ||
+      bottomRightOffset != Offset.zero ||
+      bottomLeftOffset != Offset.zero;
+
+  void resetAll() {
+    scale = 1.0;
+    rotation = 0.0;
+    flipX = false;
+    flipY = false;
+    topLeftOffset = Offset.zero;
+    topRightOffset = Offset.zero;
+    bottomRightOffset = Offset.zero;
+    bottomLeftOffset = Offset.zero;
+    transformMode = StickerTransformMode.transform;
+  }
 }
 
 class ShapeStickerWidget extends StatefulWidget {
@@ -44,13 +86,20 @@ class ShapeStickerWidget extends StatefulWidget {
 }
 
 class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
-  static const double _kPadH = 24.0;
-  static const double _kPadV = 48.0;
-  static const double _kMinTotalWidth = 120.0;
+  static const double _kPadH = 40.0;
+  static const double _kPadV = 56.0;
+  static const double _kMinTotalWidth = 140.0;
 
   late Offset _offset;
   late double _scale;
   late double _rotation;
+  late bool _flipX;
+  late bool _flipY;
+  late Offset _topLeftOffset;
+  late Offset _topRightOffset;
+  late Offset _bottomRightOffset;
+  late Offset _bottomLeftOffset;
+  late StickerTransformMode _transformMode;
 
   Offset _startOffset = Offset.zero;
   double _startScale = 1.0;
@@ -60,7 +109,6 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
   double _previousAngle = 0.0;
   double _previousDist = 0.0;
   final GlobalKey _centerKey = GlobalKey();
-  bool _flipX = false;
 
   @override
   void initState() {
@@ -68,18 +116,46 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     _offset = widget.data.offset;
     _scale = widget.data.scale;
     _rotation = widget.data.rotation;
+    _flipX = widget.data.flipX;
+    _flipY = widget.data.flipY;
+    _topLeftOffset = widget.data.topLeftOffset;
+    _topRightOffset = widget.data.topRightOffset;
+    _bottomRightOffset = widget.data.bottomRightOffset;
+    _bottomLeftOffset = widget.data.bottomLeftOffset;
+    _transformMode = widget.data.transformMode;
   }
 
   @override
   void didUpdateWidget(covariant ShapeStickerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data.offset != oldWidget.data.offset ||
-        widget.data.scale != oldWidget.data.scale ||
-        widget.data.rotation != oldWidget.data.rotation) {
+    setState(() {
       _offset = widget.data.offset;
       _scale = widget.data.scale;
       _rotation = widget.data.rotation;
-    }
+      _flipX = widget.data.flipX;
+      _flipY = widget.data.flipY;
+      _topLeftOffset = widget.data.topLeftOffset;
+      _topRightOffset = widget.data.topRightOffset;
+      _bottomRightOffset = widget.data.bottomRightOffset;
+      _bottomLeftOffset = widget.data.bottomLeftOffset;
+      _transformMode = widget.data.transformMode;
+    });
+  }
+
+  /// Converts a global screen delta into the sticker's local (rotated, scaled, flipped) coordinate space.
+  Offset _screenDeltaToLocal(Offset screenDelta) {
+    final double s = _scale == 0 ? 1.0 : _scale;
+    // Unrotate: R(-_rotation)
+    final double cosR = math.cos(-_rotation);
+    final double sinR = math.sin(-_rotation);
+    double lx = (screenDelta.dx * cosR - screenDelta.dy * sinR) / s;
+    double ly = (screenDelta.dx * sinR + screenDelta.dy * cosR) / s;
+
+    // Handle flips
+    if (_flipX) lx = -lx;
+    if (_flipY) ly = -ly;
+
+    return Offset(lx, ly);
   }
 
   // Corner resize node (Figma/Apple Freeform style circular handle with App Primary Theme)
@@ -113,6 +189,49 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                   color: Colors.black.withValues(alpha: 0.25),
                   blurRadius: 4,
                   offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Perspective Pin Handle (Glowing circular node for 4 corners)
+  Widget _buildPerspectivePinHandle({
+    required GestureDragUpdateCallback onPanUpdate,
+    required GestureDragEndCallback onPanEnd,
+  }) {
+    return Transform.scale(
+      scale: 1.0 / (_scale == 0 ? 1 : _scale),
+      alignment: Alignment.center,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanUpdate: onPanUpdate,
+        onPanEnd: onPanEnd,
+        child: Container(
+          width: 44,
+          height: 44,
+          color: Colors.transparent,
+          alignment: Alignment.center,
+          child: Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: ColorConstants.primary,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: [
+                BoxShadow(
+                  color: ColorConstants.primary.withValues(alpha: 0.5),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -253,7 +372,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     );
   }
 
-  // Ultra-Clean Minimalist Floating Micro-Pill (Flip + Delete)
+  // Ultra-Clean Minimalist Floating Micro-Pill (Flip + Delete for regular shapes)
   Widget _buildFloatingActionPill() {
     return Transform.scale(
       scale: 1.0 / (_scale == 0 ? 1 : _scale),
@@ -286,7 +405,10 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
               onTap: () {
                 setState(() {
                   _flipX = !_flipX;
+                  widget.data.flipX = _flipX;
                 });
+                widget.onUpdate(_offset, _scale, _rotation);
+                widget.onUpdateEnd?.call();
               },
             ),
             Container(
@@ -305,6 +427,15 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      width: 1,
+      height: 14,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      color: Colors.white.withValues(alpha: 0.15),
     );
   }
 
@@ -348,14 +479,15 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     );
     final pos = details.globalPosition;
     final double currentDist = (pos - center).distance;
-    if (_previousDist > 5 && currentDist > 5) {
-      final double scaleRatio = currentDist / _previousDist;
+
+    if (_previousDist > 0) {
+      final double factor = currentDist / _previousDist;
       setState(() {
-        _scale = (_scale * scaleRatio).clamp(0.1, 10.0);
+        _scale = (_scale * factor).clamp(0.1, 10.0);
       });
-      _previousDist = currentDist;
       widget.onUpdate(_offset, _scale, _rotation);
     }
+    _previousDist = currentDist;
   }
 
   void _onRotateStart(DragStartDetails details) {
@@ -395,6 +527,13 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     final double totalHeight = h + _kPadV * 2;
     final double contentLeft = (totalWidth - w) / 2;
     final double contentTop = _kPadV;
+    final bool isPerspective = _transformMode == StickerTransformMode.perspective;
+
+    // Corner destination positions in local stack coordinates
+    final Offset p0 = Offset(contentLeft, contentTop) + _topLeftOffset;
+    final Offset p1 = Offset(contentLeft + w, contentTop) + _topRightOffset;
+    final Offset p2 = Offset(contentLeft + w, contentTop + h) + _bottomRightOffset;
+    final Offset p3 = Offset(contentLeft, contentTop + h) + _bottomLeftOffset;
 
     return Positioned(
       left: _offset.dx,
@@ -412,7 +551,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // 1. Center Content Box (snug border + gesture in App Theme Primary)
+                // 1. Center Content Box (Rendered with homography & gesture)
                 Positioned(
                   left: contentLeft,
                   top: contentTop,
@@ -429,8 +568,10 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                     onScaleUpdate: (details) {
                       setState(() {
                         _offset = _startOffset + (details.focalPoint - _focalPoint);
-                        _scale = (_startScale * details.scale).clamp(0.1, 10.0);
-                        _rotation = _startRotation + details.rotation;
+                        if (!isPerspective) {
+                          _scale = (_startScale * details.scale).clamp(0.1, 10.0);
+                          _rotation = _startRotation + details.rotation;
+                        }
                       });
                       widget.onUpdate(_offset, _scale, _rotation);
                     },
@@ -439,129 +580,221 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: ColorConstants.primary,
-                          width: 1.5 / (_scale == 0 ? 1 : _scale),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ColorConstants.primary.withValues(alpha: 0.12),
-                            blurRadius: 4,
-                            spreadRadius: 0.5,
-                          ),
-                        ],
+                        border: isPerspective
+                            ? null
+                            : Border.all(
+                                color: ColorConstants.primary,
+                                width: 1.5 / (_scale == 0 ? 1 : _scale),
+                              ),
+                        boxShadow: isPerspective
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: ColorConstants.primary.withValues(alpha: 0.12),
+                                  blurRadius: 4,
+                                  spreadRadius: 0.5,
+                                ),
+                              ],
                       ),
-                      child: Transform(
-                        transform: Matrix4.diagonal3Values(_flipX ? -1.0 : 1.0, 1.0, 1.0),
-                        alignment: Alignment.center,
-                        child: CustomPaint(
-                          size: widget.data.size,
-                          painter: _StickerPainter(widget.data.content, widget.canvasSize),
+                      child: CustomPaint(
+                        size: widget.data.size,
+                        painter: _StickerPainter(
+                          widget.data.content,
+                          widget.canvasSize,
+                          topLeftOffset: _topLeftOffset,
+                          topRightOffset: _topRightOffset,
+                          bottomRightOffset: _bottomRightOffset,
+                          bottomLeftOffset: _bottomLeftOffset,
+                          flipX: _flipX,
+                          flipY: _flipY,
                         ),
                       ),
                     ),
                   ),
                 ),
 
-                // 2. 4 Side Midpoint Pill Handles
-                // Top side midpoint
-                Positioned(
-                  left: contentLeft + w / 2 - 16,
-                  top: contentTop - 16,
-                  child: _buildHorizontalSideHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                // 2. Perspective Quad Guidelines (in PERSP mode)
+                if (isPerspective)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: _PerspectiveQuadPainter(
+                          p0: p0,
+                          p1: p1,
+                          p2: p2,
+                          p3: p3,
+                          scale: _scale,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                // Bottom side midpoint
-                Positioned(
-                  left: contentLeft + w / 2 - 16,
-                  top: contentTop + h - 16,
-                  child: _buildHorizontalSideHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
-                  ),
-                ),
-                // Left side midpoint
-                Positioned(
-                  left: contentLeft - 16,
-                  top: contentTop + h / 2 - 16,
-                  child: _buildVerticalSideHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
-                  ),
-                ),
-                // Right side midpoint
-                Positioned(
-                  left: contentLeft + w - 16,
-                  top: contentTop + h / 2 - 16,
-                  child: _buildVerticalSideHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
-                  ),
-                ),
 
-                // 3. 4 Corner Resize Nodes
-                Positioned(
-                  left: contentLeft - 18,
-                  top: contentTop - 18,
-                  child: _buildCornerHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                // 3. Handles:
+                // --- If PERSP mode: 4 Interactive Corner Pins ---
+                if (isPerspective) ...[
+                  Positioned(
+                    left: p0.dx - 22,
+                    top: p0.dy - 22,
+                    child: _buildPerspectivePinHandle(
+                      onPanUpdate: (details) {
+                        final localDelta = _screenDeltaToLocal(details.delta);
+                        setState(() {
+                          _topLeftOffset += localDelta;
+                          widget.data.topLeftOffset = _topLeftOffset;
+                        });
+                        widget.onUpdate(_offset, _scale, _rotation);
+                      },
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: contentLeft + w - 18,
-                  top: contentTop - 18,
-                  child: _buildCornerHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                  Positioned(
+                    left: p1.dx - 22,
+                    top: p1.dy - 22,
+                    child: _buildPerspectivePinHandle(
+                      onPanUpdate: (details) {
+                        final localDelta = _screenDeltaToLocal(details.delta);
+                        setState(() {
+                          _topRightOffset += localDelta;
+                          widget.data.topRightOffset = _topRightOffset;
+                        });
+                        widget.onUpdate(_offset, _scale, _rotation);
+                      },
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: contentLeft - 18,
-                  top: contentTop + h - 18,
-                  child: _buildCornerHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                  Positioned(
+                    left: p2.dx - 22,
+                    top: p2.dy - 22,
+                    child: _buildPerspectivePinHandle(
+                      onPanUpdate: (details) {
+                        final localDelta = _screenDeltaToLocal(details.delta);
+                        setState(() {
+                          _bottomRightOffset += localDelta;
+                          widget.data.bottomRightOffset = _bottomRightOffset;
+                        });
+                        widget.onUpdate(_offset, _scale, _rotation);
+                      },
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: contentLeft + w - 18,
-                  top: contentTop + h - 18,
-                  child: _buildCornerHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                  Positioned(
+                    left: p3.dx - 22,
+                    top: p3.dy - 22,
+                    child: _buildPerspectivePinHandle(
+                      onPanUpdate: (details) {
+                        final localDelta = _screenDeltaToLocal(details.delta);
+                        setState(() {
+                          _bottomLeftOffset += localDelta;
+                          widget.data.bottomLeftOffset = _bottomLeftOffset;
+                        });
+                        widget.onUpdate(_offset, _scale, _rotation);
+                      },
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
                   ),
-                ),
+                ],
 
-                // 4. Rotate Handle at Top
-                Positioned(
-                  top: contentTop - 40,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _buildRotateHandle(),
+                // --- If TRSF mode: 4 Midpoints, 4 Corners, 1 Rotate Handle ---
+                if (!isPerspective) ...[
+                  // 4 Side Midpoint Pill Handles
+                  Positioned(
+                    left: contentLeft + w / 2 - 16,
+                    top: contentTop - 16,
+                    child: _buildHorizontalSideHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
                   ),
-                ),
+                  Positioned(
+                    left: contentLeft + w / 2 - 16,
+                    top: contentTop + h - 16,
+                    child: _buildHorizontalSideHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
+                  ),
+                  Positioned(
+                    left: contentLeft - 16,
+                    top: contentTop + h / 2 - 16,
+                    child: _buildVerticalSideHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
+                  ),
+                  Positioned(
+                    left: contentLeft + w - 16,
+                    top: contentTop + h / 2 - 16,
+                    child: _buildVerticalSideHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
+                  ),
 
-                // 5. Floating Action Bar at Bottom (Ultra-compact Flip + Delete)
-                Positioned(
-                  top: contentTop + h + 8,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _buildFloatingActionPill(),
+                  // 4 Corner Resize Nodes
+                  Positioned(
+                    left: contentLeft - 18,
+                    top: contentTop - 18,
+                    child: _buildCornerHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
                   ),
-                ),
+                  Positioned(
+                    left: contentLeft + w - 18,
+                    top: contentTop - 18,
+                    child: _buildCornerHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
+                  ),
+                  Positioned(
+                    left: contentLeft - 18,
+                    top: contentTop + h - 18,
+                    child: _buildCornerHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
+                  ),
+                  Positioned(
+                    left: contentLeft + w - 18,
+                    top: contentTop + h - 18,
+                    child: _buildCornerHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    ),
+                  ),
+
+                  // Top Rotate Handle
+                  Positioned(
+                    top: contentTop - 40,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: _buildRotateHandle(),
+                    ),
+                  ),
+                ],
+
+                // 4. Floating Action Micro-Pill at Bottom (Only for standard shape stickers)
+                if (!widget.data.isLasso)
+                  Positioned(
+                    top: math.max(p2.dy, p3.dy) + 12,
+                    left: -200,
+                    right: -200,
+                    child: Center(
+                      child: UnconstrainedBox(
+                        child: _buildFloatingActionPill(),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -571,14 +804,112 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
   }
 }
 
-class _StickerPainter extends CustomPainter {
-  final PaintContent content;
-  final Size? canvasSize;
-  _StickerPainter(this.content, this.canvasSize);
+class _PerspectiveQuadPainter extends CustomPainter {
+  final Offset p0;
+  final Offset p1;
+  final Offset p2;
+  final Offset p3;
+  final double scale;
+
+  _PerspectiveQuadPainter({
+    required this.p0,
+    required this.p1,
+    required this.p2,
+    required this.p3,
+    required this.scale,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final double s = scale == 0 ? 1 : scale;
+    final strokePaint = Paint()
+      ..color = ColorConstants.primary
+      ..strokeWidth = 1.6 / s
+      ..style = PaintingStyle.stroke;
+
+    final diagPaint = Paint()
+      ..color = ColorConstants.primary.withValues(alpha: 0.25)
+      ..strokeWidth = 1.0 / s
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..moveTo(p0.dx, p0.dy)
+      ..lineTo(p1.dx, p1.dy)
+      ..lineTo(p2.dx, p2.dy)
+      ..lineTo(p3.dx, p3.dy)
+      ..close();
+
+    canvas.drawPath(path, strokePaint);
+    canvas.drawLine(p0, p2, diagPaint);
+    canvas.drawLine(p1, p3, diagPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PerspectiveQuadPainter oldDelegate) =>
+      oldDelegate.p0 != p0 ||
+      oldDelegate.p1 != p1 ||
+      oldDelegate.p2 != p2 ||
+      oldDelegate.p3 != p3 ||
+      oldDelegate.scale != scale;
+}
+
+class _StickerPainter extends CustomPainter {
+  final PaintContent content;
+  final Size? canvasSize;
+  final Offset topLeftOffset;
+  final Offset topRightOffset;
+  final Offset bottomRightOffset;
+  final Offset bottomLeftOffset;
+  final bool flipX;
+  final bool flipY;
+
+  _StickerPainter(
+    this.content,
+    this.canvasSize, {
+    this.topLeftOffset = Offset.zero,
+    this.topRightOffset = Offset.zero,
+    this.bottomRightOffset = Offset.zero,
+    this.bottomLeftOffset = Offset.zero,
+    this.flipX = false,
+    this.flipY = false,
+  });
+
+  bool get hasPerspectiveDistortion =>
+      topLeftOffset != Offset.zero ||
+      topRightOffset != Offset.zero ||
+      bottomRightOffset != Offset.zero ||
+      bottomLeftOffset != Offset.zero;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (flipX || flipY) {
+      canvas.save();
+      canvas.translate(size.width / 2, size.height / 2);
+      canvas.scale(flipX ? -1.0 : 1.0, flipY ? -1.0 : 1.0);
+      canvas.translate(-size.width / 2, -size.height / 2);
+    }
+
+    if (hasPerspectiveDistortion) {
+      final matrix = QuadHomography.fromRectToQuad(
+        width: size.width,
+        height: size.height,
+        p0: Offset.zero + topLeftOffset,
+        p1: Offset(size.width, 0) + topRightOffset,
+        p2: Offset(size.width, size.height) + bottomRightOffset,
+        p3: Offset(0, size.height) + bottomLeftOffset,
+      );
+      canvas.save();
+      canvas.transform(matrix.storage);
+    }
+
     content.draw(canvas, size, false);
+
+    if (hasPerspectiveDistortion) {
+      canvas.restore();
+    }
+    if (flipX || flipY) {
+      canvas.restore();
+    }
   }
 
   @override

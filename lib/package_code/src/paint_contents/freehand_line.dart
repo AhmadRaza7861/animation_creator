@@ -94,6 +94,9 @@ abstract class FreehandLine extends PaintContent {
     return path;
   }
 
+  @override
+  Path getPath() => buildSmoothPath();
+
   /// 所有手绘线条共用的 JSON 字段
   ///
   /// Common JSON fields shared by all freehand lines

@@ -53,7 +53,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   String _canvasSizeLabel = 'Square (1:1)';
   int _fps = 14;
   String _exportType = 'Mp4'; // 'Mp4' or 'GIF'
-  bool _enableStickers = true;
+  bool _enableStickers = false;
 
   @override
   void initState() {
@@ -61,8 +61,11 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     if (widget.projectId != null) {
       _loadExistingProjectSettings();
     } else if (widget.template != null) {
+      _enableStickers = true;
       _nameController.text = '${widget.template!.name} Animation';
       _loadTemplateDimensions();
+    } else {
+      _enableStickers = false;
     }
   }
 
@@ -74,7 +77,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           _nameController.text = project.meta.title;
           _fps = project.state['fps'] as int? ?? 14;
           _exportType = project.state['exportType'] as String? ?? 'Mp4';
-          _enableStickers = project.state['enableStickers'] as bool? ?? true;
+          _enableStickers = project.state['enableStickers'] as bool? ??
+              (project.state['templateFolder'] != null || project.state['templateMode'] != null);
           final bgMap = project.state['globalBackground'] as Map<String, dynamic>?;
           if (bgMap != null) {
             _backgroundColor = Color(bgMap['color'] as int? ?? Colors.white.value);
@@ -442,12 +446,12 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
       //backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: const AppBackButton(),
-        title:Text(
+        title: Text(
           StringConstants.new_project,
-          style: TextStyle(
+          style: const TextStyle(
             color: ColorConstants.darkText,
             fontWeight: FontWeight.w700,
-            fontSize: 22,
+            fontSize: 18,
           ),
         ),
         centerTitle: true,
@@ -460,12 +464,12 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Project Name Field
-               Text(
+              Text(
                 StringConstants.project_name,
-                style: TextStyle(
+                style: const TextStyle(
                   color: ColorConstants.text_color,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
               const SizedBox(height: 10),
@@ -479,7 +483,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                   boxShadow: [
                     BoxShadow(
                       color:ColorConstants.shodow.withValues(alpha: 0.05),
-                      offset: Offset(2,2),
+                      offset: const Offset(2,2),
                       spreadRadius: 0,
                       blurRadius: 13,
                     )
@@ -489,30 +493,30 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                 child: TextField(
                   controller: _nameController,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w400,
                     color: Colors.black,
                   ),
-                  decoration:  InputDecoration(
+                  decoration: InputDecoration(
                     hintText: StringConstants.name_your_animation,
-                    hintStyle: TextStyle(
+                    hintStyle: const TextStyle(
                       color: ColorConstants.subTextColor,
                       fontWeight: FontWeight.w400,
-                      fontSize: 16
+                      fontSize: 14,
                     ),
-                    border:InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 13),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 13),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
               // 2. Aspect Ratio Dropdown
-               Text(
+              Text(
                 StringConstants.aspect_ratio,
-                style: TextStyle(
+                style: const TextStyle(
                   color: ColorConstants.text_color,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
               const SizedBox(height: 10),
@@ -554,7 +558,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       Text(
                         _canvasSizeLabel,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: widget.projectId != null
                               ? Colors.black
@@ -575,12 +579,12 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               const SizedBox(height: 20),
 
               // 3. Frame Rate Dropdown
-               Text(
+              Text(
                 StringConstants.frame_rate,
-                style: TextStyle(
+                style: const TextStyle(
                   color: ColorConstants.text_color,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
               const SizedBox(height: 10),
@@ -610,7 +614,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       Text(
                         '${_fps}fps',
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: ColorConstants.text_color,
                         ),
@@ -915,12 +919,12 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               // 5. Background Section
               Row(
                 children: [
-                   Text(
+                  Text(
                     StringConstants.background,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: ColorConstants.darkText,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
                   ),
                   const Spacer(),

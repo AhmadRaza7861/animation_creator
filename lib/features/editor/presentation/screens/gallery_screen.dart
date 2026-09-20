@@ -18,6 +18,7 @@ class GalleryScreen extends StatelessWidget {
           style: TextStyle(
             color: ColorConstants.darkText,
             fontWeight: FontWeight.bold,
+            fontSize: 18,
             letterSpacing: 0.5,
           ),
         ),

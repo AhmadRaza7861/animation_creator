@@ -65,11 +65,16 @@ class EditorController extends ChangeNotifier {
   }) : _projectId = projectId {
     _globalStrokeWidth = 10.0;
     _colorOpacity = 1.0;
+    _activeCategory = 'Brush';
+    _currentSubMenu = 'none';
+    _isTextToolSelected = false;
+    GlobalToolState.instance.resetToDefaultBrush();
     GlobalToolState.instance.setStyle(
       strokeWidth: 10.0,
       color: Colors.black,
     );
     _addNewCanvas(initial: true);
+    _loadGlobalPreferences();
     _loadStickerHintPersistence();
     if (projectId != null) {
       loadProjectData();
@@ -92,7 +97,7 @@ class EditorController extends ChangeNotifier {
   String _projectName = 'Movie Name';
   String _exportType = 'Mp4';
   String? _savedJsonData;
-  bool _enableStickers = true;
+  bool _enableStickers = false;
   // Auto-save and persistence state
   Timer? _autoSaveTimer;
   bool _isSaving = false;
@@ -265,6 +270,99 @@ class EditorController extends ChangeNotifier {
     } catch (_) {}
   }
 
+  static bool _globalPreferencesLoaded = false;
+  static bool _lastGlobalOnionEnabled = true;
+  static bool _lastGlobalGridEnabled = false;
+  static bool _lastGlobalOnionColorMode = false;
+  static bool _lastGlobalOnionLoop = false;
+  static int _lastGlobalOnionBefore = 1;
+  static int _lastGlobalOnionAfter = 0;
+  static double _lastGlobalGridOpacity = 0.25;
+  static double _lastGlobalGridVerticalSpacing = 80.0;
+  static double _lastGlobalGridHorizontalSpacing = 80.0;
+
+  Future<void> _loadGlobalPreferences() async {
+    try {
+      final docDir = await AppPathProvider.getSafeDocumentsDirectory();
+      final prefFile = File('${docDir.path}/app_preferences.json');
+      if (await prefFile.exists()) {
+        final content = await prefFile.readAsString();
+        final Map<String, dynamic> data = jsonDecode(content);
+        if (data.containsKey('isOnionEnabled')) {
+          _lastGlobalOnionEnabled = data['isOnionEnabled'] as bool;
+        }
+        if (data.containsKey('isGridEnabled')) {
+          _lastGlobalGridEnabled = data['isGridEnabled'] as bool;
+        }
+        if (data.containsKey('onionColorMode')) {
+          _lastGlobalOnionColorMode = data['onionColorMode'] as bool;
+        }
+        if (data.containsKey('onionLoop')) {
+          _lastGlobalOnionLoop = data['onionLoop'] as bool;
+        }
+        if (data.containsKey('onionBefore')) {
+          _lastGlobalOnionBefore = data['onionBefore'] as int;
+        }
+        if (data.containsKey('onionAfter')) {
+          _lastGlobalOnionAfter = data['onionAfter'] as int;
+        }
+        if (data.containsKey('gridOpacity')) {
+          _lastGlobalGridOpacity = (data['gridOpacity'] as num).toDouble();
+        }
+        if (data.containsKey('gridVerticalSpacing')) {
+          _lastGlobalGridVerticalSpacing = (data['gridVerticalSpacing'] as num).toDouble();
+        }
+        if (data.containsKey('gridHorizontalSpacing')) {
+          _lastGlobalGridHorizontalSpacing = (data['gridHorizontalSpacing'] as num).toDouble();
+        }
+      }
+      _globalPreferencesLoaded = true;
+
+      // Apply to this controller if projectId is null (new project) or not yet overridden
+      if (projectId == null) {
+        _isOnionEnabled = _lastGlobalOnionEnabled;
+        _isGridEnabled = _lastGlobalGridEnabled;
+        _onionColorMode = _lastGlobalOnionColorMode;
+        _onionLoop = _lastGlobalOnionLoop;
+        _onionBefore = _lastGlobalOnionBefore;
+        _onionAfter = _lastGlobalOnionAfter;
+        _gridOpacity = _lastGlobalGridOpacity;
+        _gridVerticalSpacing = _lastGlobalGridVerticalSpacing;
+        _gridHorizontalSpacing = _lastGlobalGridHorizontalSpacing;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistGlobalPreferences() async {
+    try {
+      _lastGlobalOnionEnabled = _isOnionEnabled;
+      _lastGlobalGridEnabled = _isGridEnabled;
+      _lastGlobalOnionColorMode = _onionColorMode;
+      _lastGlobalOnionLoop = _onionLoop;
+      _lastGlobalOnionBefore = _onionBefore;
+      _lastGlobalOnionAfter = _onionAfter;
+      _lastGlobalGridOpacity = _gridOpacity;
+      _lastGlobalGridVerticalSpacing = _gridVerticalSpacing;
+      _lastGlobalGridHorizontalSpacing = _gridHorizontalSpacing;
+
+      final docDir = await AppPathProvider.getSafeDocumentsDirectory();
+      final prefFile = File('${docDir.path}/app_preferences.json');
+      final data = {
+        'isOnionEnabled': _isOnionEnabled,
+        'isGridEnabled': _isGridEnabled,
+        'onionColorMode': _onionColorMode,
+        'onionLoop': _onionLoop,
+        'onionBefore': _onionBefore,
+        'onionAfter': _onionAfter,
+        'gridOpacity': _gridOpacity,
+        'gridVerticalSpacing': _gridVerticalSpacing,
+        'gridHorizontalSpacing': _gridHorizontalSpacing,
+      };
+      await prefFile.writeAsString(jsonEncode(data));
+    } catch (_) {}
+  }
+
   set projectName(String val) {
     _projectName = val;
     markDirty();
@@ -408,9 +506,6 @@ class EditorController extends ChangeNotifier {
 
   set globalBackground(CanvasBackground bg) {
     _globalBackground = bg;
-    for (final c in _canvases) {
-      c.prepareSnapshot();
-    }
     markDirty();
     notifyListeners();
   }
@@ -444,6 +539,7 @@ class EditorController extends ChangeNotifier {
     if (opacity != null) _gridOpacity = opacity;
     if (vertical != null) _gridVerticalSpacing = vertical;
     if (horizontal != null) _gridHorizontalSpacing = horizontal;
+    _persistGlobalPreferences();
     markDirty();
     notifyListeners();
   }
@@ -454,6 +550,7 @@ class EditorController extends ChangeNotifier {
     if (loop != null) _onionLoop = loop;
     if (before != null) _onionBefore = before;
     if (after != null) _onionAfter = after;
+    _persistGlobalPreferences();
     markDirty();
     notifyListeners();
   }
@@ -527,7 +624,24 @@ class EditorController extends ChangeNotifier {
         _exportType = data.state['exportType'] as String? ?? 'Mp4';
       }
       if (data.state.containsKey('aspectRatio') && data.state['aspectRatio'] != null) {
-        _aspectRatio = (data.state['aspectRatio'] as num).toDouble();
+        final rawRatio = data.state['aspectRatio'];
+        if (rawRatio is num) {
+          _aspectRatio = rawRatio.toDouble();
+        } else if (rawRatio is String) {
+          if (rawRatio.contains(':')) {
+            final parts = rawRatio.split(':');
+            final w = double.tryParse(parts[0]);
+            final h = double.tryParse(parts[1]);
+            _aspectRatio = (w != null && h != null && h > 0) ? w / h : 1.0;
+          } else if (rawRatio.contains('/')) {
+            final parts = rawRatio.split('/');
+            final w = double.tryParse(parts[0]);
+            final h = double.tryParse(parts[1]);
+            _aspectRatio = (w != null && h != null && h > 0) ? w / h : 1.0;
+          } else {
+            _aspectRatio = double.tryParse(rawRatio) ?? 1.0;
+          }
+        }
       } else {
         _aspectRatio = 1.0;
       }
@@ -545,6 +659,37 @@ class EditorController extends ChangeNotifier {
       }
       if (data.state.containsKey('enableStickers')) {
         _enableStickers = data.state['enableStickers'] as bool;
+      }
+      if (data.state.containsKey('isOnionEnabled')) {
+        _isOnionEnabled = data.state['isOnionEnabled'] as bool;
+      } else {
+        _isOnionEnabled = _lastGlobalOnionEnabled;
+      }
+      if (data.state.containsKey('onionColorMode')) {
+        _onionColorMode = data.state['onionColorMode'] as bool;
+      }
+      if (data.state.containsKey('onionLoop')) {
+        _onionLoop = data.state['onionLoop'] as bool;
+      }
+      if (data.state.containsKey('onionBefore')) {
+        _onionBefore = data.state['onionBefore'] as int;
+      }
+      if (data.state.containsKey('onionAfter')) {
+        _onionAfter = data.state['onionAfter'] as int;
+      }
+      if (data.state.containsKey('isGridEnabled')) {
+        _isGridEnabled = data.state['isGridEnabled'] as bool;
+      } else {
+        _isGridEnabled = _lastGlobalGridEnabled;
+      }
+      if (data.state.containsKey('gridOpacity')) {
+        _gridOpacity = (data.state['gridOpacity'] as num).toDouble();
+      }
+      if (data.state.containsKey('gridVerticalSpacing')) {
+        _gridVerticalSpacing = (data.state['gridVerticalSpacing'] as num).toDouble();
+      }
+      if (data.state.containsKey('gridHorizontalSpacing')) {
+        _gridHorizontalSpacing = (data.state['gridHorizontalSpacing'] as num).toDouble();
       }
       if (data.state.containsKey('audio')) {
         try {
@@ -612,6 +757,10 @@ class EditorController extends ChangeNotifier {
           restoredColor = _canvases.first.drawConfig.value.color;
         }
 
+        _activeCategory = 'Brush';
+        _currentSubMenu = 'none';
+        _isTextToolSelected = false;
+        GlobalToolState.instance.resetToDefaultBrush();
         GlobalToolState.instance.setStyle(
           strokeWidth: _globalStrokeWidth,
           color: restoredColor,
@@ -620,6 +769,7 @@ class EditorController extends ChangeNotifier {
           controller.drawConfig.value = controller.drawConfig.value.copyWith(
             strokeWidth: _globalStrokeWidth,
             color: restoredColor,
+            contentType: FreehandLine,
           );
         }
 
@@ -636,7 +786,6 @@ class EditorController extends ChangeNotifier {
           for (var controller in _canvases) {
             controller.forceRefreshLayers();
             controller.updateSnapshot(includeBackground: false);
-            controller.prepareSnapshot();
           }
         });
       }
@@ -717,6 +866,15 @@ class EditorController extends ChangeNotifier {
       'templateFrameCount': _templateFrameCount,
       'templateFrameAssets': _templateFrameAssets,
       'enableStickers': _enableStickers,
+      'isOnionEnabled': _isOnionEnabled,
+      'onionColorMode': _onionColorMode,
+      'onionLoop': _onionLoop,
+      'onionBefore': _onionBefore,
+      'onionAfter': _onionAfter,
+      'isGridEnabled': _isGridEnabled,
+      'gridOpacity': _gridOpacity,
+      'gridVerticalSpacing': _gridVerticalSpacing,
+      'gridHorizontalSpacing': _gridHorizontalSpacing,
       'audio': _audioState.toJson(),
       'canvases': [],
     };
@@ -874,6 +1032,7 @@ class EditorController extends ChangeNotifier {
         }
       }
 
+      final int validIndex = (lMap['currentIndex'] as int? ?? history.length).clamp(0, history.length);
       controller.layers.add(
         LayerData(
           id: lMap['id'] as String,
@@ -884,7 +1043,8 @@ class EditorController extends ChangeNotifier {
           opacity: (lMap['opacity'] as num).toDouble(),
           blendMode: BlendMode.values[lMap['blendMode'] as int],
           history: history,
-          currentIndex: (lMap['currentIndex'] as int? ?? history.length).clamp(0, history.length),
+          currentIndex: validIndex,
+          sessionStartIndex: validIndex,
         ),
       );
     }
@@ -924,10 +1084,10 @@ class EditorController extends ChangeNotifier {
 
           if (content is BlurContent) {
             content.image = decodedImage;
-            content.setImageData(decodedImage);
+            content.cachedBase64Image = base64Data;
           } else if (content is SmudgeContent) {
             content.image = decodedImage;
-            content.setImageData(decodedImage);
+            content.cachedBase64Image = base64Data;
           } else if (content is FillContent) {
             content.image = decodedImage;
           }
@@ -1351,6 +1511,7 @@ class EditorController extends ChangeNotifier {
         textAlign: sticker.textAlign,
         opacity: sticker.opacity,
         fontFamily: sticker.fontFamily,
+        flipX: sticker.flipX,
         paint: paint,
       );
       textContent.draw(canvas, size, false);
@@ -1361,6 +1522,12 @@ class EditorController extends ChangeNotifier {
         scale: sticker.scale,
         rotation: sticker.rotation,
         size: sticker.size,
+        flipX: sticker.flipX,
+        flipY: sticker.flipY,
+        topLeftOffset: sticker.topLeftOffset,
+        topRightOffset: sticker.topRightOffset,
+        bottomRightOffset: sticker.bottomRightOffset,
+        bottomLeftOffset: sticker.bottomLeftOffset,
         paint: sticker.content.paint,
       );
       shapeContent.draw(canvas, size, false);
@@ -1400,13 +1567,21 @@ class EditorController extends ChangeNotifier {
           a.isUnderline != b.isUnderline ||
           a.textAlign != b.textAlign ||
           a.opacity != b.opacity ||
-          a.fontFamily != b.fontFamily;
+          a.fontFamily != b.fontFamily ||
+          a.flipX != b.flipX;
     }
     if (a is ActiveShapeSticker && b is ActiveShapeSticker) {
       return a.offset != b.offset ||
           a.scale != b.scale ||
           a.rotation != b.rotation ||
-          a.size != b.size;
+          a.size != b.size ||
+          a.flipX != b.flipX ||
+          a.flipY != b.flipY ||
+          a.topLeftOffset != b.topLeftOffset ||
+          a.topRightOffset != b.topRightOffset ||
+          a.bottomRightOffset != b.bottomRightOffset ||
+          a.bottomLeftOffset != b.bottomLeftOffset ||
+          a.transformMode != b.transformMode;
     }
     if (a is ActiveStraightLineSticker && b is ActiveStraightLineSticker) {
       return a.startPoint != b.startPoint || a.endPoint != b.endPoint;
@@ -1437,15 +1612,24 @@ class EditorController extends ChangeNotifier {
         textAlign: sticker.textAlign,
         opacity: sticker.opacity,
         fontFamily: sticker.fontFamily,
+        flipX: sticker.flipX,
       );
     } else if (sticker is ActiveShapeSticker) {
       return ActiveShapeSticker(
         id: sticker.id,
-        content: sticker.content.copy(),
+        content: sticker.content,
         size: sticker.size,
         offset: sticker.offset,
         scale: sticker.scale,
         rotation: sticker.rotation,
+        flipX: sticker.flipX,
+        flipY: sticker.flipY,
+        topLeftOffset: sticker.topLeftOffset,
+        topRightOffset: sticker.topRightOffset,
+        bottomRightOffset: sticker.bottomRightOffset,
+        bottomLeftOffset: sticker.bottomLeftOffset,
+        transformMode: sticker.transformMode,
+        isLassoSelection: sticker.isLassoSelection,
       );
     } else if (sticker is ActiveStraightLineSticker) {
       return ActiveStraightLineSticker(
@@ -1590,7 +1774,7 @@ class EditorController extends ChangeNotifier {
   bool _canUndoFallback() {
     final layer = drawingController.activeLayer.value;
     if (layer == null || layer.isLocked) return false;
-    return layer.currentIndex > 0;
+    return layer.currentIndex > layer.sessionStartIndex;
   }
 
   bool _canRedoFallback() => true;
@@ -1618,6 +1802,7 @@ class EditorController extends ChangeNotifier {
         textAlign: sticker.textAlign,
         opacity: sticker.opacity,
         fontFamily: sticker.fontFamily,
+        flipX: sticker.flipX,
         paint: paint,
       );
       _activeSticker = null;
@@ -1631,6 +1816,12 @@ class EditorController extends ChangeNotifier {
         scale: sticker.scale,
         rotation: sticker.rotation,
         size: sticker.size,
+        flipX: sticker.flipX,
+        flipY: sticker.flipY,
+        topLeftOffset: sticker.topLeftOffset,
+        topRightOffset: sticker.topRightOffset,
+        bottomRightOffset: sticker.bottomRightOffset,
+        bottomLeftOffset: sticker.bottomLeftOffset,
         paint: sticker.content.paint,
       );
       _activeSticker = null;
@@ -1666,6 +1857,151 @@ class EditorController extends ChangeNotifier {
     }
     updateSnapshot();
     notifyListeners();
+  }
+
+  void setShapeStickerTransformMode(StickerTransformMode mode) {
+    if (_activeSticker is ActiveShapeSticker) {
+      final sticker = _activeSticker as ActiveShapeSticker;
+      sticker.transformMode = mode;
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void flipActiveShapeStickerH() {
+    if (_activeSticker is ActiveShapeSticker) {
+      final sticker = _activeSticker as ActiveShapeSticker;
+      sticker.flipX = !sticker.flipX;
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void flipActiveShapeStickerV() {
+    if (_activeSticker is ActiveShapeSticker) {
+      final sticker = _activeSticker as ActiveShapeSticker;
+      sticker.flipY = !sticker.flipY;
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void duplicateActiveShapeSticker() {
+    if (_activeSticker is ActiveShapeSticker) {
+      final sticker = _activeSticker as ActiveShapeSticker;
+      final shapeContent = ShapeStickerContent.data(
+        child: sticker.content.copy(),
+        offset: sticker.offset,
+        scale: sticker.scale,
+        rotation: sticker.rotation,
+        size: sticker.size,
+        flipX: sticker.flipX,
+        flipY: sticker.flipY,
+        topLeftOffset: sticker.topLeftOffset,
+        topRightOffset: sticker.topRightOffset,
+        bottomRightOffset: sticker.bottomRightOffset,
+        bottomLeftOffset: sticker.bottomLeftOffset,
+        paint: sticker.content.paint.copyWith(),
+      );
+      drawingController.addContent(shapeContent);
+
+      sticker.offset += const Offset(20, 20);
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void rotateActiveShapeSticker90() {
+    if (_activeSticker is ActiveShapeSticker) {
+      final sticker = _activeSticker as ActiveShapeSticker;
+      sticker.rotation += 1.5707963267948966; // 90 degrees in radians
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void centerActiveShapeSticker() {
+    if (_activeSticker is ActiveShapeSticker) {
+      final sticker = _activeSticker as ActiveShapeSticker;
+      final Size canvasSize = drawingController.drawConfig.value.size ??
+          drawingControllerSize ??
+          const Size(500, 500);
+      sticker.offset = Offset(canvasSize.width / 2, canvasSize.height / 2);
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void flipActiveTextStickerH() {
+    if (_activeSticker is ActiveTextSticker) {
+      final sticker = _activeSticker as ActiveTextSticker;
+      sticker.flipX = !sticker.flipX;
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void duplicateActiveTextSticker() {
+    if (_activeSticker is ActiveTextSticker) {
+      final sticker = _activeSticker as ActiveTextSticker;
+      final Paint paint = drawingController.drawConfig.value.paint.copyWith()..color = sticker.color;
+      final textContent = TextContent.data(
+        offset: sticker.offset,
+        text: sticker.text,
+        scale: sticker.scale,
+        rotation: sticker.rotation,
+        fontSize: sticker.fontSize,
+        isBold: sticker.isBold,
+        isItalic: sticker.isItalic,
+        isUnderline: sticker.isUnderline,
+        textAlign: sticker.textAlign,
+        opacity: sticker.opacity,
+        fontFamily: sticker.fontFamily,
+        flipX: sticker.flipX,
+        paint: paint,
+      );
+      drawingController.addContent(textContent);
+
+      sticker.offset += const Offset(20, 20);
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void resetActiveShapeSticker() {
+    if (_activeSticker is ActiveShapeSticker) {
+      final sticker = _activeSticker as ActiveShapeSticker;
+      sticker.resetAll();
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void resetActiveTextSticker() {
+    if (_activeSticker is ActiveTextSticker) {
+      final sticker = _activeSticker as ActiveTextSticker;
+      sticker.resetAll();
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
+  void deleteActiveSticker() {
+    if (_activeSticker != null) {
+      _activeSticker = null;
+      _clearActiveStickerHistory();
+      updateSnapshot();
+      notifyListeners();
+    }
   }
 
   void addTextSticker(String text, Offset position) {
@@ -1916,20 +2252,51 @@ class EditorController extends ChangeNotifier {
         notifyListeners();
         return true;
       } else if (content is Lasso) {
+        if (_activeSticker != null) {
+          stampActiveSticker();
+        }
+
         final drawPath = content.getDrawPath();
         drawPath.path.close();
         final bounds = drawPath.path.getBounds();
 
-        if (bounds.isEmpty) return false;
+        if (bounds.isEmpty || bounds.width < 1 || bounds.height < 1) {
+          updateSnapshot();
+          drawingController.refresh();
+          notifyListeners();
+          return true;
+        }
+
+        final List<PaintContent> historyCopy = [];
+        final historySlice = controller.getHistory.take(controller.currentIndex);
+
+        for (final item in historySlice) {
+          bool overlaps = true;
+          try {
+            final Path p = item.getPath();
+            final Rect b = p.getBounds();
+            if (!b.isEmpty && !bounds.overlaps(b.inflate(item.paint.strokeWidth / 2))) {
+              overlaps = false;
+            }
+          } catch (_) {
+            overlaps = true;
+          }
+
+          if (overlaps) {
+            historyCopy.add(item.copy());
+          }
+        }
+
+        if (historyCopy.isEmpty) {
+          updateSnapshot();
+          drawingController.refresh();
+          notifyListeners();
+          return true;
+        }
 
         final Paint eraserPaint = Paint()
           ..style = PaintingStyle.fill
           ..blendMode = BlendMode.clear;
-
-        final historyCopy = controller.getHistory
-            .take(controller.currentIndex)
-            .map((e) => e.copy())
-            .toList();
 
         controller.addContent(EraserHole(path: drawPath, paint: eraserPaint));
 
@@ -1945,8 +2312,10 @@ class EditorController extends ChangeNotifier {
           content: stickerContent,
           offset: bounds.center,
           size: bounds.size,
+          isLassoSelection: true,
         );
         updateSnapshot();
+        drawingController.refresh();
         notifyListeners();
         return true;
       } else if (content is ShapeStickerContent) {
@@ -1957,6 +2326,13 @@ class EditorController extends ChangeNotifier {
           scale: content.scale,
           rotation: content.rotation,
           size: content.size,
+          flipX: content.flipX,
+          flipY: content.flipY,
+          topLeftOffset: content.topLeftOffset,
+          topRightOffset: content.topRightOffset,
+          bottomRightOffset: content.bottomRightOffset,
+          bottomLeftOffset: content.bottomLeftOffset,
+          isLassoSelection: true,
         );
         updateSnapshot();
         notifyListeners();
@@ -2010,6 +2386,7 @@ class EditorController extends ChangeNotifier {
       controller.drawConfig.removeListener(_onDrawConfigChanged);
       controller.dispose();
     }
+    GlobalToolState.instance.resetToDefaultBrush();
     super.dispose();
   }
 }

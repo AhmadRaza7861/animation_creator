@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../projects/data/project_repository.dart';
@@ -388,13 +389,14 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
               ),
             ),
 
-            // Bottom Playback Floating Control Bar (FittedBox to prevent any overflow on large numbers)
+            // Bottom Playback Floating Control Bar (Stable anchored layout)
             Positioned(
               bottom: 10,
               left: 10,
               right: 10,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.96),
                   borderRadius: BorderRadius.circular(16),
@@ -407,122 +409,122 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                     ),
                   ],
                 ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Transport Buttons: Step Back, Play/Pause, Step Forward
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Step Back Button
-                          IconButton(
-                            icon: const Icon(Icons.skip_previous_rounded, size: 20, color: ColorConstants.darkText),
-                            onPressed: _stepBackward,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                            splashRadius: 16,
-                          ),
-                          const SizedBox(width: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Transport Buttons: Step Back, Play/Pause, Step Forward
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Step Back Button
+                        IconButton(
+                          icon: const Icon(Icons.skip_previous_rounded, size: 20, color: ColorConstants.darkText),
+                          onPressed: _stepBackward,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                          splashRadius: 16,
+                        ),
+                        const SizedBox(width: 2),
 
-                          // Play/Pause Button
-                          GestureDetector(
-                            onTap: _togglePlayPause,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: ColorConstants.primary,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: ColorConstants.primary.withValues(alpha: 0.3),
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
+                        // Play/Pause Button
+                        GestureDetector(
+                          onTap: _togglePlayPause,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: ColorConstants.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: ColorConstants.primary.withValues(alpha: 0.3),
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 16,
                             ),
                           ),
-                          const SizedBox(width: 2),
+                        ),
+                        const SizedBox(width: 2),
 
-                          // Step Forward Button
-                          IconButton(
-                            icon: const Icon(Icons.skip_next_rounded, size: 20, color: ColorConstants.darkText),
-                            onPressed: _stepForward,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                            splashRadius: 16,
-                          ),
-                        ],
+                        // Step Forward Button
+                        IconButton(
+                          icon: const Icon(Icons.skip_next_rounded, size: 20, color: ColorConstants.darkText),
+                          onPressed: _stepForward,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                          splashRadius: 16,
+                        ),
+                      ],
+                    ),
+
+                    // Frame Indicator Pill (fixed minimum width, centered, tabular figures)
+                    Container(
+                      constraints: const BoxConstraints(minWidth: 92),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      const SizedBox(width: 8),
+                      child: Text(
+                        'Frame ${_currentFrameIndex + 1}/${widget.template.frameCount}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: ColorConstants.darkText,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
 
-                      // Frame Indicator Pill
-                      Container(
+                    // Playback Speed Toggle Pill (0.5x / 1.0x / 2.0x)
+                    GestureDetector(
+                      onTap: _cycleSpeed,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 56),
+                        alignment: Alignment.center,
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: _playbackSpeed != 1.0
+                              ? ColorConstants.primary
+                              : const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Frame ${_currentFrameIndex + 1}/${widget.template.frameCount}',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w800,
-                            color: ColorConstants.darkText,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Playback Speed Toggle Pill (0.5x / 1.0x / 2.0x)
-                      GestureDetector(
-                        onTap: _cycleSpeed,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
+                          border: Border.all(
                             color: _playbackSpeed != 1.0
                                 ? ColorConstants.primary
-                                : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _playbackSpeed != 1.0
-                                  ? ColorConstants.primary
-                                  : const Color(0xFFE2E8F0),
-                              width: 1.0,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.speed_rounded,
-                                size: 13,
-                                color: _playbackSpeed != 1.0 ? Colors.white : ColorConstants.darkText,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${_playbackSpeed}x',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: _playbackSpeed != 1.0 ? Colors.white : ColorConstants.darkText,
-                                ),
-                              ),
-                            ],
+                                : const Color(0xFFE2E8F0),
+                            width: 1.0,
                           ),
                         ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.speed_rounded,
+                              size: 13,
+                              color: _playbackSpeed != 1.0 ? Colors.white : ColorConstants.darkText,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${_playbackSpeed}x',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: _playbackSpeed != 1.0 ? Colors.white : ColorConstants.darkText,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

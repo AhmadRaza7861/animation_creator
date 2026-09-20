@@ -52,8 +52,13 @@ class BlurContent extends PaintContent {
     Uint8List? rgbaData,
     int? rgbaWidth,
     int? rgbaHeight,
+    Uint32List? pixelBuffer,
   }) : super.paint(paint) {
-    if (rgbaData != null && rgbaWidth != null && rgbaHeight != null) {
+    if (pixelBuffer != null) {
+      _pixels = pixelBuffer;
+      _width = rgbaWidth ?? 0;
+      _height = rgbaHeight ?? 0;
+    } else if (rgbaData != null && rgbaWidth != null && rgbaHeight != null) {
       setRgbaData(rgbaData, rgbaWidth, rgbaHeight);
     }
   }
@@ -101,9 +106,9 @@ class BlurContent extends PaintContent {
   int _processedIndex = 0;
 
   /// Reusable local patch buffers to eliminate GC allocations in touch loop
-  Uint32List _patchSrc = Uint32List(256 * 256);
-  Uint32List _patchHoriz = Uint32List(256 * 256);
-  Uint32List _patchBlurred = Uint32List(256 * 256);
+  static Uint32List _patchSrc = Uint32List(256 * 256);
+  static Uint32List _patchHoriz = Uint32List(256 * 256);
+  static Uint32List _patchBlurred = Uint32List(256 * 256);
 
   bool _isDecoding = false;
   bool _needsDecode = false;
@@ -124,7 +129,7 @@ class BlurContent extends PaintContent {
     imageData.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
       if (data != null) {
         if (_pixels == null) {
-          final Uint32List u32 = data.buffer.asUint32List();
+          final Uint32List u32 = data.buffer.asUint32List(data.offsetInBytes, data.lengthInBytes ~/ 4);
           _pixels = Uint32List.fromList(u32);
           _width = imageData.width;
           _height = imageData.height;
@@ -143,7 +148,7 @@ class BlurContent extends PaintContent {
       canvasSize = size;
     }
     final ByteData bd = ByteData.sublistView(data);
-    _pixels = Uint32List.fromList(bd.buffer.asUint32List());
+    _pixels = Uint32List.fromList(bd.buffer.asUint32List(bd.offsetInBytes, data.lengthInBytes ~/ 4));
     _processPendingSegments();
     _scheduleLiveImageDecode();
   }
@@ -512,10 +517,10 @@ class BlurContent extends PaintContent {
         points: points.map((p) => BlurPoint(p.point, p.pressure)).toList(),
         strength: strength,
         paint: paint.copyWith(),
-        image: image,
+        image: image ?? liveImage,
         canvasSize: canvasSize,
         onRepaint: onRepaint,
-        rgbaData: rgbaData,
+        pixelBuffer: _pixels,
         rgbaWidth: _width,
         rgbaHeight: _height,
       )..cachedBase64Image = cachedBase64Image;

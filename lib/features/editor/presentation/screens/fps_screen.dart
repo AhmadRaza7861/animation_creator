@@ -90,12 +90,12 @@ class _FpsScreenState extends State<FpsScreen> {
           ),
           const SizedBox(width: 8),
         ],
-        title:  Text(
+        title: Text(
           StringConstants.frames_per_second,
-          style: TextStyle(
+          style: const TextStyle(
             color: ColorConstants.text_color,
             fontWeight: FontWeight.w700,
-            fontSize: 22,
+            fontSize: 18,
           ),
         ),
         backgroundColor: ColorConstants.background,

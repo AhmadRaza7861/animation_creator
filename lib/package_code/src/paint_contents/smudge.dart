@@ -100,13 +100,13 @@ class SmudgeContent extends PaintContent {
   final List<double> _pendingPressures = [];
   int _processedIndex = 0;
 
-  /// Moving wet-paint carrier reservoir buffer
-  Uint32List _reservoir = Uint32List(128 * 128);
+  /// Moving wet-paint carrier reservoir buffer (allocated on demand during touch)
+  Uint32List _reservoir = Uint32List(0);
   int _reservoirDim = 0;
   bool _reservoirInitialized = false;
 
   /// Reusable local patch buffer to prevent memory allocations in touch loop
-  Uint32List _patchBuffer = Uint32List(256 * 256);
+  static Uint32List _patchBuffer = Uint32List(256 * 256);
 
   bool _isDecoding = false;
   bool _needsDecode = false;
@@ -127,7 +127,7 @@ class SmudgeContent extends PaintContent {
     imageData.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
       if (data != null) {
         if (_pixels == null) {
-          final Uint32List u32 = data.buffer.asUint32List();
+          final Uint32List u32 = data.buffer.asUint32List(data.offsetInBytes, data.lengthInBytes ~/ 4);
           _pixels = Uint32List.fromList(u32);
           _width = imageData.width;
           _height = imageData.height;
@@ -146,7 +146,7 @@ class SmudgeContent extends PaintContent {
       canvasSize = size;
     }
     final ByteData bd = ByteData.sublistView(data);
-    _pixels = Uint32List.fromList(bd.buffer.asUint32List());
+    _pixels = Uint32List.fromList(bd.buffer.asUint32List(bd.offsetInBytes, data.lengthInBytes ~/ 4));
     _processPendingSegments();
     _scheduleLiveImageDecode();
   }
@@ -667,7 +667,7 @@ class SmudgeContent extends PaintContent {
         onRepaint: onRepaint,
       )
         ..liveImage = liveImage ?? image
-        .._pixels = _pixels != null ? Uint32List.fromList(_pixels!) : null
+        .._pixels = _pixels
         .._width = _width
         .._height = _height
         ..cachedBase64Image = cachedBase64Image;

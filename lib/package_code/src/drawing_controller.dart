@@ -16,6 +16,7 @@ import 'helper/flood_fill.dart';
 import 'paint_contents/eyedropper.dart';
 import 'paint_contents/blur.dart';
 import 'paint_contents/smudge.dart';
+import 'paint_contents/lasso.dart';
 import 'ruler/ruler_config.dart';
 import 'ruler/mirror_content.dart';
 
@@ -307,6 +308,13 @@ class GlobalToolState extends ChangeNotifier {
     );
     content.paint = toolConfig.value.paint;
     paintContent = content;
+  }
+
+  void resetToDefaultBrush() {
+    activeBrushPresetId = null;
+    activeTipLabel = null;
+    rulerConfig.value = rulerConfig.value.copyWith(type: RulerType.none);
+    setPaintContent(FreehandLine());
   }
 }
 
@@ -790,6 +798,9 @@ class DrawingController extends ChangeNotifier {
     final int hisLen = layer.history.length;
     if (hisLen > layer.currentIndex) {
       layer.history.removeRange(layer.currentIndex, hisLen);
+      if (layer.sessionStartIndex > layer.currentIndex) {
+        layer.sessionStartIndex = layer.currentIndex;
+      }
     }
     layer.history.add(content);
     layer.currentIndex++;
@@ -809,6 +820,9 @@ class DrawingController extends ChangeNotifier {
     final int hisLen = layer.history.length;
     if (hisLen > layer.currentIndex) {
       layer.history.removeRange(layer.currentIndex, hisLen);
+      if (layer.sessionStartIndex > layer.currentIndex) {
+        layer.sessionStartIndex = layer.currentIndex;
+      }
     }
 
     // Find the insert position: before non-fill drawing contents (so strokes stay on top)
@@ -915,6 +929,9 @@ class DrawingController extends ChangeNotifier {
     final int hisLen = layer.history.length;
     if (hisLen > layer.currentIndex) {
       layer.history.removeRange(layer.currentIndex, hisLen);
+      if (layer.sessionStartIndex > layer.currentIndex) {
+        layer.sessionStartIndex = layer.currentIndex;
+      }
     }
     layer.history.addAll(contents);
     layer.currentIndex += contents.length;
@@ -941,6 +958,9 @@ class DrawingController extends ChangeNotifier {
     layer.history.removeWhere((content) => contents.contains(content));
     
     layer.currentIndex = layer.history.length;
+    if (layer.sessionStartIndex > layer.currentIndex) {
+      layer.sessionStartIndex = layer.currentIndex;
+    }
     _invalidateRasterCache();
     _refreshDeep();
     updateSnapshot();
@@ -1441,6 +1461,9 @@ class DrawingController extends ChangeNotifier {
 
       if (hisLen > currentLayer.currentIndex) {
         currentLayer.history.removeRange(currentLayer.currentIndex, hisLen);
+        if (currentLayer.sessionStartIndex > currentLayer.currentIndex) {
+          currentLayer.sessionStartIndex = currentLayer.currentIndex;
+        }
       }
 
       if (eraserContent != null) {
@@ -1458,6 +1481,9 @@ class DrawingController extends ChangeNotifier {
           if (color != null) {
             setStyle(color: color);
           }
+        } else if (drawingContent is Lasso) {
+          intercepted = true;
+          interceptDraw?.call(drawingContent!);
         } else if (interceptDraw != null) {
           intercepted = interceptDraw!(drawingContent!);
         }
@@ -1530,7 +1556,7 @@ class DrawingController extends ChangeNotifier {
     if (layer == null || layer.isLocked) return;
     
     _invalidateRasterCache();
-    if (layer.currentIndex > 0) {
+    if (layer.currentIndex > layer.sessionStartIndex) {
       layer.currentIndex = layer.currentIndex - 1;
       _refreshDeep();
       updateSnapshot();
@@ -1548,7 +1574,7 @@ class DrawingController extends ChangeNotifier {
     }
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return false;
-    return layer.currentIndex > 0;
+    return layer.currentIndex > layer.sessionStartIndex;
   }
 
   /// 重做上一步撤销的操作
@@ -1594,6 +1620,7 @@ class DrawingController extends ChangeNotifier {
     cachedImage = null;
     layer.history.clear();
     layer.currentIndex = 0;
+    layer.sessionStartIndex = 0;
     _refreshDeep();
     updateSnapshot();
     notifyListeners();
@@ -1714,7 +1741,8 @@ class DrawingController extends ChangeNotifier {
     final List<Map<String, dynamic>> out = [];
     for (final layer in layers) {
       final List<Map<String, dynamic>> historyJson = [];
-      for (final content in layer.history) {
+      final activeHistory = layer.history.sublist(0, layer.currentIndex.clamp(0, layer.history.length));
+      for (final content in activeHistory) {
         await content.prepareExport();
         historyJson.add(content.toJson());
       }
@@ -1726,7 +1754,7 @@ class DrawingController extends ChangeNotifier {
         'isGuide': layer.isGuide,
         'opacity': layer.opacity,
         'blendMode': layer.blendMode.index,
-        'currentIndex': layer.currentIndex,
+        'currentIndex': activeHistory.length,
         'history': historyJson,
       });
     }
