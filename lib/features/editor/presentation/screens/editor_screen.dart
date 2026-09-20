@@ -523,7 +523,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   void _showOnionSettingsSheet(
     BuildContext context,
     EditorController controller,
-  ) {
+  )
+  {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -818,7 +819,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   void _showGridSettingsSheet(
     BuildContext context,
     EditorController controller,
-  ) {
+  )
+  {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1687,34 +1689,84 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                   ),
                   const Spacer(),
 
-                  IconButton(
-                    icon: const Icon(
-                      Icons.undo_rounded,
-                      size: 22,
-                      color: ColorConstants.darkText,
-                    ),
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => controller.drawingController.undo(),
+                  ListenableBuilder(
+                    listenable: controller.drawingController,
+                    builder: (context, _) {
+                      final bool canUndo = controller.drawingController.canUndo();
+                      final bool canRedo = controller.drawingController.canRedo();
+
+                      return Container(
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Undo
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: const BorderRadius.horizontal(
+                                  left: Radius.circular(16),
+                                ),
+                                onTap: canUndo
+                                    ? () => controller.drawingController.undo()
+                                    : null,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  child: Icon(
+                                    Icons.undo_rounded,
+                                    size: 19,
+                                    color: canUndo
+                                        ? ColorConstants.darkText
+                                        : const Color(0xFFCBD5E1),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Divider
+                            Container(
+                              width: 1,
+                              height: 14,
+                              color: const Color(0xFFE2E8F0),
+                            ),
+                            // Redo
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: const BorderRadius.horizontal(
+                                  right: Radius.circular(16),
+                                ),
+                                onTap: canRedo
+                                    ? () => controller.drawingController.redo()
+                                    : null,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  child: Icon(
+                                    Icons.redo_rounded,
+                                    size: 19,
+                                    color: canRedo
+                                        ? ColorConstants.darkText
+                                        : const Color(0xFFCBD5E1),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.redo_rounded,
-                      size: 22,
-                      color: ColorConstants.darkText,
-                    ),
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => controller.drawingController.redo(),
-                  ),
+                  const SizedBox(width: 4),
                   IconButton(
                     icon: SvgPicture.asset(
                       AssetConstants.expander_icon,
