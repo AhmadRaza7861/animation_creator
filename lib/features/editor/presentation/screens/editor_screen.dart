@@ -1161,18 +1161,22 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
 
                       return MenuAnchor(
                         style: MenuStyle(
-                          padding: WidgetStateProperty.all(
-                            const EdgeInsets.all(16),
-                          ),
+                          padding: WidgetStateProperty.all(EdgeInsets.zero),
                           shape: WidgetStateProperty.all(
                             RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
                           backgroundColor: WidgetStateProperty.all(
                             Colors.white,
                           ),
-                          elevation: WidgetStateProperty.all(8),
+                          elevation: WidgetStateProperty.all(12),
+                          shadowColor: WidgetStateProperty.all(
+                            Colors.black.withValues(alpha: 0.12),
+                          ),
+                          surfaceTintColor: WidgetStateProperty.all(
+                            Colors.transparent,
+                          ),
                         ),
                         builder:
                             (
@@ -1242,7 +1246,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                 30.0,
                                 50.0,
                               ];
-                              final opacityPresets = [0.2, 0.45, 0.7, 1.0];
+                              final opacityPresets = [0.25, 0.50, 0.75, 1.0];
 
                               final baseColor = config.color.withOpacity(1.0);
                               final previewColor = baseColor.withOpacity(
@@ -1250,33 +1254,40 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                               );
 
                               return Container(
-                                width: 250,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
+                                width: 268,
+                                padding: const EdgeInsets.all(16),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
+                                    // 1. Live Preview Card
                                     Container(
-                                      height: 58,
+                                      height: 60,
                                       decoration: BoxDecoration(
-                                        color: Colors.grey.shade50,
+                                        color: Colors.white,
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
-                                          color: Colors.grey.shade200,
+                                          color: const Color(0xFFE2E8F0),
+                                          width: 1.0,
                                         ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.03,
+                                            ),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(15),
                                         child: Stack(
                                           children: [
-                                            Positioned.fill(
+                                            const Positioned.fill(
                                               child: CustomPaint(
-                                                painter:
-                                                    const _CheckerboardPainter(),
+                                                painter: _CheckerboardPainter(),
                                               ),
                                             ),
                                             Positioned.fill(
@@ -1291,30 +1302,102 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 20),
+                                    const SizedBox(height: 16),
+
+                                    // 2. Brush Size Header
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          'Brush Size',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey.shade800,
-                                          ),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SvgPicture.asset(
+                                              AssetConstants.stock_icon,
+                                              width: 14,
+                                              height: 14,
+                                              colorFilter:
+                                                  const ColorFilter.mode(
+                                                    Color(0xFF475569),
+                                                    BlendMode.srcIn,
+                                                  ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            const Text(
+                                              'Brush Size',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFF1E293B),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        Text(
-                                          '${currentWidth.round()} px',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: ColorConstants.accent,
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2.5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: ColorConstants.accent
+                                                .withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${currentWidth.round()} px',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: ColorConstants.accent,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 10),
+                                    const SizedBox(height: 6),
+
+                                    // 3. Brush Size Slider
+                                    SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        trackHeight: 5,
+                                        activeTrackColor: ColorConstants.accent,
+                                        inactiveTrackColor: const Color(
+                                          0xFFF1F5F9,
+                                        ),
+                                        thumbColor: Colors.white,
+                                        thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 8,
+                                          elevation: 3,
+                                          pressedElevation: 5,
+                                        ),
+                                        overlayColor: ColorConstants.accent
+                                            .withValues(alpha: 0.15),
+                                        overlayShape:
+                                            const RoundSliderOverlayShape(
+                                              overlayRadius: 16,
+                                            ),
+                                        trackShape:
+                                            const RoundedRectSliderTrackShape(),
+                                      ),
+                                      child: Slider(
+                                        value: currentWidth.clamp(1.0, 50.0),
+                                        min: 1.0,
+                                        max: 50.0,
+                                        onChanged: (val) {
+                                          setPopupState(() {
+                                            controller.globalStrokeWidth = val;
+                                          });
+                                          controller.drawingController
+                                              .setStyle(strokeWidth: val);
+                                          setState(() {});
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+
+                                    // 4. Brush Size Quick Presets
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
@@ -1327,22 +1410,27 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                               controller.globalStrokeWidth = p;
                                             });
                                             controller.drawingController
-                                                .setStyle(strokeWidth: p);
+                                              .setStyle(strokeWidth: p);
                                             setState(() {});
                                           },
-                                          child: Container(
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 150,
+                                            ),
                                             width: 34,
-                                            height: 34,
+                                            height: 30,
                                             alignment: Alignment.center,
                                             decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                               color: isSelected
                                                   ? ColorConstants.accent
-                                                  : Colors.grey.shade50,
+                                                  : const Color(0xFFF8FAFC),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Colors.transparent
-                                                    : Colors.grey.shade200,
+                                                    : const Color(0xFFE2E8F0),
+                                                width: 1.0,
                                               ),
                                               boxShadow: isSelected
                                                   ? [
@@ -1364,146 +1452,117 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                             child: Text(
                                               '${p.round()}',
                                               style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
                                                 color: isSelected
                                                     ? Colors.white
-                                                    : Colors.grey.shade700,
+                                                    : const Color(0xFF475569),
                                               ),
                                             ),
                                           ),
                                         );
                                       }).toList(),
                                     ),
-                                    const SizedBox(height: 14),
-                                    Center(
-                                      child: Container(
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade50,
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.grey.shade200,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            ContinuousPressButton(
-                                              icon: Icons.remove,
-                                              isCapsuleSide: true,
-                                              onPress: () {
-                                                final val = (currentWidth - 1.0)
-                                                    .clamp(1.0, 50.0);
-                                                setPopupState(() {
-                                                  controller.globalStrokeWidth =
-                                                      val;
-                                                });
-                                                controller.drawingController
-                                                    .setStyle(strokeWidth: val);
-                                                setState(() {});
-                                              },
-                                              onStep: () {
-                                                final val =
-                                                    (controller.globalStrokeWidth -
-                                                            1.0)
-                                                        .clamp(1.0, 50.0);
-                                                setPopupState(() {
-                                                  controller.globalStrokeWidth =
-                                                      val;
-                                                });
-                                                controller.drawingController
-                                                    .setStyle(strokeWidth: val);
-                                                setState(() {});
-                                              },
-                                            ),
-                                            Container(
-                                              width: 1,
-                                              height: 18,
-                                              color: Colors.grey.shade200,
-                                            ),
-                                            Container(
-                                              width: 60,
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                '${currentWidth.round()}',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                  color:
-                                                      ColorConstants.darkText,
-                                                ),
-                                              ),
-                                            ),
-                                            Container(
-                                              width: 1,
-                                              height: 18,
-                                              color: Colors.grey.shade200,
-                                            ),
-                                            ContinuousPressButton(
-                                              icon: Icons.add,
-                                              isCapsuleSide: true,
-                                              onPress: () {
-                                                final val = (currentWidth + 1.0)
-                                                    .clamp(1.0, 50.0);
-                                                setPopupState(() {
-                                                  controller.globalStrokeWidth =
-                                                      val;
-                                                });
-                                                controller.drawingController
-                                                    .setStyle(strokeWidth: val);
-                                                setState(() {});
-                                              },
-                                              onStep: () {
-                                                final val =
-                                                    (controller.globalStrokeWidth +
-                                                            1.0)
-                                                        .clamp(1.0, 50.0);
-                                                setPopupState(() {
-                                                  controller.globalStrokeWidth =
-                                                      val;
-                                                });
-                                                controller.drawingController
-                                                    .setStyle(strokeWidth: val);
-                                                setState(() {});
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+
+                                    // 5. Divider
                                     Container(
                                       height: 1,
                                       margin: const EdgeInsets.symmetric(
-                                        vertical: 18,
+                                        vertical: 14,
                                       ),
-                                      color: Colors.grey.shade200,
+                                      color: const Color(0xFFF1F5F9),
                                     ),
+
+                                    // 6. Opacity Header
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          'Opacity',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey.shade800,
-                                          ),
+                                        const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.opacity_rounded,
+                                              size: 15,
+                                              color: Color(0xFF475569),
+                                            ),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Opacity',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFF1E293B),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        Text(
-                                          '${(currentOpacity * 100).round()}%',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: ColorConstants.accent,
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2.5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: ColorConstants.accent
+                                                .withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${(currentOpacity * 100).round()}%',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: ColorConstants.accent,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 10),
+                                    const SizedBox(height: 6),
+
+                                    // 7. Opacity Slider
+                                    SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        trackHeight: 5,
+                                        activeTrackColor: ColorConstants.accent,
+                                        inactiveTrackColor: const Color(
+                                          0xFFF1F5F9,
+                                        ),
+                                        thumbColor: Colors.white,
+                                        thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 8,
+                                          elevation: 3,
+                                          pressedElevation: 5,
+                                        ),
+                                        overlayColor: ColorConstants.accent
+                                            .withValues(alpha: 0.15),
+                                        overlayShape:
+                                            const RoundSliderOverlayShape(
+                                              overlayRadius: 16,
+                                            ),
+                                        trackShape:
+                                            const RoundedRectSliderTrackShape(),
+                                      ),
+                                      child: Slider(
+                                        value: currentOpacity.clamp(0.05, 1.0),
+                                        min: 0.05,
+                                        max: 1.0,
+                                        onChanged: (val) {
+                                          setPopupState(() {
+                                            controller.colorOpacity = val;
+                                          });
+                                          controller.drawingController.setStyle(
+                                            color: baseColor.withOpacity(val),
+                                          );
+                                          setState(() {});
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+
+                                    // 8. Opacity Quick Presets
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
@@ -1523,20 +1582,24 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                 );
                                             setState(() {});
                                           },
-                                          child: Container(
-                                            width: 48,
-                                            height: 32,
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 150,
+                                            ),
+                                            width: 54,
+                                            height: 30,
                                             alignment: Alignment.center,
                                             decoration: BoxDecoration(
                                               borderRadius:
-                                                  BorderRadius.circular(16),
+                                                  BorderRadius.circular(10),
                                               color: isSelected
                                                   ? ColorConstants.accent
-                                                  : Colors.grey.shade50,
+                                                  : const Color(0xFFF8FAFC),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Colors.transparent
-                                                    : Colors.grey.shade200,
+                                                    : const Color(0xFFE2E8F0),
+                                                width: 1.0,
                                               ),
                                               boxShadow: isSelected
                                                   ? [
@@ -1559,124 +1622,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                               '${(o * 100).round()}%',
                                               style: TextStyle(
                                                 fontSize: 11,
-                                                fontWeight: FontWeight.bold,
+                                                fontWeight: FontWeight.w700,
                                                 color: isSelected
                                                     ? Colors.white
-                                                    : Colors.grey.shade700,
+                                                    : const Color(0xFF475569),
                                               ),
                                             ),
                                           ),
                                         );
                                       }).toList(),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    Center(
-                                      child: Container(
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade50,
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.grey.shade200,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            ContinuousPressButton(
-                                              icon: Icons.remove,
-                                              isCapsuleSide: true,
-                                              onPress: () {
-                                                final val =
-                                                    (currentOpacity - 0.05)
-                                                        .clamp(0.05, 1.0);
-                                                setPopupState(() {
-                                                  controller.colorOpacity = val;
-                                                });
-                                                controller.drawingController
-                                                    .setStyle(
-                                                      color: baseColor
-                                                          .withOpacity(val),
-                                                    );
-                                                setState(() {});
-                                              },
-                                              onStep: () {
-                                                final val =
-                                                    (controller.colorOpacity -
-                                                            0.05)
-                                                        .clamp(0.05, 1.0);
-                                                setPopupState(() {
-                                                  controller.colorOpacity = val;
-                                                });
-                                                controller.drawingController
-                                                    .setStyle(
-                                                      color: baseColor
-                                                          .withOpacity(val),
-                                                    );
-                                                setState(() {});
-                                              },
-                                            ),
-                                            Container(
-                                              width: 1,
-                                              height: 18,
-                                              color: Colors.grey.shade200,
-                                            ),
-                                            Container(
-                                              width: 70,
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                '${(currentOpacity * 100).round()}%',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                  color:
-                                                      ColorConstants.darkText,
-                                                ),
-                                              ),
-                                            ),
-                                            Container(
-                                              width: 1,
-                                              height: 18,
-                                              color: Colors.grey.shade200,
-                                            ),
-                                            ContinuousPressButton(
-                                              icon: Icons.add,
-                                              isCapsuleSide: true,
-                                              onPress: () {
-                                                final val =
-                                                    (currentOpacity + 0.05)
-                                                        .clamp(0.05, 1.0);
-                                                setPopupState(() {
-                                                  controller.colorOpacity = val;
-                                                });
-                                                controller.drawingController
-                                                    .setStyle(
-                                                      color: baseColor
-                                                          .withOpacity(val),
-                                                    );
-                                                setState(() {});
-                                              },
-                                              onStep: () {
-                                                final val =
-                                                    (controller.colorOpacity +
-                                                            0.05)
-                                                        .clamp(0.05, 1.0);
-                                                setPopupState(() {
-                                                  controller.colorOpacity = val;
-                                                });
-                                                controller.drawingController
-                                                    .setStyle(
-                                                      color: baseColor
-                                                          .withOpacity(val),
-                                                    );
-                                                setState(() {});
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
                                     ),
                                   ],
                                 ),
@@ -3386,22 +3340,34 @@ class StrokePreviewPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final double clampedWidth = strokeWidth.clamp(1.0, 50.0);
     final paint = Paint()
       ..color = color
-      ..strokeWidth = strokeWidth.clamp(1.0, 50.0)
+      ..strokeWidth = clampedWidth
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
+    // Dynamically calculate wave amplitude to ensure thick strokes never clip or overlap
+    final double maxAllowedAmp =
+        (size.height / 2 - (clampedWidth / 2) - 4).clamp(0.0, 13.0);
+    final double midY = size.height / 2;
+    final double startX = 22.0;
+    final double endX = size.width - 22.0;
+
     final path = Path();
-    path.moveTo(20, size.height / 2);
-    path.cubicTo(
-      size.width * 0.25,
-      size.height / 2 - 15,
-      size.width * 0.75,
-      size.height / 2 + 15,
-      size.width - 20,
-      size.height / 2,
-    );
+    path.moveTo(startX, midY);
+    if (maxAllowedAmp > 2.0) {
+      path.cubicTo(
+        startX + (endX - startX) * 0.32,
+        midY - maxAllowedAmp,
+        startX + (endX - startX) * 0.68,
+        midY + maxAllowedAmp,
+        endX,
+        midY,
+      );
+    } else {
+      path.lineTo(endX, midY);
+    }
     canvas.drawPath(path, paint);
   }
 
@@ -3416,8 +3382,8 @@ class _CheckerboardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paintLight = Paint()..color = Colors.white;
-    final paintDark = Paint()..color = Colors.grey.shade200;
+    final paintLight = Paint()..color = const Color(0xFFFAFAFA);
+    final paintDark = Paint()..color = const Color(0xFFF1F5F9);
     const double sizeSquare = 8.0;
 
     for (double y = 0; y < size.height; y += sizeSquare) {

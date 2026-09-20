@@ -2523,37 +2523,47 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
       ),
       child: Row(
         children: [
-          // 1. Deselect / Close Handle Button (Done / ✕)
-          GestureDetector(
-            onTap: () {
-              _selectedClipIdNotifier.value = null;
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              height: 48,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F5F8),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE5E6EB), width: 1),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.close_rounded,
-                    color: Color(0xFF2C2D35),
-                    size: 18,
+          // 1. Deselect / Close Handle Button (Done / ✓)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                _selectedClipIdNotifier.value = null;
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF9318).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFFF9318).withValues(alpha: 0.25),
+                    width: 1,
                   ),
-                  SizedBox(width: 4),
-                  Text(
-                    'Done',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF2C2D35),
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check_rounded,
+                      color: Color(0xFFFF9318),
+                      size: 22,
                     ),
-                  ),
-                ],
+                    SizedBox(height: 3),
+                    Text(
+                      'Done',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFFF9318),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -2562,7 +2572,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
             width: 1,
             height: 28,
             color: const Color(0xFFE5E6EB),
-            margin: const EdgeInsets.symmetric(horizontal: 6),
+            margin: const EdgeInsets.symmetric(horizontal: 8),
           ),
 
           Expanded(
