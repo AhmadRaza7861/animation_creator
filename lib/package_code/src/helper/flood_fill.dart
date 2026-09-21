@@ -1,21 +1,27 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+/// Flood fill result containing the raster fill image and compositing placement
+class FloodFillResult {
+  final ui.Image image;
+  final bool isUnderneath;
+
+  const FloodFillResult({
+    required this.image,
+    required this.isUnderneath,
+  });
+}
+
 /// 油漆桶填充工具辅助类
 ///
 /// True paint-bucket flood fill for digital animation and drawing:
 /// - Determines the connected enclosed region from composited line art
 /// - Treats anti-aliased pixels of the outline as boundaries (prevents leaking across strokes)
-/// - Expands the fill mask slightly underneath the anti-aliased boundary pixels (eliminates halos)
-/// - Keeps the original line art visually on top without modifying or replacing stroke pixels
+/// - Expands the fill mask slightly underneath the anti-aliased boundary pixels (eliminates halos) for interior fills
+/// - For stroke re-coloring, accurately captures the stroke anti-aliasing without outer dilation halos
 class FloodFill {
-  /// 执行填充算法
-  /// [image] 原始图片坐标数据 (所有可见图层的合成快照)
-  /// [startPoint] 点击开始的位置 (逻辑坐标)
-  /// [fillColor] 填充颜色
-  /// [tolerance] 容差 (0.0 - 1.0)
-  /// [expandRadius] 边缘抗锯齿扩展半径 (像素，默认 2.0，用于消除白边)
-  static Future<ui.Image?> fill({
+  /// 执行填充算法并返回结果（包含放置层级信息）
+  static Future<FloodFillResult?> fillWithResult({
     required ui.Image image,
     required ui.Offset startPoint,
     required ui.Color fillColor,
@@ -90,15 +96,15 @@ class FloodFill {
         }
         return false;
       } else {
-        // Re-coloring mode: boundary is where color differs from target
+        // Re-coloring mode: transparent background is a boundary
+        if (pA == 0) return true;
         final int pR = pixels[idx];
         final int pG = pixels[idx + 1];
         final int pB = pixels[idx + 2];
         final double diffR = (pR - targetR).toDouble();
         final double diffG = (pG - targetG).toDouble();
         final double diffB = (pB - targetB).toDouble();
-        final double diffA = (pA - targetA).toDouble();
-        final double distSq = diffR * diffR + diffG * diffG + diffB * diffB + diffA * diffA;
+        final double distSq = diffR * diffR + diffG * diffG + diffB * diffB;
         return distSq > colorToleranceSq;
       }
     }
@@ -166,11 +172,11 @@ class FloodFill {
       }
     }
 
-    // 2. Build Output Image with Sub-Pixel Dilation
-    // The fill mask is expanded underneath anti-aliased boundary pixels so when the line art
-    // is rendered on top, there is no white/transparent halo, and the stroke remains 100% crisp.
+    // 2. Build Output Image
+    // For interior fills: Sub-pixel dilation expands underneath line art so no white halos exist.
+    // For re-coloring: No dilation outside into the background, and original anti-aliased alpha is preserved.
     final Uint8List filledPixels = Uint8List(width * height * 4);
-    final int dilationRadius = expandRadius.ceil().clamp(1, 4);
+    final int dilationRadius = isTargetTransparent ? expandRadius.ceil().clamp(1, 4) : 0;
 
     for (int y = 0; y < height; y++) {
       final int rowOffset = y * width;
@@ -179,11 +185,20 @@ class FloodFill {
         final int pixelIndex = pos * 4;
 
         if (mask[pos] == 1) {
-          // Pure interior pixel: 100% solid fill
-          filledPixels[pixelIndex] = fillR;
-          filledPixels[pixelIndex + 1] = fillG;
-          filledPixels[pixelIndex + 2] = fillB;
-          filledPixels[pixelIndex + 3] = fillA;
+          if (isTargetTransparent) {
+            // Pure interior pixel: 100% solid fill
+            filledPixels[pixelIndex] = fillR;
+            filledPixels[pixelIndex + 1] = fillG;
+            filledPixels[pixelIndex + 2] = fillB;
+            filledPixels[pixelIndex + 3] = fillA;
+          } else {
+            // Re-coloring mode: preserve the original anti-aliased edge alpha
+            final int origA = pixels[pixelIndex + 3];
+            filledPixels[pixelIndex] = fillR;
+            filledPixels[pixelIndex + 1] = fillG;
+            filledPixels[pixelIndex + 2] = fillB;
+            filledPixels[pixelIndex + 3] = ((origA / 255.0) * fillA).round().clamp(0, 255);
+          }
         } else if (dilationRadius > 0) {
           // Check if boundary pixel is adjacent to the filled interior (within expandRadius)
           bool nearInterior = false;
@@ -222,7 +237,33 @@ class FloodFill {
     );
     final ui.Codec codec = await descriptor.instantiateCodec();
     final ui.FrameInfo frameInfo = await codec.getNextFrame();
-    return frameInfo.image;
+    return FloodFillResult(
+      image: frameInfo.image,
+      isUnderneath: isTargetTransparent,
+    );
+  }
+
+  /// 执行填充算法（兼容方法）
+  /// [image] 原始图片坐标数据 (所有可见图层的合成快照)
+  /// [startPoint] 点击开始的位置 (逻辑坐标)
+  /// [fillColor] 填充颜色
+  /// [tolerance] 容差 (0.0 - 1.0)
+  /// [expandRadius] 边缘抗锯齿扩展半径 (像素，默认 2.0，用于消除白边)
+  static Future<ui.Image?> fill({
+    required ui.Image image,
+    required ui.Offset startPoint,
+    required ui.Color fillColor,
+    double tolerance = 0.15,
+    double expandRadius = 2.0,
+  }) async {
+    final FloodFillResult? result = await fillWithResult(
+      image: image,
+      startPoint: startPoint,
+      fillColor: fillColor,
+      tolerance: tolerance,
+      expandRadius: expandRadius,
+    );
+    return result?.image;
   }
 
   static bool _isSameColor(int r1, int g1, int b1, int a1, int r2, int g2, int b2, int a2) {

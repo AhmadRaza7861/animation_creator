@@ -15,6 +15,7 @@ class FillContent extends PaintContent {
   FillContent.data({
     required this.image,
     required Paint paint,
+    this.isUnderneath = true,
   }) : super.paint(paint);
 
   factory FillContent.fromJson(Map<String, dynamic> data) {
@@ -23,12 +24,17 @@ class FillContent extends PaintContent {
     return FillContent.data(
       image: null, // Will be replaced asynchronously
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      isUnderneath: (data['isUnderneath'] as bool?) ?? true,
     );
   }
 
   /// 填充后的图片（包含透明度，仅包含填充部分）
   ui.Image? image;
   String? cachedBase64Image;
+
+  /// Whether this fill is drawn underneath line art (interior flood fills)
+  /// or on top of strokes (re-coloring fills).
+  bool isUnderneath = true;
 
   @override
   String get contentType => 'FillContent';
@@ -55,6 +61,7 @@ class FillContent extends PaintContent {
   FillContent copy() => FillContent.data(
     image: image,
     paint: paint.copyWith(),
+    isUnderneath: isUnderneath,
   )..cachedBase64Image = cachedBase64Image;
 
   @override
@@ -62,6 +69,7 @@ class FillContent extends PaintContent {
     return <String, dynamic>{
       'paint': paint.toJson(),
       'imageDataBase64': cachedBase64Image,
+      'isUnderneath': isUnderneath,
     };
   }
 

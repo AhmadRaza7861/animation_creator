@@ -41,7 +41,7 @@ class LayerData {
 
   /// Draws the layer history onto the canvas.
   /// If a SmudgeContent or BlurContent is present, it is rendered first as the base raster state,
-  /// followed by subsequent fills (pass 1) and non-fill strokes (pass 2).
+  /// followed by interior fills (pass 1), non-fill strokes (pass 2), and re-coloring fills (pass 3).
   void drawHistory(Canvas canvas, Size size, bool deeper, [Canvas? tempCanvas]) {
     final int count = currentIndex.clamp(0, history.length);
     if (count == 0) return;
@@ -54,54 +54,45 @@ class LayerData {
       }
     }
 
+    final int startIdx = rasterIndex >= 0 ? rasterIndex + 1 : 0;
+
     if (rasterIndex >= 0) {
       // Draw the base raster state first (Smudge or Blur)
       history[rasterIndex].draw(canvas, size, deeper);
       if (tempCanvas != null) {
         history[rasterIndex].draw(tempCanvas, size, deeper);
       }
+    }
 
-      // Pass 1: Draw subsequent FillContent items
-      for (int j = rasterIndex + 1; j < count; j++) {
-        final item = history[j];
-        if (item is FillContent) {
-          item.draw(canvas, size, deeper);
-          if (tempCanvas != null) {
-            item.draw(tempCanvas, size, deeper);
-          }
+    // Pass 1: Draw interior FillContent items (underneath strokes)
+    for (int j = startIdx; j < count; j++) {
+      final item = history[j];
+      if (item is FillContent && item.isUnderneath) {
+        item.draw(canvas, size, deeper);
+        if (tempCanvas != null) {
+          item.draw(tempCanvas, size, deeper);
         }
       }
+    }
 
-      // Pass 2: Draw subsequent non-fill items (strokes, shapes, lines, etc.)
-      for (int j = rasterIndex + 1; j < count; j++) {
-        final item = history[j];
-        if (item is! FillContent) {
-          item.draw(canvas, size, deeper);
-          if (tempCanvas != null) {
-            item.draw(tempCanvas, size, deeper);
-          }
+    // Pass 2: Draw non-fill items (strokes, shapes, lines, etc.)
+    for (int j = startIdx; j < count; j++) {
+      final item = history[j];
+      if (item is! FillContent) {
+        item.draw(canvas, size, deeper);
+        if (tempCanvas != null) {
+          item.draw(tempCanvas, size, deeper);
         }
       }
-    } else {
-      // Pass 1: Draw all FillContent items first (underneath strokes)
-      for (int j = 0; j < count; j++) {
-        final item = history[j];
-        if (item is FillContent) {
-          item.draw(canvas, size, deeper);
-          if (tempCanvas != null) {
-            item.draw(tempCanvas, size, deeper);
-          }
-        }
-      }
+    }
 
-      // Pass 2: Draw all non-fill items (strokes, shapes, lines, etc.) on top
-      for (int j = 0; j < count; j++) {
-        final item = history[j];
-        if (item is! FillContent) {
-          item.draw(canvas, size, deeper);
-          if (tempCanvas != null) {
-            item.draw(tempCanvas, size, deeper);
-          }
+    // Pass 3: Draw re-coloring / overlay FillContent items (on top of strokes)
+    for (int j = startIdx; j < count; j++) {
+      final item = history[j];
+      if (item is FillContent && !item.isUnderneath) {
+        item.draw(canvas, size, deeper);
+        if (tempCanvas != null) {
+          item.draw(tempCanvas, size, deeper);
         }
       }
     }

@@ -1119,17 +1119,18 @@ class DrawingController extends ChangeNotifier {
     final ui.Picture picture = recorder.endRecording();
     final ui.Image snapshotImage = await picture.toImage(width, height);
 
-    final ui.Image? filledImage = await FloodFill.fill(
+    final FloodFillResult? fillResult = await FloodFill.fillWithResult(
       image: snapshotImage,
       startPoint: startPoint,
       fillColor: drawConfig.value.color,
       tolerance: drawConfig.value.tolerance,
     );
 
-    if (filledImage != null) {
+    if (fillResult != null) {
       final FillContent content = FillContent.data(
-        image: filledImage,
+        image: fillResult.image,
         paint: drawConfig.value.paint.copyWith(),
+        isUnderneath: fillResult.isUnderneath,
       );
       addContent(content);
     }
