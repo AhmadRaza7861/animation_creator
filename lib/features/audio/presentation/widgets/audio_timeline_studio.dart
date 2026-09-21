@@ -2729,13 +2729,13 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                                     // Top Triangle Pointer Indicator (Pointing downwards ▼)
                                     CustomPaint(
                                       size: const Size(12, 10),
-                                      painter: _PlayheadTrianglePainter(color: const Color(0xFFFF4B72)),
+                                      painter: _PlayheadTrianglePainter(color: const Color(0xFFFF9318)),
                                     ),
                                     // Vertical Line Needle through Ruler and all Track Lanes
                                     Expanded(
                                       child: Container(
                                         width: 2,
-                                        color: const Color(0xFFFF4B72),
+                                        color: const Color(0xFFFF9318),
                                       ),
                                     ),
                                   ],
