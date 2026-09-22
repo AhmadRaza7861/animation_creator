@@ -82,11 +82,18 @@ class EditorController extends ChangeNotifier {
     }
   }
 
+  bool _isDisposed = false;
   final List<DrawingController> _canvases = [];
   final List<ui.Image?> _thumbnails = [];
   CanvasBackground _globalBackground = CanvasBackground();
   int _currentIndex = 0;
   bool _isLoadingProject = false;
+
+  @override
+  void notifyListeners() {
+    if (_isDisposed) return;
+    super.notifyListeners();
+  }
   
   double _aspectRatio = 1.0;
   String? _templateFolder;
@@ -690,11 +697,12 @@ class EditorController extends ChangeNotifier {
   }
 
   Future<void> loadProjectData() async {
-    if (projectId == null) return;
+    if (_isDisposed || projectId == null) return;
     _isLoadingProject = true;
     notifyListeners();
 
     final data = await repository.loadProject(projectId!);
+    if (_isDisposed) return;
     if (data != null && data.state['canvases'] != null) {
       _projectName = data.meta.title;
       if (data.state.containsKey('exportType')) {
@@ -799,14 +807,21 @@ class EditorController extends ChangeNotifier {
         }
       }
 
-      // Rehydrate canvases.
+      // Rehydrate canvases in parallel
       _canvases.clear();
       _thumbnails.clear();
       final canvasesList = data.state['canvases'] as List<dynamic>;
-      for (final canvasData in canvasesList) {
-        final cMap = canvasData as Map<String, dynamic>;
-        final controller = await _createControllerFromData(cMap);
-        _canvases.add(controller);
+      final loadedCanvases = await Future.wait(
+        canvasesList.map((c) => _createControllerFromData(c as Map<String, dynamic>)),
+      );
+      if (_isDisposed) {
+        for (final c in loadedCanvases) {
+          c.dispose();
+        }
+        return;
+      }
+      _canvases.addAll(loadedCanvases);
+      for (int i = 0; i < _canvases.length; i++) {
         _thumbnails.add(null);
       }
 
@@ -859,11 +874,16 @@ class EditorController extends ChangeNotifier {
           }
         }
 
+        // Instantly refresh and snapshot the active canvas so drawing is available immediately
+        if (_canvases.isNotEmpty) {
+          final active = _canvases[_currentIndex];
+          active.forceRefreshLayers();
+          active.updateSnapshot(includeBackground: false);
+        }
+
+        // Stagger background frame layer redraws asynchronously to maintain smooth 60/120fps UI
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          for (var controller in _canvases) {
-            controller.forceRefreshLayers();
-            controller.updateSnapshot(includeBackground: false);
-          }
+          _refreshBackgroundCanvasesAsync();
         });
       }
     } else {
@@ -872,6 +892,19 @@ class EditorController extends ChangeNotifier {
 
     _isLoadingProject = false;
     notifyListeners();
+  }
+
+  void _refreshBackgroundCanvasesAsync() async {
+    for (int i = 0; i < _canvases.length; i++) {
+      if (_isDisposed) return;
+      if (i == _currentIndex) continue;
+      await Future.delayed(const Duration(milliseconds: 5));
+      if (_isDisposed) return;
+      if (!_isLoadingProject && i < _canvases.length) {
+        _canvases[i].forceRefreshLayers();
+        _canvases[i].updateSnapshot(includeBackground: false);
+      }
+    }
   }
 
   bool get hasAnyDrawing {
@@ -956,18 +989,19 @@ class EditorController extends ChangeNotifier {
       'canvases': [],
     };
 
-    final List<Map<String, dynamic>> canvasesData = [];
-    for (final controller in _canvases) {
-      final size = controller.drawConfig.value.size ?? Size.zero;
-      canvasesData.add({
-        'size': {'width': size.width, 'height': size.height},
-        'backgroundColor': controller.backgroundColor.value,
-        'strokeWidth': controller.drawConfig.value.strokeWidth,
-        'strokeColor': controller.drawConfig.value.color.value,
-        'layers': await controller.getLayersConfig(),
-        'activeLayerId': controller.activeLayer.value?.id,
-      });
-    }
+    final List<Map<String, dynamic>> canvasesData = await Future.wait(
+      _canvases.map((controller) async {
+        final size = controller.drawConfig.value.size ?? Size.zero;
+        return {
+          'size': {'width': size.width, 'height': size.height},
+          'backgroundColor': controller.backgroundColor.value,
+          'strokeWidth': controller.drawConfig.value.strokeWidth,
+          'strokeColor': controller.drawConfig.value.color.value,
+          'layers': await controller.getLayersConfig(),
+          'activeLayerId': controller.activeLayer.value?.id,
+        };
+      }),
+    );
     state['canvases'] = canvasesData;
 
     List<int>? thumbBytes = await _generateSolidThumbnailBytes();
@@ -1275,6 +1309,8 @@ class EditorController extends ChangeNotifier {
       }
       _currentIndex = index;
       final currentCanvas = _canvases[index];
+      currentCanvas.forceRefreshLayers();
+      currentCanvas.updateSnapshot(includeBackground: false);
       if (currentCanvas.activeLayer.value == null || currentCanvas.activeLayer.value!.isLocked) {
         final unlocked = currentCanvas.layers.where((l) => !l.isLocked).firstOrNull;
         if (unlocked != null) {
@@ -2520,6 +2556,7 @@ class EditorController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _autoSaveTimer?.cancel();
     _autoSaveTimer = null;
     for (var controller in _canvases) {
