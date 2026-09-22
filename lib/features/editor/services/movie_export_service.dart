@@ -281,11 +281,13 @@ class MovieExportService {
       canvas.drawRect(Offset.zero & sourceSize, bgPaint);
 
       if (background.image != null) {
-        final Paint imgPaint = Paint()
-          ..color = Colors.white.withValues(alpha: background.imageOpacity.clamp(0.0, 1.0));
-        final Rect src = Rect.fromLTWH(0, 0, background.image!.width.toDouble(), background.image!.height.toDouble());
-        final Rect dst = Offset.zero & sourceSize;
-        canvas.drawImageRect(background.image!, src, dst, imgPaint);
+        paintImage(
+          canvas: canvas,
+          rect: Offset.zero & sourceSize,
+          image: background.image!,
+          fit: BoxFit.cover,
+          opacity: background.imageOpacity.clamp(0.0, 1.0),
+        );
       }
 
       if (background.pattern != null && background.pattern != 'none') {

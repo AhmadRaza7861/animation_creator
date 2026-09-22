@@ -59,9 +59,12 @@ class StringConstants {
   static const String width = 'WIDTH';
   static const String height = 'HEIGHT';
   static const String backgrounds = 'Backgrounds';
-  static const String select = 'Select';
   static const String select_preset = 'Select Preset';
   static const String background_presets = 'Background Presets';
-
   static const String aspect_ratio_cannot_be_changed = 'Aspect ratio cannot be changed after project creation.';
+  static const String image_import = 'Image import';
+  static const String crop_image = 'Crop Image';
+  static const String fit_cover = 'Fit / Cover';
+  static const String reset = 'Reset';
+  static const String processing_image = 'Processing image...';
 }

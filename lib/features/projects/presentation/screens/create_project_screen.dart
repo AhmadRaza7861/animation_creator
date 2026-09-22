@@ -19,6 +19,7 @@ import '../../../editor/presentation/screens/editor_screen.dart';
 import '../../../editor/presentation/screens/canvas_size_screen.dart';
 import '../../../editor/presentation/screens/fps_screen.dart';
 import '../../../editor/presentation/screens/background_presets_screen.dart';
+import '../../../editor/presentation/screens/image_crop_screen.dart';
 
 class CreateProjectScreen extends StatefulWidget {
   final ProjectRepository repository;
@@ -194,15 +195,27 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     try {
       final XFile? pickedFile = await _imagePicker.pickImage(
         source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 90,
+        maxWidth: 2560,
+        maxHeight: 2560,
+        imageQuality: 95,
       );
       if (pickedFile != null && mounted) {
-        setState(() {
-          _backgroundImagePath = pickedFile.path;
-          _backgroundPattern = null;
-        });
+        final double currentAspectRatio = _canvasWidth / (_canvasHeight > 0 ? _canvasHeight : 1000);
+        final String? croppedPath = await Navigator.push<String?>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ImageCropScreen(
+              imageFile: File(pickedFile.path),
+              targetAspectRatio: currentAspectRatio,
+            ),
+          ),
+        );
+        if (croppedPath != null && mounted) {
+          setState(() {
+            _backgroundImagePath = croppedPath;
+            _backgroundPattern = null;
+          });
+        }
       }
     } catch (e) {
       debugPrint('Failed to pick background image: $e');
@@ -389,9 +402,12 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
               final bytes = await File(_backgroundImagePath!).readAsBytes();
               final codec = await ui.instantiateImageCodec(bytes);
               final frame = await codec.getNextFrame();
-              final Rect src = Rect.fromLTWH(0, 0, frame.image.width.toDouble(), frame.image.height.toDouble());
-              final Rect dst = Offset.zero & size;
-              canvas.drawImageRect(frame.image, src, dst, Paint());
+              paintImage(
+                canvas: canvas,
+                rect: Offset.zero & size,
+                image: frame.image,
+                fit: BoxFit.cover,
+              );
             } catch (_) {}
           }
 

@@ -1019,16 +1019,13 @@ class EditorController extends ChangeNotifier {
 
       // Background image if any
       if (_globalBackground.image != null) {
-        final Paint imgPaint = Paint()
-          ..color = Colors.white.withValues(alpha: _globalBackground.imageOpacity.clamp(0.0, 1.0));
-        final Rect src = Rect.fromLTWH(
-          0,
-          0,
-          _globalBackground.image!.width.toDouble(),
-          _globalBackground.image!.height.toDouble(),
+        paintImage(
+          canvas: canvas,
+          rect: Offset.zero & canvasSize,
+          image: _globalBackground.image!,
+          fit: BoxFit.cover,
+          opacity: _globalBackground.imageOpacity.clamp(0.0, 1.0),
         );
-        final Rect dst = Offset.zero & canvasSize;
-        canvas.drawImageRect(_globalBackground.image!, src, dst, imgPaint);
       }
 
       // Background pattern if any

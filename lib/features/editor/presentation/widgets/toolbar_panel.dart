@@ -17,6 +17,7 @@ import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
 import '../screens/export/make_movie_screen.dart';
 import '../screens/video_trimming_screen.dart';
+import '../screens/image_crop_screen.dart';
 import 'sticker_widgets/text_sticker_widget.dart';
 import 'sticker_widgets/shape_sticker_widget.dart';
 import '../../services/global_clipboard.dart';
@@ -1348,13 +1349,25 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
         final source = selectedOption == 'camera' ? ImageSource.camera : ImageSource.gallery;
         final XFile? file = await _picker.pickImage(
           source: source,
-          maxWidth: 1920,
-          maxHeight: 1920,
-          imageQuality: 90,
+          maxWidth: 2560,
+          maxHeight: 2560,
+          imageQuality: 95,
         );
-        if (file != null) {
-          final ui.Image image = await _getFileImage(file.path);
-          controller.addImageSticker(image, imageUrl: file.path);
+        if (file != null && mounted) {
+          final String? croppedPath = await Navigator.push<String?>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ImageCropScreen(
+                imageFile: File(file.path),
+                targetAspectRatio: null,
+                lockAspectRatio: false,
+              ),
+            ),
+          );
+          if (croppedPath != null && mounted) {
+            final ui.Image image = await _getFileImage(croppedPath);
+            controller.addImageSticker(image, imageUrl: croppedPath);
+          }
         }
       } catch (e) {
         debugPrint('Error picking sticker image: $e');
