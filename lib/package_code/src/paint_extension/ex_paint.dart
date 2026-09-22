@@ -56,20 +56,20 @@ extension ExPaint on Paint {
 
 Paint jsonToPaint(Map<String, dynamic> data) {
   return Paint()
-    ..blendMode = BlendMode.values[data['blendMode'] as int]
-    ..color = Color(data['color'] as int)
+    ..blendMode = BlendMode.values[(data['blendMode'] as int?) ?? 0]
+    ..color = Color((data['color'] as int?) ?? 0xFF000000)
     ..colorFilter =
         data['colorFilter'] == null ? null : stringToColorFilter(data['colorFilter'] as String)
-    ..filterQuality = FilterQuality.values[data['filterQuality'] as int]
+    ..filterQuality = FilterQuality.values[(data['filterQuality'] as int?) ?? 0]
     ..imageFilter =
         data['imageFilter'] == null ? null : stringToImageFilter(data['imageFilter'] as String)
-    ..invertColors = data['invertColors'] as bool
-    ..isAntiAlias = data['isAntiAlias'] as bool
+    ..invertColors = (data['invertColors'] as bool?) ?? false
+    ..isAntiAlias = (data['isAntiAlias'] as bool?) ?? true
     ..maskFilter =
         data['maskFilter'] == null ? null : stringToMaskFilter(data['maskFilter'] as String)
     // ..shader = data['shader'] as Shader? // 无法解析
-    ..strokeCap = StrokeCap.values[data['strokeCap'] as int]
-    ..strokeJoin = StrokeJoin.values[data['strokeJoin'] as int]
-    ..strokeWidth = data['strokeWidth'] as double
-    ..style = PaintingStyle.values[data['style'] as int];
+    ..strokeCap = StrokeCap.values[(data['strokeCap'] as int?) ?? 0]
+    ..strokeJoin = StrokeJoin.values[(data['strokeJoin'] as int?) ?? 0]
+    ..strokeWidth = (data['strokeWidth'] as num?)?.toDouble() ?? 0.0
+    ..style = PaintingStyle.values[(data['style'] as int?) ?? 0];
 }

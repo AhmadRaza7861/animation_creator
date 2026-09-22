@@ -6,6 +6,10 @@ extension ExOffset on Offset {
   }
 }
 
-Offset jsonToOffset(Map<String, dynamic> data) {
-  return Offset(data['dx'] as double, data['dy'] as double);
+Offset jsonToOffset(Map<String, dynamic>? data) {
+  if (data == null) return Offset.zero;
+  return Offset(
+    (data['dx'] as num?)?.toDouble() ?? 0.0,
+    (data['dy'] as num?)?.toDouble() ?? 0.0,
+  );
 }

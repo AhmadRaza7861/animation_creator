@@ -328,12 +328,14 @@ void main() {
       controller.activeSticker = lassoSticker;
       await tester.pumpAndSettle();
 
-      // Lasso selection shows sub-menu with back button and TRSF/PERSP suite
-      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
+      // Lasso selection shows sub-menu with check/confirm button and TRSF/PERSP suite
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
       expect(find.text('TRSF'), findsOneWidget);
       expect(find.text('PERSP'), findsOneWidget);
       expect(find.text('Flip H'), findsOneWidget);
       expect(find.text('Flip V'), findsOneWidget);
+      expect(find.text('Copy'), findsOneWidget);
+      expect(find.text('Paste'), findsOneWidget);
       expect(find.text('Duplicate'), findsOneWidget);
       expect(find.text('Reset'), findsOneWidget);
       expect(find.text('Delete'), findsOneWidget);
@@ -349,8 +351,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(lassoSticker.transformMode, equals(StickerTransformMode.perspective));
 
-      // Tap Back button (<) to stamp and return to standard toolbar
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      // Tap Check/Confirm button to stamp and return to standard toolbar
+      await tester.tap(find.byIcon(Icons.check_rounded));
       await tester.pumpAndSettle();
       expect(controller.activeSticker, isNull);
       expect(find.text('Export'), findsOneWidget);

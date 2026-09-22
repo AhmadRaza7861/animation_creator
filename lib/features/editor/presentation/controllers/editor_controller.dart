@@ -19,6 +19,7 @@ import '../widgets/sticker_widgets/text_sticker_widget.dart';
 import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
+import '../../services/global_clipboard.dart';
 
 class CanvasBackground {
   final Color color;
@@ -1472,26 +1473,28 @@ class EditorController extends ChangeNotifier {
     }
     final source = _canvases[index];
     final size = source.drawConfig.value.size ?? Size.zero;
-    _clipboardFrame = {
+    final frameJson = {
       'size': {'width': size.width, 'height': size.height},
       'backgroundColor': source.backgroundColor.value,
       'layers': await source.getLayersConfig(),
       'activeLayerId': source.activeLayer.value?.id,
     };
+    GlobalClipboard.instance.copyFrame(frameJson);
+    notifyListeners();
   }
 
-  Map<String, dynamic>? _clipboardFrame;
-  bool get hasClipboardFrame => _clipboardFrame != null;
+  bool get hasClipboardFrame => GlobalClipboard.instance.hasFrameContent;
 
   void pasteFrame(int index) async {
-    if (_clipboardFrame == null) return;
+    final frameData = GlobalClipboard.instance.frameData;
+    if (frameData == null) return;
     if (index < 0 || index >= _canvases.length) return;
     if (_activeSticker != null) {
       stampActiveSticker();
     }
 
     final targetController = _canvases[index];
-    final layersData = _clipboardFrame!['layers'] as List<dynamic>? ?? [];
+    final layersData = frameData['layers'] as List<dynamic>? ?? [];
 
     final List<LayerData> copiedLayers = [];
     for (final lData in layersData) {
@@ -2049,6 +2052,70 @@ class EditorController extends ChangeNotifier {
       updateSnapshot();
       notifyListeners();
     }
+  }
+
+  bool get canCopyLassoSelection => _activeSticker is ActiveShapeSticker;
+  bool get canPasteLassoSelection => GlobalClipboard.instance.hasLassoContent;
+
+  void copyActiveLassoSelection() {
+    if (_activeSticker is ActiveShapeSticker) {
+      final sticker = _activeSticker as ActiveShapeSticker;
+      GlobalClipboard.instance.copyLasso(sticker);
+      notifyListeners();
+    }
+  }
+
+  Future<bool> pasteLassoSelection() async {
+    final clipboardData = GlobalClipboard.instance.lassoData;
+    if (clipboardData == null) {
+      debugPrint('pasteLassoSelection: clipboardData is null');
+      return false;
+    }
+
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
+
+    final content = decodePaintContent(
+      clipboardData.contentJson['type'] as String,
+      clipboardData.contentJson,
+    );
+    if (content == null) return false;
+
+    await _rehydrateContent(content, clipboardData.contentJson);
+
+    final Size canvasSize = drawingController.drawConfig.value.size ??
+        drawingControllerSize ??
+        const Size(500, 500);
+
+    // Place in center of current canvas
+    final Offset pasteCenter = Offset(canvasSize.width / 2, canvasSize.height / 2);
+
+    final pastedSticker = ActiveShapeSticker(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: content,
+      size: clipboardData.size,
+      offset: pasteCenter,
+      scale: clipboardData.scale,
+      rotation: clipboardData.rotation,
+      flipX: clipboardData.flipX,
+      flipY: clipboardData.flipY,
+      topLeftOffset: clipboardData.topLeftOffset,
+      topRightOffset: clipboardData.topRightOffset,
+      bottomRightOffset: clipboardData.bottomRightOffset,
+      bottomLeftOffset: clipboardData.bottomLeftOffset,
+      transformMode: clipboardData.transformMode,
+      isLassoSelection: true,
+    );
+
+    _activeCategory = 'Lasso';
+    drawingController.setPaintContent(Lasso());
+    _activeSticker = pastedSticker;
+    recordActiveStickerState();
+    updateSnapshot();
+    drawingController.refresh();
+    notifyListeners();
+    return true;
   }
 
   void resetActiveShapeSticker() {

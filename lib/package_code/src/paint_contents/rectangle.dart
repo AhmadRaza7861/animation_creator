@@ -22,9 +22,11 @@ class Rectangle extends PaintContent {
 
   factory Rectangle.fromJson(Map<String, dynamic> data) {
     return Rectangle.data(
-      startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>),
-      endPoint: jsonToOffset(data['endPoint'] as Map<String, dynamic>),
-      paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>?),
+      endPoint: jsonToOffset(data['endPoint'] as Map<String, dynamic>?),
+      paint: data['paint'] != null
+          ? jsonToPaint(data['paint'] as Map<String, dynamic>)
+          : Paint(),
     );
   }
 

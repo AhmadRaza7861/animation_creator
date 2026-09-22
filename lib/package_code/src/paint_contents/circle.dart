@@ -40,13 +40,15 @@ class Circle extends PaintContent {
 
   factory Circle.fromJson(Map<String, dynamic> data) {
     return Circle.data(
-      isEllipse: data['isEllipse'] as bool,
-      startFromCenter: data['startFromCenter'] as bool,
-      center: jsonToOffset(data['center'] as Map<String, dynamic>),
-      radius: data['radius'] as double,
-      startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>),
-      endPoint: jsonToOffset(data['endPoint'] as Map<String, dynamic>),
-      paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      isEllipse: (data['isEllipse'] as bool?) ?? false,
+      startFromCenter: (data['startFromCenter'] as bool?) ?? true,
+      center: jsonToOffset(data['center'] as Map<String, dynamic>?),
+      radius: (data['radius'] as num?)?.toDouble() ?? 0.0,
+      startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>?),
+      endPoint: jsonToOffset(data['endPoint'] as Map<String, dynamic>?),
+      paint: data['paint'] != null
+          ? jsonToPaint(data['paint'] as Map<String, dynamic>)
+          : Paint(),
     );
   }
 

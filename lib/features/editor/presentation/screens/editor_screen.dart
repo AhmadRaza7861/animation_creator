@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
@@ -1871,6 +1872,69 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
 
                         controller.layersPanelPosition = Offset(newX, newY);
                       },
+                    ),
+                  ),
+                if (controller.activeCategory == 'Lasso' &&
+                    controller.activeSticker == null &&
+                    controller.canPasteLassoSelection)
+                  Positioned(
+                    bottom: 160,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () async {
+                          final ok = await controller.pasteLassoSelection();
+                          if (ok) {
+                            Fluttertoast.showToast(
+                              msg: 'Selection pasted',
+                              backgroundColor: const Color(0xFFFF9318),
+                              textColor: Colors.white,
+                              toastLength: Toast.LENGTH_SHORT,
+                            );
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: const Color(0xFFFF9318).withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.paste_rounded,
+                                size: 18,
+                                color: Color(0xFFFF9318),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Paste Selection',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
               ],

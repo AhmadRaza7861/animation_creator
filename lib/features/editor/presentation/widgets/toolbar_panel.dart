@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../package_code/paint_contents.dart';
@@ -18,6 +19,7 @@ import '../screens/export/make_movie_screen.dart';
 import '../screens/video_trimming_screen.dart';
 import 'sticker_widgets/text_sticker_widget.dart';
 import 'sticker_widgets/shape_sticker_widget.dart';
+import '../../services/global_clipboard.dart';
 
 class ToolbarPanel extends ConsumerStatefulWidget {
   final String? projectId;
@@ -95,6 +97,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     EditorController controller,
   ) {
     final bool isPersp = sticker.transformMode == StickerTransformMode.perspective;
+    final bool canPaste = controller.canPasteLassoSelection;
 
     return Container(
       height: 72,
@@ -118,9 +121,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 border: Border.all(color: Colors.grey.shade300, width: 1),
               ),
               child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 16,
-                color: Colors.black87,
+                Icons.check_rounded,
+                size: 20,
+                color: ColorConstants.accent,
               ),
             ),
           ),
@@ -163,8 +166,49 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'Duplicate',
+                    label: 'Copy',
                     icon: Icons.copy_rounded,
+                    isActive: false,
+                    onTap: () {
+                      controller.copyActiveLassoSelection();
+                      Fluttertoast.showToast(
+                        msg: 'Selection copied to clipboard',
+                        backgroundColor: const Color(0xFFFF9318),
+                        textColor: Colors.white,
+                        toastLength: Toast.LENGTH_SHORT,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _bottomSubToolItem(
+                    label: 'Paste',
+                    icon: Icons.paste_rounded,
+                    isActive: false,
+                    onTap: canPaste
+                        ? () async {
+                            final ok = await controller.pasteLassoSelection();
+                            if (ok) {
+                              Fluttertoast.showToast(
+                                msg: 'Selection pasted',
+                                backgroundColor: const Color(0xFFFF9318),
+                                textColor: Colors.white,
+                                toastLength: Toast.LENGTH_SHORT,
+                              );
+                            }
+                          }
+                        : () {
+                            Fluttertoast.showToast(
+                              msg: 'No selection in clipboard',
+                              backgroundColor: Colors.grey.shade700,
+                              textColor: Colors.white,
+                              toastLength: Toast.LENGTH_SHORT,
+                            );
+                          },
+                  ),
+                  const SizedBox(width: 4),
+                  _bottomSubToolItem(
+                    label: 'Duplicate',
+                    icon: Icons.control_point_duplicate_rounded,
                     isActive: false,
                     onTap: () => controller.duplicateActiveShapeSticker(),
                   ),
