@@ -39,26 +39,55 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
   }
 
   Future<void> _initVideo() async {
-    _videoController = VideoPlayerController.file(File(widget.filePath))
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _isVideoInitialized = true;
-          });
-          _videoController?.setLooping(true);
-          _videoController?.play();
-        }
-      });
+    try {
+      final controller = VideoPlayerController.file(File(widget.filePath));
+      _videoController = controller;
+      await controller.initialize();
+      if (!mounted) {
+        controller.dispose();
+        return;
+      }
+      controller.setLooping(true);
+      controller.addListener(_onVideoControllerUpdate);
+      // Stay paused by default on load - user taps play to start
+      if (mounted) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error initializing video in ShareMovieScreen: $e');
+    }
+  }
+
+  void _onVideoControllerUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    _videoController?.removeListener(_onVideoControllerUpdate);
     _videoController?.dispose();
     super.dispose();
   }
 
-  void _openFullscreenPlayer() {
-    Navigator.push(
+  void _togglePlayPause() {
+    if (_videoController == null || !_isVideoInitialized) return;
+    setState(() {
+      if (_videoController!.value.isPlaying) {
+        _videoController!.pause();
+      } else {
+        _videoController!.play();
+      }
+    });
+  }
+
+  void _openFullscreenPlayer() async {
+    final bool wasPlaying = _videoController?.value.isPlaying ?? false;
+    _videoController?.pause();
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => FullscreenPlayerScreen(
@@ -68,6 +97,9 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
         ),
       ),
     );
+    if (mounted && _videoController != null && wasPlaying) {
+      _videoController!.play();
+    }
   }
 
   Future<void> _saveToGallery() async {
@@ -170,6 +202,8 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isPlaying = _isGif ? true : (_videoController?.value.isPlaying ?? false);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -215,7 +249,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                   children: [
                     // Preview Card
                     GestureDetector(
-                      onTap: _openFullscreenPlayer,
+                      onTap: _togglePlayPause,
                       child: Container(
                         width: double.infinity,
                         height: 200,
@@ -266,9 +300,9 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                     colors: [
-                                      Colors.black.withValues(alpha: 0.55),
+                                      Colors.black.withValues(alpha: 0.45),
                                       Colors.transparent,
-                                      Colors.black.withValues(alpha: 0.65),
+                                      Colors.black.withValues(alpha: 0.55),
                                     ],
                                     stops: const [0.0, 0.5, 1.0],
                                   ),
@@ -333,20 +367,59 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                                   ),
                                 ),
 
-                              // Center Play Button Overlay
-                              Center(
-                                child: Container(
-                                  width: 58,
-                                  height: 58,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.65),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white38, width: 1.5),
+                              // Center Play Button Overlay (shown only when paused)
+                              AnimatedOpacity(
+                                opacity: isPlaying ? 0.0 : 1.0,
+                                duration: const Duration(milliseconds: 200),
+                                child: Center(
+                                  child: Container(
+                                    width: 58,
+                                    height: 58,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.65),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white38, width: 1.5),
+                                    ),
+                                    child: const Icon(
+                                      Icons.play_arrow_rounded,
+                                      color: Colors.white,
+                                      size: 38,
+                                    ),
                                   ),
-                                  child: const Icon(
-                                    Icons.play_arrow_rounded,
-                                    color: Colors.white,
-                                    size: 38,
+                                ),
+                              ),
+
+                              // Bottom-left Fullscreen Button
+                              Positioned(
+                                bottom: 12,
+                                left: 14,
+                                child: GestureDetector(
+                                  onTap: _openFullscreenPlayer,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.fullscreen_rounded,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Fullscreen',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
