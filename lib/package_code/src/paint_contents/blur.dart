@@ -297,45 +297,56 @@ class BlurContent extends PaintContent {
       final int rowOffset = y * patchW;
       int sumR = 0, sumG = 0, sumB = 0, sumA = 0;
 
-      // Initialize sliding accumulator for x = 0
+      // Initialize sliding accumulator for x = 0 with proper boundary clipping (no edge clamping)
       for (int k = -r; k <= r; k++) {
-        final int sx = k.clamp(0, patchW - 1);
-        final int px = _patchSrc[rowOffset + sx];
-        final int a = (px >> 24) & 0xFF;
-        sumA += a;
-        sumR += (px & 0xFF) * a;
-        sumG += ((px >> 8) & 0xFF) * a;
-        sumB += ((px >> 16) & 0xFF) * a;
+        final int sx = k;
+        if (sx >= 0 && sx < patchW) {
+          final int px = _patchSrc[rowOffset + sx];
+          final int a = (px >> 24) & 0xFF;
+          if (a > 0) {
+            sumA += a;
+            sumR += (px & 0xFF) * a;
+            sumG += ((px >> 8) & 0xFF) * a;
+            sumB += ((px >> 16) & 0xFF) * a;
+          }
+        }
       }
 
       for (int x = 0; x < patchW; x++) {
         if (sumA > 0) {
-          final int a = (sumA ~/ windowSize).clamp(0, 255);
           final int rVal = (sumR ~/ sumA).clamp(0, 255);
           final int gVal = (sumG ~/ sumA).clamp(0, 255);
           final int bVal = (sumB ~/ sumA).clamp(0, 255);
-          _patchHoriz[rowOffset + x] = (a << 24) | (bVal << 16) | (gVal << 8) | rVal;
+          _patchHoriz[rowOffset + x] = (255 << 24) | (bVal << 16) | (gVal << 8) | rVal;
         } else {
           _patchHoriz[rowOffset + x] = 0;
         }
 
         // Slide window by 1 pixel: remove (x - r), add (x + r + 1)
-        final int remX = (x - r).clamp(0, patchW - 1);
-        final int addX = (x + r + 1).clamp(0, patchW - 1);
+        final int remX = x - r;
+        final int addX = x + r + 1;
 
-        final int remPx = _patchSrc[rowOffset + remX];
-        final int remA = (remPx >> 24) & 0xFF;
-        sumA -= remA;
-        sumR -= (remPx & 0xFF) * remA;
-        sumG -= ((remPx >> 8) & 0xFF) * remA;
-        sumB -= ((remPx >> 16) & 0xFF) * remA;
+        if (remX >= 0 && remX < patchW) {
+          final int remPx = _patchSrc[rowOffset + remX];
+          final int remA = (remPx >> 24) & 0xFF;
+          if (remA > 0) {
+            sumA -= remA;
+            sumR -= (remPx & 0xFF) * remA;
+            sumG -= ((remPx >> 8) & 0xFF) * remA;
+            sumB -= ((remPx >> 16) & 0xFF) * remA;
+          }
+        }
 
-        final int addPx = _patchSrc[rowOffset + addX];
-        final int addA = (addPx >> 24) & 0xFF;
-        sumA += addA;
-        sumR += (addPx & 0xFF) * addA;
-        sumG += ((addPx >> 8) & 0xFF) * addA;
-        sumB += ((addPx >> 16) & 0xFF) * addA;
+        if (addX >= 0 && addX < patchW) {
+          final int addPx = _patchSrc[rowOffset + addX];
+          final int addA = (addPx >> 24) & 0xFF;
+          if (addA > 0) {
+            sumA += addA;
+            sumR += (addPx & 0xFF) * addA;
+            sumG += ((addPx >> 8) & 0xFF) * addA;
+            sumB += ((addPx >> 16) & 0xFF) * addA;
+          }
+        }
       }
     }
 
@@ -343,45 +354,56 @@ class BlurContent extends PaintContent {
     for (int x = 0; x < patchW; x++) {
       int sumR = 0, sumG = 0, sumB = 0, sumA = 0;
 
-      // Initialize sliding accumulator for y = 0
+      // Initialize sliding accumulator for y = 0 with proper boundary clipping
       for (int k = -r; k <= r; k++) {
-        final int sy = k.clamp(0, patchH - 1);
-        final int px = _patchHoriz[sy * patchW + x];
-        final int a = (px >> 24) & 0xFF;
-        sumA += a;
-        sumR += (px & 0xFF) * a;
-        sumG += ((px >> 8) & 0xFF) * a;
-        sumB += ((px >> 16) & 0xFF) * a;
+        final int sy = k;
+        if (sy >= 0 && sy < patchH) {
+          final int px = _patchHoriz[sy * patchW + x];
+          final int a = (px >> 24) & 0xFF;
+          if (a > 0) {
+            sumA += a;
+            sumR += (px & 0xFF) * a;
+            sumG += ((px >> 8) & 0xFF) * a;
+            sumB += ((px >> 16) & 0xFF) * a;
+          }
+        }
       }
 
       for (int y = 0; y < patchH; y++) {
         if (sumA > 0) {
-          final int a = (sumA ~/ windowSize).clamp(0, 255);
           final int rVal = (sumR ~/ sumA).clamp(0, 255);
           final int gVal = (sumG ~/ sumA).clamp(0, 255);
           final int bVal = (sumB ~/ sumA).clamp(0, 255);
-          _patchBlurred[y * patchW + x] = (a << 24) | (bVal << 16) | (gVal << 8) | rVal;
+          _patchBlurred[y * patchW + x] = (255 << 24) | (bVal << 16) | (gVal << 8) | rVal;
         } else {
           _patchBlurred[y * patchW + x] = 0;
         }
 
         // Slide window by 1 pixel: remove (y - r), add (y + r + 1)
-        final int remY = (y - r).clamp(0, patchH - 1);
-        final int addY = (y + r + 1).clamp(0, patchH - 1);
+        final int remY = y - r;
+        final int addY = y + r + 1;
 
-        final int remPx = _patchHoriz[remY * patchW + x];
-        final int remA = (remPx >> 24) & 0xFF;
-        sumA -= remA;
-        sumR -= (remPx & 0xFF) * remA;
-        sumG -= ((remPx >> 8) & 0xFF) * remA;
-        sumB -= ((remPx >> 16) & 0xFF) * remA;
+        if (remY >= 0 && remY < patchH) {
+          final int remPx = _patchHoriz[remY * patchW + x];
+          final int remA = (remPx >> 24) & 0xFF;
+          if (remA > 0) {
+            sumA -= remA;
+            sumR -= (remPx & 0xFF) * remA;
+            sumG -= ((remPx >> 8) & 0xFF) * remA;
+            sumB -= ((remPx >> 16) & 0xFF) * remA;
+          }
+        }
 
-        final int addPx = _patchHoriz[addY * patchW + x];
-        final int addA = (addPx >> 24) & 0xFF;
-        sumA += addA;
-        sumR += (addPx & 0xFF) * addA;
-        sumG += ((addPx >> 8) & 0xFF) * addA;
-        sumB += ((addPx >> 16) & 0xFF) * addA;
+        if (addY >= 0 && addY < patchH) {
+          final int addPx = _patchHoriz[addY * patchW + x];
+          final int addA = (addPx >> 24) & 0xFF;
+          if (addA > 0) {
+            sumA += addA;
+            sumR += (addPx & 0xFF) * addA;
+            sumG += ((addPx >> 8) & 0xFF) * addA;
+            sumB += ((addPx >> 16) & 0xFF) * addA;
+          }
+        }
       }
     }
 
@@ -403,20 +425,22 @@ class BlurContent extends PaintContent {
         final double distSq = dx * dx + dySq;
 
         if (distSq < radiusSq) {
+          final int globalIdx = globalRow + globalX;
+          final int orig = pixels[globalIdx];
+          final int origA = (orig >> 24) & 0xFF;
+
+          // STRICT BOUNDARY: Never bleed or create pixels outside original image content!
+          if (origA == 0) continue;
+
+          final int blur = _patchBlurred[patchRow + x];
+          final int blurA = (blur >> 24) & 0xFF;
+          if (blurA == 0) continue;
+
           final double dist = math.sqrt(distSq);
           final double t = dist / brushRadius;
           // Smooth Hermite / smoothstep curve: (1-t)^2 * (1+2t)
           final double falloff = (1.0 - t) * (1.0 - t) * (1.0 + 2.0 * t);
-          final double mixFactor = (falloff * stampIntensity).clamp(0.0, 0.55);
-
-          final int globalIdx = globalRow + globalX;
-          final int orig = pixels[globalIdx];
-          final int blur = _patchBlurred[patchRow + x];
-
-          final int origA = (orig >> 24) & 0xFF;
-          final int blurA = (blur >> 24) & 0xFF;
-
-          if (origA == 0 && blurA == 0) continue;
+          final double mixFactor = (falloff * stampIntensity).clamp(0.0, 0.65);
 
           final int origB = (orig >> 16) & 0xFF;
           final int origG = (orig >> 8) & 0xFF;
@@ -429,9 +453,9 @@ class BlurContent extends PaintContent {
           final int outR = (origR + (blurR - origR) * mixFactor).round().clamp(0, 255);
           final int outG = (origG + (blurG - origG) * mixFactor).round().clamp(0, 255);
           final int outB = (origB + (blurB - origB) * mixFactor).round().clamp(0, 255);
-          final int outA = (origA + (blurA - origA) * mixFactor).round().clamp(0, 255);
 
-          pixels[globalIdx] = (outA << 24) | (outB << 16) | (outG << 8) | outR;
+          // Preserve exact original alpha - no alpha bleed or border expansion
+          pixels[globalIdx] = (origA << 24) | (outB << 16) | (outG << 8) | outR;
         }
       }
     }

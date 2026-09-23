@@ -201,5 +201,68 @@ void main() {
       expect(controller.currentIndex, equals(2));
       expect(controller.getHistory.last is BlurContent, isTrue);
     });
+
+    test('BlurContent never bleeds or stretches pixels outside original image bounds', () async {
+      // Create a 100x100 canvas with a 40x40 solid red image in the center (x: 30..70, y: 30..70)
+      final Uint8List rawRgba = Uint8List(100 * 100 * 4);
+      for (int y = 0; y < 100; y++) {
+        for (int x = 0; x < 100; x++) {
+          final int idx = (y * 100 + x) * 4;
+          if (x >= 30 && x < 70 && y >= 30 && y < 70) {
+            rawRgba[idx] = 255;     // R
+            rawRgba[idx + 1] = 0;   // G
+            rawRgba[idx + 2] = 0;   // B
+            rawRgba[idx + 3] = 255; // A (opaque image)
+          } else {
+            // Transparent empty canvas
+            rawRgba[idx] = 0;
+            rawRgba[idx + 1] = 0;
+            rawRgba[idx + 2] = 0;
+            rawRgba[idx + 3] = 0;
+          }
+        }
+      }
+
+      final BlurContent blur = BlurContent(strength: 0.8);
+      blur.paint.strokeWidth = 30.0;
+      blur.setRgbaData(rawRgba, 100, 100, const Size(100, 100));
+
+      // Draw a blur stroke that crosses through the boundary of the image (from x=20 outside to x=80 outside)
+      blur.startDrawWithPressure(const Offset(20, 50), 1.0);
+      blur.drawingWithPressure(const Offset(50, 50), 1.0);
+      blur.drawingWithPressure(const Offset(80, 50), 1.0);
+
+      final Uint8List pixels = blur.rgbaData!;
+
+      // 1. Outside pixels (e.g. x=10..29 and x=70..90 at y=50) MUST remain completely transparent (0 alpha, 0 rgb)
+      for (int x = 0; x < 30; x++) {
+        final int idx = (50 * 100 + x) * 4;
+        expect(pixels[idx + 3], equals(0), reason: 'Pixel at x=$x must remain 100% transparent with no bleed');
+        expect(pixels[idx], equals(0), reason: 'Pixel at x=$x must have 0 red');
+      }
+      for (int x = 70; x < 100; x++) {
+        final int idx = (50 * 100 + x) * 4;
+        expect(pixels[idx + 3], equals(0), reason: 'Pixel at x=$x must remain 100% transparent with no bleed');
+        expect(pixels[idx], equals(0), reason: 'Pixel at x=$x must have 0 red');
+      }
+
+      // 2. Pixels above and below the image (e.g. y=10..29 and y=70..90 at x=50) MUST remain completely transparent
+      for (int y = 0; y < 30; y++) {
+        final int idx = (y * 100 + 50) * 4;
+        expect(pixels[idx + 3], equals(0), reason: 'Pixel at y=$y must remain 100% transparent with no vertical bleed');
+      }
+      for (int y = 70; y < 100; y++) {
+        final int idx = (y * 100 + 50) * 4;
+        expect(pixels[idx + 3], equals(0), reason: 'Pixel at y=$y must remain 100% transparent with no vertical bleed');
+      }
+
+      // 3. Inside the image (x: 30..69, y: 30..69), original alpha (255) must be preserved
+      for (int y = 30; y < 70; y++) {
+        for (int x = 30; x < 70; x++) {
+          final int idx = (y * 100 + x) * 4;
+          expect(pixels[idx + 3], equals(255), reason: 'Image interior pixel at ($x,$y) must preserve 255 alpha');
+        }
+      }
+    });
   });
 }
