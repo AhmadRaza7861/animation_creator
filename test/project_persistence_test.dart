@@ -103,5 +103,95 @@ void main() {
       await repository.deleteProject(matching.id);
       controller.dispose();
     });
+
+    test('EditorController safely recovers and opens project with missing/deleted background image', () async {
+      final String nonExistentPath =
+          '/data/user/0/com.flipbook.draw.animation/cache/cropped_bg_9999999999999.png';
+
+      final Map<String, dynamic> stateWithMissingBg = {
+        'aspectRatio': 1.0,
+        'fps': 12,
+        'projectName': 'Missing Bg Test',
+        'globalBackground': {
+          'color': 0xFFFFFFFF,
+          'imagePath': nonExistentPath,
+          'imageOpacity': 1.0,
+          'pattern': null,
+        },
+        'canvases': [
+          {
+            'size': null,
+            'backgroundColor': 0xFFFFFFFF,
+            'layers': [
+              {
+                'id': 'layer_0',
+                'name': 'Layer 1',
+                'isVisible': true,
+                'isLocked': false,
+                'opacity': 1.0,
+                'blendMode': 3,
+                'currentIndex': 0,
+                'history': [],
+              }
+            ],
+            'activeLayerId': 'layer_0',
+          }
+        ],
+      };
+
+      final projectId = await repository.saveProject(
+        title: 'Missing Bg Test',
+        state: stateWithMissingBg,
+      );
+
+      final controller = EditorController(
+        projectId: projectId,
+        repository: repository,
+      );
+
+      // Should complete initialization without hanging or crashing
+      await controller.loadProjectData();
+      expect(controller.canvases.length, 1);
+      expect(controller.globalBackground.image, isNull);
+
+      await repository.deleteProject(projectId);
+      controller.dispose();
+    });
+
+    test('ProjectRepository relocates external background image into project assets directory', () async {
+      final docsDir = await AppPathProvider.getSafeDocumentsDirectory();
+      final tempAsset = File('${docsDir.path}/temp_sample_bg.png');
+      await tempAsset.writeAsBytes([1, 2, 3, 4], flush: true);
+
+      final Map<String, dynamic> state = {
+        'aspectRatio': 1.0,
+        'fps': 12,
+        'globalBackground': {
+          'color': 0xFFFFFFFF,
+          'imagePath': tempAsset.path,
+          'imageOpacity': 1.0,
+          'pattern': null,
+        },
+        'canvases': [],
+      };
+
+      final projectId = await repository.saveProject(
+        title: 'Relocate Asset Test',
+        state: state,
+      );
+
+      final loaded = await repository.loadProject(projectId);
+      expect(loaded, isNotNull);
+      final bgPath = loaded!.state['globalBackground']?['imagePath'] as String?;
+      expect(bgPath, isNotNull);
+      expect(bgPath!.contains('drawing_projects/$projectId/assets'), isTrue);
+      expect(File(bgPath).existsSync(), isTrue);
+
+      if (await tempAsset.exists()) {
+        await tempAsset.delete();
+      }
+      await repository.deleteProject(projectId);
+    });
   });
 }
+

@@ -163,9 +163,33 @@ class ProjectRepository {
           );
         }
 
+        // 0. Ensure all external/temporary image assets are copied into the project's permanent directory
+        final Map<String, dynamic> persistentState = Map<String, dynamic>.from(state);
+
+        if (persistentState['globalBackground'] is Map) {
+          final bgMap = Map<String, dynamic>.from(persistentState['globalBackground'] as Map);
+          final rawPath = bgMap['imagePath'] as String?;
+          if (rawPath != null && rawPath.isNotEmpty) {
+            final srcFile = File(rawPath);
+            if (!rawPath.startsWith(dirPath) && srcFile.existsSync()) {
+              final assetsDir = Directory('$dirPath/assets');
+              if (!assetsDir.existsSync()) {
+                assetsDir.createSync(recursive: true);
+              }
+              final ext = rawPath.contains('.') ? rawPath.split('.').last : 'png';
+              final destFile = File('${assetsDir.path}/bg_image.$ext');
+              try {
+                srcFile.copySync(destFile.path);
+                bgMap['imagePath'] = destFile.path;
+                persistentState['globalBackground'] = bgMap;
+              } catch (_) {}
+            }
+          }
+        }
+
         // 1. Write data.json atomically with flush
         final dataTmp = File('$dirPath/data.json.tmp');
-        dataTmp.writeAsStringSync(jsonEncode(state), flush: true);
+        dataTmp.writeAsStringSync(jsonEncode(persistentState), flush: true);
         final dataFile = File('$dirPath/data.json');
         if (dataFile.existsSync()) {
           try {

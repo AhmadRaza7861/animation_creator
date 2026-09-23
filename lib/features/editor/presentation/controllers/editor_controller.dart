@@ -644,24 +644,28 @@ class EditorController extends ChangeNotifier {
     final Completer<ImageInfo> completer = Completer<ImageInfo>();
     final NetworkImage img = NetworkImage(path);
     img.resolve(ImageConfiguration.empty).addListener(
-      ImageStreamListener((ImageInfo info, _) {
-        completer.complete(info);
-      }),
+      ImageStreamListener(
+        (ImageInfo info, _) {
+          if (!completer.isCompleted) completer.complete(info);
+        },
+        onError: (dynamic error, StackTrace? stackTrace) {
+          if (!completer.isCompleted) completer.completeError(error, stackTrace);
+        },
+      ),
     );
     final ImageInfo imageInfo = await completer.future;
     return imageInfo.image;
   }
 
   Future<ui.Image> _getFileImage(String path) async {
-    final Completer<ImageInfo> completer = Completer<ImageInfo>();
-    final FileImage img = FileImage(File(path));
-    img.resolve(ImageConfiguration.empty).addListener(
-      ImageStreamListener((ImageInfo info, _) {
-        completer.complete(info);
-      }),
-    );
-    final ImageInfo imageInfo = await completer.future;
-    return imageInfo.image;
+    final File file = File(path);
+    if (!await file.exists()) {
+      throw FileSystemException('Image file does not exist at $path', path);
+    }
+    final Uint8List bytes = await file.readAsBytes();
+    final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+    final ui.FrameInfo fi = await codec.getNextFrame();
+    return fi.image;
   }
 
   Future<ui.Image> _getAssetImage(String assetPath) async {
@@ -797,12 +801,19 @@ class EditorController extends ChangeNotifier {
         );
         if (_globalBackground.imagePath != null) {
           try {
-            final bytes = await File(_globalBackground.imagePath!).readAsBytes();
-            final codec = await ui.instantiateImageCodec(bytes);
-            final frame = await codec.getNextFrame();
-            _globalBackground = _globalBackground.copyWith(image: frame.image);
+            final file = File(_globalBackground.imagePath!);
+            if (await file.exists()) {
+              final bytes = await file.readAsBytes();
+              final codec = await ui.instantiateImageCodec(bytes);
+              final frame = await codec.getNextFrame();
+              _globalBackground = _globalBackground.copyWith(image: frame.image);
+            } else {
+              debugPrint('Background image file not found: ${_globalBackground.imagePath}');
+              _globalBackground = _globalBackground.copyWith(clearImage: true);
+            }
           } catch (e) {
             debugPrint('Failed to load bg image: $e');
+            _globalBackground = _globalBackground.copyWith(clearImage: true);
           }
         }
       }

@@ -44,8 +44,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       TransformationController();
   bool _isRulerMenuExpanded = false;
   bool _isRulerBarCollapsed = false;
-  bool _isBrushPanelCollapsed = false;
-  bool _isBrushPanelHorizontal = false;
+  bool _isBrushPanelCollapsed = true;
   Offset? _brushPanelPosition;
   Offset? _rulerBarPosition;
 
@@ -1790,18 +1789,17 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 if (controller.activeCategory == 'Brush')
                   Positioned(
                     left: (_brushPanelPosition?.dx ??
-                            (_isBrushPanelHorizontal
-                                ? 16.0
-                                : (MediaQuery.of(context).size.width - 52 - 16)))
+                            (MediaQuery.of(context).size.width -
+                                (_isBrushPanelCollapsed ? 38.0 : 44.0) -
+                                16.0))
                         .clamp(
                           2.0,
                           (MediaQuery.of(context).size.width -
-                                  (_isBrushPanelHorizontal ? 260.0 : 52.0) -
+                                  (_isBrushPanelCollapsed ? 38.0 : 44.0) -
                                   2.0)
                               .clamp(2.0, 4000.0),
                         ),
-                    top: (_brushPanelPosition?.dy ??
-                            (_isBrushPanelHorizontal ? 8.0 : 8.0))
+                    top: (_brushPanelPosition?.dy ?? 12.0)
                         .clamp(
                           0.0,
                           (MediaQuery.of(context).size.height - 140.0)
@@ -1962,135 +1960,127 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
             final bool isRulerActive =
                 _isRulerMenuExpanded && rulerConfig.type != RulerType.none;
 
-            if (_isBrushPanelHorizontal) {
-              // ----------------------------------------------------
-              // HORIZONTAL FLOATING BRUSH BAR
-              // ----------------------------------------------------
+            // 1. COLLAPSED FLOATING MINI-BADGE (Glassmorphic Chip)
+            if (_isBrushPanelCollapsed) {
               return GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onPanUpdate: _onBrushPanelPanUpdate,
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: Colors.grey.shade200, width: 1.2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.07),
-                        blurRadius: 14,
-                        spreadRadius: 1,
-                        offset: const Offset(0, 4),
+                onTap: () {
+                  setState(() {
+                    _isBrushPanelCollapsed = false;
+                  });
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(19),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.90),
+                        borderRadius: BorderRadius.circular(19),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ColorConstants.accent.withValues(alpha: 0.22),
+                            blurRadius: 12,
+                            offset: const Offset(0, 3),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SvgPicture.asset(
+                            isBrushTipsActive
+                                ? AssetConstants.brush_tips
+                                : (isRulerActive
+                                    ? AssetConstants.ruler_icon
+                                    : AssetConstants.brush_icon),
+                            width: 19,
+                            height: 19,
+                            colorFilter: const ColorFilter.mode(
+                              ColorConstants.accent,
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                          Positioned(
+                            top: 5,
+                            right: 5,
+                            child: Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: ColorConstants.accent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Grip Drag Handle (3 rows of 2 dots)
-                      GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onPanUpdate: _onBrushPanelPanUpdate,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _buildGripDot(size: 2.8),
-                                  const SizedBox(width: 2.0),
-                                  _buildGripDot(size: 2.8),
-                                ],
-                              ),
-                              const SizedBox(height: 2.0),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _buildGripDot(size: 2.8),
-                                  const SizedBox(width: 2.0),
-                                  _buildGripDot(size: 2.8),
-                                ],
-                              ),
-                              const SizedBox(height: 2.0),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _buildGripDot(size: 2.8),
-                                  const SizedBox(width: 2.0),
-                                  _buildGripDot(size: 2.8),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                ),
+              );
+            }
+
+            // 2. EXPANDED FLOATING DOCK (Ultra-sleek Glassmorphic Floating Capsule)
+            return GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanUpdate: _onBrushPanelPanUpdate,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    width: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        width: 1.2,
                       ),
-                      const SizedBox(width: 5),
-
-                      // Orientation Toggle Button
-                      _buildOrientationToggleBtn(),
-
-                      if (_isBrushPanelCollapsed) ...[
-                        const SizedBox(width: 4),
-                        // Collapsed View
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            setState(() {
-                              _isBrushPanelCollapsed = false;
-                            });
-                          },
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 18,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Drag Grab Pill
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2, bottom: 6),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 4,
-                            ),
+                            width: 16,
+                            height: 3.5,
                             decoration: BoxDecoration(
-                              color: ColorConstants.accent.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset(
-                                  isBrushTipsActive
-                                      ? AssetConstants.brush_tips
-                                      : (isRulerActive
-                                          ? AssetConstants.ruler_icon
-                                          : AssetConstants.brush_icon),
-                                  width: 20,
-                                  height: 20,
-                                  colorFilter: const ColorFilter.mode(
-                                    ColorConstants.accent,
-                                    BlendMode.srcIn,
-                                  ),
-                                ),
-                                const SizedBox(width: 2),
-                                const Icon(
-                                  Icons.keyboard_arrow_right_rounded,
-                                  size: 14,
-                                  color: ColorConstants.accent,
-                                ),
-                              ],
+                              color: const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
                         ),
-                      ] else ...[
-                        const SizedBox(width: 5),
 
                         // 1. Brush Tips Studio Button
-                        GestureDetector(
+                        _buildFloatingDockItem(
+                          tooltip: 'Brush Studio',
+                          svgAsset: AssetConstants.brush_tips,
+                          isActive: isBrushTipsActive,
                           onTap: () {
                             BrushStudioScreen.open(
                               context,
@@ -2098,51 +2088,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                               editorController: controller,
                             );
                           },
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 5),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: isBrushTipsActive
-                                  ? ColorConstants.accent.withValues(alpha: 0.09)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset(
-                                  AssetConstants.brush_tips,
-                                  width: 19,
-                                  height: 19,
-                                  colorFilter: ColorFilter.mode(
-                                    isBrushTipsActive
-                                        ? ColorConstants.accent
-                                        : Colors.grey.shade700,
-                                    BlendMode.srcIn,
-                                  ),
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  'Tips',
-                                  style: TextStyle(
-                                    fontSize: 8.5,
-                                    fontWeight: isBrushTipsActive
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    color: isBrushTipsActive
-                                        ? ColorConstants.accent
-                                        : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(height: 5),
 
                         // 2. Single Brush Tool Button
-                        GestureDetector(
+                        _buildFloatingDockItem(
+                          tooltip: 'Freehand Brush',
+                          svgAsset: AssetConstants.brush_icon,
+                          isActive: isSingleBrushActive,
                           onTap: () {
                             controller.activeCategory = 'Brush';
                             controller.drawingController.activeBrushPresetId = null;
@@ -2153,51 +2106,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                               strokeWidth: controller.globalStrokeWidth,
                             );
                           },
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 5),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: isSingleBrushActive
-                                  ? ColorConstants.accent.withValues(alpha: 0.09)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset(
-                                  AssetConstants.brush_icon,
-                                  width: 19,
-                                  height: 19,
-                                  colorFilter: ColorFilter.mode(
-                                    isSingleBrushActive
-                                        ? ColorConstants.accent
-                                        : Colors.grey.shade700,
-                                    BlendMode.srcIn,
-                                  ),
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  'Brush',
-                                  style: TextStyle(
-                                    fontSize: 8.5,
-                                    fontWeight: isSingleBrushActive
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    color: isSingleBrushActive
-                                        ? ColorConstants.accent
-                                        : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(height: 5),
 
-                        // 3. Ruler Button
-                        GestureDetector(
+                        // 3. Ruler Quick Toggle Button
+                        _buildFloatingDockItem(
+                          tooltip: 'Ruler',
+                          svgAsset: AssetConstants.ruler_icon,
+                          isActive: isRulerActive,
                           onTap: () {
                             setState(() {
                               if (isRulerActive) {
@@ -2211,52 +2127,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                               }
                             });
                           },
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 5),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: isRulerActive
-                                  ? ColorConstants.accent.withValues(alpha: 0.09)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset(
-                                  AssetConstants.ruler_icon,
-                                  width: 19,
-                                  height: 19,
-                                  colorFilter: ColorFilter.mode(
-                                    isRulerActive
-                                        ? ColorConstants.accent
-                                        : Colors.grey.shade700,
-                                    BlendMode.srcIn,
-                                  ),
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  'Ruler',
-                                  style: TextStyle(
-                                    fontSize: 8.5,
-                                    fontWeight: isRulerActive
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    color: isRulerActive
-                                        ? ColorConstants.accent
-                                        : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(height: 5),
 
-                        // 4. Sticker Mode Toggle
+                        // 4. Sticker / Object Mode Toggle Button
                         if (isSingleBrushActive) ...[
-                          GestureDetector(
+                          _buildFloatingDockItem(
+                            tooltip: 'Sticker Mode',
+                            iconData: Icons.auto_awesome_rounded,
+                            isActive: controller.enableStickers,
                             onTap: () {
                               controller.enableStickers =
                                   !controller.enableStickers;
@@ -2297,47 +2176,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                 ),
                               );
                             },
-                            child: Container(
-                              height: 40,
-                              padding: const EdgeInsets.symmetric(horizontal: 5),
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: controller.enableStickers
-                                    ? ColorConstants.accent.withValues(alpha: 0.09)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.auto_awesome_rounded,
-                                    size: 19,
-                                    color: controller.enableStickers
-                                        ? ColorConstants.accent
-                                        : Colors.grey.shade700,
-                                  ),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    'Sticker',
-                                    style: TextStyle(
-                                      fontSize: 8.5,
-                                      fontWeight: controller.enableStickers
-                                          ? FontWeight.w800
-                                          : FontWeight.w600,
-                                      color: controller.enableStickers
-                                          ? ColorConstants.accent
-                                          : Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(height: 5),
                         ],
 
-                        // Collapse button
+                        // 5. Minimize / Collapse Button
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -2346,424 +2189,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                             });
                           },
                           child: Container(
-                            width: 16,
+                            width: 32,
                             height: 22,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(6),
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
-                              Icons.keyboard_arrow_left_rounded,
-                              size: 13,
-                              color: Colors.black54,
+                              Icons.keyboard_arrow_up_rounded,
+                              size: 16,
+                              color: Color(0xFF64748B),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 2),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              );
-            }
-
-            // ----------------------------------------------------
-            // VERTICAL FLOATING BRUSH BAR
-            // ----------------------------------------------------
-            return GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onPanUpdate: _onBrushPanelPanUpdate,
-              child: Container(
-                width: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Colors.grey.shade200, width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.07),
-                      blurRadius: 14,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 4),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Grip Drag Handle (6-dot matrix)
-                    GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanUpdate: _onBrushPanelPanUpdate,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        alignment: Alignment.center,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _buildGripDot(size: 3.0),
-                                  const SizedBox(width: 2.5),
-                                  _buildGripDot(size: 3.0),
-                                  const SizedBox(width: 2.5),
-                                  _buildGripDot(size: 3.0),
-                                ],
-                              ),
-                              const SizedBox(height: 2.0),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _buildGripDot(size: 3.0),
-                                  const SizedBox(width: 2.5),
-                                  _buildGripDot(size: 3.0),
-                                  const SizedBox(width: 2.5),
-                                  _buildGripDot(size: 3.0),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-
-                    // Orientation Toggle Button
-                    _buildOrientationToggleBtn(),
-
-                    if (_isBrushPanelCollapsed) ...[
-                      // Collapsed View: active tool icon + tap to expand
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          setState(() {
-                            _isBrushPanelCollapsed = false;
-                          });
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(top: 2, bottom: 2),
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            color: ColorConstants.accent.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SvgPicture.asset(
-                                isBrushTipsActive
-                                    ? AssetConstants.brush_tips
-                                    : (isRulerActive
-                                        ? AssetConstants.ruler_icon
-                                        : AssetConstants.brush_icon),
-                                width: 20,
-                                height: 20,
-                                colorFilter: const ColorFilter.mode(
-                                  ColorConstants.accent,
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 14,
-                                color: ColorConstants.accent,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ] else ...[
-                      // Expanded View: full tools
-                      const SizedBox(height: 2),
-
-                      // 1. Brush Tips Studio Button
-                      GestureDetector(
-                        onTap: () {
-                          BrushStudioScreen.open(
-                            context,
-                            drawingController: controller.drawingController,
-                            editorController: controller,
-                          );
-                        },
-                        child: Container(
-                          width: 40,
-                          padding: const EdgeInsets.symmetric(vertical: 3.5),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isBrushTipsActive
-                                ? ColorConstants.accent.withValues(alpha: 0.09)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SvgPicture.asset(
-                                AssetConstants.brush_tips,
-                                width: 20,
-                                height: 20,
-                                colorFilter: ColorFilter.mode(
-                                  isBrushTipsActive
-                                      ? ColorConstants.accent
-                                      : Colors.grey.shade700,
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Tips',
-                                style: TextStyle(
-                                  fontSize: 9.0,
-                                  fontWeight: isBrushTipsActive
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                  color: isBrushTipsActive
-                                      ? ColorConstants.accent
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-
-                      // 2. Single Brush Tool Button
-                      GestureDetector(
-                        onTap: () {
-                          controller.activeCategory = 'Brush';
-                          controller.drawingController.activeBrushPresetId = null;
-                          controller.drawingController.setPaintContent(
-                            FreehandLine(),
-                          );
-                          controller.drawingController.setStyle(
-                            strokeWidth: controller.globalStrokeWidth,
-                          );
-                        },
-                        child: Container(
-                          width: 40,
-                          padding: const EdgeInsets.symmetric(vertical: 3.5),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isSingleBrushActive
-                                ? ColorConstants.accent.withValues(alpha: 0.09)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SvgPicture.asset(
-                                AssetConstants.brush_icon,
-                                width: 20,
-                                height: 20,
-                                colorFilter: ColorFilter.mode(
-                                  isSingleBrushActive
-                                      ? ColorConstants.accent
-                                      : Colors.grey.shade700,
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Brush',
-                                style: TextStyle(
-                                  fontSize: 9.0,
-                                  fontWeight: isSingleBrushActive
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                  color: isSingleBrushActive
-                                      ? ColorConstants.accent
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-
-                      // 3. Ruler Button (Toggles Ruler completely on/off)
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            if (isRulerActive) {
-                              _isRulerMenuExpanded = false;
-                              controller.drawingController.rulerConfig.value =
-                                  rulerConfig.copyWith(type: RulerType.none);
-                            } else {
-                              _isRulerMenuExpanded = true;
-                              controller.drawingController.rulerConfig.value =
-                                  rulerConfig.copyWith(type: RulerType.line);
-                            }
-                          });
-                        },
-                        child: Container(
-                          width: 40,
-                          padding: const EdgeInsets.symmetric(vertical: 3.5),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isRulerActive
-                                ? ColorConstants.accent.withValues(alpha: 0.09)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SvgPicture.asset(
-                                AssetConstants.ruler_icon,
-                                width: 20,
-                                height: 20,
-                                colorFilter: ColorFilter.mode(
-                                  isRulerActive
-                                      ? ColorConstants.accent
-                                      : Colors.grey.shade700,
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Ruler',
-                                style: TextStyle(
-                                  fontSize: 9.0,
-                                  fontWeight: isRulerActive
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                  color: isRulerActive
-                                      ? ColorConstants.accent
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-
-                      // 4. Sticker / Object Mode Toggle (Only when Single Brush is selected, NOT Brush Tips)
-                      if (isSingleBrushActive) ...[
-                        GestureDetector(
-                          onTap: () {
-                            controller.enableStickers =
-                                !controller.enableStickers;
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Row(
-                                  children: [
-                                    Icon(
-                                      controller.enableStickers
-                                          ? Icons.auto_awesome_rounded
-                                          : Icons.edit_rounded,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        controller.enableStickers
-                                            ? '🎯 Sticker Mode Active: Strokes can be moved & rotated'
-                                            : '✏️ Freehand Mode Active: Direct drawing on canvas',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                duration: const Duration(seconds: 2),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            width: 40,
-                            padding: const EdgeInsets.symmetric(vertical: 3.5),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: controller.enableStickers
-                                  ? ColorConstants.accent.withValues(alpha: 0.09)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.auto_awesome_rounded,
-                                  size: 20,
-                                  color: controller.enableStickers
-                                      ? ColorConstants.accent
-                                      : Colors.grey.shade700,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Sticker',
-                                  style: TextStyle(
-                                    fontSize: 9.0,
-                                    fontWeight: controller.enableStickers
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    color: controller.enableStickers
-                                        ? ColorConstants.accent
-                                        : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                      ],
-
-                      // Collapse button
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          setState(() {
-                            _isBrushPanelCollapsed = true;
-                          });
-                        },
-                        child: Container(
-                          width: 22,
-                          height: 16,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Icon(
-                            Icons.keyboard_arrow_up_rounded,
-                            size: 13,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                    ],
-                  ],
                 ),
               ),
             );
@@ -2773,19 +2215,67 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     );
   }
 
+  Widget _buildFloatingDockItem({
+    required String tooltip,
+    String? svgAsset,
+    IconData? iconData,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      preferBelow: false,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive
+                ? ColorConstants.accent.withValues(alpha: 0.14)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: isActive
+                ? Border.all(
+                    color: ColorConstants.accent.withValues(alpha: 0.35),
+                    width: 1,
+                  )
+                : null,
+          ),
+          child: svgAsset != null
+              ? SvgPicture.asset(
+                  svgAsset,
+                  width: 19,
+                  height: 19,
+                  colorFilter: ColorFilter.mode(
+                    isActive ? ColorConstants.accent : const Color(0xFF475569),
+                    BlendMode.srcIn,
+                  ),
+                )
+              : Icon(
+                  iconData,
+                  size: 19,
+                  color: isActive
+                      ? ColorConstants.accent
+                      : const Color(0xFF475569),
+                ),
+        ),
+      ),
+    );
+  }
+
   void _onBrushPanelPanUpdate(DragUpdateDetails details) {
     setState(() {
-      final double defaultX = _isBrushPanelHorizontal
-          ? 16.0
-          : (MediaQuery.of(context).size.width - 52 - 16);
-      final double defaultY = _isBrushPanelHorizontal ? 8.0 : 8.0;
+      final double defaultX = MediaQuery.of(context).size.width - 44.0 - 16.0;
+      final double defaultY = 12.0;
       final double currentX = _brushPanelPosition?.dx ?? defaultX;
       final double currentY = _brushPanelPosition?.dy ?? defaultY;
 
-      final double panelW = _isBrushPanelHorizontal ? 260.0 : 52.0;
-      final double panelH = _isBrushPanelHorizontal
-          ? 52.0
-          : (_isBrushPanelCollapsed ? 110.0 : 260.0);
+      final double panelW = _isBrushPanelCollapsed ? 38.0 : 44.0;
+      final double panelH = _isBrushPanelCollapsed ? 38.0 : 190.0;
 
       final double newX = (currentX + details.delta.dx).clamp(
         2.0,
@@ -2793,47 +2283,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       );
       final double newY = (currentY + details.delta.dy).clamp(
         0.0,
-        (MediaQuery.of(context).size.height - panelH - 100.0).clamp(0.0, 4000.0),
+        (MediaQuery.of(context).size.height - panelH - 120.0).clamp(0.0, 4000.0),
       );
 
       _brushPanelPosition = Offset(newX, newY);
     });
-  }
-
-  Widget _buildOrientationToggleBtn() {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        setState(() {
-          _isBrushPanelHorizontal = !_isBrushPanelHorizontal;
-        });
-      },
-      child: Container(
-        width: 32,
-        height: 26,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
-        ),
-        child: CustomPaint(
-          size: const Size(16, 13),
-          painter: _OrientationIconPainter(isHorizontal: _isBrushPanelHorizontal),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGripDot({double size = 3.2, Color? color}) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: color ?? const Color(0xFF9CA3AF),
-        shape: BoxShape.circle,
-      ),
-    );
   }
 
   Widget _buildHorizontalRulerBar(EditorController controller) {
@@ -3265,6 +2719,17 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       ),
     );
   }
+
+  Widget _buildGripDot({double size = 3.2, Color? color}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color ?? const Color(0xFF9CA3AF),
+        shape: BoxShape.circle,
+      ),
+    );
+  }
 }
 
 class _GridPainterPreview extends CustomPainter {
@@ -3519,50 +2984,5 @@ class DashedBorderPainter extends CustomPainter {
         oldDelegate.dashLength != dashLength ||
         oldDelegate.radius != radius;
   }
-}
-
-/// Custom painter for the Orientation Toggle Icon (Switch between Vertical and Horizontal modes)
-class _OrientationIconPainter extends CustomPainter {
-  final bool isHorizontal;
-
-  _OrientationIconPainter({required this.isHorizontal});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint borderPaint = Paint()
-      ..color = const Color(0xFF475569)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3;
-
-    if (!isHorizontal) {
-      // In Vertical mode: shows 2 side-by-side vertical rounded rectangles ([|] [|])
-      final rrect1 = RRect.fromRectAndRadius(
-        const Rect.fromLTWH(1.5, 0.8, 5.2, 11.4),
-        const Radius.circular(1.5),
-      );
-      final rrect2 = RRect.fromRectAndRadius(
-        const Rect.fromLTWH(9.3, 0.8, 5.2, 11.4),
-        const Radius.circular(1.5),
-      );
-      canvas.drawRRect(rrect1, borderPaint);
-      canvas.drawRRect(rrect2, borderPaint);
-    } else {
-      // In Horizontal mode: shows 2 stacked horizontal rounded rectangles ([=] / [=])
-      final rrect1 = RRect.fromRectAndRadius(
-        const Rect.fromLTWH(0.8, 1.2, 14.4, 4.4),
-        const Radius.circular(1.5),
-      );
-      final rrect2 = RRect.fromRectAndRadius(
-        const Rect.fromLTWH(0.8, 7.4, 14.4, 4.4),
-        const Radius.circular(1.5),
-      );
-      canvas.drawRRect(rrect1, borderPaint);
-      canvas.drawRRect(rrect2, borderPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _OrientationIconPainter oldDelegate) =>
-      oldDelegate.isHorizontal != isHorizontal;
 }
 

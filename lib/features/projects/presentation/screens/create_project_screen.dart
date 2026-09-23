@@ -1021,11 +1021,12 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                           ),
                         ),
                       //  Image file
-                        if (_backgroundImagePath != null)
+                        if (_backgroundImagePath != null && File(_backgroundImagePath!).existsSync())
                           Positioned.fill(
                             child: Image.file(
                               File(_backgroundImagePath!),
                               fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                             ),
                           ),
                         // Pattern painter overlay

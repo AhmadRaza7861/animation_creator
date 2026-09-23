@@ -337,7 +337,7 @@ class ProjectCard extends StatelessWidget {
   }
 
   Widget _buildCanvasArtwork() {
-    if (project.thumbnailPath != null) {
+    if (project.thumbnailPath != null && File(project.thumbnailPath!).existsSync()) {
       final thumbFile = File(project.thumbnailPath!);
       return Container(
         color: Colors.white,

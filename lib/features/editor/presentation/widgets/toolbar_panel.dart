@@ -15,6 +15,8 @@ import '../../../../../core/widgets/font_presets.dart';
 import '../../../../../core/widgets/app_dialogs.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
+import '../../../../../package_code/src/ruler/ruler_config.dart';
+import '../screens/brush_studio_screen.dart';
 import '../screens/export/make_movie_screen.dart';
 import '../screens/video_trimming_screen.dart';
 import '../screens/image_crop_screen.dart';
@@ -269,7 +271,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Brush',
                     svgAsset: AssetConstants.brush_icon,
-                    isSelected: controller.activeCategory == 'Brush',
+                    isSelected: controller.activeCategory == 'Brush' &&
+                        controller.drawingController.activeBrushPresetId == null,
                     onTap: () {
                       controller.activeCategory = 'Brush';
                       controller.drawingController.activeBrushPresetId = null;
@@ -278,6 +281,19 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       );
                       controller.drawingController.setStyle(
                         strokeWidth: controller.globalStrokeWidth,
+                      );
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: 'Studio',
+                    svgAsset: AssetConstants.brush_tips,
+                    isSelected: controller.activeCategory == 'Brush' &&
+                        controller.drawingController.activeBrushPresetId != null,
+                    onTap: () {
+                      BrushStudioScreen.open(
+                        context,
+                        drawingController: controller.drawingController,
+                        editorController: controller,
                       );
                     },
                   ),
@@ -330,6 +346,28 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         Eyedropper(),
                       );
                       controller.activeCategory = 'Eyedropper';
+                    },
+                  ),
+
+                  ValueListenableBuilder<RulerConfig>(
+                    valueListenable: controller.drawingController.rulerConfig,
+                    builder: (context, rulerConfig, child) {
+                      final bool isRulerActive =
+                          rulerConfig.type != RulerType.none;
+                      return _bottomToolbarCategoryItem(
+                        label: 'Ruler',
+                        svgAsset: AssetConstants.ruler_icon,
+                        isSelected: isRulerActive,
+                        onTap: () {
+                          if (isRulerActive) {
+                            controller.drawingController.rulerConfig.value =
+                                rulerConfig.copyWith(type: RulerType.none);
+                          } else {
+                            controller.drawingController.rulerConfig.value =
+                                rulerConfig.copyWith(type: RulerType.line);
+                          }
+                        },
+                      );
                     },
                   ),
                   _bottomToolbarCategoryItem(
@@ -405,15 +443,6 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       controller.drawingController.prepareSnapshot();
                     },
                   ),
-
-                  // _bottomToolbarCategoryItem(
-                  //   label: 'Ruler',
-                  //   svgAsset: AssetConstants.ruler_icon,
-                  //   isSelected: controller.showRulerMenu,
-                  //   onTap: () {
-                  //     controller.showRulerMenu = !controller.showRulerMenu;
-                  //   },
-                  // ),
                   const SizedBox(width: 16),
                 ],
               ),

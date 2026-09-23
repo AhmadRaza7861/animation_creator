@@ -254,9 +254,13 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
       }
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
-      final Directory tempDir = await AppPathProvider.getSafeTempDirectory();
+      final Directory docsDir = await AppPathProvider.getSafeDocumentsDirectory();
+      final Directory persistentDir = Directory('${docsDir.path}/persistent_assets');
+      if (!await persistentDir.exists()) {
+        await persistentDir.create(recursive: true);
+      }
       final String croppedPath =
-          '${tempDir.path}/cropped_bg_${DateTime.now().millisecondsSinceEpoch}.png';
+          '${persistentDir.path}/cropped_bg_${DateTime.now().millisecondsSinceEpoch}.png';
       final File croppedFile = File(croppedPath);
       await croppedFile.writeAsBytes(pngBytes);
 
