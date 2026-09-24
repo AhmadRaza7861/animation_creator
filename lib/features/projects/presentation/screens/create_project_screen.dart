@@ -200,22 +200,10 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         imageQuality: 95,
       );
       if (pickedFile != null && mounted) {
-        final double currentAspectRatio = _canvasWidth / (_canvasHeight > 0 ? _canvasHeight : 1000);
-        final String? croppedPath = await Navigator.push<String?>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ImageCropScreen(
-              imageFile: File(pickedFile.path),
-              targetAspectRatio: currentAspectRatio,
-            ),
-          ),
-        );
-        if (croppedPath != null && mounted) {
-          setState(() {
-            _backgroundImagePath = croppedPath;
-            _backgroundPattern = null;
-          });
-        }
+        setState(() {
+          _backgroundImagePath = pickedFile.path;
+          _backgroundPattern = null;
+        });
       }
     } catch (e) {
       debugPrint('Failed to pick background image: $e');
@@ -437,14 +425,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           Navigator.of(context, rootNavigator: true).pop();
         }
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditorScreen(
-              projectId: projectId,
-            ),
-          ),
-        );
+        Navigator.pop(context, projectId);
       }
     } catch (e) {
       if (widget.template != null && mounted) {

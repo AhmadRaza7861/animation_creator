@@ -1383,20 +1383,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
           imageQuality: 95,
         );
         if (file != null && mounted) {
-          final String? croppedPath = await Navigator.push<String?>(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ImageCropScreen(
-                imageFile: File(file.path),
-                targetAspectRatio: null,
-                lockAspectRatio: false,
-              ),
-            ),
-          );
-          if (croppedPath != null && mounted) {
-            final ui.Image image = await _getFileImage(croppedPath);
-            controller.addImageSticker(image, imageUrl: croppedPath);
-          }
+          final ui.Image image = await _getFileImage(file.path);
+          controller.addImageSticker(image, imageUrl: file.path);
         }
       } catch (e) {
         debugPrint('Error picking sticker image: $e');

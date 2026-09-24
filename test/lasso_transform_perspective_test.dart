@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dummy/package_code/src/draw_path/draw_path.dart';
 import 'package:dummy/package_code/paint_contents.dart';
 import 'package:dummy/package_code/src/drawing_controller.dart';
 import 'package:dummy/package_code/src/paint_extension/quad_homography.dart';
@@ -623,6 +624,56 @@ void main() {
       // Cleanup
       await repo.deleteProject(projectId);
       controller2.dispose();
+    });
+
+    testWidgets('ShapeStickerWidget renders CustomPaint with exact dimensions and 0 padding offset', (tester) async {
+      final content = ClippedHistoryContent(
+        [],
+        DrawPath()..path.addRect(const Rect.fromLTWH(50, 50, 100, 100)),
+        const Rect.fromLTWH(50, 50, 100, 100),
+      );
+
+      final sticker = ActiveShapeSticker(
+        id: 'test_sticker',
+        content: content,
+        size: const Size(100, 100),
+        offset: const Offset(100, 100),
+        isLassoSelection: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                ShapeStickerWidget(
+                  data: sticker,
+                  onUpdate: (offset, scale, rotation) {},
+                  onDelete: () {},
+                  onConfirm: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Verify that the CustomPaint is rendered
+      final customPaintFinder = find.byType(CustomPaint);
+      expect(customPaintFinder, findsWidgets);
+
+      // Find the CustomPaint that has Size(100, 100)
+      final RenderBox customPaintBox = tester.renderObject(
+        find.byWidgetPredicate((widget) => widget is CustomPaint && widget.size == const Size(100, 100)),
+      );
+
+      // Verify exact size is 100x100 (not 97x97 from border padding)
+      expect(customPaintBox.size, equals(const Size(100, 100)));
+
+      // Verify top-left in global coordinates matches bounds top-left (50, 50)
+      final globalPos = customPaintBox.localToGlobal(Offset.zero);
+      expect(globalPos.dx, equals(50.0));
+      expect(globalPos.dy, equals(50.0));
     });
   });
 }

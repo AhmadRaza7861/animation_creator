@@ -24,6 +24,8 @@ void main() {
   );
 }
 
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+
 class MyApp extends StatelessWidget {
   final ProjectRepository repository;
   const MyApp({super.key, required this.repository});
@@ -36,6 +38,7 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       navigatorKey: NavigationService.navigatorKey,
+      navigatorObservers: [routeObserver],
       themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
       home: SplashScreen(repository: repository),

@@ -44,7 +44,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       TransformationController();
   bool _isRulerMenuExpanded = false;
   bool _isRulerBarCollapsed = false;
-  bool _isBrushPanelCollapsed = true;
   Offset? _brushPanelPosition;
   Offset? _rulerBarPosition;
 
@@ -1024,7 +1023,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       controller.isAudioStudioOpen = false;
       return;
     }
-    await controller.saveProject();
+    await controller.saveProject(immediate: true);
     if (context.mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
@@ -1789,14 +1788,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 if (controller.activeCategory == 'Brush')
                   Positioned(
                     left: (_brushPanelPosition?.dx ??
-                            (MediaQuery.of(context).size.width -
-                                (_isBrushPanelCollapsed ? 38.0 : 44.0) -
-                                16.0))
+                            (MediaQuery.of(context).size.width - 44.0 - 16.0))
                         .clamp(
                           2.0,
-                          (MediaQuery.of(context).size.width -
-                                  (_isBrushPanelCollapsed ? 38.0 : 44.0) -
-                                  2.0)
+                          (MediaQuery.of(context).size.width - 44.0 - 2.0)
                               .clamp(2.0, 4000.0),
                         ),
                     top: (_brushPanelPosition?.dy ?? 12.0)
@@ -1960,251 +1955,152 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
             final bool isRulerActive =
                 _isRulerMenuExpanded && rulerConfig.type != RulerType.none;
 
-            // 1. COLLAPSED FLOATING MINI-BADGE (Glassmorphic Chip)
-            if (_isBrushPanelCollapsed) {
-              return GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onPanUpdate: _onBrushPanelPanUpdate,
-                onTap: () {
-                  setState(() {
-                    _isBrushPanelCollapsed = false;
-                  });
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(19),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.90),
-                        borderRadius: BorderRadius.circular(19),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.95),
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ColorConstants.accent.withValues(alpha: 0.22),
-                            blurRadius: 12,
-                            offset: const Offset(0, 3),
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SvgPicture.asset(
-                            isBrushTipsActive
-                                ? AssetConstants.brush_tips
-                                : (isRulerActive
-                                    ? AssetConstants.ruler_icon
-                                    : AssetConstants.brush_icon),
-                            width: 19,
-                            height: 19,
-                            colorFilter: const ColorFilter.mode(
-                              ColorConstants.accent,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                          Positioned(
-                            top: 5,
-                            right: 5,
-                            child: Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: ColorConstants.accent,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      width: 1.2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 18,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
-                ),
-              );
-            }
-
-            // 2. EXPANDED FLOATING DOCK (Ultra-sleek Glassmorphic Floating Capsule)
-            return GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onPanUpdate: _onBrushPanelPanUpdate,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: Container(
-                    width: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.95),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 18,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Drag Grab Pill
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2, bottom: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Drag Grab Pill (dedicated drag handle)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onPanUpdate: _onBrushPanelPanUpdate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                           child: Container(
-                            width: 16,
-                            height: 3.5,
+                            width: 18,
+                            height: 4,
                             decoration: BoxDecoration(
                               color: const Color(0xFFCBD5E1),
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
                         ),
+                      ),
 
-                        // 1. Brush Tips Studio Button
-                        _buildFloatingDockItem(
-                          tooltip: 'Brush Studio',
-                          svgAsset: AssetConstants.brush_tips,
-                          isActive: isBrushTipsActive,
-                          onTap: () {
-                            BrushStudioScreen.open(
-                              context,
-                              drawingController: controller.drawingController,
-                              editorController: controller,
-                            );
-                          },
-                        ),
+                      // 1. Brush Tips Studio Button
+                      _buildFloatingDockItem(
+                        tooltip: 'Brush Studio',
+                        svgAsset: AssetConstants.brush_tips,
+                        isActive: isBrushTipsActive,
+                        onTap: () {
+                          BrushStudioScreen.open(
+                            context,
+                            drawingController: controller.drawingController,
+                            editorController: controller,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 5),
+
+                      // 2. Single Brush Tool Button
+                      _buildFloatingDockItem(
+                        tooltip: 'Freehand Brush',
+                        svgAsset: AssetConstants.brush_icon,
+                        isActive: isSingleBrushActive,
+                        onTap: () {
+                          controller.activeCategory = 'Brush';
+                          controller.drawingController.activeBrushPresetId = null;
+                          controller.drawingController.setPaintContent(
+                            FreehandLine(),
+                          );
+                          controller.drawingController.setStyle(
+                            strokeWidth: controller.globalStrokeWidth,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 5),
+
+                      // 3. Ruler Quick Toggle Button
+                      _buildFloatingDockItem(
+                        tooltip: 'Ruler',
+                        svgAsset: AssetConstants.ruler_icon,
+                        isActive: isRulerActive,
+                        onTap: () {
+                          setState(() {
+                            if (isRulerActive) {
+                              _isRulerMenuExpanded = false;
+                              controller.drawingController.rulerConfig.value =
+                                  rulerConfig.copyWith(type: RulerType.none);
+                            } else {
+                              _isRulerMenuExpanded = true;
+                              controller.drawingController.rulerConfig.value =
+                                  rulerConfig.copyWith(type: RulerType.line);
+                            }
+                          });
+                        },
+                      ),
+
+                      // 4. Sticker / Object Mode Toggle Button
+                      if (isSingleBrushActive) ...[
                         const SizedBox(height: 5),
-
-                        // 2. Single Brush Tool Button
                         _buildFloatingDockItem(
-                          tooltip: 'Freehand Brush',
-                          svgAsset: AssetConstants.brush_icon,
-                          isActive: isSingleBrushActive,
+                          tooltip: 'Sticker Mode',
+                          iconData: Icons.auto_awesome_rounded,
+                          isActive: controller.enableStickers,
                           onTap: () {
-                            controller.activeCategory = 'Brush';
-                            controller.drawingController.activeBrushPresetId = null;
-                            controller.drawingController.setPaintContent(
-                              FreehandLine(),
-                            );
-                            controller.drawingController.setStyle(
-                              strokeWidth: controller.globalStrokeWidth,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 5),
-
-                        // 3. Ruler Quick Toggle Button
-                        _buildFloatingDockItem(
-                          tooltip: 'Ruler',
-                          svgAsset: AssetConstants.ruler_icon,
-                          isActive: isRulerActive,
-                          onTap: () {
-                            setState(() {
-                              if (isRulerActive) {
-                                _isRulerMenuExpanded = false;
-                                controller.drawingController.rulerConfig.value =
-                                    rulerConfig.copyWith(type: RulerType.none);
-                              } else {
-                                _isRulerMenuExpanded = true;
-                                controller.drawingController.rulerConfig.value =
-                                    rulerConfig.copyWith(type: RulerType.line);
-                              }
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 5),
-
-                        // 4. Sticker / Object Mode Toggle Button
-                        if (isSingleBrushActive) ...[
-                          _buildFloatingDockItem(
-                            tooltip: 'Sticker Mode',
-                            iconData: Icons.auto_awesome_rounded,
-                            isActive: controller.enableStickers,
-                            onTap: () {
-                              controller.enableStickers =
-                                  !controller.enableStickers;
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      Icon(
+                            controller.enableStickers =
+                                !controller.enableStickers;
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(
+                                      controller.enableStickers
+                                          ? Icons.auto_awesome_rounded
+                                          : Icons.edit_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
                                         controller.enableStickers
-                                            ? Icons.auto_awesome_rounded
-                                            : Icons.edit_rounded,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          controller.enableStickers
-                                              ? '🎯 Sticker Mode Active: Strokes can be moved & rotated'
-                                              : '✏️ Freehand Mode Active: Direct drawing on canvas',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                            ? '🎯 Sticker Mode Active: Strokes can be moved & rotated'
+                                            : '✏️ Freehand Mode Active: Direct drawing on canvas',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  duration: const Duration(seconds: 2),
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 5),
-                        ],
-
-                        // 5. Minimize / Collapse Button
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            setState(() {
-                              _isBrushPanelCollapsed = true;
-                            });
+                                duration: const Duration(seconds: 2),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                            );
                           },
-                          child: Container(
-                            width: 32,
-                            height: 22,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.keyboard_arrow_up_rounded,
-                              size: 16,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -2274,8 +2170,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       final double currentX = _brushPanelPosition?.dx ?? defaultX;
       final double currentY = _brushPanelPosition?.dy ?? defaultY;
 
-      final double panelW = _isBrushPanelCollapsed ? 38.0 : 44.0;
-      final double panelH = _isBrushPanelCollapsed ? 38.0 : 190.0;
+      const double panelW = 44.0;
+      const double panelH = 175.0;
 
       final double newX = (currentX + details.delta.dx).clamp(
         2.0,

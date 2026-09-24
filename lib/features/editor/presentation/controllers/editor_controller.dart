@@ -939,25 +939,49 @@ class EditorController extends ChangeNotifier {
     return false;
   }
 
+  Completer<void>? _saveCompleter;
+  bool _hasImmediatePendingSave = false;
+
   Future<void> saveProject({bool immediate = false}) async {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = null;
 
+    if (immediate) {
+      _hasImmediatePendingSave = true;
+    }
+
     if (_isSaving) {
       _hasPendingSave = true;
+      while (_isSaving) {
+        if (_saveCompleter != null) {
+          try {
+            await _saveCompleter!.future;
+          } catch (_) {}
+        } else {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      }
       return;
     }
     _isSaving = true;
+    _saveCompleter = Completer<void>();
 
     try {
       do {
+        final bool stamp = immediate || _hasImmediatePendingSave;
         _hasPendingSave = false;
-        await _performSave(stampStickers: immediate);
+        _hasImmediatePendingSave = false;
+        await _performSave(stampStickers: stamp);
       } while (_hasPendingSave);
     } catch (e) {
       debugPrint('Error in saveProject: $e');
     } finally {
       _isSaving = false;
+      final completer = _saveCompleter;
+      _saveCompleter = null;
+      if (completer != null && !completer.isCompleted) {
+        completer.complete();
+      }
     }
   }
 
@@ -1092,13 +1116,16 @@ class EditorController extends ChangeNotifier {
             ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
         );
 
-        final int count = layer.currentIndex.clamp(0, layer.history.length);
-        for (int j = 0; j < count; j++) {
-          layer.history[j].draw(canvas, canvasSize, false);
-        }
+        layer.drawHistory(canvas, canvasSize, false);
 
         canvas.restore();
       }
+
+      // Draw active sticker if currently active on canvas 0
+      if (_activeSticker != null && _currentIndex == 0) {
+        _drawActiveSticker(canvas, canvasSize, _activeSticker!);
+      }
+
       canvas.restore();
 
       final ui.Picture picture = recorder.endRecording();
@@ -1142,11 +1169,29 @@ class EditorController extends ChangeNotifier {
 
       final historyData = lMap['history'] as List<dynamic>;
       final List<PaintContent> history = [];
-      for (final hData in historyData) {
+
+      // Optimization & Crash Prevention: Identify latest raster content index in historyData
+      int latestRasterDataIndex = -1;
+      for (int i = historyData.length - 1; i >= 0; i--) {
+        final hMap = historyData[i] as Map<String, dynamic>;
+        final type = hMap['type'] as String?;
+        if (type == 'SmudgeContent' || type == 'BlurContent') {
+          latestRasterDataIndex = i;
+          break;
+        }
+      }
+
+      for (int i = 0; i < historyData.length; i++) {
+        final hData = historyData[i];
         final hMap = hData as Map<String, dynamic>;
         final content = decodePaintContent(hMap['type'] as String, hMap);
         if (content != null) {
-          await _rehydrateContent(content, hMap);
+          // Only rehydrate image if it is the latest raster state or non-raster content
+          final bool shouldRehydrateImage = (i == latestRasterDataIndex) ||
+              (content is! SmudgeContent && content is! BlurContent);
+          if (shouldRehydrateImage) {
+            await _rehydrateContent(content, hMap);
+          }
           history.add(content);
         }
       }
@@ -1301,6 +1346,7 @@ class EditorController extends ChangeNotifier {
       _canvases.insert(targetIndex, controller);
       _thumbnails.insert(targetIndex, null);
       _currentIndex = targetIndex;
+      markDirty();
     }
     notifyListeners();
   }
@@ -1412,6 +1458,7 @@ class EditorController extends ChangeNotifier {
     if (_currentIndex >= _canvases.length) {
       _currentIndex = _canvases.length - 1;
     }
+    markDirty();
     notifyListeners();
   }
 
@@ -1435,6 +1482,7 @@ class EditorController extends ChangeNotifier {
     } else if (_currentIndex < oldIndex && _currentIndex >= newIndex) {
       _currentIndex += 1;
     }
+    markDirty();
     notifyListeners();
   }
 
@@ -1454,6 +1502,7 @@ class EditorController extends ChangeNotifier {
     _thumbnails.clear();
     _thumbnails.addAll(newThumbs);
     _currentIndex = activeIndex.clamp(0, _canvases.length - 1);
+    markDirty();
     notifyListeners();
   }
 
@@ -1508,6 +1557,7 @@ class EditorController extends ChangeNotifier {
     _canvases.insert(index + 1, duplicated);
     _thumbnails.insert(index + 1, null);
     _currentIndex = index + 1;
+    markDirty();
     notifyListeners();
   }
 
@@ -2455,9 +2505,21 @@ class EditorController extends ChangeNotifier {
         }
 
         final List<PaintContent> historyCopy = [];
-        final historySlice = controller.getHistory.take(controller.currentIndex);
+        final historySlice = controller.getHistory.take(controller.currentIndex).toList();
 
-        for (final item in historySlice) {
+        // 1. Identify the latest active raster state in history
+        int latestRasterIndex = -1;
+        for (int j = historySlice.length - 1; j >= 0; j--) {
+          if (historySlice[j] is SmudgeContent || historySlice[j] is BlurContent) {
+            latestRasterIndex = j;
+            break;
+          }
+        }
+
+        // 2. Only inspect history from latestRasterIndex onwards to avoid duplicate raster textures
+        final int startIndex = latestRasterIndex >= 0 ? latestRasterIndex : 0;
+        for (int j = startIndex; j < historySlice.length; j++) {
+          final item = historySlice[j];
           bool overlaps = true;
           try {
             final Path p = item.getPath();

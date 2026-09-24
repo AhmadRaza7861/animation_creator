@@ -103,8 +103,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
   }
 
 
-  void _openDetail(TemplateModel template) {
-    Navigator.push(
+  void _openDetail(TemplateModel template) async {
+    final projectId = await Navigator.push<String>(
       context,
       MaterialPageRoute(
         builder: (context) => TemplateDetailScreen(
@@ -113,6 +113,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
         ),
       ),
     );
+    if (projectId != null && mounted) {
+      Navigator.pop(context, projectId);
+    }
   }
 
   @override

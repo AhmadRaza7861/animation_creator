@@ -344,7 +344,9 @@ class ProjectCard extends StatelessWidget {
         child: Center(
           child: Image.file(
             thumbFile,
+            key: ValueKey('${project.id}_${project.lastModified.millisecondsSinceEpoch}'),
             fit: BoxFit.contain,
+            gaplessPlayback: true,
             errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
           ),
         ),

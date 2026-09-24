@@ -187,6 +187,47 @@ class ProjectRepository {
           }
         }
 
+        // 0.2 Ensure all canvas layer image assets are copied into the project directory
+        final canvasesList = persistentState['canvases'] as List<dynamic>?;
+        if (canvasesList != null) {
+          final assetsDir = Directory('$dirPath/assets');
+          for (final c in canvasesList) {
+            if (c is Map) {
+              final layersList = c['layers'] as List<dynamic>?;
+              if (layersList != null) {
+                for (final l in layersList) {
+                  if (l is Map) {
+                    final historyList = l['history'] as List<dynamic>?;
+                    if (historyList != null) {
+                      for (final item in historyList) {
+                        if (item is Map && item['type'] == 'ImageContent') {
+                          final rawUrl = item['imageUrl'] as String?;
+                          if (rawUrl != null && rawUrl.isNotEmpty && !rawUrl.startsWith('http') && !rawUrl.startsWith('assets/')) {
+                            final srcFile = File(rawUrl);
+                            if (!rawUrl.startsWith(dirPath) && srcFile.existsSync()) {
+                              if (!assetsDir.existsSync()) {
+                                assetsDir.createSync(recursive: true);
+                              }
+                              final fileName = srcFile.uri.pathSegments.isNotEmpty
+                                  ? srcFile.uri.pathSegments.last
+                                  : 'img_${DateTime.now().millisecondsSinceEpoch}.png';
+                              final destFile = File('${assetsDir.path}/$fileName');
+                              try {
+                                srcFile.copySync(destFile.path);
+                                item['imageUrl'] = destFile.path;
+                              } catch (_) {}
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
         // 1. Write data.json atomically with flush
         final dataTmp = File('$dirPath/data.json.tmp');
         dataTmp.writeAsStringSync(jsonEncode(persistentState), flush: true);

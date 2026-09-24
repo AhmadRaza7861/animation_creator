@@ -1511,6 +1511,18 @@ class DrawingController extends ChangeNotifier {
           }
           currentLayer.history.add(drawingContent!);
           currentLayer.currentIndex = currentLayer.history.length;
+
+          // Release heavy working pixel buffers from all earlier raster states in layer history
+          if (isSmudge || isBlur) {
+            for (int i = 0; i < currentLayer.history.length - 1; i++) {
+              final item = currentLayer.history[i];
+              if (item is SmudgeContent) {
+                item.releaseWorkingBuffers();
+              } else if (item is BlurContent) {
+                item.releaseWorkingBuffers();
+              }
+            }
+          }
         }
         drawingContent = null;
 
@@ -1727,8 +1739,18 @@ class DrawingController extends ChangeNotifier {
     // For now we just return all contents from all layers inside a single list.
     final List<Map<String, dynamic>> out = [];
     for (final layer in layers) {
-      for (final content in layer.history) {
-        await content.prepareExport();
+      int latestRasterIndex = -1;
+      for (int j = layer.history.length - 1; j >= 0; j--) {
+        if (layer.history[j] is SmudgeContent || layer.history[j] is BlurContent) {
+          latestRasterIndex = j;
+          break;
+        }
+      }
+      for (int j = 0; j < layer.history.length; j++) {
+        final content = layer.history[j];
+        if (j == latestRasterIndex || (content is! SmudgeContent && content is! BlurContent)) {
+          await content.prepareExport();
+        }
         out.add(content.toJson());
       }
     }
@@ -1743,8 +1765,23 @@ class DrawingController extends ChangeNotifier {
     for (final layer in layers) {
       final List<Map<String, dynamic>> historyJson = [];
       final activeHistory = layer.history.sublist(0, layer.currentIndex.clamp(0, layer.history.length));
-      for (final content in activeHistory) {
-        await content.prepareExport();
+      
+      // Find latest raster content index (SmudgeContent or BlurContent)
+      int latestRasterIndex = -1;
+      for (int j = activeHistory.length - 1; j >= 0; j--) {
+        if (activeHistory[j] is SmudgeContent || activeHistory[j] is BlurContent) {
+          latestRasterIndex = j;
+          break;
+        }
+      }
+
+      for (int j = 0; j < activeHistory.length; j++) {
+        final content = activeHistory[j];
+        // Only the latest raster snapshot needs base64 export!
+        // Shadowed intermediate raster states do not need to bloat the JSON file.
+        if (j == latestRasterIndex || (content is! SmudgeContent && content is! BlurContent)) {
+          await content.prepareExport();
+        }
         historyJson.add(content.toJson());
       }
       out.add({

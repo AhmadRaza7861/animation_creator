@@ -287,5 +287,90 @@ void main() {
       expect(a, greaterThan(0), reason: 'Second smudge stroke should drag green paint all the way to x=100');
       expect(g, greaterThan(0), reason: 'Should preserve green channel in second smudge stroke');
     });
+
+    test('DrawingController releases unmanaged working pixel buffers from superseded smudge strokes in history', () async {
+      final DrawingController controller = DrawingController();
+      controller.setBoardSize(const Size(200, 200));
+
+      final testImg = await createTestImage(200, 200);
+
+      // Draw 3 consecutive smudge strokes
+      for (int i = 0; i < 3; i++) {
+        final smudge = SmudgeContent(strength: 0.7);
+        smudge.paint.strokeWidth = 20.0;
+        smudge.setImageData(testImg);
+        controller.setPaintContent(smudge);
+        controller.startDraw(Offset(20.0 + i * 20, 50.0));
+        controller.drawing(Offset(40.0 + i * 20, 50.0));
+        controller.endDraw();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+
+      final history = controller.getHistory;
+      expect(history.length, equals(3));
+
+      // Older strokes (index 0 and 1) should have had their heavy _pixels buffers released
+      final stroke0 = history[0] as SmudgeContent;
+      final stroke1 = history[1] as SmudgeContent;
+
+      expect(stroke0.rgbaData, isNull, reason: 'Superseded stroke 0 pixel buffer must be released');
+      expect(stroke1.rgbaData, isNull, reason: 'Superseded stroke 1 pixel buffer must be released');
+    });
+
+    test('DrawingController.getLayersConfig only serializes active raster snapshot to prevent bloated JSON and OOM crashes', () async {
+      final DrawingController controller = DrawingController();
+      controller.setBoardSize(const Size(100, 100));
+
+      final testImg = await createTestImage(100, 100);
+
+      // Create 3 smudge strokes with images
+      for (int i = 0; i < 3; i++) {
+        final smudge = SmudgeContent(strength: 0.7);
+        smudge.paint.strokeWidth = 20.0;
+        smudge.setImageData(testImg);
+        controller.setPaintContent(smudge);
+        controller.startDraw(Offset(10.0 + i * 10, 50.0));
+        controller.drawing(Offset(20.0 + i * 10, 50.0));
+        controller.endDraw();
+      }
+
+      final layersConfig = await controller.getLayersConfig();
+      expect(layersConfig.length, equals(1));
+
+      final historyJson = layersConfig.first['history'] as List<dynamic>;
+      expect(historyJson.length, equals(3));
+
+      // Strokes 0 and 1 should NOT have exported base64 image strings
+      expect(historyJson[0]['imageDataBase64'], isNull, reason: 'Stroke 0 is superseded and must not bloat JSON');
+      expect(historyJson[1]['imageDataBase64'], isNull, reason: 'Stroke 1 is superseded and must not bloat JSON');
+      // Stroke 2 (the latest active raster state) SHOULD have exported base64 image data
+      expect(historyJson[2]['imageDataBase64'], isNotNull, reason: 'Latest active raster state must be serialized');
+    });
+
+    test('BlurContent and SmudgeContent getPath returns non-empty path bounding the stroke for accurate hit-testing', () {
+      final smudge = SmudgeContent(strength: 0.7);
+      smudge.paint.strokeWidth = 10.0;
+      smudge.startDraw(const Offset(10, 20));
+      smudge.drawing(const Offset(30, 40));
+
+      final Path smudgePath = smudge.getPath();
+      final Rect bounds = smudgePath.getBounds();
+      expect(bounds.left, equals(10.0));
+      expect(bounds.top, equals(20.0));
+      expect(bounds.right, equals(30.0));
+      expect(bounds.bottom, equals(40.0));
+
+      final blur = BlurContent(strength: 0.5);
+      blur.paint.strokeWidth = 15.0;
+      blur.startDraw(const Offset(50, 60));
+      blur.drawing(const Offset(70, 80));
+
+      final Path blurPath = blur.getPath();
+      final Rect blurBounds = blurPath.getBounds();
+      expect(blurBounds.left, equals(50.0));
+      expect(blurBounds.top, equals(60.0));
+      expect(blurBounds.right, equals(70.0));
+      expect(blurBounds.bottom, equals(80.0));
+    });
   });
 }

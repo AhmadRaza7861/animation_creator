@@ -211,6 +211,15 @@ class SmudgeContent extends PaintContent {
     }
   }
 
+  /// Releases unmanaged 32-bit pixel buffers, reservoir, and live textures once superseded in history
+  void releaseWorkingBuffers() {
+    _pixels = null;
+    _reservoir = Uint32List(0);
+    _reservoirDim = 0;
+    _reservoirInitialized = false;
+    liveImage = null;
+  }
+
   /// Finalizes the smudge stroke and produces the final raster image
   void finalizeStroke() {
     _processPendingSegments();
@@ -218,6 +227,9 @@ class SmudgeContent extends PaintContent {
       image = liveImage;
     }
     _scheduleLiveImageDecode(forceImmediate: true);
+    _reservoir = Uint32List(0);
+    _reservoirDim = 0;
+    _reservoirInitialized = false;
   }
 
   double _getScaleX() => (_width > 0 && canvasSize != null && canvasSize!.width > 0)
@@ -655,6 +667,22 @@ class SmudgeContent extends PaintContent {
         Paint()..filterQuality = ui.FilterQuality.high,
       );
     }
+  }
+
+  @override
+  Path getPath() {
+    final Path path = Path();
+    if (points.isEmpty) {
+      if (canvasSize != null && canvasSize!.width > 0 && canvasSize!.height > 0) {
+        path.addRect(Offset.zero & canvasSize!);
+      }
+      return path;
+    }
+    path.moveTo(points.first.point.dx, points.first.point.dy);
+    for (int i = 1; i < points.length; i++) {
+      path.lineTo(points[i].point.dx, points[i].point.dy);
+    }
+    return path;
   }
 
   @override

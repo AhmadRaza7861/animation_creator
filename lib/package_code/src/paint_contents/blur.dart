@@ -494,6 +494,15 @@ class BlurContent extends PaintContent {
     );
   }
 
+  /// Releases unmanaged 32-bit pixel buffers and live textures once superseded in history
+  void releaseWorkingBuffers() {
+    _pixels = null;
+    _patchSrc = Uint32List(0);
+    _patchHoriz = Uint32List(0);
+    _patchBlurred = Uint32List(0);
+    liveImage = null;
+  }
+
   Future<void> commitSnapshot() async {
     if (_pixels == null || _width <= 0 || _height <= 0) return;
     final Completer<ui.Image> completer = Completer<ui.Image>();
@@ -534,6 +543,22 @@ class BlurContent extends PaintContent {
         ..filterQuality = ui.FilterQuality.high
         ..isAntiAlias = true,
     );
+  }
+
+  @override
+  Path getPath() {
+    final Path path = Path();
+    if (points.isEmpty) {
+      if (canvasSize != null && canvasSize!.width > 0 && canvasSize!.height > 0) {
+        path.addRect(Offset.zero & canvasSize!);
+      }
+      return path;
+    }
+    path.moveTo(points.first.point.dx, points.first.point.dy);
+    for (int i = 1; i < points.length; i++) {
+      path.lineTo(points[i].point.dx, points[i].point.dy);
+    }
+    return path;
   }
 
   @override

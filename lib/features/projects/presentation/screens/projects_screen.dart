@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../main.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/app_dialogs.dart';
@@ -27,7 +28,7 @@ class ProjectsScreen extends StatefulWidget {
   State<ProjectsScreen> createState() => _ProjectsScreenState();
 }
 
-class _ProjectsScreenState extends State<ProjectsScreen> {
+class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
   List<ProjectMeta> _projects = [];
   List<TemplateModel> _featuredTemplates = [];
   int _currentTab = 0; // 0: Home, 1: Projects
@@ -43,7 +44,23 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final modalRoute = ModalRoute.of(context);
+    if (modalRoute != null) {
+      routeObserver.subscribe(this, modalRoute);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // Top route was popped, returning focus to ProjectsScreen: refresh immediately!
+    _loadProjects();
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _projectSearchController.dispose();
     super.dispose();
   }
@@ -97,30 +114,46 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  void _createNewProject() {
-    Navigator.push(
+  Future<void> _createNewProject() async {
+    final projectId = await Navigator.push<String>(
       context,
       MaterialPageRoute(
         builder: (context) => CreateProjectScreen(
           repository: widget.repository,
         ),
       ),
-    ).then((_) => _loadProjects());
+    );
+    if (projectId != null && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditorScreen(
+            projectId: projectId,
+          ),
+        ),
+      );
+    }
+    if (mounted) {
+      await _loadProjects();
+    }
   }
 
-  void _openProject(ProjectMeta project) {
-    Navigator.push(
+  Future<void> _openProject(ProjectMeta project) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => EditorScreen(
           projectId: project.id,
         ),
       ),
-    ).then((_) => _loadProjects());
+    );
+    if (mounted) {
+      await _loadProjects();
+    }
   }
 
-  void _openTutorial(TemplateModel template) {
-    Navigator.push(
+  Future<void> _openTutorial(TemplateModel template) async {
+    final projectId = await Navigator.push<String>(
       context,
       MaterialPageRoute(
         builder: (context) => TemplateDetailScreen(
@@ -128,18 +161,44 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           template: template,
         ),
       ),
-    ).then((_) => _loadProjects());
+    );
+    if (projectId != null && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditorScreen(
+            projectId: projectId,
+          ),
+        ),
+      );
+    }
+    if (mounted) {
+      await _loadProjects();
+    }
   }
 
-  void _openTemplatesLibrary() {
-    Navigator.push(
+  Future<void> _openTemplatesLibrary() async {
+    final projectId = await Navigator.push<String>(
       context,
       MaterialPageRoute(
         builder: (context) => TemplatesScreen(
           repository: widget.repository,
         ),
       ),
-    ).then((_) => _loadProjects());
+    );
+    if (projectId != null && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditorScreen(
+            projectId: projectId,
+          ),
+        ),
+      );
+    }
+    if (mounted) {
+      await _loadProjects();
+    }
   }
 
   Future<void> _renameProject(ProjectMeta project) async {
@@ -223,6 +282,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           onTabSelected: (index) {
             if (_currentTab != index) {
               setState(() => _currentTab = index);
+              _loadProjects();
             }
           },
           onCenterAction: _createNewProject,

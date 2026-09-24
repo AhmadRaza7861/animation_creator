@@ -577,38 +577,46 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                     },
                     onScaleEnd: (details) => widget.onUpdateEnd?.call(),
                     onDoubleTap: widget.onConfirm,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
-                        border: isPerspective
-                            ? null
-                            : Border.all(
-                                color: ColorConstants.primary,
-                                width: 1.5 / (_scale == 0 ? 1 : _scale),
-                              ),
-                        boxShadow: isPerspective
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: ColorConstants.primary.withValues(alpha: 0.12),
-                                  blurRadius: 4,
-                                  spreadRadius: 0.5,
-                                ),
-                              ],
-                      ),
-                      child: CustomPaint(
-                        size: widget.data.size,
-                        painter: _StickerPainter(
-                          widget.data.content,
-                          widget.canvasSize,
-                          topLeftOffset: _topLeftOffset,
-                          topRightOffset: _topRightOffset,
-                          bottomRightOffset: _bottomRightOffset,
-                          bottomLeftOffset: _bottomLeftOffset,
-                          flipX: _flipX,
-                          flipY: _flipY,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned.fill(
+                          child: CustomPaint(
+                            size: widget.data.size,
+                            painter: _StickerPainter(
+                              widget.data.content,
+                              widget.canvasSize,
+                              topLeftOffset: _topLeftOffset,
+                              topRightOffset: _topRightOffset,
+                              bottomRightOffset: _bottomRightOffset,
+                              bottomLeftOffset: _bottomLeftOffset,
+                              flipX: _flipX,
+                              flipY: _flipY,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (!isPerspective)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: ColorConstants.primary,
+                                    width: 1.5 / (_scale == 0 ? 1 : _scale),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: ColorConstants.primary.withValues(alpha: 0.12),
+                                      blurRadius: 4,
+                                      spreadRadius: 0.5,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),

@@ -173,14 +173,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
 
       if (mounted) {
         Navigator.pop(context); // Dismiss loading dialog
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditorScreen(
-              projectId: newProjectId,
-            ),
-          ),
-        );
+        Navigator.pop(context, newProjectId);
       }
     } catch (e) {
       debugPrint('Error starting tutorial lesson: $e');

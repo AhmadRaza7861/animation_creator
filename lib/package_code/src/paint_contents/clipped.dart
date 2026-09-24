@@ -2,9 +2,11 @@ import 'package:flutter/painting.dart';
 import '../draw_path/draw_path.dart';
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
+import 'blur.dart';
 import 'image.dart';
 import 'paint_content.dart';
 import 'paint_content_decoder.dart';
+import 'smudge.dart';
 
 /// Content wrapper that applies an offset to its child
 class OffsetContent extends PaintContent {
@@ -127,8 +129,17 @@ class ClippedHistoryContent extends PaintContent {
         ? canvasSize!
         : (size.width > 0 && size.height > 0 ? size : const Size(100000, 100000));
 
-    for (final content in history) {
-      content.draw(canvas, renderCanvasSize, deeper);
+    int rasterIndex = -1;
+    for (int j = history.length - 1; j >= 0; j--) {
+      if (history[j] is SmudgeContent || history[j] is BlurContent) {
+        rasterIndex = j;
+        break;
+      }
+    }
+
+    final int startIdx = rasterIndex >= 0 ? rasterIndex : 0;
+    for (int j = startIdx; j < history.length; j++) {
+      history[j].draw(canvas, renderCanvasSize, deeper);
     }
     
     // Restore saveLayer
@@ -169,8 +180,17 @@ class ClippedHistoryContent extends PaintContent {
 
   @override
   Future<void> prepareExport() async {
-    for (final content in history) {
-      await content.prepareExport();
+    int latestRasterIndex = -1;
+    for (int j = history.length - 1; j >= 0; j--) {
+      if (history[j] is SmudgeContent || history[j] is BlurContent) {
+        latestRasterIndex = j;
+        break;
+      }
+    }
+    for (int j = 0; j < history.length; j++) {
+      if (j == latestRasterIndex || (history[j] is! SmudgeContent && history[j] is! BlurContent)) {
+        await history[j].prepareExport();
+      }
     }
   }
 }
