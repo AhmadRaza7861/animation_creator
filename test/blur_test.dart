@@ -264,5 +264,79 @@ void main() {
         }
       }
     });
+
+    test('Blur Intensity at 0% applies zero blur and leaves all pixels identical', () async {
+      final ui.Image splitImg = await createSplitImage(100, 100, Colors.black, Colors.white);
+      final ByteData? data = await splitImg.toByteData(format: ui.ImageByteFormat.rawRgba);
+      expect(data, isNotNull);
+
+      final Uint8List originalBytes = Uint8List.fromList(data!.buffer.asUint8List());
+
+      final BlurContent blurZero = BlurContent(strength: 0.0);
+      blurZero.paint.strokeWidth = 40.0;
+      blurZero.setRgbaData(Uint8List.fromList(originalBytes), 100, 100, const Size(100, 100));
+
+      // Draw stroke right across the high-contrast boundary
+      blurZero.startDrawWithPressure(const Offset(50, 20), 1.0);
+      blurZero.drawingWithPressure(const Offset(50, 50), 1.0);
+      blurZero.drawingWithPressure(const Offset(50, 80), 1.0);
+
+      final Uint8List processed = blurZero.rgbaData!;
+      expect(processed.length, equals(originalBytes.length));
+
+      // At 0% intensity, every single pixel must remain byte-for-byte identical to original
+      bool identical = true;
+      for (int i = 0; i < originalBytes.length; i++) {
+        if (processed[i] != originalBytes[i]) {
+          identical = false;
+          break;
+        }
+      }
+      expect(identical, isTrue, reason: '0% blur intensity must leave all pixels 100% unchanged');
+    });
+
+    test('Blur Intensity progressively increases blur effect from 25% to 100%', () async {
+      final ui.Image splitImg = await createSplitImage(100, 100, Colors.black, Colors.white);
+      final ByteData? data = await splitImg.toByteData(format: ui.ImageByteFormat.rawRgba);
+      expect(data, isNotNull);
+      final Uint8List baseBytes = data!.buffer.asUint8List();
+
+      double getLeftBoundaryPixelR(double strength) {
+        final BlurContent blur = BlurContent(strength: strength);
+        blur.paint.strokeWidth = 50.0;
+        blur.setRgbaData(Uint8List.fromList(baseBytes), 100, 100, const Size(100, 100));
+        blur.startDrawWithPressure(const Offset(50, 20), 1.0);
+        blur.drawingWithPressure(const Offset(50, 50), 1.0);
+        blur.drawingWithPressure(const Offset(50, 80), 1.0);
+        final Uint8List px = blur.rgbaData!;
+        // Sample pixel at (x=48, y=50) which was originally black (0)
+        return px[(50 * 100 + 48) * 4].toDouble();
+      }
+
+      final double r25 = getLeftBoundaryPixelR(0.25);
+      final double r50 = getLeftBoundaryPixelR(0.50);
+      final double r75 = getLeftBoundaryPixelR(0.75);
+      final double r100 = getLeftBoundaryPixelR(1.00);
+
+      expect(r25, greaterThan(0), reason: '25% blur should start softening');
+      expect(r50, greaterThan(r25), reason: '50% blur should be stronger than 25%');
+      expect(r75, greaterThan(r50), reason: '75% blur should be stronger than 50%');
+      expect(r100, greaterThan(r75), reason: '100% blur should produce maximum softening');
+    });
+
+    test('BlurContent JSON serialization and deserialization preserves strength', () {
+      final blur = BlurContent(strength: 0.85);
+      blur.paint.strokeWidth = 32.0;
+      blur.points.add(const BlurPoint(Offset(10, 20), 0.9));
+
+      final json = blur.toContentJson();
+      expect(json['strength'], equals(0.85));
+
+      final restored = BlurContent.fromJson(json);
+      expect(restored.strength, equals(0.85));
+      expect(restored.paint.strokeWidth, equals(32.0));
+      expect(restored.points.length, equals(1));
+      expect(restored.points.first.point, equals(const Offset(10, 20)));
+    });
   });
 }

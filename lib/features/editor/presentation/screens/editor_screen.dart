@@ -1208,7 +1208,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       SvgPicture.asset(
-                                        AssetConstants.stock_icon,
+                                        (controller.activeCategory == 'Blur' ||
+                                                config.contentType == BlurContent)
+                                            ? AssetConstants.blur_icon
+                                            : AssetConstants.stock_icon,
                                         width: 14,
                                         height: 14,
                                         colorFilter: const ColorFilter.mode(
@@ -1218,7 +1221,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '${controller.globalStrokeWidth.round()}px',
+                                        (controller.activeCategory == 'Blur' ||
+                                                config.contentType == BlurContent)
+                                            ? 'Blur • ${(controller.blurStrength * 100).round()}%'
+                                            : '${controller.globalStrokeWidth.round()}px',
                                         style: const TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
@@ -1233,6 +1239,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         menuChildren: [
                           StatefulBuilder(
                             builder: (context, setPopupState) {
+                              final bool isBlurActive =
+                                  controller.activeCategory == 'Blur' ||
+                                  config.contentType == BlurContent;
                               final double currentWidth =
                                   controller.globalStrokeWidth;
                               final double currentOpacity =
@@ -1246,6 +1255,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                 50.0,
                               ];
                               final opacityPresets = [0.25, 0.50, 0.75, 1.0];
+                              final blurPresets = [0.0, 0.25, 0.50, 0.75, 1.0];
 
                               final baseColor = config.color.withOpacity(1.0);
                               final previewColor = baseColor.withOpacity(
@@ -1284,17 +1294,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         borderRadius: BorderRadius.circular(15),
                                         child: Stack(
                                           children: [
-                                            const Positioned.fill(
-                                              child: CustomPaint(
-                                                painter: _CheckerboardPainter(),
+                                            if (!isBlurActive)
+                                              const Positioned.fill(
+                                                child: CustomPaint(
+                                                  painter: _CheckerboardPainter(),
+                                                ),
                                               ),
-                                            ),
                                             Positioned.fill(
                                               child: CustomPaint(
-                                                painter: StrokePreviewPainter(
-                                                  currentWidth,
-                                                  previewColor,
-                                                ),
+                                                painter: isBlurActive
+                                                    ? BlurPreviewPainter(
+                                                        controller.blurStrength,
+                                                        currentWidth,
+                                                      )
+                                                    : StrokePreviewPainter(
+                                                        currentWidth,
+                                                        previewColor,
+                                                      ),
                                               ),
                                             ),
                                           ],
@@ -1312,7 +1328,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             SvgPicture.asset(
-                                              AssetConstants.stock_icon,
+                                              isBlurActive
+                                                  ? AssetConstants.blur_icon
+                                                  : AssetConstants.stock_icon,
                                               width: 14,
                                               height: 14,
                                               colorFilter:
@@ -1322,9 +1340,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                   ),
                                             ),
                                             const SizedBox(width: 6),
-                                            const Text(
-                                              'Brush Size',
-                                              style: TextStyle(
+                                            Text(
+                                              isBlurActive
+                                                  ? 'Blur Size'
+                                                  : 'Brush Size',
+                                              style: const TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w700,
                                                 color: Color(0xFF1E293B),
@@ -1409,7 +1429,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                               controller.globalStrokeWidth = p;
                                             });
                                             controller.drawingController
-                                              .setStyle(strokeWidth: p);
+                                                .setStyle(strokeWidth: p);
                                             setState(() {});
                                           },
                                           child: AnimatedContainer(
@@ -1472,165 +1492,332 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                       color: const Color(0xFFF1F5F9),
                                     ),
 
-                                    // 6. Opacity Header
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.opacity_rounded,
-                                              size: 15,
-                                              color: Color(0xFF475569),
-                                            ),
-                                            SizedBox(width: 6),
-                                            Text(
-                                              'Opacity',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w700,
-                                                color: Color(0xFF1E293B),
+                                    if (isBlurActive) ...[
+                                      // 6. Blur Intensity Header
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SvgPicture.asset(
+                                                AssetConstants.blur_icon,
+                                                width: 15,
+                                                height: 15,
+                                                colorFilter:
+                                                    const ColorFilter.mode(
+                                                      Color(0xFF475569),
+                                                      BlendMode.srcIn,
+                                                    ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2.5,
+                                              const SizedBox(width: 6),
+                                              const Text(
+                                                'Blur Intensity',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Color(0xFF1E293B),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: ColorConstants.accent
-                                                .withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2.5,
                                             ),
-                                          ),
-                                          child: Text(
-                                            '${(currentOpacity * 100).round()}%',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                              color: ColorConstants.accent,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-
-                                    // 7. Opacity Slider
-                                    SliderTheme(
-                                      data: SliderTheme.of(context).copyWith(
-                                        trackHeight: 5,
-                                        activeTrackColor: ColorConstants.accent,
-                                        inactiveTrackColor: const Color(
-                                          0xFFF1F5F9,
-                                        ),
-                                        thumbColor: Colors.white,
-                                        thumbShape: const RoundSliderThumbShape(
-                                          enabledThumbRadius: 8,
-                                          elevation: 3,
-                                          pressedElevation: 5,
-                                        ),
-                                        overlayColor: ColorConstants.accent
-                                            .withValues(alpha: 0.15),
-                                        overlayShape:
-                                            const RoundSliderOverlayShape(
-                                              overlayRadius: 16,
-                                            ),
-                                        trackShape:
-                                            const RoundedRectSliderTrackShape(),
-                                      ),
-                                      child: Slider(
-                                        value: currentOpacity.clamp(0.05, 1.0),
-                                        min: 0.05,
-                                        max: 1.0,
-                                        onChanged: (val) {
-                                          setPopupState(() {
-                                            controller.colorOpacity = val;
-                                          });
-                                          controller.drawingController.setStyle(
-                                            color: baseColor.withOpacity(val),
-                                          );
-                                          setState(() {});
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-
-                                    // 8. Opacity Quick Presets
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: opacityPresets.map((o) {
-                                        final isSelected =
-                                            (currentOpacity - o).abs() < 0.04;
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setPopupState(() {
-                                              controller.colorOpacity = o;
-                                            });
-                                            controller.drawingController
-                                                .setStyle(
-                                                  color: baseColor.withOpacity(
-                                                    o,
-                                                  ),
-                                                );
-                                            setState(() {});
-                                          },
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                              milliseconds: 150,
-                                            ),
-                                            width: 54,
-                                            height: 30,
-                                            alignment: Alignment.center,
                                             decoration: BoxDecoration(
+                                              color: ColorConstants.accent
+                                                  .withValues(alpha: 0.12),
                                               borderRadius:
-                                                  BorderRadius.circular(10),
-                                              color: isSelected
-                                                  ? ColorConstants.accent
-                                                  : const Color(0xFFF8FAFC),
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? Colors.transparent
-                                                    : const Color(0xFFE2E8F0),
-                                                width: 1.0,
-                                              ),
-                                              boxShadow: isSelected
-                                                  ? [
-                                                      BoxShadow(
-                                                        color: ColorConstants
-                                                            .accent
-                                                            .withValues(
-                                                              alpha: 0.3,
-                                                            ),
-                                                        blurRadius: 6,
-                                                        offset: const Offset(
-                                                          0,
-                                                          2,
-                                                        ),
-                                                      ),
-                                                    ]
-                                                  : null,
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: Text(
-                                              '${(o * 100).round()}%',
-                                              style: TextStyle(
-                                                fontSize: 11,
+                                              '${(controller.blurStrength * 100).round()}%',
+                                              style: const TextStyle(
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w700,
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : const Color(0xFF475569),
+                                                color: ColorConstants.accent,
                                               ),
                                             ),
                                           ),
-                                        );
-                                      }).toList(),
-                                    ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+
+                                      // 7. Blur Intensity Slider (0% to 100%)
+                                      SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          trackHeight: 5,
+                                          activeTrackColor:
+                                              ColorConstants.accent,
+                                          inactiveTrackColor: const Color(
+                                            0xFFF1F5F9,
+                                          ),
+                                          thumbColor: Colors.white,
+                                          thumbShape:
+                                              const RoundSliderThumbShape(
+                                                enabledThumbRadius: 8,
+                                                elevation: 3,
+                                                pressedElevation: 5,
+                                              ),
+                                          overlayColor: ColorConstants.accent
+                                              .withValues(alpha: 0.15),
+                                          overlayShape:
+                                              const RoundSliderOverlayShape(
+                                                overlayRadius: 16,
+                                              ),
+                                          trackShape:
+                                              const RoundedRectSliderTrackShape(),
+                                        ),
+                                        child: Slider(
+                                          value: controller.blurStrength
+                                              .clamp(0.0, 1.0),
+                                          min: 0.0,
+                                          max: 1.0,
+                                          onChanged: (val) {
+                                            setPopupState(() {
+                                              controller.blurStrength = val;
+                                            });
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // 8. Blur Intensity Quick Presets
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: blurPresets.map((b) {
+                                          final isSelected =
+                                              (controller.blurStrength - b)
+                                                      .abs() <
+                                                  0.04;
+                                          return GestureDetector(
+                                            onTap: () {
+                                              setPopupState(() {
+                                                controller.blurStrength = b;
+                                              });
+                                              setState(() {});
+                                            },
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 150,
+                                              ),
+                                              width: 42,
+                                              height: 30,
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                color: isSelected
+                                                    ? ColorConstants.accent
+                                                    : const Color(0xFFF8FAFC),
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? Colors.transparent
+                                                      : const Color(
+                                                        0xFFE2E8F0,
+                                                      ),
+                                                  width: 1.0,
+                                                ),
+                                                boxShadow: isSelected
+                                                    ? [
+                                                        BoxShadow(
+                                                          color: ColorConstants
+                                                              .accent
+                                                              .withValues(
+                                                                alpha: 0.3,
+                                                              ),
+                                                          blurRadius: 6,
+                                                          offset: const Offset(
+                                                            0,
+                                                            2,
+                                                          ),
+                                                        ),
+                                                      ]
+                                                    : null,
+                                              ),
+                                              child: Text(
+                                                '${(b * 100).round()}%',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : const Color(
+                                                        0xFF475569,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ] else ...[
+                                      // 6. Opacity Header
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.opacity_rounded,
+                                                size: 15,
+                                                color: Color(0xFF475569),
+                                              ),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                'Opacity',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Color(0xFF1E293B),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2.5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: ColorConstants.accent
+                                                  .withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    8,
+                                                  ),
+                                            ),
+                                            child: Text(
+                                              '${(currentOpacity * 100).round()}%',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: ColorConstants.accent,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+
+                                      // 7. Opacity Slider
+                                      SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          trackHeight: 5,
+                                          activeTrackColor: ColorConstants.accent,
+                                          inactiveTrackColor: const Color(
+                                            0xFFF1F5F9,
+                                          ),
+                                          thumbColor: Colors.white,
+                                          thumbShape: const RoundSliderThumbShape(
+                                            enabledThumbRadius: 8,
+                                            elevation: 3,
+                                            pressedElevation: 5,
+                                          ),
+                                          overlayColor: ColorConstants.accent
+                                              .withValues(alpha: 0.15),
+                                          overlayShape:
+                                              const RoundSliderOverlayShape(
+                                                overlayRadius: 16,
+                                              ),
+                                          trackShape:
+                                              const RoundedRectSliderTrackShape(),
+                                        ),
+                                        child: Slider(
+                                          value: currentOpacity.clamp(0.05, 1.0),
+                                          min: 0.05,
+                                          max: 1.0,
+                                          onChanged: (val) {
+                                            setPopupState(() {
+                                              controller.colorOpacity = val;
+                                            });
+                                            controller.drawingController.setStyle(
+                                              color: baseColor.withOpacity(val),
+                                            );
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // 8. Opacity Quick Presets
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: opacityPresets.map((o) {
+                                          final isSelected =
+                                              (currentOpacity - o).abs() < 0.04;
+                                          return GestureDetector(
+                                            onTap: () {
+                                              setPopupState(() {
+                                                controller.colorOpacity = o;
+                                              });
+                                              controller.drawingController
+                                                  .setStyle(
+                                                    color: baseColor.withOpacity(
+                                                      o,
+                                                    ),
+                                                  );
+                                              setState(() {});
+                                            },
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 150,
+                                              ),
+                                              width: 54,
+                                              height: 30,
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                color: isSelected
+                                                    ? ColorConstants.accent
+                                                    : const Color(0xFFF8FAFC),
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? Colors.transparent
+                                                      : const Color(0xFFE2E8F0),
+                                                  width: 1.0,
+                                                ),
+                                                boxShadow: isSelected
+                                                    ? [
+                                                        BoxShadow(
+                                                          color: ColorConstants
+                                                              .accent
+                                                              .withValues(
+                                                                alpha: 0.3,
+                                                              ),
+                                                          blurRadius: 6,
+                                                          offset: const Offset(
+                                                            0,
+                                                            2,
+                                                          ),
+                                                        ),
+                                                      ]
+                                                    : null,
+                                              ),
+                                              child: Text(
+                                                '${(o * 100).round()}%',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : const Color(0xFF475569),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               );
@@ -2879,6 +3066,154 @@ class DashedBorderPainter extends CustomPainter {
         oldDelegate.gap != gap ||
         oldDelegate.dashLength != dashLength ||
         oldDelegate.radius != radius;
+  }
+}
+
+class BlurPreviewPainter extends CustomPainter {
+  final double blurStrength;
+  final double strokeWidth;
+
+  const BlurPreviewPainter(this.blurStrength, this.strokeWidth);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(15));
+    canvas.clipRRect(rrect);
+
+    // Draw rich gradient background
+    final bgPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset.zero,
+        Offset(size.width, size.height),
+        const [
+          Color(0xFF4F46E5),
+          Color(0xFF7C3AED),
+          Color(0xFFDB2777),
+          Color(0xFFF59E0B),
+        ],
+        [0.0, 0.35, 0.7, 1.0],
+      );
+    canvas.drawRect(rect, bgPaint);
+
+    void drawSampleShapes() {
+      canvas.drawCircle(
+        Offset(size.width * 0.18, size.height * 0.5),
+        15,
+        Paint()..color = Colors.white.withValues(alpha: 0.95),
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(size.width * 0.48, size.height * 0.5),
+            width: 28,
+            height: 28,
+          ),
+          const Radius.circular(7),
+        ),
+        Paint()..color = const Color(0xFF10B981),
+      );
+      canvas.drawCircle(
+        Offset(size.width * 0.78, size.height * 0.5),
+        13,
+        Paint()..color = const Color(0xFF38BDF8),
+      );
+
+      final textPainter = TextPainter(
+        text: const TextSpan(
+          text: 'BLUR PREVIEW',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+            shadows: [
+              Shadow(
+                color: Colors.black45,
+                blurRadius: 3,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(
+          (size.width - textPainter.width) / 2,
+          (size.height - textPainter.height) / 2,
+        ),
+      );
+    }
+
+    // 1. Draw base sample shapes
+    drawSampleShapes();
+
+    // 2. Draw blurred overlay on right side if blurStrength > 0
+    final double sigma = (blurStrength * 12.0);
+    if (sigma > 0.01) {
+      final double splitX = size.width * 0.38;
+      final blurRect = Rect.fromLTWH(splitX, 0, size.width - splitX, size.height);
+      canvas.saveLayer(
+        blurRect,
+        Paint()
+          ..imageFilter = ui.ImageFilter.blur(
+            sigmaX: sigma,
+            sigmaY: sigma,
+            tileMode: TileMode.clamp,
+          ),
+      );
+      canvas.drawRect(rect, bgPaint);
+      drawSampleShapes();
+      canvas.restore();
+
+      // Divider line between Sharp and Blurred
+      final linePaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.8)
+        ..strokeWidth = 1.5;
+      canvas.drawLine(
+        Offset(splitX, 0),
+        Offset(splitX, size.height),
+        linePaint,
+      );
+
+      // Labels
+      final labelSharp = TextPainter(
+        text: TextSpan(
+          text: 'Sharp',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.9),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      labelSharp.layout();
+      labelSharp.paint(canvas, const Offset(6, 4));
+
+      final labelBlur = TextPainter(
+        text: TextSpan(
+          text: 'Blur ${(blurStrength * 100).round()}%',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.95),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      labelBlur.layout();
+      labelBlur.paint(canvas, Offset(size.width - labelBlur.width - 6, 4));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant BlurPreviewPainter oldDelegate) {
+    return oldDelegate.blurStrength != blurStrength ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }
 

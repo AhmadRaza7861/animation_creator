@@ -289,6 +289,7 @@ class EditorController extends ChangeNotifier {
 
   bool _isUndoingActiveStickerPlacement = false;
   double _globalStrokeWidth = 10.0;
+  double _blurStrength = 0.75;
   String _activeCategory = 'Brush';
   double _colorOpacity = 1.0;
 
@@ -480,8 +481,21 @@ class EditorController extends ChangeNotifier {
 
   Object? get activeSticker => _activeSticker;
   double get globalStrokeWidth => _globalStrokeWidth;
+  double get blurStrength => _blurStrength;
   String get activeCategory => _activeCategory;
   double get colorOpacity => _colorOpacity;
+
+  set blurStrength(double val) {
+    _blurStrength = val.clamp(0.0, 1.0);
+    for (final c in _canvases) {
+      c.setStyle(strength: _blurStrength);
+    }
+    if (drawingController.drawingContent is BlurContent) {
+      (drawingController.drawingContent as BlurContent).strength = _blurStrength;
+    }
+    markDirty();
+    notifyListeners();
+  }
 
   set colorOpacity(double val) {
     _colorOpacity = val;
@@ -853,6 +867,12 @@ class EditorController extends ChangeNotifier {
           _colorOpacity = 1.0;
         }
 
+        if (data.state.containsKey('blurStrength')) {
+          _blurStrength = (data.state['blurStrength'] as num).toDouble().clamp(0.0, 1.0);
+        } else {
+          _blurStrength = 0.75;
+        }
+
         Color restoredColor = Colors.black;
         if (data.state.containsKey('strokeColor')) {
           restoredColor = Color(data.state['strokeColor'] as int);
@@ -1005,6 +1025,7 @@ class EditorController extends ChangeNotifier {
       'strokeWidth': _globalStrokeWidth,
       'strokeColor': drawingController.drawConfig.value.color.value,
       'colorOpacity': _colorOpacity,
+      'blurStrength': _blurStrength,
       'templateFolder': _templateFolder,
       'templateExtension': _templateExtension,
       'templateMode': _templateMode,

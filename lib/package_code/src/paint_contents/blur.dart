@@ -249,6 +249,9 @@ class BlurContent extends PaintContent {
   void _applyBlurStamp(Offset pt, double pressure) {
     if (_pixels == null || _width <= 0 || _height <= 0) return;
 
+    final double effStrength = strength.clamp(0.0, 1.0);
+    if (effStrength <= 0.001) return; // 0% intensity applies zero blur
+
     final double scaleX = canvasSize != null && canvasSize!.width > 0
         ? _width / canvasSize!.width
         : 1.0;
@@ -261,8 +264,8 @@ class BlurContent extends PaintContent {
     final double brushRadius = (paint.strokeWidth / 2.0) * scaleX * pressure.clamp(0.4, 1.6);
     if (brushRadius <= 0.5) return;
 
-    // Blur kernel radius scaled proportionally to brush size and strength
-    final int r = (math.max(3.0, brushRadius * 0.25) * (0.6 + strength * 0.8)).round().clamp(3, 30);
+    // Blur kernel radius scaled proportionally to brush size and strength (0% to 100%)
+    final int r = (math.max(1.0, brushRadius * 0.35) * (0.2 + effStrength * 1.2)).round().clamp(1, 45);
     final int windowSize = 2 * r + 1;
 
     final int x0 = (cx - brushRadius - r).floor().clamp(0, _width - 1);
@@ -407,10 +410,10 @@ class BlurContent extends PaintContent {
       }
     }
 
-    // 4. Smooth cubic Hermite brush feathering & responsive blend:
+    // 4. Smooth cubic Hermite brush feathering & progressive blend:
     // finalPixel = lerp(originalPixel, blurredPixel, mixFactor)
     final double radiusSq = brushRadius * brushRadius;
-    final double stampIntensity = (0.22 + strength * 0.28) * pressure.clamp(0.6, 1.4);
+    final double stampIntensity = (effStrength * (0.35 + effStrength * 0.55)) * pressure.clamp(0.5, 1.5);
 
     for (int y = 0; y < patchH; y++) {
       final int globalY = y0 + y;
@@ -440,7 +443,7 @@ class BlurContent extends PaintContent {
           final double t = dist / brushRadius;
           // Smooth Hermite / smoothstep curve: (1-t)^2 * (1+2t)
           final double falloff = (1.0 - t) * (1.0 - t) * (1.0 + 2.0 * t);
-          final double mixFactor = (falloff * stampIntensity).clamp(0.0, 0.65);
+          final double mixFactor = (falloff * stampIntensity).clamp(0.0, 0.90);
 
           final int origB = (orig >> 16) & 0xFF;
           final int origG = (orig >> 8) & 0xFF;
