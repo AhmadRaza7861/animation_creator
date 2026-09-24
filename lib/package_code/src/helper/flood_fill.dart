@@ -223,23 +223,26 @@ class FloodFill {
             filledPixels[pixelIndex + 3] = fillA;
           }
         } else if (!isTargetTransparent && pixels[pixelIndex + 3] > 0) {
-          // In re-coloring mode: include anti-aliased fringe pixels touching the recolored stroke
+          // In re-coloring mode: include full anti-aliased fringe pixels touching the recolored stroke
           bool nearStroke = false;
-          for (int dy = -1; dy <= 1 && !nearStroke; dy++) {
+          for (int dy = -3; dy <= 3 && !nearStroke; dy++) {
             final int ny = y + dy;
             if (ny < 0 || ny >= height) continue;
-            for (int dx = -1; dx <= 1; dx++) {
+            for (int dx = -3; dx <= 3; dx++) {
               final int nx = x + dx;
               if (nx < 0 || nx >= width) continue;
-              if (mask[ny * width + nx] == 1) {
-                nearStroke = true;
-                break;
+              if (dx * dx + dy * dy <= 9) {
+                if (mask[ny * width + nx] == 1) {
+                  nearStroke = true;
+                  break;
+                }
               }
             }
           }
 
           if (nearStroke) {
-            final double curA = pixels[pixelIndex + 3].toDouble();
+            final int origA = pixels[pixelIndex + 3];
+            final double curA = origA.toDouble();
             final double curUnpremulR = curA > 0 ? (pixels[pixelIndex] * 255.0 / curA) : pixels[pixelIndex].toDouble();
             final double curUnpremulG = curA > 0 ? (pixels[pixelIndex + 1] * 255.0 / curA) : pixels[pixelIndex + 1].toDouble();
             final double curUnpremulB = curA > 0 ? (pixels[pixelIndex + 2] * 255.0 / curA) : pixels[pixelIndex + 2].toDouble();
@@ -249,8 +252,8 @@ class FloodFill {
             final double diffB = curUnpremulB - targetUnpremulB;
             final double distSq = diffR * diffR + diffG * diffG + diffB * diffB;
 
-            if (distSq <= colorToleranceSq * 1.5) {
-              final int origA = pixels[pixelIndex + 3];
+            // Cover all pixels that match target color or are anti-aliased edge fringe
+            if (distSq <= colorToleranceSq * 3.0 || origA < 80) {
               filledPixels[pixelIndex] = fillR;
               filledPixels[pixelIndex + 1] = fillG;
               filledPixels[pixelIndex + 2] = fillB;

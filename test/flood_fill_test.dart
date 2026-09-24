@@ -327,9 +327,17 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
       expect(controller.activeLayer.value!.history.length, 2);
-      final FillContent fillItem = controller.activeLayer.value!.history[1] as FillContent;
-      expect(fillItem.isUnderneath, isFalse, reason: 'Stroke re-color must be placed on top');
-      expect(fillItem.image, isNotNull);
+      final StrokeRecolorContent recolorItem = controller.activeLayer.value!.history[1] as StrokeRecolorContent;
+      expect(recolorItem.newColor, equals(const Color(0xFFFF0000)));
+      expect(line.paint.color, equals(const Color(0xFFFF0000)), reason: 'Vector stroke must be directly recolored without raster fringes');
+
+      // Test Undo
+      controller.undo();
+      expect(line.paint.color, equals(Colors.black), reason: 'Undo must revert stroke to original color');
+
+      // Test Redo
+      controller.redo();
+      expect(line.paint.color, equals(const Color(0xFFFF0000)), reason: 'Redo must restore stroke to new color');
     });
 
     test('FloodFill does not leak through 1-pixel diagonal stroke barrier', () async {

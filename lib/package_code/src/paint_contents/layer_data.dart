@@ -5,6 +5,7 @@ import 'blur.dart';
 import 'fill.dart';
 import 'paint_content.dart';
 import 'smudge.dart';
+import 'stroke_recolor.dart';
 
 /// Represents a single drawing layer.
 class LayerData {
@@ -78,7 +79,7 @@ class LayerData {
     // Pass 2: Draw non-fill items (strokes, shapes, lines, etc.)
     for (int j = startIdx; j < count; j++) {
       final item = history[j];
-      if (item is! FillContent) {
+      if (item is! FillContent && item is! StrokeRecolorContent) {
         item.draw(canvas, size, deeper);
         if (tempCanvas != null) {
           item.draw(tempCanvas, size, deeper);

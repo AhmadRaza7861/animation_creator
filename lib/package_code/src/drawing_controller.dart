@@ -17,6 +17,7 @@ import 'paint_contents/eyedropper.dart';
 import 'paint_contents/blur.dart';
 import 'paint_contents/smudge.dart';
 import 'paint_contents/lasso.dart';
+import 'paint_contents/stroke_recolor.dart';
 import 'ruler/ruler_config.dart';
 import 'ruler/mirror_content.dart';
 
@@ -1089,11 +1090,34 @@ class DrawingController extends ChangeNotifier {
       return;
     }
 
+    // 1. First check if user tapped directly on a vector stroke on the active layer
+    if (activeLayer.value != null && activeLayer.value!.isVisible && !activeLayer.value!.isLocked) {
+      final LayerData layer = activeLayer.value!;
+      final PaintContent? hitStroke = _findHitContent(layer, startPoint);
+      if (hitStroke != null) {
+        final Color newColor = drawConfig.value.color;
+        if (hitStroke.paint.color != newColor) {
+          final Color oldColor = hitStroke.paint.color;
+          hitStroke.paint.color = newColor;
+          final int hitIdx = layer.history.indexOf(hitStroke);
+          final StrokeRecolorContent recolorContent = StrokeRecolorContent(
+            targetItem: hitStroke,
+            oldColor: oldColor,
+            newColor: newColor,
+            targetIndex: hitIdx,
+          );
+          addContent(recolorContent);
+          return;
+        }
+        return;
+      }
+    }
+
     final int width = size.width.round();
     final int height = size.height.round();
     if (width <= 0 || height <= 0) return;
 
-    // 渲染所有可见图层的 1:1 像素快照，与 startPoint 逻辑坐标完全对齐
+    // 2. Otherwise perform high-precision flood fill for enclosed area / raster pixels
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
 
@@ -1134,6 +1158,104 @@ class DrawingController extends ChangeNotifier {
       );
       addContent(content);
     }
+  }
+
+  PaintContent? _findHitContent(LayerData layer, Offset pt) {
+    final int count = layer.currentIndex.clamp(0, layer.history.length);
+    for (int i = count - 1; i >= 0; i--) {
+      final item = layer.history[i];
+      if (item is FillContent || item is Eyedropper || item is StrokeRecolorContent) continue;
+      if (_isPointOnContent(item, pt)) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  bool _isPointOnContent(PaintContent item, Offset pt) {
+    final double baseWidth = item.paint.strokeWidth > 0 ? item.paint.strokeWidth : 4.0;
+    final double hitR = (baseWidth * 0.5 + 8.0);
+    final double hitRSq = hitR * hitR;
+
+    if (item is SimpleLine) {
+      if (item.startPoint != null && item.endPoint != null) {
+        return _distToSegmentSq(pt, item.startPoint!, item.endPoint!) <= hitRSq;
+      }
+    } else if (item is SmoothLine) {
+      if (item.points.length == 1) {
+        final double d = (pt - item.points.first).distanceSquared;
+        return d <= hitRSq;
+      }
+      for (int i = 0; i < item.points.length - 1; i++) {
+        final double w = i < item.strokeWidthList.length ? item.strokeWidthList[i] : baseWidth;
+        final double r = (w * 0.5 + 8.0);
+        if (_distToSegmentSq(pt, item.points[i], item.points[i + 1]) <= r * r) {
+          return true;
+        }
+      }
+      return false;
+    } else if (item is FreehandLine) {
+      final List<Offset>? pts = item.points;
+      if (pts != null && pts.isNotEmpty) {
+        if (pts.length == 1) {
+          return (pt - pts.first).distanceSquared <= hitRSq;
+        }
+        for (int i = 0; i < pts.length - 1; i++) {
+          if (_distToSegmentSq(pt, pts[i], pts[i + 1]) <= hitRSq) {
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    // General path-based hit testing for all other shapes and brush lines
+    final Path path = item.getPath();
+    final Rect bounds = path.getBounds();
+    if (bounds.isEmpty) return false;
+
+    if (!bounds.inflate(hitR).contains(pt)) {
+      return false;
+    }
+
+    if (item.paint.style == PaintingStyle.fill) {
+      if (path.contains(pt)) return true;
+    }
+
+    // Stroke hit testing along path metrics
+    for (final metric in path.computeMetrics()) {
+      final double len = metric.length;
+      if (len <= 0) continue;
+      const double step = 5.0;
+      for (double d = 0; d <= len; d += step) {
+        final ui.Tangent? t = metric.getTangentForOffset(d);
+        if (t != null) {
+          final double dx = pt.dx - t.position.dx;
+          final double dy = pt.dy - t.position.dy;
+          if (dx * dx + dy * dy <= hitRSq) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  static double _distToSegmentSq(Offset p, Offset a, Offset b) {
+    final double dx = b.dx - a.dx;
+    final double dy = b.dy - a.dy;
+    final double l2 = dx * dx + dy * dy;
+    if (l2 == 0) {
+      final double px = p.dx - a.dx;
+      final double py = p.dy - a.dy;
+      return px * px + py * py;
+    }
+    final double t = (((p.dx - a.dx) * dx + (p.dy - a.dy) * dy) / l2).clamp(0.0, 1.0);
+    final double projX = a.dx + t * dx;
+    final double projY = a.dy + t * dy;
+    final double diffX = p.dx - projX;
+    final double diffY = p.dy - projY;
+    return diffX * diffX + diffY * diffY;
   }
 
   /// 准备画板快照并提取颜色
@@ -1570,7 +1692,12 @@ class DrawingController extends ChangeNotifier {
     
     _invalidateRasterCache();
     if (layer.currentIndex > layer.sessionStartIndex) {
-      layer.currentIndex = layer.currentIndex - 1;
+      final int lastIndex = layer.currentIndex - 1;
+      final item = layer.history[lastIndex];
+      if (item is StrokeRecolorContent) {
+        item.revert();
+      }
+      layer.currentIndex = lastIndex;
       _refreshDeep();
       updateSnapshot();
       notifyListeners();
@@ -1603,6 +1730,10 @@ class DrawingController extends ChangeNotifier {
     
     _invalidateRasterCache();
     if (layer.currentIndex < layer.history.length) {
+      final item = layer.history[layer.currentIndex];
+      if (item is StrokeRecolorContent) {
+        item.apply();
+      }
       layer.currentIndex = layer.currentIndex + 1;
       _refreshDeep();
       updateSnapshot();

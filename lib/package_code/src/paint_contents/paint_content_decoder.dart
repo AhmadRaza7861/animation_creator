@@ -26,6 +26,7 @@ import 'highlighter_line.dart';
 import 'image_tip_brush.dart';
 import 'shape_brush_line.dart';
 import 'tip_brush.dart';
+import 'stroke_recolor.dart';
 
 PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
   switch (type) {
@@ -117,6 +118,8 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
       return ChalkBrush.fromJson(data);
     case 'ScatterBrush':
       return ScatterBrush.fromJson(data);
+    case 'StrokeRecolorContent':
+      return StrokeRecolorContent.fromJson(data);
     default:
       return null;
   }
