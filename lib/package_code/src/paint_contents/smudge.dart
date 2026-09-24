@@ -319,9 +319,9 @@ class SmudgeContent extends PaintContent {
     final double dist = dir.distance;
     if (dist < 0.1) return;
 
-    // Optimized step spacing: 20-22% of brush radius for smooth continuous blending with high performance
-    final double stepSize = math.max(2.0, baseRadius * 0.22);
-    final int numSteps = (dist / stepSize).ceil().clamp(1, 60);
+    // Optimized step spacing: continuous sub-step spacing for silky-smooth stretching without discrete ribbing
+    final double stepSize = math.max(1.2, baseRadius * 0.12);
+    final int numSteps = (dist / stepSize).ceil().clamp(1, 80);
 
     Offset prevPt = p0;
     double prevPr = pressure0;
@@ -378,17 +378,17 @@ class SmudgeContent extends PaintContent {
             continue;
           }
 
-          // Smooth polynomial falloff mask: (1 - (r/R)^2)^2
+          // Solid-core falloff curve for firm physical drag with smooth boundary feathering
           final double uSq = distSq * invRadiusSq;
           final double oneMinusUSq = 1.0 - uSq;
-          final double falloff = oneMinusUSq * oneMinusUSq;
+          final double falloff = oneMinusUSq * (1.0 - uSq * 0.4);
 
           final int currentDstColor = pixels[canvasRow + px];
 
-          // A. Pixel Advection (Deformation / Dragging)
-          final double advectFactor = (falloff * effStrength).clamp(0.0, 1.0);
-          final double srcSampleX = px - stepDelta.dx * (advectFactor * 1.5 + 0.5);
-          final double srcSampleY = py - stepDelta.dy * (advectFactor * 1.5 + 0.5);
+          // A. True directional pixel advection (pulling upstream pixels along movement vector)
+          final double pullStrength = (falloff * (0.85 + 0.35 * effStrength)).clamp(0.0, 1.15);
+          final double srcSampleX = px - stepDelta.dx * pullStrength;
+          final double srcSampleY = py - stepDelta.dy * pullStrength;
 
           final int advectedColor = _sampleBilinearFast(pixels, w, h, srcSampleX, srcSampleY);
 
@@ -400,16 +400,43 @@ class SmudgeContent extends PaintContent {
             final double resV = (dy + resRadius).clamp(0.0, (resDim - 1).toDouble());
             final int carriedColor = _sampleReservoirBilinearFast(_reservoir, resDim, resU, resV);
 
-            // Blend advected paint with carried reservoir pigment
-            final double reservoirWeight = ((1.0 - effStrength * 0.4) * 0.5).clamp(0.1, 0.7);
-            final int blendedPaint = _blendColorsFast(advectedColor, carriedColor, reservoirWeight);
+            final int aCar = (carriedColor >> 24) & 0xFF;
+            final int aAdv = (advectedColor >> 24) & 0xFF;
 
-            // Deposit result onto canvas with smooth falloff
-            final double depositWeight = (falloff * (0.6 + effStrength * 0.4)).clamp(0.0, 1.0);
+            int blendedPaint;
+            if (aCar == 0) {
+              blendedPaint = advectedColor;
+            } else if (aAdv == 0) {
+              blendedPaint = carriedColor;
+            } else {
+              // Extract maximum color intensity to preserve vibrant dragged pigment over dark/empty background
+              final int rAdv = advectedColor & 0xFF;
+              final int gAdv = (advectedColor >> 8) & 0xFF;
+              final int bAdv = (advectedColor >> 16) & 0xFF;
+              final int maxAdv = math.max(rAdv, math.max(gAdv, bAdv));
+
+              final int rCar = carriedColor & 0xFF;
+              final int gCar = (carriedColor >> 8) & 0xFF;
+              final int bCar = (carriedColor >> 16) & 0xFF;
+              final int maxCar = math.max(rCar, math.max(gCar, bCar));
+
+              if (maxCar > maxAdv + 20) {
+                // Carried paint is significantly brighter/richer; carry it forward strongly
+                final double carWeight = (0.75 + 0.25 * effStrength).clamp(0.5, 0.95);
+                blendedPaint = _blendColorsFast(advectedColor, carriedColor, carWeight);
+              } else {
+                // Balance advection and reservoir
+                final double resWeight = (0.45 * (1.0 - effStrength * 0.3)).clamp(0.15, 0.5);
+                blendedPaint = _blendColorsFast(advectedColor, carriedColor, resWeight);
+              }
+            }
+
+            // High direct deposit weight at core to prevent iterative blur, with smooth edge falloff
+            final double depositWeight = (falloff * (0.82 + effStrength * 0.18)).clamp(0.0, 1.0);
             finalColor = _blendColorsFast(currentDstColor, blendedPaint, depositWeight);
           } else {
             // Pure advection when reservoir is not yet populated
-            final double depositWeight = (falloff * effStrength).clamp(0.0, 1.0);
+            final double depositWeight = (falloff * (0.82 + effStrength * 0.18)).clamp(0.0, 1.0);
             finalColor = _blendColorsFast(currentDstColor, advectedColor, depositWeight);
           }
 
@@ -446,11 +473,18 @@ class SmudgeContent extends PaintContent {
               final int canvasColor = _sampleBilinearFast(pixels, w, h, sampleX, sampleY);
               final int canvasA = (canvasColor >> 24) & 0xFF;
 
+              final int oldRes = _reservoir[rowIdx + u];
+              // Gentle pickup rate so wet paint travels far and tapers naturally
+              final double pickupRate = ((1.0 - effStrength * 0.7) * 0.25).clamp(0.04, 0.35);
+              final double mixWeight = (falloff * pickupRate).clamp(0.0, 1.0);
+
               if (canvasA > 5) {
-                final int oldRes = _reservoir[rowIdx + u];
-                final double pickupRate = ((1.0 - effStrength * 0.6) * 0.45).clamp(0.1, 0.8);
-                final double mixWeight = (falloff * pickupRate).clamp(0.0, 1.0);
                 _reservoir[rowIdx + u] = _blendColorsFast(oldRes, canvasColor, mixWeight);
+              } else if (oldRes != 0) {
+                // Natural gradual fade/taper when dragging into empty transparent space
+                final int oldA = (oldRes >> 24) & 0xFF;
+                final int newA = (oldA * (1.0 - mixWeight * 0.5)).round().clamp(0, 255);
+                _reservoir[rowIdx + u] = (newA << 24) | (oldRes & 0x00FFFFFF);
               }
             }
           }

@@ -172,6 +172,45 @@ void main() {
       final int strokeIdx = (50 * width + 50) * 4;
       expect(compPixels[strokeIdx + 3], greaterThan(0));
     });
+
+    test('Smudge pulls and stretches wet paint across black background with sharp contrast and tapered falloff', () async {
+      const int width = 100;
+      const int height = 100;
+      final Uint8List blackCanvas = Uint8List(width * height * 4);
+      // Initialize with solid black (R=0, G=0, B=0, A=255)
+      for (int i = 0; i < width * height; i++) {
+        blackCanvas[i * 4 + 3] = 255;
+      }
+      // Put a solid white patch at center (x: 40..60, y: 40..60)
+      for (int y = 40; y <= 60; y++) {
+        for (int x = 40; x <= 60; x++) {
+          final int idx = (y * width + x) * 4;
+          blackCanvas[idx] = 255;
+          blackCanvas[idx + 1] = 255;
+          blackCanvas[idx + 2] = 255;
+          blackCanvas[idx + 3] = 255;
+        }
+      }
+
+      final SmudgeContent smudge = SmudgeContent(strength: 0.85);
+      smudge.paint.strokeWidth = 20.0;
+      smudge.setRgbaData(blackCanvas, width, height, const Size(100, 100));
+
+      // Smudge outward from center (50, 50) towards (90, 50)
+      smudge.startDrawWithPressure(const Offset(50, 50), 1.0);
+      smudge.drawingWithPressure(const Offset(70, 50), 1.0);
+      smudge.drawingWithPressure(const Offset(90, 50), 1.0);
+      smudge.finalizeStroke();
+
+      final Uint8List result = smudge.rgbaData!;
+      // Pixel at (70, 50) should have high brightness (carried white paint, not degraded into dark gray)
+      final int idx70 = (50 * width + 70) * 4;
+      expect(result[idx70], greaterThan(150), reason: 'Stretched core should preserve bright white pigment');
+
+      // Pixel at (85, 50) should also have paint pulled into it
+      final int idx85 = (50 * width + 85) * 4;
+      expect(result[idx85], greaterThan(50), reason: 'Paint should stretch into the tapered tail');
+    });
   });
 }
 
