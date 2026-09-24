@@ -425,5 +425,100 @@ void main() {
       final int outerIdx = (5 * width + 5) * 4;
       expect(fillPixels[outerIdx + 3], 0);
     });
+
+    test('FloodFill enclosed area formed by stroke crossing canvas boundaries does not leak', () async {
+      const int width = 100;
+      const int height = 100;
+
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 100, 100));
+
+      final Paint strokePaint = Paint()
+        ..color = const Color(0xFF990000)
+        ..strokeWidth = 6.0
+        ..isAntiAlias = true;
+
+      // Draw an arc from left boundary (0, 50) through (50, 50) to bottom boundary (50, 100)
+      final Path path = Path()
+        ..moveTo(-5, 50)
+        ..quadraticBezierTo(50, 50, 50, 105);
+
+      canvas.drawPath(path, strokePaint);
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image snapshotImage = await picture.toImage(width, height);
+
+      // Fill in bottom-left enclosed region at (20, 80) with Blue
+      const Color blueColor = Color(0xFF0000FF);
+      final ui.Image? filledImage = await FloodFill.fill(
+        image: snapshotImage,
+        startPoint: const Offset(20, 80),
+        fillColor: blueColor,
+        tolerance: 0.15,
+      );
+
+      expect(filledImage, isNotNull);
+      final ByteData? filledData = await filledImage!.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final Uint8List fillPixels = filledData!.buffer.asUint8List();
+
+      // Inside bottom-left (20, 80) is filled
+      final int insideIdx = (80 * width + 20) * 4;
+      expect(fillPixels[insideIdx + 2], 255); // Blue
+      expect(fillPixels[insideIdx + 3], 255); // Alpha
+
+      // Outside the enclosed area (top-right at 70, 20) must NOT be filled
+      final int outsideIdx = (20 * width + 70) * 4;
+      expect(fillPixels[outsideIdx + 3], 0);
+
+      // Outside at top-left (20, 20) must NOT be filled
+      final int topLeftIdx = (20 * width + 20) * 4;
+      expect(fillPixels[topLeftIdx + 3], 0);
+    });
+
+    test('FloodFill on open stroke does not expand dilation fringe into transparent space', () async {
+      const int width = 100;
+      const int height = 100;
+
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 100, 100));
+
+      final Paint strokePaint = Paint()
+        ..color = const Color(0xFFD2B48C) // Beige stroke
+        ..strokeWidth = 8.0
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true;
+
+      // Draw an open stroke in top region
+      final Path path = Path()
+        ..moveTo(20, 30)
+        ..lineTo(50, 30)
+        ..lineTo(70, 60);
+
+      canvas.drawPath(path, strokePaint);
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image snapshotImage = await picture.toImage(width, height);
+
+      // Tap on empty space at (20, 70) with Green
+      const Color greenColor = Color(0xFF00FF00);
+      final ui.Image? filledImage = await FloodFill.fill(
+        image: snapshotImage,
+        startPoint: const Offset(20, 70),
+        fillColor: greenColor,
+        tolerance: 0.15,
+      );
+
+      expect(filledImage, isNotNull);
+      final ByteData? filledData = await filledImage!.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final Uint8List fillPixels = filledData!.buffer.asUint8List();
+
+      // Empty space (20, 70) is filled
+      final int fillIdx = (70 * width + 20) * 4;
+      expect(fillPixels[fillIdx + 1], 255); // Green
+      expect(fillPixels[fillIdx + 3], 255);
+
+      // Solid center of stroke at (35, 30) has original stroke, dilation only expands under anti-aliased edge
+      // Verify that 10 pixels above stroke (35, 10) is also filled because it's in the open canvas
+      final int openIdx = (10 * width + 35) * 4;
+      expect(fillPixels[openIdx + 3], 255);
+    });
   });
 }

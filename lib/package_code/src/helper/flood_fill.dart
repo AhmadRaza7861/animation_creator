@@ -17,8 +17,8 @@ class FloodFillResult {
 /// True paint-bucket flood fill for digital animation and drawing:
 /// - Determines the connected enclosed region from composited line art
 /// - Treats anti-aliased pixels of the outline as boundaries (prevents leaking across strokes)
-/// - Expands the fill mask slightly underneath the anti-aliased boundary pixels (eliminates halos) for interior fills
-/// - For stroke re-coloring, accurately captures the stroke anti-aliasing without outer dilation halos
+/// - Expands the fill mask slightly underneath the anti-aliased boundary pixels (eliminates halos) for interior fills without bleeding into empty space
+/// - For stroke re-coloring, accurately captures the stroke and its anti-aliasing without leaving old color halos
 class FloodFill {
   /// 执行填充算法并返回结果（包含放置层级信息）
   static Future<FloodFillResult?> fillWithResult({
@@ -51,29 +51,25 @@ class FloodFill {
     final int fillB = (fillColor.b * 255.0).round().clamp(0, 255);
     final int fillA = (fillColor.a * 255.0).round().clamp(0, 255);
 
-    // 如果起始位置颜色已经是填充颜色，则不需要填充
+    // If start pixel is already the target fill color, no-op
     if (_isSameColor(targetR, targetG, targetB, targetA, fillR, fillG, fillB, fillA)) {
       return null;
     }
 
     final bool isTargetTransparent = targetA < 20;
 
-    // Strict boundary threshold for anti-aliased line art:
-    // Any pixel with stroke opacity >= boundaryAlphaThreshold is treated as a boundary.
-    // This strictly stops the flood fill at the stroke edge so it never leaks across lines.
-    final int boundaryAlphaThreshold;
-    if (isTargetTransparent) {
-      if (tolerance <= 0) {
-        boundaryAlphaThreshold = 1;
-      } else {
-        // Clamped to a very tight threshold (default ~8-12) so even faint anti-aliasing blocks leaks
-        boundaryAlphaThreshold = (tolerance * 255.0 * 0.25).round().clamp(4, 25);
-      }
-    } else {
-      boundaryAlphaThreshold = 0;
-    }
+    // Strict boundary threshold for line art:
+    // Any stroke pixel with opacity >= 3 is treated as a solid boundary so flood fill
+    // never leaks through anti-aliased gaps, frame boundaries, or corners.
+    const int boundaryAlphaThreshold = 3;
 
     final double colorToleranceSq = (tolerance * 255.0) * (tolerance * 255.0) * 4.0;
+
+    // Chromaticity for re-coloring mode
+    final double tA = targetA.toDouble();
+    final double targetUnpremulR = tA > 0 ? (targetR * 255.0 / tA) : targetR.toDouble();
+    final double targetUnpremulG = tA > 0 ? (targetG * 255.0 / tA) : targetG.toDouble();
+    final double targetUnpremulB = tA > 0 ? (targetB * 255.0 / tA) : targetB.toDouble();
 
     // Helper: is pixel (x, y) a boundary?
     bool isBoundary(int x, int y) {
@@ -98,12 +94,14 @@ class FloodFill {
       } else {
         // Re-coloring mode: transparent background is a boundary
         if (pA == 0) return true;
-        final int pR = pixels[idx];
-        final int pG = pixels[idx + 1];
-        final int pB = pixels[idx + 2];
-        final double diffR = (pR - targetR).toDouble();
-        final double diffG = (pG - targetG).toDouble();
-        final double diffB = (pB - targetB).toDouble();
+        final double curA = pA.toDouble();
+        final double curUnpremulR = curA > 0 ? (pixels[idx] * 255.0 / curA) : pixels[idx].toDouble();
+        final double curUnpremulG = curA > 0 ? (pixels[idx + 1] * 255.0 / curA) : pixels[idx + 1].toDouble();
+        final double curUnpremulB = curA > 0 ? (pixels[idx + 2] * 255.0 / curA) : pixels[idx + 2].toDouble();
+
+        final double diffR = curUnpremulR - targetUnpremulR;
+        final double diffG = curUnpremulG - targetUnpremulG;
+        final double diffB = curUnpremulB - targetUnpremulB;
         final double distSq = diffR * diffR + diffG * diffG + diffB * diffB;
         return distSq > colorToleranceSq;
       }
@@ -130,7 +128,6 @@ class FloodFill {
       final int x = queue[head++];
       final int y = queue[head++];
 
-      // 4-Neighbors
       // Right (x + 1, y)
       if (x + 1 < width) {
         final int rPos = y * width + (x + 1);
@@ -173,8 +170,9 @@ class FloodFill {
     }
 
     // 2. Build Output Image
-    // For interior fills: Sub-pixel dilation expands underneath line art so no white halos exist.
-    // For re-coloring: No dilation outside into the background, and original anti-aliased alpha is preserved.
+    // For interior fills: Sub-pixel dilation ONLY expands underneath stroke boundary pixels (pA >= 3)
+    // so no white halos exist and empty outer canvas remains 100% transparent.
+    // For re-coloring: Traverses stroke pixels and recolors them smoothly with original anti-aliased alpha.
     final Uint8List filledPixels = Uint8List(width * height * 4);
     final int dilationRadius = isTargetTransparent ? expandRadius.ceil().clamp(1, 4) : 0;
 
@@ -192,15 +190,15 @@ class FloodFill {
             filledPixels[pixelIndex + 2] = fillB;
             filledPixels[pixelIndex + 3] = fillA;
           } else {
-            // Re-coloring mode: preserve the original anti-aliased edge alpha
+            // Re-coloring mode: preserve original anti-aliased edge alpha
             final int origA = pixels[pixelIndex + 3];
             filledPixels[pixelIndex] = fillR;
             filledPixels[pixelIndex + 1] = fillG;
             filledPixels[pixelIndex + 2] = fillB;
             filledPixels[pixelIndex + 3] = ((origA / 255.0) * fillA).round().clamp(0, 255);
           }
-        } else if (dilationRadius > 0) {
-          // Check if boundary pixel is adjacent to the filled interior (within expandRadius)
+        } else if (isTargetTransparent && dilationRadius > 0 && pixels[pixelIndex + 3] >= boundaryAlphaThreshold) {
+          // Check if stroke boundary pixel is adjacent to the filled interior (within expandRadius)
           bool nearInterior = false;
           for (int dy = -dilationRadius; dy <= dilationRadius && !nearInterior; dy++) {
             final int ny = y + dy;
@@ -218,11 +216,46 @@ class FloodFill {
           }
 
           if (nearInterior) {
-            // Expand fill cleanly underneath the anti-aliased edge
+            // Expand fill cleanly UNDERNEATH the stroke line art (pA >= 3)
             filledPixels[pixelIndex] = fillR;
             filledPixels[pixelIndex + 1] = fillG;
             filledPixels[pixelIndex + 2] = fillB;
             filledPixels[pixelIndex + 3] = fillA;
+          }
+        } else if (!isTargetTransparent && pixels[pixelIndex + 3] > 0) {
+          // In re-coloring mode: include anti-aliased fringe pixels touching the recolored stroke
+          bool nearStroke = false;
+          for (int dy = -1; dy <= 1 && !nearStroke; dy++) {
+            final int ny = y + dy;
+            if (ny < 0 || ny >= height) continue;
+            for (int dx = -1; dx <= 1; dx++) {
+              final int nx = x + dx;
+              if (nx < 0 || nx >= width) continue;
+              if (mask[ny * width + nx] == 1) {
+                nearStroke = true;
+                break;
+              }
+            }
+          }
+
+          if (nearStroke) {
+            final double curA = pixels[pixelIndex + 3].toDouble();
+            final double curUnpremulR = curA > 0 ? (pixels[pixelIndex] * 255.0 / curA) : pixels[pixelIndex].toDouble();
+            final double curUnpremulG = curA > 0 ? (pixels[pixelIndex + 1] * 255.0 / curA) : pixels[pixelIndex + 1].toDouble();
+            final double curUnpremulB = curA > 0 ? (pixels[pixelIndex + 2] * 255.0 / curA) : pixels[pixelIndex + 2].toDouble();
+
+            final double diffR = curUnpremulR - targetUnpremulR;
+            final double diffG = curUnpremulG - targetUnpremulG;
+            final double diffB = curUnpremulB - targetUnpremulB;
+            final double distSq = diffR * diffR + diffG * diffG + diffB * diffB;
+
+            if (distSq <= colorToleranceSq * 1.5) {
+              final int origA = pixels[pixelIndex + 3];
+              filledPixels[pixelIndex] = fillR;
+              filledPixels[pixelIndex + 1] = fillG;
+              filledPixels[pixelIndex + 2] = fillB;
+              filledPixels[pixelIndex + 3] = ((origA / 255.0) * fillA).round().clamp(0, 255);
+            }
           }
         }
       }
