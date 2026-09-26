@@ -214,8 +214,8 @@ class BlurContent extends PaintContent {
     if (_pixels == null || _pendingPoints.isEmpty) return;
 
     final double baseRadius = (paint.strokeWidth / 2.0).clamp(3.0, 150.0);
-    // 25% brush radius spacing for gapless continuity
-    final double stepSize = math.max(2.0, baseRadius * 0.25);
+    // 35% brush radius spacing for smooth continuous strokes without oversaturation
+    final double stepSize = math.max(3.0, baseRadius * 0.35);
 
     while (_processedIndex < _pendingPoints.length) {
       if (_processedIndex == 0) {
@@ -261,11 +261,11 @@ class BlurContent extends PaintContent {
 
     final double cx = pt.dx * scaleX;
     final double cy = pt.dy * scaleY;
-    final double brushRadius = (paint.strokeWidth / 2.0) * scaleX * pressure.clamp(0.4, 1.6);
+    final double brushRadius = (paint.strokeWidth / 2.0) * scaleX * pressure.clamp(0.5, 1.4);
     if (brushRadius <= 0.5) return;
 
-    // Blur kernel radius scaled proportionally to brush size and strength (0% to 100%)
-    final int r = (math.max(1.0, brushRadius * 0.38) * (0.25 + effStrength * 1.25)).round().clamp(1, 48);
+    // Tight, calibrated blur kernel radius for realistic Gaussian softening without oversized glow
+    final int r = (math.max(1.0, brushRadius * 0.22) * (0.35 + effStrength * 0.75)).round().clamp(1, 28);
     final int windowSize = 2 * r + 1;
 
     final int x0 = (cx - brushRadius - r).floor().clamp(0, _width - 1);
@@ -416,7 +416,7 @@ class BlurContent extends PaintContent {
 
     // 4. Smooth cubic Hermite brush feathering & progressive blend
     final double radiusSq = brushRadius * brushRadius;
-    final double stampIntensity = (effStrength * (0.42 + effStrength * 0.58)) * pressure.clamp(0.5, 1.5);
+    final double stampIntensity = (0.10 + effStrength * 0.32) * pressure.clamp(0.6, 1.3);
 
     for (int y = 0; y < patchH; y++) {
       final int globalY = y0 + y;
@@ -446,7 +446,7 @@ class BlurContent extends PaintContent {
           final double t = dist / brushRadius;
           // Smooth Hermite / smoothstep curve: (1-t)^2 * (1+2t)
           final double falloff = (1.0 - t) * (1.0 - t) * (1.0 + 2.0 * t);
-          final double mixFactor = (falloff * stampIntensity).clamp(0.0, 1.0);
+          final double mixFactor = (falloff * stampIntensity).clamp(0.0, 0.45);
 
           final int origR = orig & 0xFF;
           final int origG = (orig >> 8) & 0xFF;
