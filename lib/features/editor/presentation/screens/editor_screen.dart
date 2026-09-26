@@ -1211,7 +1211,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         (controller.activeCategory == 'Blur' ||
                                                 config.contentType == BlurContent)
                                             ? AssetConstants.blur_icon
-                                            : AssetConstants.stock_icon,
+                                            : (controller.activeCategory == 'Smudge' ||
+                                                    config.contentType == SmudgeContent)
+                                                ? AssetConstants.smudge_icon
+                                                : AssetConstants.stock_icon,
                                         width: 14,
                                         height: 14,
                                         colorFilter: const ColorFilter.mode(
@@ -1224,7 +1227,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         (controller.activeCategory == 'Blur' ||
                                                 config.contentType == BlurContent)
                                             ? 'Blur • ${(controller.blurStrength * 100).round()}%'
-                                            : '${controller.globalStrokeWidth.round()}px',
+                                            : (controller.activeCategory == 'Smudge' ||
+                                                    config.contentType == SmudgeContent)
+                                                ? 'Smudge • ${(controller.smudgeStrength * 100).round()}%'
+                                                : '${controller.globalStrokeWidth.round()}px',
                                         style: const TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
@@ -1242,6 +1248,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                               final bool isBlurActive =
                                   controller.activeCategory == 'Blur' ||
                                   config.contentType == BlurContent;
+                              final bool isSmudgeActive =
+                                  controller.activeCategory == 'Smudge' ||
+                                  config.contentType == SmudgeContent;
                               final double currentWidth =
                                   controller.globalStrokeWidth;
                               final double currentOpacity =
@@ -1256,6 +1265,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                               ];
                               final opacityPresets = [0.25, 0.50, 0.75, 1.0];
                               final blurPresets = [0.0, 0.25, 0.50, 0.75, 1.0];
+                              final smudgePresets = [0.0, 0.25, 0.50, 0.75, 1.0];
 
                               final baseColor = config.color.withOpacity(1.0);
                               final previewColor = baseColor.withOpacity(
@@ -1294,7 +1304,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         borderRadius: BorderRadius.circular(15),
                                         child: Stack(
                                           children: [
-                                            if (!isBlurActive)
+                                            if (!isBlurActive && !isSmudgeActive)
                                               const Positioned.fill(
                                                 child: CustomPaint(
                                                   painter: _CheckerboardPainter(),
@@ -1307,10 +1317,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                         controller.blurStrength,
                                                         currentWidth,
                                                       )
-                                                    : StrokePreviewPainter(
-                                                        currentWidth,
-                                                        previewColor,
-                                                      ),
+                                                    : isSmudgeActive
+                                                        ? SmudgePreviewPainter(
+                                                            controller.smudgeStrength,
+                                                            currentWidth,
+                                                          )
+                                                        : StrokePreviewPainter(
+                                                            currentWidth,
+                                                            previewColor,
+                                                          ),
                                               ),
                                             ),
                                           ],
@@ -1330,7 +1345,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                             SvgPicture.asset(
                                               isBlurActive
                                                   ? AssetConstants.blur_icon
-                                                  : AssetConstants.stock_icon,
+                                                  : isSmudgeActive
+                                                      ? AssetConstants.smudge_icon
+                                                      : AssetConstants.stock_icon,
                                               width: 14,
                                               height: 14,
                                               colorFilter:
@@ -1343,7 +1360,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                             Text(
                                               isBlurActive
                                                   ? 'Blur Size'
-                                                  : 'Brush Size',
+                                                  : isSmudgeActive
+                                                      ? 'Smudge Size'
+                                                      : 'Brush Size',
                                               style: const TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w700,
@@ -1599,6 +1618,170 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                             onTap: () {
                                               setPopupState(() {
                                                 controller.blurStrength = b;
+                                              });
+                                              setState(() {});
+                                            },
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 150,
+                                              ),
+                                              width: 42,
+                                              height: 30,
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                color: isSelected
+                                                    ? ColorConstants.accent
+                                                    : const Color(0xFFF8FAFC),
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? Colors.transparent
+                                                      : const Color(
+                                                        0xFFE2E8F0,
+                                                      ),
+                                                  width: 1.0,
+                                                ),
+                                                boxShadow: isSelected
+                                                    ? [
+                                                        BoxShadow(
+                                                          color: ColorConstants
+                                                              .accent
+                                                              .withValues(
+                                                                alpha: 0.3,
+                                                              ),
+                                                          blurRadius: 6,
+                                                          offset: const Offset(
+                                                            0,
+                                                            2,
+                                                          ),
+                                                        ),
+                                                      ]
+                                                    : null,
+                                              ),
+                                              child: Text(
+                                                '${(b * 100).round()}%',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : const Color(
+                                                        0xFF475569,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ] else if (isSmudgeActive) ...[
+                                      // 6. Smudge Intensity Header
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SvgPicture.asset(
+                                                AssetConstants.smudge_icon,
+                                                width: 15,
+                                                height: 15,
+                                                colorFilter:
+                                                    const ColorFilter.mode(
+                                                      Color(0xFF475569),
+                                                      BlendMode.srcIn,
+                                                    ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              const Text(
+                                                'Smudge Intensity',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Color(0xFF1E293B),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2.5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: ColorConstants.accent
+                                                  .withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              '${(controller.smudgeStrength * 100).round()}%',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: ColorConstants.accent,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+
+                                      // 7. Smudge Intensity Slider (0% to 100%)
+                                      SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          trackHeight: 5,
+                                          activeTrackColor:
+                                              ColorConstants.accent,
+                                          inactiveTrackColor: const Color(
+                                            0xFFF1F5F9,
+                                          ),
+                                          thumbColor: Colors.white,
+                                          thumbShape:
+                                              const RoundSliderThumbShape(
+                                                enabledThumbRadius: 8,
+                                                elevation: 3,
+                                                pressedElevation: 5,
+                                              ),
+                                          overlayColor: ColorConstants.accent
+                                              .withValues(alpha: 0.15),
+                                          overlayShape:
+                                              const RoundSliderOverlayShape(
+                                                overlayRadius: 16,
+                                              ),
+                                          trackShape:
+                                              const RoundedRectSliderTrackShape(),
+                                        ),
+                                        child: Slider(
+                                          value: controller.smudgeStrength
+                                              .clamp(0.0, 1.0),
+                                          min: 0.0,
+                                          max: 1.0,
+                                          onChanged: (val) {
+                                            setPopupState(() {
+                                              controller.smudgeStrength = val;
+                                            });
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // 8. Smudge Intensity Quick Presets
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: smudgePresets.map((b) {
+                                          final isSelected =
+                                              (controller.smudgeStrength - b)
+                                                      .abs() <
+                                                  0.04;
+                                          return GestureDetector(
+                                            onTap: () {
+                                              setPopupState(() {
+                                                controller.smudgeStrength = b;
                                               });
                                               setState(() {});
                                             },
@@ -3213,6 +3396,176 @@ class BlurPreviewPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant BlurPreviewPainter oldDelegate) {
     return oldDelegate.blurStrength != blurStrength ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+
+class SmudgePreviewPainter extends CustomPainter {
+  final double smudgeStrength;
+  final double strokeWidth;
+
+  const SmudgePreviewPainter(this.smudgeStrength, this.strokeWidth);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(15));
+    canvas.clipRRect(rrect);
+
+    // Draw rich gradient background
+    final bgPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset.zero,
+        Offset(size.width, size.height),
+        const [
+          Color(0xFF0F172A),
+          Color(0xFF1E293B),
+          Color(0xFF334155),
+        ],
+      );
+    canvas.drawRect(rect, bgPaint);
+
+    final double centerY = size.height * 0.5;
+
+    // Base paint swatches on the left
+    canvas.drawCircle(
+      Offset(size.width * 0.18, centerY),
+      14,
+      Paint()..color = const Color(0xFFFF5252),
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.28, centerY - 6),
+      11,
+      Paint()..color = const Color(0xFFFFD740),
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.28, centerY + 8),
+      10,
+      Paint()..color = const Color(0xFF448AFF),
+    );
+
+    // Smudge dragged streaks extending to the right based on smudgeStrength
+    final double dragLength = 15.0 + smudgeStrength * (size.width * 0.55);
+    final double trailWidth = max(6.0, strokeWidth * 0.45);
+
+    // Smudge trails with physical drag
+    final pathRed = Path()
+      ..moveTo(size.width * 0.18, centerY - 12)
+      ..cubicTo(
+        size.width * 0.18 + dragLength * 0.4,
+        centerY - 10,
+        size.width * 0.18 + dragLength * 0.7,
+        centerY - 4,
+        size.width * 0.18 + dragLength,
+        centerY - 2,
+      )
+      ..lineTo(size.width * 0.18 + dragLength * 0.85, centerY + 3)
+      ..cubicTo(
+        size.width * 0.18 + dragLength * 0.5,
+        centerY + 5,
+        size.width * 0.18 + dragLength * 0.2,
+        centerY + 8,
+        size.width * 0.18,
+        centerY + 12,
+      )
+      ..close();
+
+    final redGradient = ui.Gradient.linear(
+      Offset(size.width * 0.18, centerY),
+      Offset(size.width * 0.18 + dragLength, centerY),
+      [
+        const Color(0xFFFF5252).withValues(alpha: 0.95),
+        const Color(0xFFFF5252).withValues(alpha: (0.35 + 0.60 * smudgeStrength).clamp(0.0, 1.0)),
+        const Color(0xFFFF5252).withValues(alpha: (0.05 + 0.90 * smudgeStrength).clamp(0.0, 1.0)),
+      ],
+      [0.0, 0.6, 1.0],
+    );
+    canvas.drawPath(pathRed, Paint()..shader = redGradient);
+
+    // Blended yellow streak
+    final pathYellow = Path()
+      ..moveTo(size.width * 0.28, centerY - 6)
+      ..cubicTo(
+        size.width * 0.28 + dragLength * 0.35,
+        centerY - 4,
+        size.width * 0.28 + dragLength * 0.7,
+        centerY,
+        size.width * 0.28 + dragLength * 0.9,
+        centerY + 1,
+      );
+    canvas.drawPath(
+      pathYellow,
+      Paint()
+        ..color = const Color(0xFFFFD740).withValues(alpha: (0.4 + 0.6 * smudgeStrength).clamp(0.0, 1.0))
+        ..strokeWidth = trailWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, (1.0 - smudgeStrength * 0.5) * 2.0),
+    );
+
+    // Blended blue streak
+    final pathBlue = Path()
+      ..moveTo(size.width * 0.28, centerY + 8)
+      ..cubicTo(
+        size.width * 0.28 + dragLength * 0.35,
+        centerY + 7,
+        size.width * 0.28 + dragLength * 0.65,
+        centerY + 5,
+        size.width * 0.28 + dragLength * 0.85,
+        centerY + 4,
+      );
+    canvas.drawPath(
+      pathBlue,
+      Paint()
+        ..color = const Color(0xFF448AFF).withValues(alpha: (0.4 + 0.6 * smudgeStrength).clamp(0.0, 1.0))
+        ..strokeWidth = trailWidth * 0.85
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, (1.0 - smudgeStrength * 0.5) * 2.0),
+    );
+
+    // Subtle center blend zone
+    canvas.drawCircle(
+      Offset(size.width * 0.28 + dragLength * 0.45, centerY + 2),
+      trailWidth * 0.9,
+      Paint()
+        ..color = const Color(0xFFFF80AB).withValues(alpha: (0.3 + 0.4 * smudgeStrength).clamp(0.0, 1.0))
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
+    );
+
+    // Overlay text
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'SMUDGE ${(smudgeStrength * 100).round()}%',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
+          shadows: [
+            Shadow(
+              color: Colors.black54,
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        size.width - textPainter.width - 10,
+        size.height - textPainter.height - 6,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant SmudgePreviewPainter oldDelegate) {
+    return oldDelegate.smudgeStrength != smudgeStrength ||
         oldDelegate.strokeWidth != strokeWidth;
   }
 }

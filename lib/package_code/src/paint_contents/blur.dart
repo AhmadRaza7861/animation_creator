@@ -440,7 +440,7 @@ class BlurContent extends PaintContent {
           final int origA = (orig >> 24) & 0xFF;
           final int blurA = (blur >> 24) & 0xFF;
 
-          if (origA == 0 && blurA == 0) continue;
+          if (origA == 0) continue;
 
           final double dist = math.sqrt(distSq);
           final double t = dist / brushRadius;
@@ -460,7 +460,7 @@ class BlurContent extends PaintContent {
           final int outG = (origG + (blurG - origG) * mixFactor).round().clamp(0, 255);
           final int outB = (origB + (blurB - origB) * mixFactor).round().clamp(0, 255);
 
-          final int outA = (origA + (blurA - origA) * mixFactor).round().clamp(0, 255);
+          final int outA = origA;
 
           pixels[globalIdx] = (outA << 24) | (outB << 16) | (outG << 8) | outR;
         }

@@ -290,6 +290,7 @@ class EditorController extends ChangeNotifier {
   bool _isUndoingActiveStickerPlacement = false;
   double _globalStrokeWidth = 10.0;
   double _blurStrength = 0.75;
+  double _smudgeStrength = 0.75;
   String _activeCategory = 'Brush';
   double _colorOpacity = 1.0;
 
@@ -482,6 +483,7 @@ class EditorController extends ChangeNotifier {
   Object? get activeSticker => _activeSticker;
   double get globalStrokeWidth => _globalStrokeWidth;
   double get blurStrength => _blurStrength;
+  double get smudgeStrength => _smudgeStrength;
   String get activeCategory => _activeCategory;
   double get colorOpacity => _colorOpacity;
 
@@ -492,6 +494,18 @@ class EditorController extends ChangeNotifier {
     }
     if (drawingController.drawingContent is BlurContent) {
       (drawingController.drawingContent as BlurContent).strength = _blurStrength;
+    }
+    markDirty();
+    notifyListeners();
+  }
+
+  set smudgeStrength(double val) {
+    _smudgeStrength = val.clamp(0.0, 1.0);
+    for (final c in _canvases) {
+      c.setStyle(strength: _smudgeStrength);
+    }
+    if (drawingController.drawingContent is SmudgeContent) {
+      (drawingController.drawingContent as SmudgeContent).strength = _smudgeStrength;
     }
     markDirty();
     notifyListeners();
@@ -873,6 +887,12 @@ class EditorController extends ChangeNotifier {
           _blurStrength = 0.75;
         }
 
+        if (data.state.containsKey('smudgeStrength')) {
+          _smudgeStrength = (data.state['smudgeStrength'] as num).toDouble().clamp(0.0, 1.0);
+        } else {
+          _smudgeStrength = 0.75;
+        }
+
         Color restoredColor = Colors.black;
         if (data.state.containsKey('strokeColor')) {
           restoredColor = Color(data.state['strokeColor'] as int);
@@ -1026,6 +1046,7 @@ class EditorController extends ChangeNotifier {
       'strokeColor': drawingController.drawConfig.value.color.value,
       'colorOpacity': _colorOpacity,
       'blurStrength': _blurStrength,
+      'smudgeStrength': _smudgeStrength,
       'templateFolder': _templateFolder,
       'templateExtension': _templateExtension,
       'templateMode': _templateMode,

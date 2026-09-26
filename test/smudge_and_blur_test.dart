@@ -372,5 +372,70 @@ void main() {
       expect(blurBounds.right, equals(70.0));
       expect(blurBounds.bottom, equals(80.0));
     });
+
+    test('Smudge at 0% intensity applies zero distortion and leaves pixels intact', () async {
+      final ui.Image stripeImg = await createStripeImage(100, 100);
+      final ByteData? data = await stripeImg.toByteData(format: ui.ImageByteFormat.rawRgba);
+      expect(data, isNotNull);
+
+      final Uint8List originalBytes = Uint8List.fromList(data!.buffer.asUint8List());
+
+      final SmudgeContent smudgeZero = SmudgeContent(strength: 0.0);
+      smudgeZero.paint.strokeWidth = 30.0;
+      smudgeZero.setRgbaData(Uint8List.fromList(originalBytes), 100, 100, const Size(100, 100));
+
+      smudgeZero.startDrawWithPressure(const Offset(40, 50), 1.0);
+      smudgeZero.drawingWithPressure(const Offset(60, 50), 1.0);
+      smudgeZero.finalizeStroke();
+
+      final Uint8List modifiedBytes = smudgeZero.rgbaData!;
+      for (int i = 0; i < originalBytes.length; i++) {
+        expect(modifiedBytes[i], equals(originalBytes[i]), reason: 'At 0% smudge intensity, pixels must not be modified');
+      }
+    });
+
+    test('Smudge dragging black shape into white canvas preserves rich pigment and crisp directional trail', () async {
+      // Create 100x100 white canvas with black box at x: 20..50, y: 30..70
+      final Uint8List rawRgba = Uint8List(100 * 100 * 4);
+      for (int y = 0; y < 100; y++) {
+        for (int x = 0; x < 100; x++) {
+          final int idx = (y * 100 + x) * 4;
+          if (x >= 20 && x < 50 && y >= 30 && y < 70) {
+            rawRgba[idx] = 0;       // R (Black)
+            rawRgba[idx + 1] = 0;   // G
+            rawRgba[idx + 2] = 0;   // B
+            rawRgba[idx + 3] = 255; // A
+          } else {
+            rawRgba[idx] = 255;     // R (White)
+            rawRgba[idx + 1] = 255; // G
+            rawRgba[idx + 2] = 255; // B
+            rawRgba[idx + 3] = 255; // A
+          }
+        }
+      }
+
+      final SmudgeContent smudge = SmudgeContent(strength: 0.85);
+      smudge.paint.strokeWidth = 24.0;
+      smudge.setRgbaData(Uint8List.fromList(rawRgba), 100, 100, const Size(100, 100));
+
+      // Drag from black area (x=45, y=50) to white area (x=75, y=50)
+      smudge.startDrawWithPressure(const Offset(45, 50), 1.0);
+      smudge.drawingWithPressure(const Offset(60, 50), 1.0);
+      smudge.drawingWithPressure(const Offset(75, 50), 1.0);
+      smudge.finalizeStroke();
+
+      final Uint8List result = smudge.rgbaData!;
+
+      // At x=60, y=50: Paint must have been deposited (darker than white)
+      final int dragIdx = (50 * 100 + 60) * 4;
+      expect(result[dragIdx], lessThan(100), reason: 'Black paint should have been dragged to x=60');
+      expect(result[dragIdx + 3], equals(255), reason: 'Alpha must remain 255 (opaque on opaque canvas)');
+
+      // At distant position x=95, y=50: Must remain pure white
+      final int farIdx = (50 * 100 + 95) * 4;
+      expect(result[farIdx], equals(255), reason: 'Distant pixels must remain unaffected white');
+      expect(result[farIdx + 1], equals(255));
+      expect(result[farIdx + 2], equals(255));
+    });
   });
 }
