@@ -526,6 +526,7 @@ class DrawingController extends ChangeNotifier {
     }
 
     active.drawHistory(tempCanvas, size, true);
+    activeOverlayPainter?.call(tempCanvas, size);
 
     tempCanvas.restore();
 
@@ -551,6 +552,13 @@ class DrawingController extends ChangeNotifier {
 
     tempCanvas.saveLayer(Offset.zero & size, Paint());
 
+    // 1. Draw solid background color (default Colors.white)
+    tempCanvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = backgroundColor,
+    );
+
+    // 2. Draw background image / template if present
     final ui.Image? bgImg = backgroundSnapshotProvider?.call() ?? backgroundImage;
     if (bgImg != null) {
       tempCanvas.saveLayer(
@@ -566,6 +574,7 @@ class DrawingController extends ChangeNotifier {
       tempCanvas.restore();
     }
 
+    // 3. Draw all layers (bottom to top)
     for (int i = layers.length - 1; i >= 0; i--) {
       final layer = layers[i];
       if (!layer.isVisible) continue;
@@ -581,6 +590,9 @@ class DrawingController extends ChangeNotifier {
       tempCanvas.restore();
     }
 
+    // 4. Draw active overlay stickers / text / shapes if present
+    activeOverlayPainter?.call(tempCanvas, size);
+
     tempCanvas.restore();
 
     final ui.Picture picture = recorder.endRecording();
@@ -590,8 +602,7 @@ class DrawingController extends ChangeNotifier {
   /// 预先准备画板快照（当切换到模糊/涂抹工具时调用）
   void prepareSnapshot() {
     if (drawConfig.value.size != null) {
-      final ui.Image? snapshot = generateActiveLayerSnapshotSync(drawConfig.value.size) ??
-          generateSnapshotSync(drawConfig.value.size);
+      final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
       if (snapshot != null) {
         cachedImage = snapshot;
         snapshot.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
@@ -787,6 +798,9 @@ class DrawingController extends ChangeNotifier {
   /// Set drawing content type (such as SimpleLine, Eraser, etc.)
   void setPaintContent(PaintContent content) {
     GlobalToolState.instance.setPaintContent(content);
+    if (content is BlurContent || content is SmudgeContent) {
+      prepareSnapshot();
+    }
   }
 
   /// 添加一条绘制内容到历史记录
@@ -1019,8 +1033,7 @@ class DrawingController extends ChangeNotifier {
       final Size? canvasSize = drawConfig.value.size;
       if (canvasSize != null) {
         blur.canvasSize = canvasSize;
-        final ui.Image? snapshot = generateActiveLayerSnapshotSync(canvasSize) ??
-            generateSnapshotSync(canvasSize);
+        final ui.Image? snapshot = generateSnapshotSync(canvasSize);
         if (snapshot != null) {
           blur.setImageData(snapshot, canvasSize);
           if (cachedRgbaData != null && cachedRgbaWidth == snapshot.width && cachedRgbaHeight == snapshot.height) {
@@ -1044,8 +1057,7 @@ class DrawingController extends ChangeNotifier {
       final Size? canvasSize = drawConfig.value.size;
       if (canvasSize != null) {
         smudge.canvasSize = canvasSize;
-        final ui.Image? snapshot = generateActiveLayerSnapshotSync(canvasSize) ??
-            generateSnapshotSync(canvasSize);
+        final ui.Image? snapshot = generateSnapshotSync(canvasSize);
         if (snapshot != null) {
           smudge.setImageData(snapshot, canvasSize);
           if (cachedRgbaData != null && cachedRgbaWidth == snapshot.width && cachedRgbaHeight == snapshot.height) {

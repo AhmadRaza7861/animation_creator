@@ -265,7 +265,7 @@ class BlurContent extends PaintContent {
     if (brushRadius <= 0.5) return;
 
     // Blur kernel radius scaled proportionally to brush size and strength (0% to 100%)
-    final int r = (math.max(1.0, brushRadius * 0.35) * (0.2 + effStrength * 1.2)).round().clamp(1, 45);
+    final int r = (math.max(1.0, brushRadius * 0.38) * (0.25 + effStrength * 1.25)).round().clamp(1, 48);
     final int windowSize = 2 * r + 1;
 
     final int x0 = (cx - brushRadius - r).floor().clamp(0, _width - 1);
@@ -296,11 +296,12 @@ class BlurContent extends PaintContent {
     }
 
     // 2. Ultra-Fast O(1) Horizontal Sliding Accumulator Pass (_patchSrc -> _patchHoriz)
+    // Uses Decal / Zero-Padding mode to prevent edge-clamping streaking artifacts
     for (int y = 0; y < patchH; y++) {
       final int rowOffset = y * patchW;
-      int sumR = 0, sumG = 0, sumB = 0, sumA = 0;
+      int sumA = 0, sumPremulR = 0, sumPremulG = 0, sumPremulB = 0;
 
-      // Initialize sliding accumulator for x = 0 with proper boundary clipping (no edge clamping)
+      // Initialize sliding accumulator for x = 0 with decal boundary clipping
       for (int k = -r; k <= r; k++) {
         final int sx = k;
         if (sx >= 0 && sx < patchW) {
@@ -308,19 +309,20 @@ class BlurContent extends PaintContent {
           final int a = (px >> 24) & 0xFF;
           if (a > 0) {
             sumA += a;
-            sumR += (px & 0xFF) * a;
-            sumG += ((px >> 8) & 0xFF) * a;
-            sumB += ((px >> 16) & 0xFF) * a;
+            sumPremulR += (px & 0xFF) * a;
+            sumPremulG += ((px >> 8) & 0xFF) * a;
+            sumPremulB += ((px >> 16) & 0xFF) * a;
           }
         }
       }
 
       for (int x = 0; x < patchW; x++) {
         if (sumA > 0) {
-          final int rVal = (sumR ~/ sumA).clamp(0, 255);
-          final int gVal = (sumG ~/ sumA).clamp(0, 255);
-          final int bVal = (sumB ~/ sumA).clamp(0, 255);
-          _patchHoriz[rowOffset + x] = (255 << 24) | (bVal << 16) | (gVal << 8) | rVal;
+          final int outA = (sumA / windowSize).round().clamp(0, 255);
+          final int rVal = (sumPremulR ~/ sumA).clamp(0, 255);
+          final int gVal = (sumPremulG ~/ sumA).clamp(0, 255);
+          final int bVal = (sumPremulB ~/ sumA).clamp(0, 255);
+          _patchHoriz[rowOffset + x] = (outA << 24) | (bVal << 16) | (gVal << 8) | rVal;
         } else {
           _patchHoriz[rowOffset + x] = 0;
         }
@@ -334,9 +336,9 @@ class BlurContent extends PaintContent {
           final int remA = (remPx >> 24) & 0xFF;
           if (remA > 0) {
             sumA -= remA;
-            sumR -= (remPx & 0xFF) * remA;
-            sumG -= ((remPx >> 8) & 0xFF) * remA;
-            sumB -= ((remPx >> 16) & 0xFF) * remA;
+            sumPremulR -= (remPx & 0xFF) * remA;
+            sumPremulG -= ((remPx >> 8) & 0xFF) * remA;
+            sumPremulB -= ((remPx >> 16) & 0xFF) * remA;
           }
         }
 
@@ -345,19 +347,20 @@ class BlurContent extends PaintContent {
           final int addA = (addPx >> 24) & 0xFF;
           if (addA > 0) {
             sumA += addA;
-            sumR += (addPx & 0xFF) * addA;
-            sumG += ((addPx >> 8) & 0xFF) * addA;
-            sumB += ((addPx >> 16) & 0xFF) * addA;
+            sumPremulR += (addPx & 0xFF) * addA;
+            sumPremulG += ((addPx >> 8) & 0xFF) * addA;
+            sumPremulB += ((addPx >> 16) & 0xFF) * addA;
           }
         }
       }
     }
 
     // 3. Ultra-Fast O(1) Vertical Sliding Accumulator Pass (_patchHoriz -> _patchBlurred)
+    // Uses Decal / Zero-Padding mode to prevent edge-clamping streaking artifacts
     for (int x = 0; x < patchW; x++) {
-      int sumR = 0, sumG = 0, sumB = 0, sumA = 0;
+      int sumA = 0, sumPremulR = 0, sumPremulG = 0, sumPremulB = 0;
 
-      // Initialize sliding accumulator for y = 0 with proper boundary clipping
+      // Initialize sliding accumulator for y = 0 with decal boundary clipping
       for (int k = -r; k <= r; k++) {
         final int sy = k;
         if (sy >= 0 && sy < patchH) {
@@ -365,19 +368,20 @@ class BlurContent extends PaintContent {
           final int a = (px >> 24) & 0xFF;
           if (a > 0) {
             sumA += a;
-            sumR += (px & 0xFF) * a;
-            sumG += ((px >> 8) & 0xFF) * a;
-            sumB += ((px >> 16) & 0xFF) * a;
+            sumPremulR += (px & 0xFF) * a;
+            sumPremulG += ((px >> 8) & 0xFF) * a;
+            sumPremulB += ((px >> 16) & 0xFF) * a;
           }
         }
       }
 
       for (int y = 0; y < patchH; y++) {
         if (sumA > 0) {
-          final int rVal = (sumR ~/ sumA).clamp(0, 255);
-          final int gVal = (sumG ~/ sumA).clamp(0, 255);
-          final int bVal = (sumB ~/ sumA).clamp(0, 255);
-          _patchBlurred[y * patchW + x] = (255 << 24) | (bVal << 16) | (gVal << 8) | rVal;
+          final int outA = (sumA / windowSize).round().clamp(0, 255);
+          final int rVal = (sumPremulR ~/ sumA).clamp(0, 255);
+          final int gVal = (sumPremulG ~/ sumA).clamp(0, 255);
+          final int bVal = (sumPremulB ~/ sumA).clamp(0, 255);
+          _patchBlurred[y * patchW + x] = (outA << 24) | (bVal << 16) | (gVal << 8) | rVal;
         } else {
           _patchBlurred[y * patchW + x] = 0;
         }
@@ -391,9 +395,9 @@ class BlurContent extends PaintContent {
           final int remA = (remPx >> 24) & 0xFF;
           if (remA > 0) {
             sumA -= remA;
-            sumR -= (remPx & 0xFF) * remA;
-            sumG -= ((remPx >> 8) & 0xFF) * remA;
-            sumB -= ((remPx >> 16) & 0xFF) * remA;
+            sumPremulR -= (remPx & 0xFF) * remA;
+            sumPremulG -= ((remPx >> 8) & 0xFF) * remA;
+            sumPremulB -= ((remPx >> 16) & 0xFF) * remA;
           }
         }
 
@@ -402,18 +406,17 @@ class BlurContent extends PaintContent {
           final int addA = (addPx >> 24) & 0xFF;
           if (addA > 0) {
             sumA += addA;
-            sumR += (addPx & 0xFF) * addA;
-            sumG += ((addPx >> 8) & 0xFF) * addA;
-            sumB += ((addPx >> 16) & 0xFF) * addA;
+            sumPremulR += (addPx & 0xFF) * addA;
+            sumPremulG += ((addPx >> 8) & 0xFF) * addA;
+            sumPremulB += ((addPx >> 16) & 0xFF) * addA;
           }
         }
       }
     }
 
-    // 4. Smooth cubic Hermite brush feathering & progressive blend:
-    // finalPixel = lerp(originalPixel, blurredPixel, mixFactor)
+    // 4. Smooth cubic Hermite brush feathering & progressive blend
     final double radiusSq = brushRadius * brushRadius;
-    final double stampIntensity = (effStrength * (0.35 + effStrength * 0.55)) * pressure.clamp(0.5, 1.5);
+    final double stampIntensity = (effStrength * (0.42 + effStrength * 0.58)) * pressure.clamp(0.5, 1.5);
 
     for (int y = 0; y < patchH; y++) {
       final int globalY = y0 + y;
@@ -430,35 +433,36 @@ class BlurContent extends PaintContent {
         if (distSq < radiusSq) {
           final int globalIdx = globalRow + globalX;
           final int orig = pixels[globalIdx];
-          final int origA = (orig >> 24) & 0xFF;
-
-          // STRICT BOUNDARY: Never bleed or create pixels outside original image content!
-          if (origA == 0) continue;
-
           final int blur = _patchBlurred[patchRow + x];
+
+          if (orig == blur) continue;
+
+          final int origA = (orig >> 24) & 0xFF;
           final int blurA = (blur >> 24) & 0xFF;
-          if (blurA == 0) continue;
+
+          if (origA == 0 && blurA == 0) continue;
 
           final double dist = math.sqrt(distSq);
           final double t = dist / brushRadius;
           // Smooth Hermite / smoothstep curve: (1-t)^2 * (1+2t)
           final double falloff = (1.0 - t) * (1.0 - t) * (1.0 + 2.0 * t);
-          final double mixFactor = (falloff * stampIntensity).clamp(0.0, 0.90);
+          final double mixFactor = (falloff * stampIntensity).clamp(0.0, 1.0);
 
-          final int origB = (orig >> 16) & 0xFF;
-          final int origG = (orig >> 8) & 0xFF;
           final int origR = orig & 0xFF;
+          final int origG = (orig >> 8) & 0xFF;
+          final int origB = (orig >> 16) & 0xFF;
 
-          final int blurB = (blur >> 16) & 0xFF;
-          final int blurG = (blur >> 8) & 0xFF;
           final int blurR = blur & 0xFF;
+          final int blurG = (blur >> 8) & 0xFF;
+          final int blurB = (blur >> 16) & 0xFF;
 
           final int outR = (origR + (blurR - origR) * mixFactor).round().clamp(0, 255);
           final int outG = (origG + (blurG - origG) * mixFactor).round().clamp(0, 255);
           final int outB = (origB + (blurB - origB) * mixFactor).round().clamp(0, 255);
 
-          // Preserve exact original alpha - no alpha bleed or border expansion
-          pixels[globalIdx] = (origA << 24) | (outB << 16) | (outG << 8) | outR;
+          final int outA = (origA + (blurA - origA) * mixFactor).round().clamp(0, 255);
+
+          pixels[globalIdx] = (outA << 24) | (outB << 16) | (outG << 8) | outR;
         }
       }
     }
@@ -500,13 +504,11 @@ class BlurContent extends PaintContent {
   /// Releases unmanaged 32-bit pixel buffers and live textures once superseded in history
   void releaseWorkingBuffers() {
     _pixels = null;
-    _patchSrc = Uint32List(0);
-    _patchHoriz = Uint32List(0);
-    _patchBlurred = Uint32List(0);
     liveImage = null;
   }
 
   Future<void> commitSnapshot() async {
+    _processPendingSegments();
     if (_pixels == null || _width <= 0 || _height <= 0) return;
     final Completer<ui.Image> completer = Completer<ui.Image>();
     final Uint8List rgbaBytes = _pixels!.buffer.asUint8List();

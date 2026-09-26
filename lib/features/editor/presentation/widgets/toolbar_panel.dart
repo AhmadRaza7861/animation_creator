@@ -420,6 +420,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     svgAsset: AssetConstants.blur_icon,
                     isSelected: controller.activeCategory == 'Blur',
                     onTap: () {
+                      if (controller.activeSticker != null) {
+                        controller.stampActiveSticker();
+                      }
                       controller.drawingController.setPaintContent(
                         BlurContent(strength: controller.blurStrength),
                       );
@@ -437,6 +440,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     svgAsset: AssetConstants.smudge_icon,
                     isSelected: controller.activeCategory == 'Smudge',
                     onTap: () {
+                      if (controller.activeSticker != null) {
+                        controller.stampActiveSticker();
+                      }
                       controller.drawingController.setPaintContent(
                         SmudgeContent(),
                       );
