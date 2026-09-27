@@ -1563,7 +1563,7 @@ class DrawingController extends ChangeNotifier {
     if (eraserContent != null) {
       _refresh();
       _refreshDeep();
-    } else {
+    } else if (drawingContent is! SmudgeContent && drawingContent is! BlurContent) {
       _refresh();
     }
   }

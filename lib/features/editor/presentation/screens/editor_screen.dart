@@ -27,7 +27,6 @@ import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/custom_switch.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
-import '../../../settings/presentation/screens/settings_screen.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
   final String? projectId;
@@ -3422,6 +3421,7 @@ class SmudgePreviewPainter extends CustomPainter {
           Color(0xFF1E293B),
           Color(0xFF334155),
         ],
+        const [0.0, 0.5, 1.0],
       );
     canvas.drawRect(rect, bgPaint);
 

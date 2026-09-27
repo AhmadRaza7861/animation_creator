@@ -336,12 +336,12 @@ class SmudgeContent extends PaintContent {
     final double chordDist = (p2 - p1).distance;
     if (chordDist < 0.1) return;
 
-    // Step pacing: ~12% to 15% brush radius for uniform, silky smooth smear without gaps or discrete ridges
-    final double stepSize = math.max(1.0, baseRadius * 0.14);
-    final int numSteps = (chordDist / stepSize).ceil().clamp(1, 80);
+    // Step pacing: ~26% of brush radius gives continuous silky smooth smear without gaps
+    // while reducing stamp calculations by 2.5x - 3x on mobile/desktop devices.
+    final double stepSize = math.max(2.0, baseRadius * 0.26);
+    final int numSteps = (chordDist / stepSize).ceil().clamp(1, 24);
 
     Offset prevPt = p1;
-    double prevPr = pr1;
 
     for (int s = 1; s <= numSteps; s++) {
       final double t = s / numSteps;
@@ -367,11 +367,11 @@ class SmudgeContent extends PaintContent {
       final double currPr = (pr1 + (pr2 - pr1) * t).clamp(0.3, 1.8);
 
       final Offset stepDelta = currPt - prevPt;
+      final bool isLastStep = (s == numSteps);
 
-      _applySmudgeStamp(currPt, stepDelta, currPr, baseRadius);
+      _applySmudgeStamp(currPt, stepDelta, currPr, baseRadius, updateReservoir: isLastStep || (s % 2 == 0));
 
       prevPt = currPt;
-      prevPr = currPr;
     }
   }
 
@@ -380,8 +380,9 @@ class SmudgeContent extends PaintContent {
     Offset center,
     Offset stepDelta,
     double pressure,
-    double baseRadius,
-  ) {
+    double baseRadius, {
+    bool updateReservoir = true,
+  }) {
     if (_pixels == null || _width <= 0 || _height <= 0) return;
 
     final double effStrength = strength.clamp(0.0, 1.0);
@@ -393,7 +394,7 @@ class SmudgeContent extends PaintContent {
 
     final double radius = math.max(2.0, baseRadius * pressure);
     final double radiusSq = radius * radius;
-    final double invRadius = 1.0 / radius;
+    final double invRadiusSq = 1.0 / radiusSq;
 
     final double cx = center.dx;
     final double cy = center.dy;
@@ -417,6 +418,12 @@ class SmudgeContent extends PaintContent {
     final double resRadius = (resDim - 1) * 0.5;
 
     final double stepDist = stepDelta.distance;
+    final double pullBase = 0.60 + 0.40 * effStrength;
+    final double pullStepX = stepDelta.dx * pullBase;
+    final double pullStepY = stepDelta.dy * pullBase;
+    final double depositMultiplier = (0.15 + 0.85 * effStrength) * pressure.clamp(0.6, 1.3);
+    final double carrierWeight = (0.35 + 0.55 * effStrength).clamp(0.20, 0.90);
+    final double maxResIdx = (resDim - 1).toDouble();
 
     // 1. Compute Local Smear Patch (Directional Advection + Wet Reservoir)
     for (int py = minY; py <= maxY; py++) {
@@ -435,27 +442,25 @@ class SmudgeContent extends PaintContent {
           continue;
         }
 
-        final double dist = math.sqrt(distSq);
-        final double u = dist * invRadius;
-
-        // Smooth Hermite profile: (1 - u^2)^2 gives firm physical core drag with zero circular rimming
-        final double oneMinusUSq = 1.0 - u * u;
+        // Fast zero-sqrt Hermite profile: u^2 = distSq / radiusSq
+        // falloff = (1 - u^2)^2 gives firm physical core drag with zero circular rimming
+        final double uSq = distSq * invRadiusSq;
+        final double oneMinusUSq = 1.0 - uSq;
         final double falloff = oneMinusUSq * oneMinusUSq;
 
         final int currentDstColor = pixels[canvasRow + px];
 
         // Directional Advection: pull upstream pixels along movement vector
-        final double pullFactor = falloff * (0.60 + 0.40 * effStrength);
-        final double srcX = px - stepDelta.dx * pullFactor;
-        final double srcY = py - stepDelta.dy * pullFactor;
+        final double srcX = px - pullStepX * falloff;
+        final double srcY = py - pullStepY * falloff;
         final int advectedColor = _sampleCrispFast(pixels, w, h, srcX, srcY);
 
         int dragColor = advectedColor;
 
         // Wet Reservoir Mixing
         if (resDim > 0 && _reservoirInitialized) {
-          final double resU = (dx + resRadius).clamp(0.0, (resDim - 1).toDouble());
-          final double resV = (dy + resRadius).clamp(0.0, (resDim - 1).toDouble());
+          final double resU = (dx + resRadius).clamp(0.0, maxResIdx);
+          final double resV = (dy + resRadius).clamp(0.0, maxResIdx);
           final int carriedColor = _sampleReservoirCrispFast(_reservoir, resDim, resU, resV);
 
           final int aCar = (carriedColor >> 24) & 0xFF;
@@ -466,14 +471,12 @@ class SmudgeContent extends PaintContent {
           } else if (aAdv == 0) {
             dragColor = carriedColor;
           } else {
-            // At high intensity, carried pigment maintains pure color strength across long strokes
-            final double carrierWeight = (0.35 + 0.55 * effStrength).clamp(0.20, 0.90);
             dragColor = _blendColorsFast(advectedColor, carriedColor, carrierWeight);
           }
         }
 
         // Deposit onto canvas with straight-alpha interpolation to avoid dark color buildup
-        final double depositWeight = (falloff * (0.15 + 0.85 * effStrength) * pressure.clamp(0.6, 1.3)).clamp(0.0, 1.0);
+        final double depositWeight = (falloff * depositMultiplier).clamp(0.0, 1.0);
         final int finalColor = _blendColorsFast(currentDstColor, dragColor, depositWeight);
 
         _patchBuffer[localIdx] = finalColor;
@@ -490,7 +493,9 @@ class SmudgeContent extends PaintContent {
     }
 
     // 3. Dynamic Pickup into Wet Reservoir
-    if (resDim > 0 && _reservoirInitialized && stepDist > 0.05) {
+    if (updateReservoir && resDim > 0 && _reservoirInitialized && stepDist > 0.05) {
+      final double pickupBase = (1.0 - effStrength * 0.82) * 0.28;
+
       for (int v = 0; v < resDim; v++) {
         final double dy = v - resRadius;
         final double dySq = dy * dy;
@@ -502,9 +507,8 @@ class SmudgeContent extends PaintContent {
           final double distSq = dx * dx + dySq;
 
           if (distSq < radiusSq) {
-            final double dist = math.sqrt(distSq);
-            final double uNorm = dist * invRadius;
-            final double oneMinusUNormSq = 1.0 - uNorm * uNorm;
+            final double uNormSq = distSq * invRadiusSq;
+            final double oneMinusUNormSq = 1.0 - uNormSq;
             final double falloff = oneMinusUNormSq * oneMinusUNormSq;
 
             final double sampleX = cx + dx;
@@ -512,13 +516,11 @@ class SmudgeContent extends PaintContent {
             final int canvasA = (canvasColor >> 24) & 0xFF;
 
             final int oldRes = _reservoir[rowIdx + u];
-            // Calibrated pickup rate: high strength keeps carried paint pure, low strength blends quickly
-            final double pickupRate = (falloff * (1.0 - effStrength * 0.82) * 0.28).clamp(0.0, 1.0);
+            final double pickupRate = (falloff * pickupBase).clamp(0.0, 1.0);
 
             if (canvasA > 0) {
               _reservoir[rowIdx + u] = _blendColorsFast(oldRes, canvasColor, pickupRate);
             } else if (oldRes != 0) {
-              // Natural taper/fade when dragging into empty transparent space
               final int oldA = (oldRes >> 24) & 0xFF;
               final int newA = (oldA * (1.0 - pickupRate * 0.45)).round().clamp(0, 255);
               _reservoir[rowIdx + u] = (newA << 24) | (oldRes & 0x00FFFFFF);
@@ -568,6 +570,27 @@ class SmudgeContent extends PaintContent {
     final int a10 = (c10 >> 24) & 0xFF;
     final int a01 = (c01 >> 24) & 0xFF;
     final int a11 = (c11 >> 24) & 0xFF;
+
+    // Fast path: fully opaque 4-tap neighborhood (common for canvas, drawings, imported images)
+    if (a00 == 255 && a10 == 255 && a01 == 255 && a11 == 255) {
+      final double r = (c00 & 0xFF) * w00 +
+          (c10 & 0xFF) * w10 +
+          (c01 & 0xFF) * w01 +
+          (c11 & 0xFF) * w11;
+      final double g = (((c00 >> 8) & 0xFF) * w00 +
+          ((c10 >> 8) & 0xFF) * w10 +
+          ((c01 >> 8) & 0xFF) * w01 +
+          ((c11 >> 8) & 0xFF) * w11);
+      final double b = (((c00 >> 16) & 0xFF) * w00 +
+          ((c10 >> 16) & 0xFF) * w10 +
+          ((c01 >> 16) & 0xFF) * w01 +
+          ((c11 >> 16) & 0xFF) * w11);
+
+      final int rInt = r.round().clamp(0, 255);
+      final int gInt = g.round().clamp(0, 255);
+      final int bInt = b.round().clamp(0, 255);
+      return 0xFF000000 | (bInt << 16) | (gInt << 8) | rInt;
+    }
 
     final double a = a00 * w00 + a10 * w10 + a01 * w01 + a11 * w11;
     if (a < 0.5) return 0;
@@ -643,6 +666,27 @@ class SmudgeContent extends PaintContent {
     final int a01 = (c01 >> 24) & 0xFF;
     final int a11 = (c11 >> 24) & 0xFF;
 
+    // Fast path: fully opaque reservoir neighborhood
+    if (a00 == 255 && a10 == 255 && a01 == 255 && a11 == 255) {
+      final double r = (c00 & 0xFF) * w00 +
+          (c10 & 0xFF) * w10 +
+          (c01 & 0xFF) * w01 +
+          (c11 & 0xFF) * w11;
+      final double g = (((c00 >> 8) & 0xFF) * w00 +
+          ((c10 >> 8) & 0xFF) * w10 +
+          ((c01 >> 8) & 0xFF) * w01 +
+          ((c11 >> 8) & 0xFF) * w11);
+      final double b = (((c00 >> 16) & 0xFF) * w00 +
+          ((c10 >> 16) & 0xFF) * w10 +
+          ((c01 >> 16) & 0xFF) * w01 +
+          ((c11 >> 16) & 0xFF) * w11);
+
+      final int rInt = r.round().clamp(0, 255);
+      final int gInt = g.round().clamp(0, 255);
+      final int bInt = b.round().clamp(0, 255);
+      return 0xFF000000 | (bInt << 16) | (gInt << 8) | rInt;
+    }
+
     final double a = a00 * w00 + a10 * w10 + a01 * w01 + a11 * w11;
     if (a < 0.5) return 0;
 
@@ -691,6 +735,24 @@ class SmudgeContent extends PaintContent {
     if (aD == 0 && aS == 0) return 0;
 
     final double invW = 1.0 - weight;
+
+    // Fast path: fully opaque colors
+    if (aD == 255 && aS == 255) {
+      final int rD = cDst & 0xFF;
+      final int gD = (cDst >> 8) & 0xFF;
+      final int bD = (cDst >> 16) & 0xFF;
+
+      final int rS = cSrc & 0xFF;
+      final int gS = (cSrc >> 8) & 0xFF;
+      final int bS = (cSrc >> 16) & 0xFF;
+
+      final int rOut = (rD * invW + rS * weight).round().clamp(0, 255);
+      final int gOut = (gD * invW + gS * weight).round().clamp(0, 255);
+      final int bOut = (bD * invW + bS * weight).round().clamp(0, 255);
+
+      return 0xFF000000 | (bOut << 16) | (gOut << 8) | rOut;
+    }
+
     final double aOut = aD * invW + aS * weight;
     if (aOut < 0.5) return 0;
 
