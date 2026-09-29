@@ -87,8 +87,9 @@ class CanvasArea extends ConsumerWidget {
                   return;
                 }
               },
-              boardPanEnabled: activeSticker == null,
-              boardScaleEnabled: activeSticker == null,
+              boardPanEnabled: true,
+              boardScaleEnabled: true,
+              boardRotateEnabled: true,
               isDrawingEnabled: activeSticker == null && !controller.isTextToolSelected && !controller.drawingController.isCurrentLayerLocked,
               background: ValueListenableBuilder<DrawConfig>(
                 valueListenable: controller.drawingController.drawConfig,

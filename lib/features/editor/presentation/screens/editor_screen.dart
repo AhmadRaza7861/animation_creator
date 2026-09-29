@@ -2088,21 +2088,35 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                       );
                     },
                   ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: SvgPicture.asset(
-                      AssetConstants.expander_icon,
-                      width: 20,
-                      height: 20,
-                    ),
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _resetBoard,
-                    tooltip: 'Reset Zoom / Position',
+                  ValueListenableBuilder<Matrix4>(
+                    valueListenable: _transformationController,
+                    builder: (context, matrix, child) {
+                      final bool isTransformed = !matrix.isIdentity();
+                      if (!isTransformed) {
+                        return const SizedBox.shrink();
+                      }
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: SvgPicture.asset(
+                              AssetConstants.expander_icon,
+                              width: 20,
+                              height: 20,
+                            ),
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: _resetBoard,
+                            tooltip: 'Reset Zoom / Position',
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   IconButton(
                     icon: SvgPicture.asset(

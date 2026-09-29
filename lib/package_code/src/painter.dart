@@ -128,7 +128,7 @@ class _PainterState extends State<Painter> {
   void _onPointerMove(PointerMoveEvent pme) {
     if (!widget.drawingController.couldDrawing) {
       if (widget.drawingController.hasPaintingContent) {
-        widget.drawingController.endDraw();
+        widget.drawingController.cancelDraw();
       }
 
       return;
@@ -150,6 +150,11 @@ class _PainterState extends State<Painter> {
       return;
     }
 
+    if (!widget.drawingController.couldDrawing) {
+      widget.drawingController.cancelDraw();
+      return;
+    }
+
     if (!widget.drawingController.isDrawingValidContent || widget.drawingController.startPoint == pue.localPosition) {
       widget.drawingController.drawing(pue.localPosition, pue.pressure);
     }
@@ -163,18 +168,9 @@ class _PainterState extends State<Painter> {
   /// Handle pointer cancel event
   void _onPointerCancel(PointerCancelEvent pce) {
     if (widget.drawingController.hasPaintingContent) {
-      widget.drawingController.endDraw();
+      widget.drawingController.cancelDraw();
     }
   }
-
-  /// GestureDetector 占位方法（防止单指绘制时触发画布平移）
-  ///
-  /// GestureDetector placeholder methods (prevent canvas panning during single-finger drawing)
-  void _onPanDown(DragDownDetails ddd) {}
-
-  void _onPanUpdate(DragUpdateDetails dud) {}
-
-  void _onPanEnd(DragEndDetails ded) {}
 
   @override
   Widget build(BuildContext context) {
@@ -184,40 +180,25 @@ class _PainterState extends State<Painter> {
       onPointerUp: _onPointerUp,
       onPointerCancel: _onPointerCancel,
       behavior: HitTestBehavior.opaque,
-      child: ExValueBuilder<DrawConfig>(
-        valueListenable: widget.drawingController.drawConfig,
-        shouldRebuild: (DrawConfig p, DrawConfig n) => p.fingerCount != n.fingerCount,
-        builder: (_, DrawConfig config, Widget? child) {
-          // 是否能拖动画布
-          final bool isPanEnabled = config.fingerCount > 1;
-
-          return GestureDetector(
-            onPanDown: !isPanEnabled ? _onPanDown : null,
-            onPanUpdate: !isPanEnabled ? _onPanUpdate : null,
-            onPanEnd: !isPanEnabled ? _onPanEnd : null,
-            child: child,
-          );
-        },
-        child: ClipRect(
-          clipBehavior: widget.clipBehavior,
-          child: RepaintBoundary(
-            child: CustomPaint(
-              isComplex: true,
-              painter: _DeepPainter(
-                controller: widget.drawingController,
-                isOnionEnabled: widget.isOnionEnabled,
-                onionColorMode: widget.onionColorMode,
-                onionLoop: widget.onionLoop,
-                onionBefore: widget.onionBefore,
-                onionAfter: widget.onionAfter,
-                allControllers: widget.allControllers,
-                currentIndex: widget.currentIndex,
-              ),
-              child: RepaintBoundary(
-                child: CustomPaint(
-                  isComplex: true,
-                  painter: _UpPainter(controller: widget.drawingController),
-                ),
+      child: ClipRect(
+        clipBehavior: widget.clipBehavior,
+        child: RepaintBoundary(
+          child: CustomPaint(
+            isComplex: true,
+            painter: _DeepPainter(
+              controller: widget.drawingController,
+              isOnionEnabled: widget.isOnionEnabled,
+              onionColorMode: widget.onionColorMode,
+              onionLoop: widget.onionLoop,
+              onionBefore: widget.onionBefore,
+              onionAfter: widget.onionAfter,
+              allControllers: widget.allControllers,
+              currentIndex: widget.currentIndex,
+            ),
+            child: RepaintBoundary(
+              child: CustomPaint(
+                isComplex: true,
+                painter: _UpPainter(controller: widget.drawingController),
               ),
             ),
           ),

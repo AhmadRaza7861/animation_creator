@@ -657,15 +657,30 @@ class DrawingController extends ChangeNotifier {
   /// Get current brush color
   Color get getColor => drawConfig.value.color;
 
-  /// 能否开始绘制（无手指或单指触摸进入时）
-  ///
-  /// Whether drawing can start (when at most single finger is touching)
-  bool get couldStartDraw => drawConfig.value.fingerCount <= 1;
+  bool _isNavigating = false;
 
-  /// 能否进行绘制（单指触摸时）
+  /// Whether the canvas is currently being navigated (pinch-to-zoom, pan, rotate).
+  /// When true, all drawing, shape creation, lasso, eraser, and editing actions are disabled.
+  bool get isNavigating => _isNavigating;
+  set isNavigating(bool val) {
+    if (_isNavigating != val) {
+      _isNavigating = val;
+      if (val && hasPaintingContent) {
+        cancelDraw();
+      }
+      notifyListeners();
+    }
+  }
+
+  /// 能否开始绘制（无多指触摸且不在导航中时）
   ///
-  /// Whether drawing is allowed (when at most single finger is touching)
-  bool get couldDrawing => drawConfig.value.fingerCount <= 1;
+  /// Whether drawing can start (when no multi-touch navigation gesture is active)
+  bool get couldStartDraw => drawConfig.value.fingerCount <= 1 && !_isNavigating;
+
+  /// 能否进行绘制（无多指触摸且不在导航中时）
+  ///
+  /// Whether drawing is allowed (when no multi-touch navigation gesture is active)
+  bool get couldDrawing => drawConfig.value.fingerCount <= 1 && !_isNavigating;
 
   /// 是否有正在绘制的内容
   ///
@@ -713,9 +728,16 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Increment finger count (called when finger is pressed down)
   void addFingerCount(Offset offset) {
+    final int newCount = drawConfig.value.fingerCount + 1;
     drawConfig.value = drawConfig.value.copyWith(
-      fingerCount: drawConfig.value.fingerCount + 1,
+      fingerCount: newCount,
     );
+    if (newCount >= 2) {
+      _isNavigating = true;
+      if (hasPaintingContent) {
+        cancelDraw();
+      }
+    }
   }
 
   /// 减少手指计数（手指抬起时调用）
@@ -726,9 +748,24 @@ class DrawingController extends ChangeNotifier {
       return;
     }
 
+    final int newCount = drawConfig.value.fingerCount - 1;
     drawConfig.value = drawConfig.value.copyWith(
-      fingerCount: drawConfig.value.fingerCount - 1,
+      fingerCount: newCount,
     );
+    if (newCount == 0) {
+      _isNavigating = false;
+    }
+  }
+
+  /// 重置手指计数
+  ///
+  /// Reset finger count and navigation state
+  void resetFingerCount() {
+    if (drawConfig.value.fingerCount != 0 || _isNavigating) {
+      drawConfig.value = drawConfig.value.copyWith(fingerCount: 0);
+      _isNavigating = false;
+      notifyListeners();
+    }
   }
 
   /// 设置绘制样式
@@ -1509,8 +1546,13 @@ class DrawingController extends ChangeNotifier {
   /// Cancel drawing (do not save current drawing content)
   void cancelDraw() {
     _startPoint = null;
+    _startPointRaw = null;
+    _lastPointRaw = null;
     drawingContent = null;
     eraserContent = null;
+    _pendingAdditionalDraw = null;
+    _isDrawingValidContent = false;
+    notifyListeners();
   }
 
   /// 正在绘制（手指移动过程）

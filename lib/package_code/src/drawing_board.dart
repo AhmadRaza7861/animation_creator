@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -14,14 +14,14 @@ import '../../features/editor/presentation/widgets/grid_overlay.dart';
 /// 画板组件
 ///
 /// 提供交互式绘图功能的核心Widget，支持多种绘制内容（线条、形状等）
-/// 内置缩放、旋转、平移等交互功能，并可配置手掌拒绝等高级特性
+/// 内置缩放、旋转、平移等交互功能，支持多指手势画布变换与单指安全绘制
 ///
 /// Drawing Board Widget
 ///
 /// A core widget that provides interactive drawing functionality, supporting various
-/// drawing content (lines, shapes, etc.). Built-in zoom, rotation, pan interactions,
-/// and configurable advanced features like palm rejection.
-class DrawingBoard extends StatelessWidget {
+/// drawing content (lines, shapes, etc.). Built-in zoom, rotation, pan multi-touch interactions
+/// with strict single-finger drawing safety and palm rejection.
+class DrawingBoard extends StatefulWidget {
   const DrawingBoard({
     super.key,
     required this.background,
@@ -38,12 +38,13 @@ class DrawingBoard extends StatelessWidget {
     this.minScale = 0.2,
     this.boardPanEnabled = true,
     this.boardScaleEnabled = true,
+    this.boardRotateEnabled = true,
     this.boardScaleFactor = 200.0,
     this.onInteractionEnd,
     this.onInteractionStart,
     this.onInteractionUpdate,
     this.transformationController,
-    this.alignment = Alignment.topCenter,
+    this.alignment = Alignment.center,
     this.enablePalmRejection = false,
     this.foreground,
     this.isDrawingEnabled = true,
@@ -61,120 +62,75 @@ class DrawingBoard extends StatelessWidget {
   });
 
   /// 画板背景控件
-  ///
-  /// Background widget of the drawing board
   final Widget background;
 
   /// 画板前景控件 (例如用于文字贴纸)
-  ///
-  /// Foreground widget of the drawing board (e.g., text stickers)
   final Widget? foreground;
 
   /// 画板控制器
-  ///
-  /// Drawing board controller
   final DrawingController controller;
 
   /// 手指按下回调
-  ///
-  /// Callback when pointer is pressed down
   final void Function(PointerDownEvent pde)? onPointerDown;
 
   /// 手指移动回调
-  ///
-  /// Callback when pointer is moving
   final void Function(PointerMoveEvent pme)? onPointerMove;
 
   /// 手指抬起回调
-  ///
-  /// Callback when pointer is released
   final void Function(PointerUpEvent pue)? onPointerUp;
 
   /// 边缘裁剪方式
-  ///
-  /// Clip behavior for the drawing board
   final Clip clipBehavior;
 
   /// 画板容器的裁剪方式
-  ///
-  /// Clip behavior for the board container
   final Clip boardClipBehavior;
 
   /// 画板平移轴向限制
-  ///
-  /// Pan axis constraint for the board
   final PanAxis panAxis;
 
   /// 画板边界边距
-  ///
-  /// Boundary margin for the board
   final EdgeInsets? boardBoundaryMargin;
 
   /// 是否限制画板尺寸
-  ///
-  /// Whether to constrain the board size
   final bool boardConstrained;
 
   /// 最大缩放比例
-  ///
-  /// Maximum scale ratio
   final double maxScale;
 
   /// 最小缩放比例
-  ///
-  /// Minimum scale ratio
   final double minScale;
 
   /// 缩放交互结束回调
-  ///
-  /// Callback when scale interaction ends
   final void Function(ScaleEndDetails)? onInteractionEnd;
 
   /// 缩放交互开始回调
-  ///
-  /// Callback when scale interaction starts
   final void Function(ScaleStartDetails)? onInteractionStart;
 
   /// 缩放交互更新回调
-  ///
-  /// Callback when scale interaction updates
   final void Function(ScaleUpdateDetails)? onInteractionUpdate;
 
   /// 是否启用画板平移
-  ///
-  /// Whether board panning is enabled
   final bool boardPanEnabled;
 
   /// 是否启用画板缩放
-  ///
-  /// Whether board scaling is enabled
   final bool boardScaleEnabled;
 
+  /// 是否启用画板旋转
+  final bool boardRotateEnabled;
+
   /// 画板缩放因子
-  ///
-  /// Scale factor for the board
   final double boardScaleFactor;
 
   /// 变换控制器
-  ///
-  /// Transformation controller
   final TransformationController? transformationController;
 
   /// 画板对齐方式
-  ///
-  /// Alignment of the drawing board
   final AlignmentGeometry alignment;
 
-  /// 启用手掌拒绝功能，防止手掌误触
-  /// 当设置为 true 时，会检测触摸面积和触摸时间间隔，拒绝可能的手掌触摸
-  ///
-  /// Enable palm rejection to prevent accidental palm touches
-  /// When set to true, detects touch area and time intervals to reject potential palm touches
+  /// 启用手掌拒绝功能
   final bool enablePalmRejection;
 
   /// 是否允许绘制
-  ///
-  /// Whether drawing is enabled
   final bool isDrawingEnabled;
 
   final bool isGridEnabled;
@@ -190,154 +146,10 @@ class DrawingBoard extends StatelessWidget {
   final List<DrawingController>? allControllers;
   final int currentIndex;
 
-  DrawingController get _controller => controller;
-
   @override
-  Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (PointerDownEvent pde) =>
-          _controller.addFingerCount(pde.localPosition),
-      onPointerUp: (PointerUpEvent pue) =>
-          _controller.reduceFingerCount(pue.localPosition),
-      onPointerCancel: (PointerCancelEvent pce) =>
-          _controller.reduceFingerCount(pce.localPosition),
-      child: InteractiveViewer(
-        maxScale: maxScale,
-        minScale: minScale,
-        boundaryMargin:
-            boardBoundaryMargin ??
-            EdgeInsets.all(MediaQuery.of(context).size.width),
-        clipBehavior: boardClipBehavior,
-        panAxis: panAxis,
-        constrained: boardConstrained,
-        onInteractionStart: onInteractionStart,
-        onInteractionUpdate: onInteractionUpdate,
-        onInteractionEnd: onInteractionEnd,
-        scaleFactor: boardScaleFactor,
-        panEnabled: boardPanEnabled,
-        scaleEnabled: boardScaleEnabled,
-        transformationController: transformationController,
-        child: Align(alignment: alignment, child: _buildBoard),
-      ),
-    );
-  }
-
-  /// 构建画板主体，包含旋转和尺寸处理
-  ///
-  /// Build the main board with rotation and size handling
-  Widget get _buildBoard {
-    return ExValueBuilder<DrawConfig>(
-      valueListenable: _controller.drawConfig,
-      shouldRebuild: (DrawConfig p, DrawConfig n) =>
-          p.angle != n.angle || p.size != n.size,
-      builder: (_, DrawConfig dc, Widget? child) {
-        Widget c = child!;
-
-        if (dc.size != null) {
-          final bool isHorizontal = dc.angle.toDouble() % 2 == 0;
-          final double max = dc.size!.longestSide;
-
-          if (!isHorizontal) {
-            c = SizedBox(width: max, height: max, child: c);
-          }
-        }
-
-        return Transform.rotate(angle: dc.angle * pi / 2, child: c);
-      },
-      child: Center(
-        child: RepaintBoundary(
-          key: _controller.painterKey,
-          child: Stack(
-            alignment: Alignment.center,
-            children: <Widget>[
-              _buildImage,
-              RepaintBoundary(
-                key: _controller.drawingLayerKey,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: <Widget>[
-                    _buildPainter,
-                    if (foreground != null) _buildForeground,
-                  ],
-                ),
-              ),
-              if (isGridEnabled)
-                Positioned.fill(
-                  child: GridOverlay(
-                    opacity: gridOpacity,
-                    verticalSpacing: gridVerticalSpacing,
-                    horizontalSpacing: gridHorizontalSpacing,
-                  ),
-                ),
-              Positioned.fill(child: RulerOverlay(controller: _controller)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 构建前景层
-  ///
-  /// Build the foreground layer
-  Widget get _buildForeground {
-    return ExValueBuilder<DrawConfig>(
-      valueListenable: _controller.drawConfig,
-      shouldRebuild: (DrawConfig p, DrawConfig n) => p.size != n.size,
-      builder: (_, DrawConfig dc, Widget? child) {
-        return SizedBox(
-          width: dc.size?.width,
-          height: dc.size?.height,
-          child: child,
-        );
-      },
-      child: foreground,
-    );
-  }
-
-  /// 构建背景层，并监听尺寸变化
-  ///
-  /// Build the background layer and listen for size changes
-  Widget get _buildImage => GetSize(
-    onChange: (Size? size) => _controller.setBoardSize(size),
-    child: background,
-  );
-
-  /// 构建绘制层，包含实际的绘图canvas
-  ///
-  /// Build the painting layer with the actual drawing canvas
-  Widget get _buildPainter {
-    return ExValueBuilder<DrawConfig>(
-      valueListenable: _controller.drawConfig,
-      shouldRebuild: (DrawConfig p, DrawConfig n) => p.size != n.size,
-      builder: (_, DrawConfig dc, Widget? child) {
-        return SizedBox(
-          width: dc.size?.width,
-          height: dc.size?.height,
-          child: child,
-        );
-      },
-      child: Painter(
-        drawingController: _controller,
-        onPointerDown: onPointerDown,
-        onPointerMove: onPointerMove,
-        onPointerUp: onPointerUp,
-        enablePalmRejection: enablePalmRejection,
-        isDrawingEnabled: isDrawingEnabled,
-        isOnionEnabled: isOnionEnabled,
-        onionColorMode: onionColorMode,
-        onionLoop: onionLoop,
-        onionBefore: onionBefore,
-        onionAfter: onionAfter,
-        allControllers: allControllers,
-        currentIndex: currentIndex,
-      ),
-    );
-  }
+  State<DrawingBoard> createState() => _DrawingBoardState();
 
   /// 构建默认操作栏，包含笔刷粗细调节、撤销、重做、旋转、清空等功能
-  ///
-  /// Build default action bar with brush width adjustment, undo, redo, rotate, and clear functions
   static Widget buildDefaultActions(DrawingController controller) {
     return Material(
       color: Colors.white,
@@ -398,6 +210,285 @@ class DrawingBoard extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _DrawingBoardState extends State<DrawingBoard> {
+  late TransformationController _internalTransformController;
+  final Map<int, Offset> _activePointers = <int, Offset>{};
+  Map<int, Offset> _lastPointers = <int, Offset>{};
+  bool _isNavigating = false;
+
+  TransformationController get _effectiveTransformController =>
+      widget.transformationController ?? _internalTransformController;
+
+  @override
+  void initState() {
+    super.initState();
+    _internalTransformController = TransformationController();
+  }
+
+  @override
+  void dispose() {
+    _internalTransformController.dispose();
+    super.dispose();
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _activePointers[event.pointer] = event.localPosition;
+    widget.controller.addFingerCount(event.localPosition);
+
+    if (_activePointers.length >= 2) {
+      _isNavigating = true;
+      widget.controller.isNavigating = true;
+      if (widget.controller.hasPaintingContent) {
+        widget.controller.cancelDraw();
+      }
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+      widget.onInteractionStart?.call(ScaleStartDetails(
+        focalPoint: event.position,
+        localFocalPoint: event.localPosition,
+        pointerCount: _activePointers.length,
+      ));
+    }
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    _activePointers[event.pointer] = event.localPosition;
+
+    if (_isNavigating && _activePointers.length >= 2) {
+      _handleMultiTouchTransform();
+      widget.onInteractionUpdate?.call(ScaleUpdateDetails(
+        focalPoint: event.position,
+        localFocalPoint: event.localPosition,
+        pointerCount: _activePointers.length,
+      ));
+    }
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    _activePointers.remove(event.pointer);
+    widget.controller.reduceFingerCount(event.localPosition);
+
+    if (_activePointers.isEmpty) {
+      _isNavigating = false;
+      widget.controller.isNavigating = false;
+      widget.controller.resetFingerCount();
+      _lastPointers.clear();
+      widget.onInteractionEnd?.call(ScaleEndDetails(pointerCount: 0));
+    } else {
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+    }
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _activePointers.remove(event.pointer);
+    widget.controller.reduceFingerCount(event.localPosition);
+
+    if (_activePointers.isEmpty) {
+      _isNavigating = false;
+      widget.controller.isNavigating = false;
+      widget.controller.resetFingerCount();
+      _lastPointers.clear();
+      widget.onInteractionEnd?.call(ScaleEndDetails(pointerCount: 0));
+    } else {
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+    }
+  }
+
+  void _handleMultiTouchTransform() {
+    if (!widget.boardPanEnabled && !widget.boardScaleEnabled && !widget.boardRotateEnabled) {
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+      return;
+    }
+
+    if (_activePointers.length < 2 || _lastPointers.length < 2) {
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+      return;
+    }
+
+    final List<int> keys = _activePointers.keys.toList();
+    final Offset p1Curr = _activePointers[keys[0]]!;
+    final Offset p2Curr = _activePointers[keys[1]]!;
+
+    final Offset p1Prev = _lastPointers[keys[0]] ?? p1Curr;
+    final Offset p2Prev = _lastPointers[keys[1]] ?? p2Curr;
+
+    final Offset centerCurr = (p1Curr + p2Curr) / 2.0;
+    final Offset centerPrev = (p1Prev + p2Prev) / 2.0;
+
+    final double distCurr = (p2Curr - p1Curr).distance;
+    final double distPrev = (p2Prev - p1Prev).distance;
+
+    double scaleDelta = 1.0;
+    if (widget.boardScaleEnabled && distPrev > 2.0 && distCurr > 2.0) {
+      scaleDelta = distCurr / distPrev;
+    }
+
+    double rotDelta = 0.0;
+    if (widget.boardRotateEnabled) {
+      final double angleCurr = math.atan2(p2Curr.dy - p1Curr.dy, p2Curr.dx - p1Curr.dx);
+      final double anglePrev = math.atan2(p2Prev.dy - p1Prev.dy, p2Prev.dx - p1Prev.dx);
+      rotDelta = angleCurr - anglePrev;
+      while (rotDelta > math.pi) rotDelta -= 2 * math.pi;
+      while (rotDelta < -math.pi) rotDelta += 2 * math.pi;
+    }
+
+    final Matrix4 currentMatrix = _effectiveTransformController.value;
+
+    final double curScale = math.sqrt(
+      currentMatrix.storage[0] * currentMatrix.storage[0] +
+      currentMatrix.storage[1] * currentMatrix.storage[1],
+    );
+
+    if (curScale * scaleDelta < widget.minScale) {
+      scaleDelta = widget.minScale / (curScale > 0 ? curScale : 1.0);
+    } else if (curScale * scaleDelta > widget.maxScale) {
+      scaleDelta = widget.maxScale / (curScale > 0 ? curScale : 1.0);
+    }
+
+    final Matrix4 delta = Matrix4.identity()
+      ..translate(centerCurr.dx, centerCurr.dy)
+      ..rotateZ(rotDelta)
+      ..scale(scaleDelta, scaleDelta, 1.0)
+      ..translate(-centerPrev.dx, -centerPrev.dy);
+
+    final Matrix4 newMatrix = delta * currentMatrix;
+    _effectiveTransformController.value = newMatrix;
+
+    _lastPointers = Map<int, Offset>.from(_activePointers);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: _onPointerDown,
+      onPointerMove: _onPointerMove,
+      onPointerUp: _onPointerUp,
+      onPointerCancel: _onPointerCancel,
+      child: ClipRect(
+        clipBehavior: widget.boardClipBehavior,
+        child: AnimatedBuilder(
+          animation: _effectiveTransformController,
+          builder: (BuildContext context, Widget? child) {
+            return Transform(
+              transform: _effectiveTransformController.value,
+              child: child,
+            );
+          },
+          child: Align(
+            alignment: widget.alignment,
+            child: _buildBoard,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建画板主体，包含旋转和尺寸处理
+  Widget get _buildBoard {
+    return ExValueBuilder<DrawConfig>(
+      valueListenable: widget.controller.drawConfig,
+      shouldRebuild: (DrawConfig p, DrawConfig n) =>
+          p.angle != n.angle || p.size != n.size,
+      builder: (_, DrawConfig dc, Widget? child) {
+        Widget c = child!;
+
+        if (dc.size != null) {
+          final bool isHorizontal = dc.angle.toDouble() % 2 == 0;
+          final double max = dc.size!.longestSide;
+
+          if (!isHorizontal) {
+            c = SizedBox(width: max, height: max, child: c);
+          }
+        }
+
+        return Transform.rotate(angle: dc.angle * math.pi / 2, child: c);
+      },
+      child: Center(
+        child: RepaintBoundary(
+          key: widget.controller.painterKey,
+          child: Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              _buildImage,
+              RepaintBoundary(
+                key: widget.controller.drawingLayerKey,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    _buildPainter,
+                    if (widget.foreground != null) _buildForeground,
+                  ],
+                ),
+              ),
+              if (widget.isGridEnabled)
+                Positioned.fill(
+                  child: GridOverlay(
+                    opacity: widget.gridOpacity,
+                    verticalSpacing: widget.gridVerticalSpacing,
+                    horizontalSpacing: widget.gridHorizontalSpacing,
+                  ),
+                ),
+              Positioned.fill(child: RulerOverlay(controller: widget.controller)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建前景层
+  Widget get _buildForeground {
+    return ExValueBuilder<DrawConfig>(
+      valueListenable: widget.controller.drawConfig,
+      shouldRebuild: (DrawConfig p, DrawConfig n) => p.size != n.size,
+      builder: (_, DrawConfig dc, Widget? child) {
+        return SizedBox(
+          width: dc.size?.width,
+          height: dc.size?.height,
+          child: child,
+        );
+      },
+      child: widget.foreground,
+    );
+  }
+
+  /// 构建背景层，并监听尺寸变化
+  Widget get _buildImage => GetSize(
+    onChange: (Size? size) => widget.controller.setBoardSize(size),
+    child: widget.background,
+  );
+
+  /// 构建绘制层，包含实际的绘图canvas
+  Widget get _buildPainter {
+    return ExValueBuilder<DrawConfig>(
+      valueListenable: widget.controller.drawConfig,
+      shouldRebuild: (DrawConfig p, DrawConfig n) => p.size != n.size,
+      builder: (_, DrawConfig dc, Widget? child) {
+        return SizedBox(
+          width: dc.size?.width,
+          height: dc.size?.height,
+          child: child,
+        );
+      },
+      child: Painter(
+        drawingController: widget.controller,
+        onPointerDown: widget.onPointerDown,
+        onPointerMove: widget.onPointerMove,
+        onPointerUp: widget.onPointerUp,
+        enablePalmRejection: widget.enablePalmRejection,
+        isDrawingEnabled: widget.isDrawingEnabled,
+        isOnionEnabled: widget.isOnionEnabled,
+        onionColorMode: widget.onionColorMode,
+        onionLoop: widget.onionLoop,
+        onionBefore: widget.onionBefore,
+        onionAfter: widget.onionAfter,
+        allControllers: widget.allControllers,
+        currentIndex: widget.currentIndex,
       ),
     );
   }
