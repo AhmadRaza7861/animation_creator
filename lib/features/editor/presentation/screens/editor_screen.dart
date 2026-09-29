@@ -43,6 +43,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       TransformationController();
   bool _isRulerMenuExpanded = false;
   bool _isRulerBarCollapsed = false;
+  bool _isBrushPanelCollapsed = false;
+  bool _isBrushPanelDragging = false;
+  Offset? _brushPanelDragStart;
   Offset? _brushPanelPosition;
   Offset? _rulerBarPosition;
 
@@ -2379,6 +2382,97 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
             final bool isRulerActive =
                 _isRulerMenuExpanded && rulerConfig.type != RulerType.none;
 
+            if (_isBrushPanelCollapsed) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanStart: (details) {
+                      _isBrushPanelDragging = false;
+                      _brushPanelDragStart = details.globalPosition;
+                    },
+                    onPanUpdate: (details) {
+                      if (_brushPanelDragStart != null &&
+                          (details.globalPosition - _brushPanelDragStart!).distance > 4.0) {
+                        _isBrushPanelDragging = true;
+                      }
+                      _onBrushPanelPanUpdate(details);
+                    },
+                    onPanEnd: (details) {
+                      if (!_isBrushPanelDragging) {
+                        setState(() {
+                          _isBrushPanelCollapsed = false;
+                        });
+                      }
+                    },
+                    onTap: () {
+                      setState(() {
+                        _isBrushPanelCollapsed = false;
+                      });
+                    },
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ColorConstants.accent.withValues(alpha: 0.4),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 12,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SvgPicture.asset(
+                            isBrushTipsActive
+                                ? AssetConstants.brush_tips
+                                : isRulerActive
+                                    ? AssetConstants.ruler_icon
+                                    : AssetConstants.brush_icon,
+                            width: 20,
+                            height: 20,
+                            colorFilter: const ColorFilter.mode(
+                              ColorConstants.accent,
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 2,
+                            right: 2,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: ColorConstants.accent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                size: 8,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
             return ClipRRect(
               borderRadius: BorderRadius.circular(22),
               child: BackdropFilter(
@@ -2405,10 +2499,32 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Drag Grab Pill (dedicated drag handle)
+                      // Top Drag Handle & Tap to Collapse
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onPanUpdate: _onBrushPanelPanUpdate,
+                        onPanStart: (details) {
+                          _isBrushPanelDragging = false;
+                          _brushPanelDragStart = details.globalPosition;
+                        },
+                        onPanUpdate: (details) {
+                          if (_brushPanelDragStart != null &&
+                              (details.globalPosition - _brushPanelDragStart!).distance > 4.0) {
+                            _isBrushPanelDragging = true;
+                          }
+                          _onBrushPanelPanUpdate(details);
+                        },
+                        onPanEnd: (details) {
+                          if (!_isBrushPanelDragging) {
+                            setState(() {
+                              _isBrushPanelCollapsed = true;
+                            });
+                          }
+                        },
+                        onTap: () {
+                          setState(() {
+                            _isBrushPanelCollapsed = true;
+                          });
+                        },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                           child: Container(
@@ -2524,6 +2640,25 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                           },
                         ),
                       ],
+
+                      // 5. Dedicated Collapse Button
+                      const SizedBox(height: 4),
+                      Container(
+                        height: 1,
+                        width: 22,
+                        color: const Color(0xFFE2E8F0),
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                      ),
+                      _buildFloatingDockItem(
+                        tooltip: 'Collapse Toolbar',
+                        iconData: Icons.keyboard_arrow_up_rounded,
+                        isActive: false,
+                        onTap: () {
+                          setState(() {
+                            _isBrushPanelCollapsed = true;
+                          });
+                        },
+                      ),
                     ],
                   ),
                 ),
