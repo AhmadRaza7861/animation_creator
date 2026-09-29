@@ -1966,6 +1966,8 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Refresh board and notify listeners
   void refresh() {
+    cachedImage = null;
+    painter?._refresh();
     notifyListeners();
   }
 }

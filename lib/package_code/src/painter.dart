@@ -306,7 +306,20 @@ class _UpPainter extends CustomPainter {
 
       canvas.restore();
     } else {
-      controller.drawingContent?.draw(canvas, size, false);
+      final activeLayer = controller.activeLayer.value;
+      if (activeLayer != null &&
+          (activeLayer.opacity < 1.0 || activeLayer.blendMode != BlendMode.srcOver)) {
+        canvas.saveLayer(
+          Offset.zero & size,
+          Paint()
+            ..blendMode = activeLayer.blendMode
+            ..color = Colors.white.withValues(alpha: activeLayer.opacity),
+        );
+        controller.drawingContent?.draw(canvas, size, false);
+        canvas.restore();
+      } else {
+        controller.drawingContent?.draw(canvas, size, false);
+      }
     }
   }
 

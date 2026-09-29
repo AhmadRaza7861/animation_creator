@@ -14,14 +14,9 @@ const List<BlendMode> _kCommonBlendModes = [
   BlendMode.lighten,
   BlendMode.colorDodge,
   BlendMode.colorBurn,
-  BlendMode.hardLight,
   BlendMode.softLight,
+  BlendMode.hardLight,
   BlendMode.difference,
-  BlendMode.exclusion,
-  BlendMode.hue,
-  BlendMode.saturation,
-  BlendMode.color,
-  BlendMode.luminosity,
 ];
 
 const Map<BlendMode, String> _kBlendModeLabels = {
@@ -33,14 +28,9 @@ const Map<BlendMode, String> _kBlendModeLabels = {
   BlendMode.lighten: 'Lighten',
   BlendMode.colorDodge: 'Color Dodge',
   BlendMode.colorBurn: 'Color Burn',
-  BlendMode.hardLight: 'Hard Light',
   BlendMode.softLight: 'Soft Light',
+  BlendMode.hardLight: 'Hard Light',
   BlendMode.difference: 'Difference',
-  BlendMode.exclusion: 'Exclusion',
-  BlendMode.hue: 'Hue',
-  BlendMode.saturation: 'Saturation',
-  BlendMode.color: 'Color',
-  BlendMode.luminosity: 'Luminosity',
 };
 
 class LayerPanel extends StatefulWidget {
@@ -84,6 +74,7 @@ class _LayerPanelState extends State<LayerPanel> {
     );
     widget.controller.layers.insert(0, newLayer); // Insert at top
     widget.controller.activeLayer.value = newLayer;
+    widget.controller.refresh();
     widget.controller.updateSnapshot();
     setState(() {});
   }
@@ -105,6 +96,7 @@ class _LayerPanelState extends State<LayerPanel> {
     );
     widget.controller.layers.insert(index, newLayer); // Insert above
     widget.controller.activeLayer.value = newLayer;
+    widget.controller.refresh();
     widget.controller.updateSnapshot();
     setState(() {});
   }
@@ -115,7 +107,7 @@ class _LayerPanelState extends State<LayerPanel> {
     if (widget.controller.activeLayer.value == layer) {
       widget.controller.activeLayer.value = widget.controller.layers.first;
     }
-    widget.controller.cachedImage = null; // Invalidate deep cache
+    widget.controller.refresh();
     widget.controller.updateSnapshot();
     setState(() {});
   }
@@ -128,21 +120,21 @@ class _LayerPanelState extends State<LayerPanel> {
 
   void _toggleVisibility(LayerData layer) {
     layer.isVisible = !layer.isVisible;
-    widget.controller.cachedImage = null;
+    widget.controller.refresh();
     widget.controller.updateSnapshot();
     setState(() {});
   }
 
   void _changeOpacity(LayerData layer, double value) {
     layer.opacity = value;
-    widget.controller.cachedImage = null;
+    widget.controller.refresh();
     widget.controller.updateSnapshot();
     setState(() {});
   }
 
   void _changeBlendMode(LayerData layer, BlendMode blendMode) {
     layer.blendMode = blendMode;
-    widget.controller.cachedImage = null;
+    widget.controller.refresh();
     widget.controller.updateSnapshot();
     setState(() {});
   }
@@ -199,7 +191,7 @@ class _LayerPanelState extends State<LayerPanel> {
                   widget.controller.layers.insert(newIndex, layer);
                   
                   // Invalidate cache and redraw
-                  widget.controller.cachedImage = null;
+                  widget.controller.refresh();
                   widget.controller.updateSnapshot();
                   setState(() {});
                 },
@@ -270,31 +262,28 @@ class _LayerPanelState extends State<LayerPanel> {
     return Column(
       key: key,
       children: [
-        InkWell(
-          onTap: () {
-            widget.controller.activeLayer.value = layer;
-            setState(() {});
-          },
-          onDoubleTap: () {
-             setState(() {
-               _expandedLayer = isExpanded ? null : layer;
-             });
-          },
-          child: Container(
-            color: isActive ? ColorConstants.accent.withOpacity(0.1) : Colors.transparent,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _toggleVisibility(layer),
-                  child: Icon(
-                    layer.isVisible ? Icons.visibility : Icons.visibility_off,
-                    color: layer.isVisible ? ColorConstants.darkText : Colors.grey,
-                    size: 20,
-                  ),
+        Container(
+          color: isActive ? ColorConstants.accent.withOpacity(0.1) : Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _toggleVisibility(layer),
+                child: Icon(
+                  layer.isVisible ? Icons.visibility : Icons.visibility_off,
+                  color: layer.isVisible ? ColorConstants.darkText : Colors.grey,
+                  size: 20,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    widget.controller.activeLayer.value = layer;
+                    setState(() {});
+                  },
                   child: Text(
                     layer.name,
                     style: TextStyle(
@@ -304,29 +293,33 @@ class _LayerPanelState extends State<LayerPanel> {
                     ),
                   ),
                 ),
-                if (layer.isLocked) const Icon(Icons.lock, size: 16, color: Colors.redAccent),
-                const SizedBox(width: 4),
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4.0),
-                    child: Icon(Icons.drag_indicator, color: Colors.black38, size: 20),
-                  ),
+              ),
+              if (layer.isLocked) const Icon(Icons.lock, size: 16, color: Colors.redAccent),
+              const SizedBox(width: 4),
+              ReorderableDragStartListener(
+                index: index,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Icon(Icons.drag_indicator, color: Colors.black38, size: 20),
                 ),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _expandedLayer = isExpanded ? null : layer;
-                    });
-                  },
+              ),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  setState(() {
+                    _expandedLayer = isExpanded ? null : layer;
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
                   child: Icon(
                     isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     color: Colors.black45,
                     size: 20,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         if (isExpanded) _buildLayerSettings(layer),
@@ -385,6 +378,8 @@ class _LayerPanelState extends State<LayerPanel> {
                     child: DropdownButton<BlendMode>(
                       isExpanded: true,
                       isDense: true,
+                      menuMaxHeight: 280,
+                      borderRadius: BorderRadius.circular(12),
                       value: _kCommonBlendModes.contains(layer.blendMode) ? layer.blendMode : BlendMode.srcOver,
                       icon: const Icon(Icons.unfold_more_rounded, size: 16, color: Colors.black54),
                       items: _kCommonBlendModes.map((mode) {
