@@ -225,6 +225,73 @@ void main() {
       expect(controller.activeLayer.value!.currentIndex, 2);
     });
 
+    test('LayerData.drawHistory prevents previous eraser from punching holes in later flood fills', () async {
+      const int width = 100;
+      const int height = 100;
+      final LayerData layer = LayerData(id: 'test_layer');
+
+      // 1. Initial green stroke
+      final SimpleLine initialStroke = SimpleLine.data(
+        startPoint: const Offset(10, 10),
+        endPoint: const Offset(90, 90),
+        paint: Paint()..color = const Color(0xFF4CAF50)..strokeWidth = 10,
+      );
+
+      // 2. Eraser stroke across center (40, 50) -> (60, 50)
+      final Eraser eraser = Eraser();
+      eraser.startDraw(const Offset(40, 50));
+      eraser.drawing(const Offset(60, 50));
+      eraser.paint.strokeWidth = 20;
+
+      // 3. New brown stroked rectangle enclosing the center (20, 20) -> (80, 80)
+      final Rectangle newShape = Rectangle.data(
+        startPoint: const Offset(20, 20),
+        endPoint: const Offset(80, 80),
+        paint: Paint()
+          ..color = const Color(0xFF795548)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4,
+      );
+
+      // 4. Fill inside the new shape with solid brown color (isUnderneath = true)
+      // Create a filled image at (50, 50)
+      final ui.PictureRecorder fillRecorder = ui.PictureRecorder();
+      final Canvas fillCanvas = Canvas(fillRecorder, const Rect.fromLTWH(0, 0, 100, 100));
+      fillCanvas.drawRect(
+        const Rect.fromLTWH(20, 20, 60, 60),
+        Paint()..color = const Color(0xFF795548)..style = PaintingStyle.fill,
+      );
+      final ui.Image fillImage = await fillRecorder.endRecording().toImage(width, height);
+
+      final FillContent fill = FillContent.data(
+        image: fillImage,
+        paint: Paint()..color = const Color(0xFF795548),
+        isUnderneath: true,
+      );
+
+      // Layer history in chronological order: [initialStroke, eraser, newShape, fill]
+      layer.history = [initialStroke, eraser, newShape, fill];
+      layer.currentIndex = 4;
+
+      // Render layer
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 100, 100));
+      layer.drawHistory(canvas, const Size(100, 100), false);
+      final ui.Image outputImage = await recorder.endRecording().toImage(width, height);
+
+      final ByteData? data = await outputImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+      expect(data, isNotNull);
+      final Uint8List pixels = data!.buffer.asUint8List();
+
+      // Pixel at (50, 50) (center) must be fully filled with brown color (alpha == 255)
+      // and NOT erased by the previous eraser
+      final int centerIdx = (50 * width + 50) * 4;
+      expect(pixels[centerIdx + 3], 255, reason: 'Fill interior at (50, 50) must not have an eraser hole');
+      expect(pixels[centerIdx], 0x79, reason: 'Red channel should match brown fill color');
+      expect(pixels[centerIdx + 1], 0x55, reason: 'Green channel should match brown fill color');
+      expect(pixels[centerIdx + 2], 0x48, reason: 'Blue channel should match brown fill color');
+    });
+
     test('LayerData.drawHistory renders interior fills in Pass 1, strokes in Pass 2, and re-coloring fills in Pass 3', () async {
       final LayerData layer = LayerData(id: 'test_layer');
       final FillContent interiorFill = FillContent.data(
