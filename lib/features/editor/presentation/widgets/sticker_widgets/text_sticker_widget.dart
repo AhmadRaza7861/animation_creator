@@ -64,10 +64,6 @@ class TextStickerWidget extends StatefulWidget {
 }
 
 class _TextStickerWidgetState extends State<TextStickerWidget> {
-  static const double _kPadH = 24.0;
-  static const double _kPadV = 48.0;
-  static const double _kMinTotalWidth = 120.0;
-
   late Offset _offset;
   late double _scale;
   late double _rotation;
@@ -120,34 +116,38 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
     required GestureDragStartCallback onPanStart,
     required GestureDragUpdateCallback onPanUpdate,
     required GestureDragEndCallback onPanEnd,
+    required double invS,
   }) {
-    return Transform.scale(
-      scale: 1.0 / (_scale == 0 ? 1 : _scale),
-      alignment: Alignment.center,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onPanStart: onPanStart,
-        onPanUpdate: onPanUpdate,
-        onPanEnd: onPanEnd,
-        child: Container(
-          width: 36,
-          height: 36,
-          color: Colors.transparent,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: onPanStart,
+      onPanUpdate: onPanUpdate,
+      onPanEnd: onPanEnd,
+      child: Container(
+        color: Colors.transparent,
+        alignment: Alignment.center,
+        child: Transform.scale(
+          scale: invS,
           alignment: Alignment.center,
           child: Container(
-            width: 13,
-            height: 13,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: ColorConstants.primary, width: 2.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            child: Container(
+              width: 13,
+              height: 13,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: ColorConstants.primary, width: 2.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -160,34 +160,38 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
     required GestureDragStartCallback onPanStart,
     required GestureDragUpdateCallback onPanUpdate,
     required GestureDragEndCallback onPanEnd,
+    required double invS,
   }) {
-    return Transform.scale(
-      scale: 1.0 / (_scale == 0 ? 1 : _scale),
-      alignment: Alignment.center,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onPanStart: onPanStart,
-        onPanUpdate: onPanUpdate,
-        onPanEnd: onPanEnd,
-        child: Container(
-          width: 32,
-          height: 32,
-          color: Colors.transparent,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: onPanStart,
+      onPanUpdate: onPanUpdate,
+      onPanEnd: onPanEnd,
+      child: Container(
+        color: Colors.transparent,
+        alignment: Alignment.center,
+        child: Transform.scale(
+          scale: invS,
           alignment: Alignment.center,
           child: Container(
-            width: 15,
-            height: 6,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: ColorConstants.primary, width: 1.8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            child: Container(
+              width: 15,
+              height: 6,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(color: ColorConstants.primary, width: 1.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -200,34 +204,38 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
     required GestureDragStartCallback onPanStart,
     required GestureDragUpdateCallback onPanUpdate,
     required GestureDragEndCallback onPanEnd,
+    required double invS,
   }) {
-    return Transform.scale(
-      scale: 1.0 / (_scale == 0 ? 1 : _scale),
-      alignment: Alignment.center,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onPanStart: onPanStart,
-        onPanUpdate: onPanUpdate,
-        onPanEnd: onPanEnd,
-        child: Container(
-          width: 32,
-          height: 32,
-          color: Colors.transparent,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: onPanStart,
+      onPanUpdate: onPanUpdate,
+      onPanEnd: onPanEnd,
+      child: Container(
+        color: Colors.transparent,
+        alignment: Alignment.center,
+        child: Transform.scale(
+          scale: invS,
           alignment: Alignment.center,
           child: Container(
-            width: 6,
-            height: 15,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: ColorConstants.primary, width: 1.8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            child: Container(
+              width: 6,
+              height: 15,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(color: ColorConstants.primary, width: 1.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -236,127 +244,53 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
   }
 
   // Top rotate handle (Pro styling with hairline stem & circular rotation badge)
-  Widget _buildRotateHandle() {
-    return Transform.scale(
-      scale: 1.0 / (_scale == 0 ? 1 : _scale),
-      alignment: Alignment.bottomCenter,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onPanStart: _onRotateStart,
-        onPanUpdate: _onRotateUpdate,
-        onPanEnd: (details) => widget.onUpdateEnd?.call(),
-        child: Container(
-          width: 44,
-          height: 44,
-          color: Colors.transparent,
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: ColorConstants.primary, width: 2.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ColorConstants.primary.withValues(alpha: 0.3),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+  Widget _buildRotateHandle({required double invS}) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: _onRotateStart,
+      onPanUpdate: _onRotateUpdate,
+      onPanEnd: (details) => widget.onUpdateEnd?.call(),
+      child: Container(
+        color: Colors.transparent,
+        alignment: Alignment.bottomCenter,
+        child: Transform.scale(
+          scale: invS,
+          alignment: Alignment.bottomCenter,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: ColorConstants.primary, width: 2.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ColorConstants.primary.withValues(alpha: 0.35),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.rotate_right_rounded,
+                    size: 16,
+                    color: ColorConstants.primary,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.rotate_right_rounded,
-                  size: 15,
+                Container(
+                  width: 1.5,
+                  height: 14,
                   color: ColorConstants.primary,
                 ),
-              ),
-              Container(
-                width: 1.5,
-                height: 10,
-                color: ColorConstants.primary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Ultra-Clean Minimalist Floating Micro-Pill (Flip + Delete)
-  Widget _buildFloatingActionPill() {
-    return Transform.scale(
-      scale: 1.0 / (_scale == 0 ? 1 : _scale),
-      alignment: Alignment.topCenter,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: const Color(0xEE181724),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.14),
-            width: 0.8,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Flip horizontal button
-            _buildPillButton(
-              icon: Icons.flip_rounded,
-              tooltip: 'Flip Horizontal',
-              onTap: () {
-                setState(() {
-                  _flipX = !_flipX;
-                });
-              },
-            ),
-            Container(
-              width: 1,
-              height: 14,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              color: Colors.white.withValues(alpha: 0.15),
-            ),
-            // Delete button
-            _buildPillButton(
-              icon: Icons.delete_outline_rounded,
-              color: const Color(0xFFFF5252),
-              tooltip: 'Delete',
-              onTap: widget.onDelete,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPillButton({
-    required IconData icon,
-    Color color = Colors.white,
-    required String tooltip,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Icon(icon, size: 16, color: color),
           ),
         ),
       ),
@@ -433,10 +367,26 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
     final Size textSize = _measureText(widget.data.text, textStyle, widget.data.textAlign);
     final double w = textSize.width;
     final double h = textSize.height;
-    final double totalWidth = math.max(w + _kPadH * 2, _kMinTotalWidth);
-    final double totalHeight = h + _kPadV * 2;
-    final double contentLeft = (totalWidth - w) / 2;
-    final double contentTop = _kPadV;
+    final double scaleSafe = _scale <= 0.001 ? 1.0 : _scale;
+    final double padV = (64.0 / scaleSafe) + 24.0;
+    final double padH = (44.0 / scaleSafe) + 24.0;
+    final double totalWidth = w + padH * 2;
+    final double totalHeight = h + padV * 2;
+    final double contentLeft = padH;
+    final double contentTop = padV;
+
+    final double scaledW = w * scaleSafe;
+    final double scaledH = h * scaleSafe;
+    final bool showHorizontalMidpoints = scaledW >= 56.0;
+    final bool showVerticalMidpoints = scaledH >= 56.0;
+
+    final double invS = 1.0 / scaleSafe;
+    final double cornerTouchSize = 36.0 * invS;
+    final double halfCorner = cornerTouchSize / 2;
+    final double sideTouchSize = 32.0 * invS;
+    final double halfSide = sideTouchSize / 2;
+    final double rotateTouchW = 44.0 * invS;
+    final double rotateTouchH = 44.0 * invS;
 
     return Positioned(
       left: _offset.dx,
@@ -510,94 +460,117 @@ class _TextStickerWidgetState extends State<TextStickerWidget> {
                   ),
                 ),
 
-                // 2. 4 Side Midpoint Pill Handles
-                // Top side midpoint
-                Positioned(
-                  left: contentLeft + w / 2 - 16,
-                  top: contentTop - 16,
-                  child: _buildHorizontalSideHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                // 2. Side Midpoint Pill Handles (hidden if dimensions too narrow)
+                if (showHorizontalMidpoints) ...[
+                  Positioned(
+                    left: contentLeft + w / 2 - halfSide,
+                    top: contentTop - halfSide,
+                    width: sideTouchSize,
+                    height: sideTouchSize,
+                    child: _buildHorizontalSideHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                      invS: invS,
+                    ),
                   ),
-                ),
-                // Bottom side midpoint
-                Positioned(
-                  left: contentLeft + w / 2 - 16,
-                  top: contentTop + h - 16,
-                  child: _buildHorizontalSideHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                  Positioned(
+                    left: contentLeft + w / 2 - halfSide,
+                    top: contentTop + h - halfSide,
+                    width: sideTouchSize,
+                    height: sideTouchSize,
+                    child: _buildHorizontalSideHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                      invS: invS,
+                    ),
                   ),
-                ),
-                // Left side midpoint
-                Positioned(
-                  left: contentLeft - 16,
-                  top: contentTop + h / 2 - 16,
-                  child: _buildVerticalSideHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                ],
+                if (showVerticalMidpoints) ...[
+                  Positioned(
+                    left: contentLeft - halfSide,
+                    top: contentTop + h / 2 - halfSide,
+                    width: sideTouchSize,
+                    height: sideTouchSize,
+                    child: _buildVerticalSideHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                      invS: invS,
+                    ),
                   ),
-                ),
-                // Right side midpoint
-                Positioned(
-                  left: contentLeft + w - 16,
-                  top: contentTop + h / 2 - 16,
-                  child: _buildVerticalSideHandle(
-                    onPanStart: _onScaleHandleStart,
-                    onPanUpdate: _onScaleHandleUpdate,
-                    onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                  Positioned(
+                    left: contentLeft + w - halfSide,
+                    top: contentTop + h / 2 - halfSide,
+                    width: sideTouchSize,
+                    height: sideTouchSize,
+                    child: _buildVerticalSideHandle(
+                      onPanStart: _onScaleHandleStart,
+                      onPanUpdate: _onScaleHandleUpdate,
+                      onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                      invS: invS,
+                    ),
                   ),
-                ),
+                ],
 
                 // 3. 4 Corner Resize Nodes
                 Positioned(
-                  left: contentLeft - 18,
-                  top: contentTop - 18,
+                  left: contentLeft - halfCorner,
+                  top: contentTop - halfCorner,
+                  width: cornerTouchSize,
+                  height: cornerTouchSize,
                   child: _buildCornerHandle(
                     onPanStart: _onScaleHandleStart,
                     onPanUpdate: _onScaleHandleUpdate,
                     onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    invS: invS,
                   ),
                 ),
                 Positioned(
-                  left: contentLeft + w - 18,
-                  top: contentTop - 18,
+                  left: contentLeft + w - halfCorner,
+                  top: contentTop - halfCorner,
+                  width: cornerTouchSize,
+                  height: cornerTouchSize,
                   child: _buildCornerHandle(
                     onPanStart: _onScaleHandleStart,
                     onPanUpdate: _onScaleHandleUpdate,
                     onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    invS: invS,
                   ),
                 ),
                 Positioned(
-                  left: contentLeft - 18,
-                  top: contentTop + h - 18,
+                  left: contentLeft - halfCorner,
+                  top: contentTop + h - halfCorner,
+                  width: cornerTouchSize,
+                  height: cornerTouchSize,
                   child: _buildCornerHandle(
                     onPanStart: _onScaleHandleStart,
                     onPanUpdate: _onScaleHandleUpdate,
                     onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    invS: invS,
                   ),
                 ),
                 Positioned(
-                  left: contentLeft + w - 18,
-                  top: contentTop + h - 18,
+                  left: contentLeft + w - halfCorner,
+                  top: contentTop + h - halfCorner,
+                  width: cornerTouchSize,
+                  height: cornerTouchSize,
                   child: _buildCornerHandle(
                     onPanStart: _onScaleHandleStart,
                     onPanUpdate: _onScaleHandleUpdate,
                     onPanEnd: (_) => widget.onUpdateEnd?.call(),
+                    invS: invS,
                   ),
                 ),
 
-                // 4. Rotate Handle at Top
+                // 4. Rotate Handle at Top (Always positioned cleanly above the top edge)
                 Positioned(
-                  top: contentTop - 40,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _buildRotateHandle(),
-                  ),
+                  left: contentLeft + (w - rotateTouchW) / 2,
+                  top: contentTop - rotateTouchH,
+                  width: rotateTouchW,
+                  height: rotateTouchH,
+                  child: _buildRotateHandle(invS: invS),
                 ),
               ],
             ),

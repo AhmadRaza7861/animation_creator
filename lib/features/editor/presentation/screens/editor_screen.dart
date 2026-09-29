@@ -56,7 +56,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     try {
-      ref.read(editorControllerProvider(widget.projectId)).saveProject(immediate: true);
+      ref.read(editorControllerProvider(widget.projectId)).saveProject(immediate: true, stampStickers: true);
     } catch (_) {}
     _transformationController.dispose();
     super.dispose();
@@ -69,7 +69,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       try {
-        ref.read(editorControllerProvider(widget.projectId)).saveProject(immediate: true);
+        ref.read(editorControllerProvider(widget.projectId)).saveProject(immediate: true, stampStickers: false);
       } catch (_) {}
     }
   }
@@ -1022,7 +1022,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       controller.isAudioStudioOpen = false;
       return;
     }
-    await controller.saveProject(immediate: true);
+    await controller.saveProject(immediate: true, stampStickers: true);
     if (context.mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }

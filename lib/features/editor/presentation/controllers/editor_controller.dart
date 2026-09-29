@@ -150,6 +150,7 @@ class EditorController extends ChangeNotifier {
 
   // Active Sticker placement state
   Object? _activeSticker;
+  DateTime? _activeStickerCreatedAt;
   List<Object> _activeStickerHistory = [];
   int _activeStickerHistoryIndex = -1;
 
@@ -481,6 +482,7 @@ class EditorController extends ChangeNotifier {
   Offset? get layersPanelPosition => _layersPanelPosition;
 
   Object? get activeSticker => _activeSticker;
+  DateTime? get activeStickerCreatedAt => _activeStickerCreatedAt;
   double get globalStrokeWidth => _globalStrokeWidth;
   double get blurStrength => _blurStrength;
   double get smudgeStrength => _smudgeStrength;
@@ -980,14 +982,14 @@ class EditorController extends ChangeNotifier {
   }
 
   Completer<void>? _saveCompleter;
-  bool _hasImmediatePendingSave = false;
+  bool _hasPendingStampSave = false;
 
-  Future<void> saveProject({bool immediate = false}) async {
+  Future<void> saveProject({bool immediate = false, bool stampStickers = false}) async {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = null;
 
-    if (immediate) {
-      _hasImmediatePendingSave = true;
+    if (stampStickers) {
+      _hasPendingStampSave = true;
     }
 
     if (_isSaving) {
@@ -1008,9 +1010,9 @@ class EditorController extends ChangeNotifier {
 
     try {
       do {
-        final bool stamp = immediate || _hasImmediatePendingSave;
+        final bool stamp = stampStickers || _hasPendingStampSave;
         _hasPendingSave = false;
-        _hasImmediatePendingSave = false;
+        _hasPendingStampSave = false;
         await _performSave(stampStickers: stamp);
       } while (_hasPendingSave);
     } catch (e) {
@@ -1891,6 +1893,7 @@ class EditorController extends ChangeNotifier {
   }
 
   void _initActiveStickerHistory(Object sticker) {
+    _activeStickerCreatedAt = DateTime.now();
     _activeStickerHistory = [cloneActiveSticker(sticker)];
     _activeStickerHistoryIndex = 0;
 
@@ -1902,6 +1905,7 @@ class EditorController extends ChangeNotifier {
   }
 
   void _clearActiveStickerHistory() {
+    _activeStickerCreatedAt = null;
     _activeStickerHistory.clear();
     _activeStickerHistoryIndex = -1;
 
@@ -2357,7 +2361,6 @@ class EditorController extends ChangeNotifier {
 
     _activeSticker = newSticker;
     _initActiveStickerHistory(newSticker);
-    _activeCategory = 'Brush';
     updateSnapshot();
     notifyListeners();
   }

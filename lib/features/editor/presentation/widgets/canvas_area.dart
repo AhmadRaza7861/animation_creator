@@ -86,9 +86,6 @@ class CanvasArea extends ConsumerWidget {
                   );
                   return;
                 }
-                if (activeSticker != null) {
-                  controller.stampActiveSticker();
-                }
               },
               boardPanEnabled: activeSticker == null,
               boardScaleEnabled: activeSticker == null,
@@ -155,6 +152,11 @@ class CanvasArea extends ConsumerWidget {
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onTap: () {
+                              final createdAt = controller.activeStickerCreatedAt;
+                              if (createdAt != null &&
+                                  DateTime.now().difference(createdAt).inMilliseconds < 450) {
+                                return;
+                              }
                               controller.stampActiveSticker();
                             },
                           ),
