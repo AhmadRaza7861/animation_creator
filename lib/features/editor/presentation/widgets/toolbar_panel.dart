@@ -15,8 +15,6 @@ import '../../../../../core/widgets/font_presets.dart';
 import '../../../../../core/widgets/app_dialogs.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
-import '../../../../../package_code/src/ruler/ruler_config.dart';
-import '../screens/brush_studio_screen.dart';
 import '../screens/export/make_movie_screen.dart';
 import '../screens/video_trimming_screen.dart';
 import '../screens/image_crop_screen.dart';
@@ -90,10 +88,6 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
       return _buildBrushSubMenu(controller);
     } else if (controller.currentSubMenu == 'shapes') {
       return _buildShapesSubMenu(controller);
-    } else if (controller.currentSubMenu == 'blur') {
-      return _buildBlurSubMenu(controller);
-    } else if (controller.currentSubMenu == 'smudge') {
-      return _buildSmudgeSubMenu(controller);
     } else {
       return _buildBottomToolbar(controller);
     }
@@ -275,8 +269,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   _bottomToolbarCategoryItem(
                     label: 'Brush',
                     svgAsset: AssetConstants.brush_icon,
-                    isSelected: controller.activeCategory == 'Brush' &&
-                        controller.drawingController.activeBrushPresetId == null,
+                    isSelected: controller.activeCategory == 'Brush',
                     onTap: () {
                       controller.activeCategory = 'Brush';
                       controller.drawingController.activeBrushPresetId = null;
@@ -285,19 +278,6 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       );
                       controller.drawingController.setStyle(
                         strokeWidth: controller.globalStrokeWidth,
-                      );
-                    },
-                  ),
-                  _bottomToolbarCategoryItem(
-                    label: 'Studio',
-                    svgAsset: AssetConstants.brush_tips,
-                    isSelected: controller.activeCategory == 'Brush' &&
-                        controller.drawingController.activeBrushPresetId != null,
-                    onTap: () {
-                      BrushStudioScreen.open(
-                        context,
-                        drawingController: controller.drawingController,
-                        editorController: controller,
                       );
                     },
                   ),
@@ -350,28 +330,6 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         Eyedropper(),
                       );
                       controller.activeCategory = 'Eyedropper';
-                    },
-                  ),
-
-                  ValueListenableBuilder<RulerConfig>(
-                    valueListenable: controller.drawingController.rulerConfig,
-                    builder: (context, rulerConfig, child) {
-                      final bool isRulerActive =
-                          rulerConfig.type != RulerType.none;
-                      return _bottomToolbarCategoryItem(
-                        label: 'Ruler',
-                        svgAsset: AssetConstants.ruler_icon,
-                        isSelected: isRulerActive,
-                        onTap: () {
-                          if (isRulerActive) {
-                            controller.drawingController.rulerConfig.value =
-                                rulerConfig.copyWith(type: RulerType.none);
-                          } else {
-                            controller.drawingController.rulerConfig.value =
-                                rulerConfig.copyWith(type: RulerType.line);
-                          }
-                        },
-                      );
                     },
                   ),
                   _bottomToolbarCategoryItem(
@@ -433,7 +391,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         strength: controller.blurStrength,
                       );
                       controller.activeCategory = 'Blur';
-                      controller.currentSubMenu = 'blur';
+                      controller.currentSubMenu = 'none';
                       controller.drawingController.prepareSnapshot();
                     },
                   ),
@@ -453,7 +411,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         strength: controller.smudgeStrength,
                       );
                       controller.activeCategory = 'Smudge';
-                      controller.currentSubMenu = 'smudge';
+                      controller.currentSubMenu = 'none';
                       controller.drawingController.prepareSnapshot();
                     },
                   ),
@@ -480,7 +438,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     final controller = ref.read(editorControllerProvider(widget.projectId));
     return GestureDetector(
       onTap: () {
-        if (label != 'Text' && label != 'Ruler') {
+        if (label != 'Text') {
           controller.isTextToolSelected = false;
         }
         onTap();
@@ -707,315 +665,6 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     );
   }
 
-  Widget _buildBlurSubMenu(EditorController controller) {
-    final double intensity = controller.blurStrength;
-    final int percent = (intensity * 100).round();
-    final presets = [0.0, 0.25, 0.50, 0.75, 1.0];
-
-    return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
-      ),
-      child: Row(
-        children: [
-          // Back button
-          GestureDetector(
-            onTap: () {
-              controller.currentSubMenu = 'none';
-            },
-            child: Container(
-              width: 38,
-              height: 38,
-              margin: const EdgeInsets.only(left: 6, right: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F5F8),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade300, width: 1),
-              ),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 16,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-
-          // Blur Tool Badge with Intensity %
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(
-              color: ColorConstants.accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(
-                color: ColorConstants.accent.withValues(alpha: 0.25),
-                width: 1.0,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SvgPicture.asset(
-                  AssetConstants.blur_icon,
-                  width: 15,
-                  height: 15,
-                  colorFilter: const ColorFilter.mode(
-                    ColorConstants.accent,
-                    BlendMode.srcIn,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '$percent%',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: ColorConstants.accent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // Blur Intensity Real-Time Slider
-          Expanded(
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 5,
-                activeTrackColor: ColorConstants.accent,
-                inactiveTrackColor: const Color(0xFFF1F5F9),
-                thumbColor: Colors.white,
-                thumbShape: const RoundSliderThumbShape(
-                  enabledThumbRadius: 8,
-                  elevation: 3,
-                  pressedElevation: 5,
-                ),
-                overlayColor: ColorConstants.accent.withValues(alpha: 0.15),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                trackShape: const RoundedRectSliderTrackShape(),
-              ),
-              child: Slider(
-                value: intensity.clamp(0.0, 1.0),
-                min: 0.0,
-                max: 1.0,
-                onChanged: (val) {
-                  controller.blurStrength = val;
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-
-          // Quick Presets
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: presets.map((p) {
-              final isSelected = (intensity - p).abs() < 0.04;
-              final label = '${(p * 100).round()}%';
-              return GestureDetector(
-                onTap: () {
-                  controller.blurStrength = p;
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: isSelected
-                        ? ColorConstants.accent
-                        : const Color(0xFFF8FAFC),
-                    border: Border.all(
-                      color: isSelected
-                          ? Colors.transparent
-                          : const Color(0xFFE2E8F0),
-                      width: 1.0,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: ColorConstants.accent.withValues(alpha: 0.25),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.white : const Color(0xFF475569),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSmudgeSubMenu(EditorController controller) {
-    final double intensity = controller.smudgeStrength;
-    final int percent = (intensity * 100).round();
-    final presets = [0.0, 0.25, 0.50, 0.75, 1.0];
-
-    return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
-      ),
-      child: Row(
-        children: [
-          // Back button
-          GestureDetector(
-            onTap: () {
-              controller.currentSubMenu = 'none';
-            },
-            child: Container(
-              width: 38,
-              height: 38,
-              margin: const EdgeInsets.only(left: 6, right: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F5F8),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade300, width: 1),
-              ),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 16,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-
-          // Smudge Tool Badge with Intensity %
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(
-              color: ColorConstants.accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(
-                color: ColorConstants.accent.withValues(alpha: 0.25),
-                width: 1.0,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SvgPicture.asset(
-                  AssetConstants.smudge_icon,
-                  width: 15,
-                  height: 15,
-                  colorFilter: const ColorFilter.mode(
-                    ColorConstants.accent,
-                    BlendMode.srcIn,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '$percent%',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: ColorConstants.accent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // Smudge Intensity Real-Time Slider
-          Expanded(
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 5,
-                activeTrackColor: ColorConstants.accent,
-                inactiveTrackColor: const Color(0xFFF1F5F9),
-                thumbColor: Colors.white,
-                thumbShape: const RoundSliderThumbShape(
-                  enabledThumbRadius: 8,
-                  elevation: 3,
-                  pressedElevation: 5,
-                ),
-                overlayColor: ColorConstants.accent.withValues(alpha: 0.15),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                trackShape: const RoundedRectSliderTrackShape(),
-              ),
-              child: Slider(
-                value: intensity.clamp(0.0, 1.0),
-                min: 0.0,
-                max: 1.0,
-                onChanged: (val) {
-                  controller.smudgeStrength = val;
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-
-          // Quick Presets
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: presets.map((p) {
-              final isSelected = (intensity - p).abs() < 0.04;
-              final label = '${(p * 100).round()}%';
-              return GestureDetector(
-                onTap: () {
-                  controller.smudgeStrength = p;
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: isSelected
-                        ? ColorConstants.accent
-                        : const Color(0xFFF8FAFC),
-                    border: Border.all(
-                      color: isSelected
-                          ? Colors.transparent
-                          : const Color(0xFFE2E8F0),
-                      width: 1.0,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: ColorConstants.accent.withValues(alpha: 0.25),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.white : const Color(0xFF475569),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-    );
-  }
 
   Widget _bottomSubToolItem({
     required String label,
