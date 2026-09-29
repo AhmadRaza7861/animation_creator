@@ -552,29 +552,7 @@ class DrawingController extends ChangeNotifier {
 
     tempCanvas.saveLayer(Offset.zero & size, Paint());
 
-    // 1. Draw solid background color (default Colors.white)
-    tempCanvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = backgroundColor,
-    );
-
-    // 2. Draw background image / template if present
-    final ui.Image? bgImg = backgroundSnapshotProvider?.call() ?? backgroundImage;
-    if (bgImg != null) {
-      tempCanvas.saveLayer(
-        Offset.zero & size,
-        Paint()..color = Colors.white.withValues(alpha: backgroundImageOpacity),
-      );
-      paintImage(
-        canvas: tempCanvas,
-        rect: Offset.zero & size,
-        image: bgImg,
-        fit: BoxFit.cover,
-      );
-      tempCanvas.restore();
-    }
-
-    // 3. Draw all layers (bottom to top)
+    // 1. Draw all layers (bottom to top) on transparent canvas
     for (int i = layers.length - 1; i >= 0; i--) {
       final layer = layers[i];
       if (!layer.isVisible) continue;
@@ -590,7 +568,7 @@ class DrawingController extends ChangeNotifier {
       tempCanvas.restore();
     }
 
-    // 4. Draw active overlay stickers / text / shapes if present
+    // 2. Draw active overlay stickers / text / shapes if present
     activeOverlayPainter?.call(tempCanvas, size);
 
     tempCanvas.restore();
