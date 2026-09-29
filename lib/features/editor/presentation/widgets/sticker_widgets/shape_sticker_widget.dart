@@ -169,27 +169,34 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
       child: Container(
         color: Colors.transparent,
         alignment: Alignment.center,
-        child: Transform.scale(
-          scale: invS,
+        child: OverflowBox(
           alignment: Alignment.center,
-          child: Container(
-            width: 36,
-            height: 36,
+          minWidth: 0,
+          maxWidth: double.infinity,
+          minHeight: 0,
+          maxHeight: double.infinity,
+          child: Transform.scale(
+            scale: invS,
             alignment: Alignment.center,
             child: Container(
-              width: 13,
-              height: 13,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: ColorConstants.primary, width: 2.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              child: Container(
+                width: 13,
+                height: 13,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ColorConstants.primary, width: 2.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -211,32 +218,39 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
       child: Container(
         color: Colors.transparent,
         alignment: Alignment.center,
-        child: Transform.scale(
-          scale: invS,
+        child: OverflowBox(
           alignment: Alignment.center,
-          child: Container(
-            width: 44,
-            height: 44,
+          minWidth: 0,
+          maxWidth: double.infinity,
+          minHeight: 0,
+          maxHeight: double.infinity,
+          child: Transform.scale(
+            scale: invS,
             alignment: Alignment.center,
             child: Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: ColorConstants.primary,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: ColorConstants.primary.withValues(alpha: 0.5),
-                    blurRadius: 6,
-                    spreadRadius: 1,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: ColorConstants.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ColorConstants.primary.withValues(alpha: 0.5),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -260,27 +274,34 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
       child: Container(
         color: Colors.transparent,
         alignment: Alignment.center,
-        child: Transform.scale(
-          scale: invS,
+        child: OverflowBox(
           alignment: Alignment.center,
-          child: Container(
-            width: 32,
-            height: 32,
+          minWidth: 0,
+          maxWidth: double.infinity,
+          minHeight: 0,
+          maxHeight: double.infinity,
+          child: Transform.scale(
+            scale: invS,
             alignment: Alignment.center,
             child: Container(
-              width: 15,
-              height: 6,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(color: ColorConstants.primary, width: 1.8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              child: Container(
+                width: 15,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: ColorConstants.primary, width: 1.8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -304,27 +325,34 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
       child: Container(
         color: Colors.transparent,
         alignment: Alignment.center,
-        child: Transform.scale(
-          scale: invS,
+        child: OverflowBox(
           alignment: Alignment.center,
-          child: Container(
-            width: 32,
-            height: 32,
+          minWidth: 0,
+          maxWidth: double.infinity,
+          minHeight: 0,
+          maxHeight: double.infinity,
+          child: Transform.scale(
+            scale: invS,
             alignment: Alignment.center,
             child: Container(
-              width: 6,
-              height: 15,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(color: ColorConstants.primary, width: 1.8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              child: Container(
+                width: 6,
+                height: 15,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: ColorConstants.primary, width: 1.8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -343,43 +371,50 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
       child: Container(
         color: Colors.transparent,
         alignment: Alignment.bottomCenter,
-        child: Transform.scale(
-          scale: invS,
+        child: OverflowBox(
           alignment: Alignment.bottomCenter,
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: ColorConstants.primary, width: 2.2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ColorConstants.primary.withValues(alpha: 0.35),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+          minWidth: 0,
+          maxWidth: double.infinity,
+          minHeight: 0,
+          maxHeight: double.infinity,
+          child: Transform.scale(
+            scale: invS,
+            alignment: Alignment.bottomCenter,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: ColorConstants.primary, width: 2.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: ColorConstants.primary.withValues(alpha: 0.35),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.rotate_right_rounded,
+                      size: 16,
+                      color: ColorConstants.primary,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.rotate_right_rounded,
-                    size: 16,
+                  Container(
+                    width: 1.5,
+                    height: 14,
                     color: ColorConstants.primary,
                   ),
-                ),
-                Container(
-                  width: 1.5,
-                  height: 14,
-                  color: ColorConstants.primary,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -866,10 +901,17 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                     height: pillTouchH,
                     child: Container(
                       alignment: Alignment.topCenter,
-                      child: Transform.scale(
-                        scale: invS,
+                      child: OverflowBox(
                         alignment: Alignment.topCenter,
-                        child: _buildFloatingActionPill(),
+                        minWidth: 0,
+                        maxWidth: double.infinity,
+                        minHeight: 0,
+                        maxHeight: double.infinity,
+                        child: Transform.scale(
+                          scale: invS,
+                          alignment: Alignment.topCenter,
+                          child: _buildFloatingActionPill(),
+                        ),
                       ),
                     ),
                   ),

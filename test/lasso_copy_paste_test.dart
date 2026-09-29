@@ -180,5 +180,26 @@ void main() {
 
       controllerB.dispose();
     });
+
+    test('clearLassoClipboard clears clipboard data and updates canPasteLassoSelection to false', () async {
+      final repo = ProjectRepository();
+      final controller = EditorController(repository: repo);
+
+      controller.activeSticker = ActiveShapeSticker(
+        id: 'test_sticker',
+        content: Circle(),
+        offset: const Offset(100, 100),
+        size: const Size(80, 80),
+        isLassoSelection: true,
+      );
+
+      controller.copyActiveLassoSelection();
+      expect(controller.canPasteLassoSelection, isTrue);
+
+      controller.clearLassoClipboard();
+      expect(controller.canPasteLassoSelection, isFalse);
+
+      controller.dispose();
+    });
   });
 }

@@ -2205,6 +2205,11 @@ class EditorController extends ChangeNotifier {
     }
   }
 
+  void clearLassoClipboard() {
+    GlobalClipboard.instance.clearLasso();
+    notifyListeners();
+  }
+
   Future<bool> pasteLassoSelection() async {
     final clipboardData = GlobalClipboard.instance.lassoData;
     if (clipboardData == null) {
