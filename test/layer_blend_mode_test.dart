@@ -70,7 +70,7 @@ void main() {
     expect(imgMultiply, isNotNull);
   });
 
-  testWidgets('LayerPanel renders curated mostly-used blend modes in dropdown', (tester) async {
+  testWidgets('LayerPanel renders curated mostly-used blend modes in modern bottom sheet', (tester) async {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -97,19 +97,21 @@ void main() {
     await tester.tap(expandFinder);
     await tester.pumpAndSettle();
 
-    // Find the blend mode dropdown
-    final dropdownFinder = find.byType(DropdownButton<BlendMode>);
-    expect(dropdownFinder, findsOneWidget);
+    // Find the blend mode tile button
+    final blendTileFinder = find.text('Blend');
+    expect(blendTileFinder, findsOneWidget);
 
-    // Open the dropdown
-    await tester.tap(dropdownFinder);
+    // Open the blend mode bottom sheet
+    await tester.tap(blendTileFinder);
     await tester.pumpAndSettle();
 
-    // Verify curated blend modes are present in the popup
+    // Verify sheet title and curated blend modes with descriptions are present
+    expect(find.text('${controller.activeLayer.value?.name} Blend Mode'), findsOneWidget);
     expect(find.text('Normal'), findsWidgets);
-    expect(find.text('Multiply'), findsWidgets);
-    expect(find.text('Screen'), findsWidgets);
-    expect(find.text('Overlay'), findsWidgets);
+    expect(find.text('Multiply'), findsOneWidget);
+    expect(find.text('Darkens base colors; ideal for shading & shadows'), findsOneWidget);
+    expect(find.text('Screen'), findsOneWidget);
+    expect(find.text('Overlay'), findsOneWidget);
 
     // Verify non-standard/unused blend modes are completely excluded
     expect(find.text('Exclusion'), findsNothing);
@@ -118,9 +120,16 @@ void main() {
     expect(find.text('Luminosity'), findsNothing);
 
     // Select Multiply
-    await tester.tap(find.text('Multiply').last);
+    await tester.tap(find.text('Multiply'));
     await tester.pumpAndSettle();
 
     expect(controller.activeLayer.value?.blendMode, equals(BlendMode.multiply));
+
+    // Close the sheet
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    // Verify the Layer Item now displays the Multiply mode badge
+    expect(find.text('Multiply'), findsWidgets);
   });
 }

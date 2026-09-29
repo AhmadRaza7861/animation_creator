@@ -5,18 +5,105 @@ import '../../../../package_code/src/paint_contents/layer_data.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 
-const List<BlendMode> _kCommonBlendModes = [
-  BlendMode.srcOver,
-  BlendMode.multiply,
-  BlendMode.screen,
-  BlendMode.overlay,
-  BlendMode.darken,
-  BlendMode.lighten,
-  BlendMode.colorDodge,
-  BlendMode.colorBurn,
-  BlendMode.softLight,
-  BlendMode.hardLight,
-  BlendMode.difference,
+class BlendModeInfo {
+  final BlendMode mode;
+  final String label;
+  final String description;
+  final String category;
+  final IconData icon;
+
+  const BlendModeInfo({
+    required this.mode,
+    required this.label,
+    required this.description,
+    required this.category,
+    required this.icon,
+  });
+}
+
+const List<BlendModeInfo> _kCuratedBlendModes = [
+  // Standard
+  BlendModeInfo(
+    mode: BlendMode.srcOver,
+    label: 'Normal',
+    description: 'Standard rendering without color blending',
+    category: 'Standard',
+    icon: Icons.layers_outlined,
+  ),
+  // Darken
+  BlendModeInfo(
+    mode: BlendMode.multiply,
+    label: 'Multiply',
+    description: 'Darkens base colors; ideal for shading & shadows',
+    category: 'Darken',
+    icon: Icons.brightness_4_outlined,
+  ),
+  BlendModeInfo(
+    mode: BlendMode.darken,
+    label: 'Darken',
+    description: 'Selects the darker of overlapping pixel colors',
+    category: 'Darken',
+    icon: Icons.dark_mode_outlined,
+  ),
+  BlendModeInfo(
+    mode: BlendMode.colorBurn,
+    label: 'Color Burn',
+    description: 'Increases contrast and deepens shadows',
+    category: 'Darken',
+    icon: Icons.local_fire_department_outlined,
+  ),
+  // Lighten
+  BlendModeInfo(
+    mode: BlendMode.screen,
+    label: 'Screen',
+    description: 'Lightens colors; perfect for highlights & glow',
+    category: 'Lighten',
+    icon: Icons.brightness_7_outlined,
+  ),
+  BlendModeInfo(
+    mode: BlendMode.lighten,
+    label: 'Lighten',
+    description: 'Selects the lighter of overlapping pixel colors',
+    category: 'Lighten',
+    icon: Icons.light_mode_outlined,
+  ),
+  BlendModeInfo(
+    mode: BlendMode.colorDodge,
+    label: 'Color Dodge',
+    description: 'Brightens underlying colors for vibrant glow effects',
+    category: 'Lighten',
+    icon: Icons.flare_rounded,
+  ),
+  // Contrast
+  BlendModeInfo(
+    mode: BlendMode.overlay,
+    label: 'Overlay',
+    description: 'Combines Multiply and Screen to boost contrast',
+    category: 'Contrast',
+    icon: Icons.tune_rounded,
+  ),
+  BlendModeInfo(
+    mode: BlendMode.softLight,
+    label: 'Soft Light',
+    description: 'Creates a subtle, soft diffuse lighting effect',
+    category: 'Contrast',
+    icon: Icons.wb_twilight_rounded,
+  ),
+  BlendModeInfo(
+    mode: BlendMode.hardLight,
+    label: 'Hard Light',
+    description: 'Creates bold, dramatic high-contrast lighting',
+    category: 'Contrast',
+    icon: Icons.flash_on_rounded,
+  ),
+  // Special
+  BlendModeInfo(
+    mode: BlendMode.difference,
+    label: 'Difference',
+    description: 'Inverts colors based on underlying layer differences',
+    category: 'Special',
+    icon: Icons.compare_arrows_rounded,
+  ),
 ];
 
 const Map<BlendMode, String> _kBlendModeLabels = {
@@ -284,13 +371,43 @@ class _LayerPanelState extends State<LayerPanel> {
                     widget.controller.activeLayer.value = layer;
                     setState(() {});
                   },
-                  child: Text(
-                    layer.name,
-                    style: TextStyle(
-                      fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                      color: isActive ? ColorConstants.accent : ColorConstants.darkText,
-                      fontSize: 14,
-                    ),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          layer.name,
+                          style: TextStyle(
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                            color: isActive ? ColorConstants.accent : ColorConstants.darkText,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (layer.blendMode != BlendMode.srcOver) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: ColorConstants.primaryLight,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: ColorConstants.accent.withValues(alpha: 0.35),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            _kBlendModeLabels[layer.blendMode] ?? 'Mode',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.w700,
+                              color: ColorConstants.accent,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -362,48 +479,75 @@ class _LayerPanelState extends State<LayerPanel> {
               ),
             ],
           ),
-          Row(
-            children: [
-              const Icon(Icons.layers_outlined, size: 16, color: Colors.black54),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7F8FA),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
+          // Modern Blend Mode Selector Tile
+          InkWell(
+            onTap: () => _openBlendModeSheet(layer),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<BlendMode>(
-                      isExpanded: true,
-                      isDense: true,
-                      menuMaxHeight: 280,
-                      borderRadius: BorderRadius.circular(12),
-                      value: _kCommonBlendModes.contains(layer.blendMode) ? layer.blendMode : BlendMode.srcOver,
-                      icon: const Icon(Icons.unfold_more_rounded, size: 16, color: Colors.black54),
-                      items: _kCommonBlendModes.map((mode) {
-                        return DropdownMenuItem(
-                          value: mode,
-                          child: Text(
-                            _kBlendModeLabels[mode] ?? mode.name,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontFamily: 'Outfit',
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF3C3043),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (mode) {
-                        if (mode != null) _changeBlendMode(layer, mode);
-                      },
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: ColorConstants.primaryLight,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.layers_rounded,
+                      size: 14,
+                      color: ColorConstants.accent,
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _kBlendModeLabels[layer.blendMode] ?? 'Normal',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w700,
+                        color: ColorConstants.darkText,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'Blend',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w600,
+                        color: ColorConstants.mediumText,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: ColorConstants.mediumText,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 8),
           Row(
@@ -450,6 +594,251 @@ class _LayerPanelState extends State<LayerPanel> {
           Text(label, style: TextStyle(fontSize: 10, color: color)),
         ],
       ),
+    );
+  }
+
+  void _openBlendModeSheet(LayerData layer) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.72,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 20,
+                    offset: Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4.5,
+                      margin: const EdgeInsets.only(top: 10, bottom: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2.5),
+                      ),
+                    ),
+                  ),
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: ColorConstants.primaryLight,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.layers_rounded,
+                            color: ColorConstants.accent,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${layer.name} Blend Mode',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontFamily: 'Outfit',
+                                  fontWeight: FontWeight.w700,
+                                  color: ColorConstants.darkText,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Select how this layer blends with layers below',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontFamily: 'Outfit',
+                                  fontWeight: FontWeight.w500,
+                                  color: ColorConstants.mediumText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: const Icon(Icons.close_rounded, size: 20, color: ColorConstants.mediumText),
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            padding: const EdgeInsets.all(6),
+                            minimumSize: const Size(32, 32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  // List of blend modes
+                  Flexible(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                      shrinkWrap: true,
+                      itemCount: _kCuratedBlendModes.length,
+                      separatorBuilder: (context, i) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final item = _kCuratedBlendModes[index];
+                        final bool isSelected = layer.blendMode == item.mode;
+
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              _changeBlendMode(layer, item.mode);
+                              setSheetState(() {});
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? ColorConstants.primaryLight
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? ColorConstants.accent
+                                      : const Color(0xFFE2E8F0),
+                                  width: isSelected ? 1.5 : 1.0,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: ColorConstants.accent.withValues(alpha: 0.15),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                children: [
+                                  // Category icon badge
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? ColorConstants.accent
+                                          : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      item.icon,
+                                      size: 18,
+                                      color: isSelected ? Colors.white : ColorConstants.darkText,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // Label & Description
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              item.label,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontFamily: 'Outfit',
+                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                                color: isSelected ? ColorConstants.accent : ColorConstants.darkText,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                              decoration: BoxDecoration(
+                                                color: isSelected
+                                                    ? ColorConstants.accent.withValues(alpha: 0.15)
+                                                    : const Color(0xFFE2E8F0),
+                                                borderRadius: BorderRadius.circular(5),
+                                              ),
+                                              child: Text(
+                                                item.category,
+                                                style: TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontFamily: 'Outfit',
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isSelected ? ColorConstants.accent : ColorConstants.mediumText,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          item.description,
+                                          style: const TextStyle(
+                                            fontSize: 11.5,
+                                            fontFamily: 'Outfit',
+                                            fontWeight: FontWeight.w400,
+                                            color: ColorConstants.mediumText,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Checkmark indicator
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    width: 22,
+                                    height: 22,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isSelected ? ColorConstants.accent : Colors.transparent,
+                                      border: Border.all(
+                                        color: isSelected ? ColorConstants.accent : const Color(0xFFCBD5E1),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: isSelected
+                                        ? const Icon(
+                                            Icons.check_rounded,
+                                            size: 14,
+                                            color: Colors.white,
+                                          )
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
