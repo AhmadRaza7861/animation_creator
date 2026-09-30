@@ -3,12 +3,14 @@ import 'package:dummy/utils/theme/theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/services/runtime_font_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/projects/data/project_repository.dart';
 import 'features/splash/presentation/screens/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  RuntimeFontService.instance.init();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
@@ -17,14 +19,11 @@ void main() {
     }
   };
 
-  runApp(
-    ProviderScope(
-      child: MyApp(repository: ProjectRepository()),
-    ),
-  );
+  runApp(ProviderScope(child: MyApp(repository: ProjectRepository())));
 }
 
-final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 class MyApp extends StatelessWidget {
   final ProjectRepository repository;
@@ -45,7 +44,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 class NavigationService {
   static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

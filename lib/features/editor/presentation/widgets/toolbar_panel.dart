@@ -12,6 +12,7 @@ import '../../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_assets.dart';
 import '../../../../../core/widgets/font_presets.dart';
+import '../../../../../core/services/runtime_font_service.dart';
 import '../../../../../core/widgets/app_dialogs.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
@@ -812,76 +813,190 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     ActiveTextSticker sticker,
     EditorController controller,
   ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = ColorConstants.primary;
+    final backgroundColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? Colors.white : ColorConstants.darkText;
+    final iconColor = isDark ? Colors.white70 : ColorConstants.darkText;
+    final dividerColor = isDark ? const Color(0xFF2C2C2C) : ColorConstants.divider;
+    final unselectedBadgeColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF1F5F9);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: backgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return SafeArea(
-              top: false,
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.6,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          const Text(
-                            'Fonts',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: fontPresets.length,
-                        itemBuilder: (context, index) {
-                          final preset = fontPresets[index];
-                          final isSelected = sticker.fontFamily == preset.name;
-
-                          return ListTile(
-                            title: Text(
-                              preset.name,
-                              style: preset.getTextStyle(
-                                color: Colors.black87,
-                                fontSize: 16,
+            return AnimatedBuilder(
+              animation: RuntimeFontService.instance,
+              builder: (context, child) {
+                return SafeArea(
+                  top: false,
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.78,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Header with Close 'X' Button on the left
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8, top: 8, bottom: 4),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  size: 26,
+                                  color: iconColor,
+                                ),
+                                onPressed: () => Navigator.pop(context),
                               ),
+                            ],
+                          ),
+                        ),
+                        Divider(
+                          height: 1,
+                          thickness: 0.8,
+                          color: dividerColor,
+                        ),
+                        // List of fonts
+                        Expanded(
+                          child: ListView.separated(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
                             ),
-                            trailing: isSelected
-                                ? const Icon(
-                                    Icons.check_circle,
-                                    color: ColorConstants.accent,
-                                  )
-                                : null,
-                            onTap: () {
-                              sticker.fontFamily = preset.name;
-                              setModalState(() {});
-                              controller.updateSnapshot();
+                            itemCount: fontPresets.length,
+                            separatorBuilder: (context, index) => Divider(
+                              height: 1,
+                              thickness: 0.8,
+                              color: dividerColor,
+                            ),
+                            itemBuilder: (context, index) {
+                              final preset = fontPresets[index];
+                              final isSelected = sticker.fontFamily == preset.name;
+                              final status = RuntimeFontService.instance
+                                  .getFontStatus(preset.name);
+
+                              Widget trailingWidget;
+                              if (isSelected) {
+                                trailingWidget = Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: primaryColor.withValues(alpha: 0.35),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                );
+                              } else if (status == FontDownloadStatus.downloading) {
+                                trailingWidget = SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      primaryColor,
+                                    ),
+                                  ),
+                                );
+                              } else if (status == FontDownloadStatus.notDownloaded ||
+                                  status == FontDownloadStatus.failed) {
+                                trailingWidget = Icon(
+                                  Icons.download_rounded,
+                                  color: ColorConstants.lightText,
+                                  size: 22,
+                                );
+                              } else {
+                                // Downloaded and available, not selected
+                                trailingWidget = Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: unselectedBadgeColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.check_rounded,
+                                    size: 16,
+                                    color: isDark ? Colors.white38 : Colors.white,
+                                  ),
+                                );
+                              }
+
+                              return InkWell(
+                                onTap: () async {
+                                  if (status == FontDownloadStatus.downloaded) {
+                                    sticker.fontFamily = preset.name;
+                                    setModalState(() {});
+                                    controller.updateSnapshot();
+                                  } else if (status ==
+                                      FontDownloadStatus.downloading) {
+                                    // already downloading
+                                  } else {
+                                    // Start downloading on tap
+                                    setModalState(() {});
+                                    final ok = await RuntimeFontService.instance
+                                        .downloadFont(preset.name);
+                                    if (ok) {
+                                      sticker.fontFamily = preset.name;
+                                      controller.updateSnapshot();
+                                      setModalState(() {});
+                                    } else {
+                                      Fluttertoast.showToast(
+                                        msg:
+                                            'Could not download font. Check internet connection.',
+                                        toastLength: Toast.LENGTH_SHORT,
+                                      );
+                                      setModalState(() {});
+                                    }
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                    horizontal: 4,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          preset.name,
+                                          style: preset.getTextStyle(
+                                            color: textColor,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                      ),
+                                      trailingWidget,
+                                    ],
+                                  ),
+                                ),
+                              );
                             },
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         );
