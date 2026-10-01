@@ -13,14 +13,25 @@ import 'package:flutter/painting.dart';
 /// Base class for all drawing content (lines, shapes, etc.)
 /// Defines the lifecycle methods and serialization interface for drawing
 abstract class PaintContent {
-  PaintContent();
+  PaintContent({String? id, this.fillColor}) : id = id ?? UniqueKey().toString();
 
-  PaintContent.paint(this.paint);
+  PaintContent.paint(this.paint, {String? id, this.fillColor}) : id = id ?? UniqueKey().toString();
+
+  /// 唯一标识符 / Unique identifier
+  String id;
+
+  /// 内部填充颜色（闭合图形使用）
+  /// Interior fill color for closed shapes
+  Color? fillColor;
 
   /// 画笔配置
   ///
   /// Paint configuration for drawing
   Paint paint = Paint();
+
+  /// 判断点是否在图形的闭合区域内（用于油漆桶填充等操作）
+  /// Determine whether point is inside closed region (for paint bucket fill detection)
+  bool containsPoint(Offset pt) => false;
 
   /// 复制实例，避免对象引用传递
   ///
@@ -64,6 +75,8 @@ abstract class PaintContent {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'type': contentType,
+      'id': id,
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
       ...toContentJson(),
     };
   }

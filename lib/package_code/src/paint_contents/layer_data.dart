@@ -6,6 +6,7 @@ import 'eraser.dart';
 import 'eraser_hole.dart';
 import 'fill.dart';
 import 'paint_content.dart';
+import 'shape_fill.dart';
 import 'smudge.dart';
 import 'stroke_recolor.dart';
 
@@ -96,7 +97,7 @@ class LayerData {
       // Pass 2: Draw non-fill items (strokes, shapes, lines, etc.) in this segment
       for (int j = segStart; j < segEnd; j++) {
         final item = history[j];
-        if (item is! FillContent && item is! StrokeRecolorContent) {
+        if (item is! FillContent && item is! StrokeRecolorContent && item is! ShapeFillContent) {
           item.draw(canvas, size, deeper);
           if (tempCanvas != null) {
             item.draw(tempCanvas, size, deeper);

@@ -33,3 +33,5 @@ export 'src/paint_contents/stroke_styles.dart';
 export 'src/paint_contents/tip_brush.dart';
 export 'src/paint_contents/image_tip_brush.dart';
 export 'src/paint_contents/stroke_recolor.dart';
+export 'src/paint_contents/shape_fill.dart';
+export 'src/paint_contents/shapes.dart';

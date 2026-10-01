@@ -13,7 +13,9 @@ class Triangle extends PaintContent {
     required this.B,
     required this.C,
     required Paint paint,
-  }) : super.paint(paint);
+    String? id,
+    Color? fillColor,
+  }) : super.paint(paint, id: id, fillColor: fillColor);
 
   factory Triangle.fromJson(Map<String, dynamic> data) {
     return Triangle.data(
@@ -22,6 +24,8 @@ class Triangle extends PaintContent {
       B: jsonToOffset(data['B'] as Map<String, dynamic>),
       C: jsonToOffset(data['C'] as Map<String, dynamic>),
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      id: data['id'] as String?,
+      fillColor: data['fillColor'] != null ? Color((data['fillColor'] as num).toInt()) : null,
     );
   }
 
@@ -48,12 +52,20 @@ class Triangle extends PaintContent {
   }
 
   @override
+  bool containsPoint(Offset pt) {
+    return getPath().contains(pt);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
-    final Path path = Path()
-      ..moveTo(A.dx, A.dy)
-      ..lineTo(B.dx, B.dy)
-      ..lineTo(C.dx, C.dy)
-      ..close();
+    final Path path = getPath();
+    if (fillColor != null) {
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor!
+        ..isAntiAlias = true;
+      canvas.drawPath(path, fillPaint);
+    }
 
     canvas.drawPath(path, paint);
   }
@@ -74,6 +86,8 @@ class Triangle extends PaintContent {
         B: B,
         C: C,
         paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
       );
 
   @override
@@ -84,6 +98,7 @@ class Triangle extends PaintContent {
       'B': B.toJson(),
       'C': C.toJson(),
       'paint': paint.toJson(),
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
     };
   }
 }

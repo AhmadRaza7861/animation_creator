@@ -22,6 +22,8 @@ class ShapeStickerContent extends PaintContent {
     this.topRightOffset = Offset.zero,
     this.bottomRightOffset = Offset.zero,
     this.bottomLeftOffset = Offset.zero,
+    super.id,
+    super.fillColor,
   });
 
   ShapeStickerContent.data({
@@ -37,6 +39,8 @@ class ShapeStickerContent extends PaintContent {
     this.bottomRightOffset = Offset.zero,
     this.bottomLeftOffset = Offset.zero,
     required Paint paint,
+    super.id,
+    super.fillColor,
   }) : super.paint(paint);
 
   factory ShapeStickerContent.fromJson(Map<String, dynamic> data) {
@@ -67,6 +71,8 @@ class ShapeStickerContent extends PaintContent {
           ? jsonToOffset(data['bottomLeftOffset'] as Map<String, dynamic>)
           : Offset.zero,
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      id: data['id'] as String?,
+      fillColor: data['fillColor'] != null ? Color((data['fillColor'] as num).toInt()) : null,
     );
   }
 
@@ -101,6 +107,28 @@ class ShapeStickerContent extends PaintContent {
     );
   }
 
+  /// Computes the full composite transform matrix from local coordinates to canvas coordinates.
+  Matrix4 getTransformMatrix() {
+    final Matrix4 matrix = Matrix4.identity()
+      ..translate(offset.dx, offset.dy)
+      ..rotateZ(rotation)
+      ..scale(scale, scale, 1.0)
+      ..translate(-size.width / 2, -size.height / 2);
+
+    if (flipX || flipY) {
+      matrix
+        ..translate(size.width / 2, size.height / 2)
+        ..scale(flipX ? -1.0 : 1.0, flipY ? -1.0 : 1.0, 1.0)
+        ..translate(-size.width / 2, -size.height / 2);
+    }
+
+    if (hasPerspectiveDistortion) {
+      matrix.multiply(getPerspectiveMatrix());
+    }
+
+    return matrix;
+  }
+
   @override
   String get contentType => 'ShapeStickerContent';
 
@@ -109,6 +137,31 @@ class ShapeStickerContent extends PaintContent {
 
   @override
   void drawing(Offset nowPoint) {}
+
+  @override
+  bool containsPoint(Offset pt) {
+    final Matrix4 matrix = getTransformMatrix();
+    final Matrix4 inv = Matrix4.identity();
+    final double det = inv.copyInverse(matrix);
+    if (det != 0) {
+      final Vector3 local = inv.transform3(Vector3(pt.dx, pt.dy, 0.0));
+      final Offset localPt = Offset(local.x, local.y);
+      if (child.containsPoint(localPt)) {
+        return true;
+      }
+    }
+    // Fallback: test transformed child path
+    try {
+      final Path childPath = child.getPath();
+      if (!childPath.getBounds().isEmpty) {
+        final Path transformedPath = childPath.transform(matrix.storage);
+        if (transformedPath.contains(pt)) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
 
   @override
   void draw(Canvas canvas, Size canvasSize, bool deeper) {
@@ -131,6 +184,10 @@ class ShapeStickerContent extends PaintContent {
       canvas.transform(matrix.storage);
     }
 
+    if (fillColor != null && child.fillColor == null) {
+      child.fillColor = fillColor;
+    }
+
     child.draw(canvas, size, deeper);
 
     canvas.restore();
@@ -138,14 +195,25 @@ class ShapeStickerContent extends PaintContent {
 
   @override
   Path getPath() {
+    final Matrix4 matrix = getTransformMatrix();
+    final Path childPath = child.getPath();
+    if (!childPath.getBounds().isEmpty) {
+      try {
+        return childPath.transform(matrix.storage);
+      } catch (_) {}
+    }
     final Rect rect = Rect.fromCenter(center: offset, width: size.width, height: size.height);
     final Path path = Path()..addRect(rect);
-    return path;
+    try {
+      return path.transform(matrix.storage);
+    } catch (_) {
+      return path;
+    }
   }
 
   @override
   ShapeStickerContent copy() => ShapeStickerContent.data(
-    child: child,
+    child: child.copy(),
     offset: offset,
     scale: scale,
     rotation: rotation,
@@ -157,6 +225,8 @@ class ShapeStickerContent extends PaintContent {
     bottomRightOffset: bottomRightOffset,
     bottomLeftOffset: bottomLeftOffset,
     paint: paint.copyWith(),
+    id: id,
+    fillColor: fillColor,
   );
 
   @override
@@ -176,6 +246,7 @@ class ShapeStickerContent extends PaintContent {
       if (bottomRightOffset != Offset.zero) 'bottomRightOffset': bottomRightOffset.toJson(),
       if (bottomLeftOffset != Offset.zero) 'bottomLeftOffset': bottomLeftOffset.toJson(),
       'paint': paint.toJson(),
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
     };
   }
 

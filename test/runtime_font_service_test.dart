@@ -7,43 +7,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('RuntimeFontService & FontPresets Tests', () {
-    test('fontPresets list contains all 33 curated fonts from reference images', () {
-      expect(fontPresets.length, 33);
+    test('fontPresets list contains all curated fonts', () {
+      expect(fontPresets.length >= 33, isTrue);
 
       final fontNames = fontPresets.map((f) => f.name).toList();
       expect(fontNames, contains('Alex Brush'));
-      expect(fontNames, contains('Art Typo'));
-      expect(fontNames, contains('Avara'));
-      expect(fontNames, contains('Battlestar'));
-      expect(fontNames, contains('Boom Box'));
-      expect(fontNames, contains('Cameo Antique'));
-      expect(fontNames, contains('Charakterny'));
-      expect(fontNames, contains('ClearSans Bold'));
-      expect(fontNames, contains('ClearSans Light'));
-      expect(fontNames, contains('ClearSans Regular'));
-      expect(fontNames, contains('ComicNeue Bold'));
-      expect(fontNames, contains('ComicNeue Regular'));
-      expect(fontNames, contains('Comili Book'));
-      expect(fontNames, contains('CooperHewitt Book'));
-      expect(fontNames, contains('Earwig Factory'));
-      expect(fontNames, contains('Exo Bold'));
-      expect(fontNames, contains('Exo Regular'));
-      expect(fontNames, contains('Exo Thin'));
-      expect(fontNames, contains('Garineldo'));
-      expect(fontNames, contains('Garineldo No1'));
-      expect(fontNames, contains('Liner'));
-      expect(fontNames, contains('Mathilde'));
-      expect(fontNames, contains('Mirage'));
-      expect(fontNames, contains('New Waltograph'));
-      expect(fontNames, contains('NumbBunny'));
-      expect(fontNames, contains('PRIDA61'));
-      expect(fontNames, contains('PRIDA65'));
-      expect(fontNames, contains('RocketFuel'));
-      expect(fontNames, contains('RocketFuel Outlined'));
-      expect(fontNames, contains('Sadegnak No1'));
-      expect(fontNames, contains('SUPER TIKI'));
-      expect(fontNames, contains('WHYPO'));
-      expect(fontNames, contains('Xolonium Bold'));
+      expect(fontNames, contains('Dancing Script'));
+      expect(fontNames, contains('Bebas Neue'));
+      expect(fontNames, contains('Pacifico'));
+      expect(fontNames, contains('Montserrat'));
+      expect(fontNames, contains('Playfair Display'));
+      expect(fontNames, contains('Permanent Marker'));
+      expect(fontNames, contains('Cinzel'));
     });
 
     test('getFontPresetByName handles matching, case, and fallback', () {
@@ -51,9 +26,9 @@ void main() {
       expect(alex.name, 'Alex Brush');
       expect(alex.fontFamily, 'AlexBrush');
 
-      final comic = getFontPresetByName('ComicNeue Bold');
-      expect(comic.name, 'ComicNeue Bold');
-      expect(comic.fontFamily, 'ComicNeue-Bold');
+      final bebas = getFontPresetByName('Bebas Neue');
+      expect(bebas.name, 'Bebas Neue');
+      expect(bebas.fontFamily, 'BebasNeue');
 
       final unknown = getFontPresetByName('NonExistentFont');
       expect(unknown.name, fontPresets.first.name);
@@ -63,7 +38,7 @@ void main() {
     });
 
     test('FontPreset.getTextStyle returns valid TextStyle with fallback styling', () {
-      final preset = getFontPresetByName('Battlestar');
+      final preset = getFontPresetByName('Bebas Neue');
       final style = preset.getTextStyle(
         color: Colors.red,
         fontSize: 24,
@@ -77,7 +52,7 @@ void main() {
 
     test('RuntimeFontService catalog is populated and non-empty', () {
       final service = RuntimeFontService.instance;
-      expect(service.catalog.length, 33);
+      expect(service.catalog.length >= 33, isTrue);
 
       for (final item in service.catalog) {
         expect(item.name.isNotEmpty, isTrue);

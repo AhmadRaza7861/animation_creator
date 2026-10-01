@@ -34,12 +34,11 @@ void main() {
       expect(controller.hasPaintingContent, isFalse);
       expect(controller.startPoint, isNull);
 
-      // 3. First finger lifted -> 1 finger remains in navigation gesture
+      // 3. First finger lifted -> 1 finger remains, zoom ends and drawing is re-enabled
       controller.reduceFingerCount(const Offset(100, 100));
       expect(controller.drawConfig.value.fingerCount, 1);
-      // isNavigating remains true until ALL fingers in gesture are lifted
-      expect(controller.isNavigating, isTrue);
-      expect(controller.couldStartDraw, isFalse);
+      expect(controller.isNavigating, isFalse);
+      expect(controller.couldStartDraw, isTrue);
 
       // 4. All fingers lifted -> navigation resets
       controller.reduceFingerCount(const Offset(200, 200));
@@ -191,6 +190,113 @@ void main() {
       // Matrix is back to identity -> reset button disappears
       expect(transformController.value, equals(Matrix4.identity()));
       expect(find.byKey(const Key('reset_zoom_button')), findsNothing);
+    });
+
+    testWidgets('Paint Bucket tool is cancelled during 2-finger zoom and does not trigger fill', (WidgetTester tester) async {
+      final DrawingController controller = DrawingController();
+      final TransformationController transformController = TransformationController();
+
+      // Select Paint Bucket tool
+      controller.setPaintContent(FillContent());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 400,
+                height: 400,
+                child: DrawingBoard(
+                  controller: controller,
+                  transformationController: transformController,
+                  background: Container(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(controller.getHistory.length, 0);
+
+      // 2 fingers touch down to pinch-zoom
+      final TestGesture gesture1 = await tester.createGesture(pointer: 1);
+      final TestGesture gesture2 = await tester.createGesture(pointer: 2);
+
+      await gesture1.down(const Offset(350, 300));
+      await tester.pump(const Duration(milliseconds: 10));
+      await gesture2.down(const Offset(450, 300));
+      await tester.pump(const Duration(milliseconds: 10));
+
+      expect(controller.isNavigating, isTrue);
+      expect(controller.hasPaintingContent, isFalse);
+
+      // Pinch out (zoom in)
+      await gesture1.moveTo(const Offset(300, 300));
+      await gesture2.moveTo(const Offset(500, 300));
+      await tester.pump();
+
+      // Lift both fingers
+      await gesture1.up();
+      await gesture2.up();
+      await tester.pumpAndSettle();
+
+      // Ensure NO fill content was committed to history during zoom
+      expect(controller.getHistory.length, 0);
+      expect(controller.isNavigating, isFalse);
+      expect(controller.isZooming, isFalse);
+      expect(controller.pointerCount, 0);
+    });
+
+    testWidgets('Eyedropper is cancelled during 2-finger zoom and does not change color', (WidgetTester tester) async {
+      final DrawingController controller = DrawingController();
+      final TransformationController transformController = TransformationController();
+
+      controller.setStyle(color: Colors.red);
+      controller.setPaintContent(Eyedropper());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 400,
+                height: 400,
+                child: DrawingBoard(
+                  controller: controller,
+                  transformationController: transformController,
+                  background: Container(color: Colors.blue),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 2 fingers pinch
+      final TestGesture gesture1 = await tester.createGesture(pointer: 1);
+      final TestGesture gesture2 = await tester.createGesture(pointer: 2);
+
+      await gesture1.down(const Offset(350, 300));
+      await gesture2.down(const Offset(450, 300));
+      await tester.pump();
+
+      expect(controller.isNavigating, isTrue);
+      expect(controller.hasPaintingContent, isFalse);
+
+      await gesture1.moveTo(const Offset(320, 300));
+      await gesture2.moveTo(const Offset(480, 300));
+      await tester.pump();
+
+      await gesture1.up();
+      await gesture2.up();
+      await tester.pumpAndSettle();
+
+      // Color remains red
+      expect(controller.getColor, Colors.red);
+      expect(controller.isNavigating, isFalse);
     });
   });
 }

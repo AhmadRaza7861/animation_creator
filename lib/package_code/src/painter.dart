@@ -82,6 +82,9 @@ class Painter extends StatefulWidget {
 }
 
 class _PainterState extends State<Painter> {
+  /// Active pointers on the painter surface
+  final Set<int> _activePointers = <int>{};
+
   /// 最近一次触摸的时间戳，用于手掌拒绝检测
   ///
   /// Timestamp of the last touch, used for palm rejection detection
@@ -91,7 +94,12 @@ class _PainterState extends State<Painter> {
   ///
   /// Handle pointer down event
   void _onPointerDown(PointerDownEvent pde) {
-    if (!widget.drawingController.couldStartDraw) {
+    _activePointers.add(pde.pointer);
+
+    if (_activePointers.length >= 2 || !widget.drawingController.couldStartDraw) {
+      if (widget.drawingController.hasPaintingContent) {
+        widget.drawingController.cancelDraw();
+      }
       return;
     }
 
@@ -101,6 +109,7 @@ class _PainterState extends State<Painter> {
         // 检测触摸面积过大（可能是手掌）
         // size 值通常在 0-20 之间，手掌通常 > 15
         if (pde.size > 15.0) {
+          _activePointers.remove(pde.pointer);
           return;
         }
 
@@ -110,6 +119,7 @@ class _PainterState extends State<Painter> {
           final Duration difference = now.difference(_lastTouchTime!);
           if (difference.inMilliseconds < 100) {
             // 100ms 内有多次触摸，可能是手掌，拒绝
+            _activePointers.remove(pde.pointer);
             return;
           }
         }
@@ -126,11 +136,10 @@ class _PainterState extends State<Painter> {
   ///
   /// Handle pointer move event
   void _onPointerMove(PointerMoveEvent pme) {
-    if (!widget.drawingController.couldDrawing) {
+    if (_activePointers.length >= 2 || !widget.drawingController.couldDrawing) {
       if (widget.drawingController.hasPaintingContent) {
         widget.drawingController.cancelDraw();
       }
-
       return;
     }
 
@@ -146,11 +155,13 @@ class _PainterState extends State<Painter> {
   ///
   /// Handle pointer up event
   void _onPointerUp(PointerUpEvent pue) {
+    _activePointers.remove(pue.pointer);
+
     if (!widget.drawingController.hasPaintingContent) {
       return;
     }
 
-    if (!widget.drawingController.couldDrawing) {
+    if (!widget.drawingController.couldDrawing || _activePointers.isNotEmpty) {
       widget.drawingController.cancelDraw();
       return;
     }
@@ -167,6 +178,7 @@ class _PainterState extends State<Painter> {
   ///
   /// Handle pointer cancel event
   void _onPointerCancel(PointerCancelEvent pce) {
+    _activePointers.remove(pce.pointer);
     if (widget.drawingController.hasPaintingContent) {
       widget.drawingController.cancelDraw();
     }

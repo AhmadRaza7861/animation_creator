@@ -10,14 +10,14 @@ import 'paint_content.dart';
 /// 拖拽绘制图形基类
 ///
 /// 按下记录起点，拖动更新终点，图形绘制在两点构成的矩形内。
-/// 子类只需实现 [drawShape] 即可获得一致的拖拽绘制行为。
+/// 子类只需实现 [getShapePath] 即可获得一致的拖拽绘制行为与闭合区域填充。
 /// 图形沿用当前画笔样式，因此描边/填充由画笔的 `style` 决定。
 ///
 /// Drag-to-draw shape base class.
 ///
 /// Press records the start point, dragging updates the end point, and the shape
 /// is drawn inside the rectangle spanned by the two. Subclasses only implement
-/// [drawShape]. Shapes honour the current paint style, so stroke vs fill is
+/// [getShapePath]. Shapes honour the current paint style, so stroke vs fill is
 /// controlled by the brush's `style`.
 abstract class DragShape extends PaintContent {
   DragShape();
@@ -26,7 +26,9 @@ abstract class DragShape extends PaintContent {
     required this.startPoint,
     required this.endPoint,
     required Paint paint,
-  }) : super.paint(paint);
+    String? id,
+    Color? fillColor,
+  }) : super.paint(paint, id: id, fillColor: fillColor);
 
   /// 起点 / Start point
   Offset? startPoint;
@@ -43,6 +45,28 @@ abstract class DragShape extends PaintContent {
   @override
   void drawing(Offset p) => endPoint = p;
 
+  /// 获取形状的闭合矢量路径 / Get vector path of the shape
+  Path getShapePath(Rect rect, Offset start, Offset end);
+
+  @override
+  Path getPath() {
+    final Offset? a = startPoint;
+    final Offset? b = endPoint;
+    if (a == null || b == null) {
+      return Path();
+    }
+    return getShapePath(Rect.fromPoints(a, b), a, b);
+  }
+
+  @override
+  bool containsPoint(Offset pt) {
+    if (startPoint == null || endPoint == null) return false;
+    final double tolerance = (paint.strokeWidth > 0 ? paint.strokeWidth * 0.5 : 2.0) + 1.0;
+    final Rect bounds = Rect.fromPoints(startPoint!, endPoint!).inflate(tolerance);
+    if (!bounds.contains(pt)) return false;
+    return getPath().contains(pt);
+  }
+
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
     final Offset? a = startPoint;
@@ -50,20 +74,31 @@ abstract class DragShape extends PaintContent {
     if (a == null || b == null) {
       return;
     }
-    drawShape(canvas, Rect.fromPoints(a, b), a, b, paint);
+    final Rect r = Rect.fromPoints(a, b);
+    if (fillColor != null) {
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor!
+        ..isAntiAlias = true;
+      canvas.drawPath(getShapePath(r, a, b), fillPaint);
+    }
+    drawShape(canvas, r, a, b, paint);
   }
 
   /// 在 [rect] 内绘制图形；[start]/[end] 为原始拖拽端点（有方向的图形会用到）
   ///
   /// Draw the shape inside [rect]. [start] / [end] are the raw drag endpoints,
   /// used by directional shapes such as arrows.
-  void drawShape(Canvas canvas, Rect rect, Offset start, Offset end, Paint paint);
+  void drawShape(Canvas canvas, Rect rect, Offset start, Offset end, Paint paint) {
+    canvas.drawPath(getShapePath(rect, start, end), paint);
+  }
 
   @override
   Map<String, dynamic> toContentJson() => <String, dynamic>{
         'startPoint': startPoint?.toJson(),
         'endPoint': endPoint?.toJson(),
         'paint': paint.toJson(),
+        if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
       };
 }
 
@@ -122,176 +157,279 @@ Path _fracPath(Rect r, List<Offset> frac) {
 /// 三角形 / Triangle
 class TriangleShape extends DragShape {
   TriangleShape();
-  TriangleShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  TriangleShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory TriangleShape.fromJson(Map<String, dynamic> d) => TriangleShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'TriangleShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) => canvas.drawPath(
-        _fracPath(r, const <Offset>[Offset(0.5, 0), Offset(1, 1), Offset(0, 1)]),
-        paint,
-      );
+  Path getShapePath(Rect r, Offset s, Offset e) =>
+      _fracPath(r, const <Offset>[Offset(0.5, 0), Offset(1, 1), Offset(0, 1)]);
 
   @override
-  TriangleShape copy() => TriangleShape();
+  TriangleShape copy() => TriangleShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 直角三角形 / Right triangle
 class RightTriangleShape extends DragShape {
   RightTriangleShape();
-  RightTriangleShape.data(
-      {required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  RightTriangleShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory RightTriangleShape.fromJson(Map<String, dynamic> d) => RightTriangleShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'RightTriangleShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) => canvas.drawPath(
-        _fracPath(r, const <Offset>[Offset(0, 0), Offset(0, 1), Offset(1, 1)]),
-        paint,
-      );
+  Path getShapePath(Rect r, Offset s, Offset e) =>
+      _fracPath(r, const <Offset>[Offset(0, 0), Offset(0, 1), Offset(1, 1)]);
 
   @override
-  RightTriangleShape copy() => RightTriangleShape();
+  RightTriangleShape copy() => RightTriangleShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 菱形 / Diamond
 class DiamondShape extends DragShape {
   DiamondShape();
-  DiamondShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  DiamondShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory DiamondShape.fromJson(Map<String, dynamic> d) => DiamondShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'DiamondShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) =>
-      canvas.drawPath(_polyInRect(r, 4), paint);
+  Path getShapePath(Rect r, Offset s, Offset e) => _polyInRect(r, 4);
 
   @override
-  DiamondShape copy() => DiamondShape();
+  DiamondShape copy() => DiamondShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 五边形 / Pentagon
 class PentagonShape extends DragShape {
   PentagonShape();
-  PentagonShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  PentagonShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory PentagonShape.fromJson(Map<String, dynamic> d) => PentagonShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'PentagonShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) =>
-      canvas.drawPath(_polyInRect(r, 5), paint);
+  Path getShapePath(Rect r, Offset s, Offset e) => _polyInRect(r, 5);
 
   @override
-  PentagonShape copy() => PentagonShape();
+  PentagonShape copy() => PentagonShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 六边形 / Hexagon
 class HexagonShape extends DragShape {
   HexagonShape();
-  HexagonShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  HexagonShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory HexagonShape.fromJson(Map<String, dynamic> d) => HexagonShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'HexagonShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) =>
-      canvas.drawPath(_polyInRect(r, 6, rotation: 0), paint);
+  Path getShapePath(Rect r, Offset s, Offset e) => _polyInRect(r, 6, rotation: 0);
 
   @override
-  HexagonShape copy() => HexagonShape();
+  HexagonShape copy() => HexagonShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 星形 / Star
 class StarShape extends DragShape {
   StarShape();
-  StarShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  StarShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory StarShape.fromJson(Map<String, dynamic> d) => StarShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'StarShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) =>
-      canvas.drawPath(_starInRect(r, 5, 0.45), paint);
+  Path getShapePath(Rect r, Offset s, Offset e) => _starInRect(r, 5, 0.45);
 
   @override
-  StarShape copy() => StarShape();
+  StarShape copy() => StarShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 椭圆 / Ellipse
 class EllipseShape extends DragShape {
   EllipseShape();
-  EllipseShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  EllipseShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory EllipseShape.fromJson(Map<String, dynamic> d) => EllipseShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'EllipseShape';
 
   @override
+  Path getShapePath(Rect r, Offset s, Offset e) => Path()..addOval(r);
+
+  @override
   void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) =>
       canvas.drawOval(r, paint);
 
   @override
-  EllipseShape copy() => EllipseShape();
+  EllipseShape copy() => EllipseShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 圆角矩形 / Rounded rectangle
 class RoundedRectShape extends DragShape {
   RoundedRectShape();
-  RoundedRectShape.data(
-      {required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  RoundedRectShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory RoundedRectShape.fromJson(Map<String, dynamic> d) => RoundedRectShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'RoundedRectShape';
+
+  @override
+  Path getShapePath(Rect r, Offset s, Offset e) => Path()
+    ..addRRect(RRect.fromRectAndRadius(r, Radius.circular(min(r.width, r.height) * 0.18)));
 
   @override
   void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) => canvas.drawRRect(
@@ -300,131 +438,188 @@ class RoundedRectShape extends DragShape {
       );
 
   @override
-  RoundedRectShape copy() => RoundedRectShape();
+  RoundedRectShape copy() => RoundedRectShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 平行四边形 / Parallelogram
 class ParallelogramShape extends DragShape {
   ParallelogramShape();
-  ParallelogramShape.data(
-      {required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  ParallelogramShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory ParallelogramShape.fromJson(Map<String, dynamic> d) => ParallelogramShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'ParallelogramShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) => canvas.drawPath(
-        _fracPath(r,
-            const <Offset>[Offset(0.25, 0), Offset(1, 0), Offset(0.75, 1), Offset(0, 1)]),
-        paint,
-      );
+  Path getShapePath(Rect r, Offset s, Offset e) => _fracPath(r,
+      const <Offset>[Offset(0.25, 0), Offset(1, 0), Offset(0.75, 1), Offset(0, 1)]);
 
   @override
-  ParallelogramShape copy() => ParallelogramShape();
+  ParallelogramShape copy() => ParallelogramShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 梯形 / Trapezoid
 class TrapezoidShape extends DragShape {
   TrapezoidShape();
-  TrapezoidShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  TrapezoidShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory TrapezoidShape.fromJson(Map<String, dynamic> d) => TrapezoidShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'TrapezoidShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) => canvas.drawPath(
-        _fracPath(r,
-            const <Offset>[Offset(0.2, 0), Offset(0.8, 0), Offset(1, 1), Offset(0, 1)]),
-        paint,
-      );
+  Path getShapePath(Rect r, Offset s, Offset e) => _fracPath(r,
+      const <Offset>[Offset(0.2, 0), Offset(0.8, 0), Offset(1, 1), Offset(0, 1)]);
 
   @override
-  TrapezoidShape copy() => TrapezoidShape();
+  TrapezoidShape copy() => TrapezoidShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 十字 / 加号 / Cross (plus)
 class CrossShape extends DragShape {
   CrossShape();
-  CrossShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  CrossShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory CrossShape.fromJson(Map<String, dynamic> d) => CrossShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'CrossShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) => canvas.drawPath(
-        _fracPath(r, const <Offset>[
-          Offset(0.34, 0), Offset(0.66, 0), Offset(0.66, 0.34), Offset(1, 0.34),
-          Offset(1, 0.66), Offset(0.66, 0.66), Offset(0.66, 1), Offset(0.34, 1),
-          Offset(0.34, 0.66), Offset(0, 0.66), Offset(0, 0.34), Offset(0.34, 0.34),
-        ]),
-        paint,
-      );
+  Path getShapePath(Rect r, Offset s, Offset e) => _fracPath(r, const <Offset>[
+        Offset(0.34, 0), Offset(0.66, 0), Offset(0.66, 0.34), Offset(1, 0.34),
+        Offset(1, 0.66), Offset(0.66, 0.66), Offset(0.66, 1), Offset(0.34, 1),
+        Offset(0.34, 0.66), Offset(0, 0.66), Offset(0, 0.34), Offset(0.34, 0.34),
+      ]);
 
   @override
-  CrossShape copy() => CrossShape();
+  CrossShape copy() => CrossShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 闪电 / Lightning bolt
 class LightningShape extends DragShape {
   LightningShape();
-  LightningShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  LightningShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory LightningShape.fromJson(Map<String, dynamic> d) => LightningShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'LightningShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) => canvas.drawPath(
-        _fracPath(r, const <Offset>[
-          Offset(0.55, 0), Offset(0.15, 0.55), Offset(0.45, 0.55),
-          Offset(0.3, 1), Offset(0.85, 0.4), Offset(0.5, 0.4),
-        ]),
-        paint,
-      );
+  Path getShapePath(Rect r, Offset s, Offset e) => _fracPath(r, const <Offset>[
+        Offset(0.55, 0), Offset(0.15, 0.55), Offset(0.45, 0.55),
+        Offset(0.3, 1), Offset(0.85, 0.4), Offset(0.5, 0.4),
+      ]);
 
   @override
-  LightningShape copy() => LightningShape();
+  LightningShape copy() => LightningShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 心形 / Heart
 class HeartShape extends DragShape {
   HeartShape();
-  HeartShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  HeartShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory HeartShape.fromJson(Map<String, dynamic> d) => HeartShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'HeartShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) {
+  Path getShapePath(Rect r, Offset s, Offset e) {
     final Offset c = r.center;
     final Path p = Path();
     const int n = 60;
@@ -436,33 +631,46 @@ class HeartShape extends DragShape {
       i == 0 ? p.moveTo(pt.dx, pt.dy) : p.lineTo(pt.dx, pt.dy);
     }
     p.close();
-    canvas.drawPath(p, paint);
+    return p;
   }
 
   @override
-  HeartShape copy() => HeartShape();
+  HeartShape copy() => HeartShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 对话气泡 / Speech bubble
 class SpeechBubbleShape extends DragShape {
   SpeechBubbleShape();
-  SpeechBubbleShape.data(
-      {required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  SpeechBubbleShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory SpeechBubbleShape.fromJson(Map<String, dynamic> d) => SpeechBubbleShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'SpeechBubbleShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) {
+  Path getShapePath(Rect r, Offset s, Offset e) {
     final Rect body = Rect.fromLTRB(r.left, r.top, r.right, r.bottom - r.height * 0.22);
     if (body.isEmpty) {
-      return;
+      return Path();
     }
     final Path bubble = Path()
       ..addRRect(RRect.fromRectAndRadius(
@@ -474,31 +682,45 @@ class SpeechBubbleShape extends DragShape {
       ..lineTo(body.left + body.width * 0.30, r.bottom)
       ..lineTo(body.left + body.width * 0.48, body.bottom - 1)
       ..close();
-    canvas.drawPath(Path.combine(ui.PathOperation.union, bubble, tail), paint);
+    return Path.combine(ui.PathOperation.union, bubble, tail);
   }
 
   @override
-  SpeechBubbleShape copy() => SpeechBubbleShape();
+  SpeechBubbleShape copy() => SpeechBubbleShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 云朵 / Cloud
 class CloudShape extends DragShape {
   CloudShape();
-  CloudShape.data({required super.startPoint, required super.endPoint, required super.paint})
-      : super.data();
+  CloudShape.data({
+    required super.startPoint,
+    required super.endPoint,
+    required super.paint,
+    super.id,
+    super.fillColor,
+  }) : super.data();
+
   factory CloudShape.fromJson(Map<String, dynamic> d) => CloudShape.data(
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   @override
   String get contentType => 'CloudShape';
 
   @override
-  void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) {
+  Path getShapePath(Rect r, Offset s, Offset e) {
     if (r.isEmpty) {
-      return;
+      return Path();
     }
     final double w = r.width;
     final double h = r.height;
@@ -524,11 +746,17 @@ class CloudShape extends DragShape {
           Radius.circular(h * 0.2),
         )),
     );
-    canvas.drawPath(p, paint);
+    return p;
   }
 
   @override
-  CloudShape copy() => CloudShape();
+  CloudShape copy() => CloudShape.data(
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 }
 
 /// 箭头 / Arrow
@@ -545,6 +773,8 @@ class ArrowShape extends DragShape {
     required super.startPoint,
     required super.endPoint,
     required super.paint,
+    super.id,
+    super.fillColor,
   }) : super.data();
 
   factory ArrowShape.fromJson(Map<String, dynamic> d) => ArrowShape.data(
@@ -552,6 +782,8 @@ class ArrowShape extends DragShape {
         startPoint: jsonToOffset(d['startPoint'] as Map<String, dynamic>),
         endPoint: jsonToOffset(d['endPoint'] as Map<String, dynamic>),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
+        id: d['id'] as String?,
+        fillColor: d['fillColor'] != null ? Color((d['fillColor'] as num).toInt()) : null,
       );
 
   /// 是否双向箭头 / Whether both ends have arrow heads
@@ -559,6 +791,44 @@ class ArrowShape extends DragShape {
 
   @override
   String get contentType => 'ArrowShape';
+
+  @override
+  Path getShapePath(Rect r, Offset s, Offset e) {
+    final Offset delta = e - s;
+    final double len = delta.distance;
+    if (len < 1) {
+      return Path();
+    }
+    final Offset u = delta / len;
+    final Offset n = Offset(-u.dy, u.dx);
+    final double head = min(len * 0.32, paint.strokeWidth * 5 + 14);
+    final double halfW = head * 0.5;
+
+    final Offset tailEnd = e - u * head;
+    final Offset shaftStart = doubleHeaded ? s + u * head : s;
+
+    final Path path = Path();
+    path.moveTo(s.dx, s.dy);
+    path.lineTo(e.dx, e.dy);
+
+    final Path headPath = Path()
+      ..moveTo(e.dx, e.dy)
+      ..lineTo(tailEnd.dx + n.dx * halfW, tailEnd.dy + n.dy * halfW)
+      ..lineTo(tailEnd.dx - n.dx * halfW, tailEnd.dy - n.dy * halfW)
+      ..close();
+
+    Path result = Path.combine(ui.PathOperation.union, path, headPath);
+
+    if (doubleHeaded) {
+      final Path headStartPath = Path()
+        ..moveTo(s.dx, s.dy)
+        ..lineTo(shaftStart.dx + n.dx * halfW, shaftStart.dy + n.dy * halfW)
+        ..lineTo(shaftStart.dx - n.dx * halfW, shaftStart.dy - n.dy * halfW)
+        ..close();
+      result = Path.combine(ui.PathOperation.union, result, headStartPath);
+    }
+    return result;
+  }
 
   @override
   void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) {
@@ -599,7 +869,14 @@ class ArrowShape extends DragShape {
   }
 
   @override
-  ArrowShape copy() => ArrowShape(doubleHeaded: doubleHeaded);
+  ArrowShape copy() => ArrowShape.data(
+        doubleHeaded: doubleHeaded,
+        startPoint: startPoint ?? Offset.zero,
+        endPoint: endPoint ?? Offset.zero,
+        paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
+      );
 
   @override
   Map<String, dynamic> toContentJson() =>

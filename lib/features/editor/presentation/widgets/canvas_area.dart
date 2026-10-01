@@ -145,111 +145,124 @@ class CanvasArea extends ConsumerWidget {
               ),
               foreground: activeSticker == null
                   ? null
-                  : Stack(
-                      fit: StackFit.expand,
-                      clipBehavior: Clip.none,
-                      children: [
-                        Positioned.fill(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () {
-                              final createdAt = controller.activeStickerCreatedAt;
-                              if (createdAt != null &&
-                                  DateTime.now().difference(createdAt).inMilliseconds < 450) {
-                                return;
-                              }
-                              controller.stampActiveSticker();
-                            },
+                  : AnimatedBuilder(
+                      animation: controller.drawingController,
+                      builder: (context, child) {
+                        final isNavigating = controller.drawingController.isNavigating ||
+                            controller.drawingController.pointerCount >= 2 ||
+                            controller.drawingController.isZooming ||
+                            controller.drawingController.isPanning;
+                        return IgnorePointer(
+                          ignoring: isNavigating,
+                          child: child,
+                        );
+                      },
+                      child: Stack(
+                        fit: StackFit.expand,
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned.fill(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                final createdAt = controller.activeStickerCreatedAt;
+                                if (createdAt != null &&
+                                    DateTime.now().difference(createdAt).inMilliseconds < 450) {
+                                  return;
+                                }
+                                controller.stampActiveSticker();
+                              },
+                            ),
                           ),
-                        ),
-                        if (activeSticker is ActiveTextSticker)
-                          TextStickerWidget(
-                            key: ValueKey((activeSticker).id),
-                            data: activeSticker,
-                            onUpdate: (offset, scale, rotation) {
-                              (activeSticker).offset = offset;
-                              (activeSticker).scale = scale;
-                              (activeSticker).rotation = rotation;
-                              controller.updateSnapshot();
-                            },
-                            onUpdateEnd: () => controller.recordActiveStickerState(),
-                            onDelete: () {
-                              controller.activeSticker = null;
-                              controller.updateSnapshot();
-                            },
-                            onConfirm: () {
-                              controller.stampActiveSticker();
-                            },
-                          ),
-                        if (activeSticker is ActiveFreehandLineSticker)
-                          FreehandLineStickerWidget(
-                            key: ValueKey((activeSticker).id),
-                            data: activeSticker,
-                            onSnap: (raw, anchor) {
-                              if (controller.showRulerMenu &&
-                                  controller.drawingController.rulerConfig.value.type != RulerType.none) {
-                                return controller.drawingController.rulerConfig.value.projectPoint(raw, anchor);
-                              }
-                              return raw;
-                            },
-                            onUpdate: () {
-                              controller.updateSnapshot();
-                            },
-                            onUpdateEnd: () => controller.recordActiveStickerState(),
-                            onDelete: () {
-                              controller.activeSticker = null;
-                              controller.updateSnapshot();
-                            },
-                            onConfirm: () {
-                              controller.stampActiveSticker();
-                            },
-                          ),
-                        if (activeSticker is ActiveShapeSticker)
-                          ShapeStickerWidget(
-                            key: ValueKey((activeSticker).id),
-                            data: activeSticker,
-                            canvasSize: controller.drawingController.drawConfig.value.size,
-                            onUpdate: (offset, scale, rotation) {
-                              (activeSticker).offset = offset;
-                              (activeSticker).scale = scale;
-                              (activeSticker).rotation = rotation;
-                              controller.updateSnapshot();
-                            },
-                            onUpdateEnd: () => controller.recordActiveStickerState(),
-                            onDelete: () {
-                              controller.activeSticker = null;
-                              controller.updateSnapshot();
-                            },
-                            onConfirm: () {
-                              controller.stampActiveSticker();
-                            },
-                          ),
-                        if (activeSticker is ActiveStraightLineSticker)
-                          StraightLineStickerWidget(
-                            key: ValueKey((activeSticker).id),
-                            data: activeSticker,
-                            onSnap: (raw, anchor) {
-                              if (controller.showRulerMenu &&
-                                  controller.drawingController.rulerConfig.value.type != RulerType.none) {
-                                return controller.drawingController.rulerConfig.value.projectPoint(raw, anchor);
-                              }
-                              return raw;
-                            },
-                            onUpdate: (start, end) {
-                              (activeSticker).startPoint = start;
-                              (activeSticker).endPoint = end;
-                              controller.updateSnapshot();
-                            },
-                            onUpdateEnd: () => controller.recordActiveStickerState(),
-                            onDelete: () {
-                              controller.activeSticker = null;
-                              controller.updateSnapshot();
-                            },
-                            onConfirm: () {
-                              controller.stampActiveSticker();
-                            },
-                          ),
-                      ],
+                          if (activeSticker is ActiveTextSticker)
+                            TextStickerWidget(
+                              key: ValueKey((activeSticker).id),
+                              data: activeSticker,
+                              onUpdate: (offset, scale, rotation) {
+                                (activeSticker).offset = offset;
+                                (activeSticker).scale = scale;
+                                (activeSticker).rotation = rotation;
+                                controller.updateSnapshot();
+                              },
+                              onUpdateEnd: () => controller.recordActiveStickerState(),
+                              onDelete: () {
+                                controller.activeSticker = null;
+                                controller.updateSnapshot();
+                              },
+                              onConfirm: () {
+                                controller.stampActiveSticker();
+                              },
+                            ),
+                          if (activeSticker is ActiveFreehandLineSticker)
+                            FreehandLineStickerWidget(
+                              key: ValueKey((activeSticker).id),
+                              data: activeSticker,
+                              onSnap: (raw, anchor) {
+                                if (controller.showRulerMenu &&
+                                    controller.drawingController.rulerConfig.value.type != RulerType.none) {
+                                  return controller.drawingController.rulerConfig.value.projectPoint(raw, anchor);
+                                }
+                                return raw;
+                              },
+                              onUpdate: () {
+                                controller.updateSnapshot();
+                              },
+                              onUpdateEnd: () => controller.recordActiveStickerState(),
+                              onDelete: () {
+                                controller.activeSticker = null;
+                                controller.updateSnapshot();
+                              },
+                              onConfirm: () {
+                                controller.stampActiveSticker();
+                              },
+                            ),
+                          if (activeSticker is ActiveShapeSticker)
+                            ShapeStickerWidget(
+                              key: ValueKey((activeSticker).id),
+                              data: activeSticker,
+                              canvasSize: controller.drawingController.drawConfig.value.size,
+                              onUpdate: (offset, scale, rotation) {
+                                (activeSticker).offset = offset;
+                                (activeSticker).scale = scale;
+                                (activeSticker).rotation = rotation;
+                                controller.updateSnapshot();
+                              },
+                              onUpdateEnd: () => controller.recordActiveStickerState(),
+                              onDelete: () {
+                                controller.activeSticker = null;
+                                controller.updateSnapshot();
+                              },
+                              onConfirm: () {
+                                controller.stampActiveSticker();
+                              },
+                            ),
+                          if (activeSticker is ActiveStraightLineSticker)
+                            StraightLineStickerWidget(
+                              key: ValueKey((activeSticker).id),
+                              data: activeSticker,
+                              onSnap: (raw, anchor) {
+                                if (controller.showRulerMenu &&
+                                    controller.drawingController.rulerConfig.value.type != RulerType.none) {
+                                  return controller.drawingController.rulerConfig.value.projectPoint(raw, anchor);
+                                }
+                                return raw;
+                              },
+                              onUpdate: (start, end) {
+                                (activeSticker).startPoint = start;
+                                (activeSticker).endPoint = end;
+                                controller.updateSnapshot();
+                              },
+                              onUpdateEnd: () => controller.recordActiveStickerState(),
+                              onDelete: () {
+                                controller.activeSticker = null;
+                                controller.updateSnapshot();
+                              },
+                              onConfirm: () {
+                                controller.stampActiveSticker();
+                              },
+                            ),
+                        ],
+                      ),
                     ),
             ),
             if (activeSticker != null &&

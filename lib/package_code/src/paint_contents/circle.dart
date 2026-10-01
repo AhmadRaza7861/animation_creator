@@ -36,7 +36,9 @@ class Circle extends PaintContent {
     required this.startPoint,
     required this.endPoint,
     required Paint paint,
-  }) : super.paint(paint);
+    String? id,
+    Color? fillColor,
+  }) : super.paint(paint, id: id, fillColor: fillColor);
 
   factory Circle.fromJson(Map<String, dynamic> data) {
     return Circle.data(
@@ -49,6 +51,8 @@ class Circle extends PaintContent {
       paint: data['paint'] != null
           ? jsonToPaint(data['paint'] as Map<String, dynamic>)
           : Paint(),
+      id: data['id'] as String?,
+      fillColor: data['fillColor'] != null ? Color((data['fillColor'] as num).toInt()) : null,
     );
   }
 
@@ -99,7 +103,38 @@ class Circle extends PaintContent {
   }
 
   @override
+  bool containsPoint(Offset pt) {
+    final double tolerance = (paint.strokeWidth > 0 ? paint.strokeWidth * 0.5 : 2.0) + 1.0;
+    if (isEllipse) {
+      final Rect r = Rect.fromPoints(startPoint, endPoint);
+      if (r.width <= 0 || r.height <= 0) return false;
+      final double rx = r.width / 2 + tolerance;
+      final double ry = r.height / 2 + tolerance;
+      final Offset c = r.center;
+      final double dx = pt.dx - c.dx;
+      final double dy = pt.dy - c.dy;
+      return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0;
+    } else {
+      final Offset c = startFromCenter ? startPoint : center;
+      final double effectiveR = radius + tolerance;
+      if (effectiveR <= 0) return false;
+      return (pt - c).distanceSquared <= effectiveR * effectiveR;
+    }
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
+    if (fillColor != null) {
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor!
+        ..isAntiAlias = true;
+      if (isEllipse) {
+        canvas.drawOval(Rect.fromPoints(startPoint, endPoint), fillPaint);
+      } else {
+        canvas.drawCircle(startFromCenter ? startPoint : center, radius, fillPaint);
+      }
+    }
     if (isEllipse) {
       canvas.drawOval(Rect.fromPoints(startPoint, endPoint), paint);
     } else {
@@ -116,6 +151,8 @@ class Circle extends PaintContent {
     center: center,
     radius: radius,
     paint: paint.copyWith(),
+    id: id,
+    fillColor: fillColor,
   );
 
   @override
@@ -135,7 +172,6 @@ class Circle extends PaintContent {
 
   @override
   Map<String, dynamic> toContentJson() {
-
     return <String, dynamic>{
       'isEllipse': isEllipse,
       'startFromCenter': startFromCenter,
@@ -144,6 +180,7 @@ class Circle extends PaintContent {
       'startPoint': startPoint.toJson(),
       'endPoint': endPoint.toJson(),
       'paint': paint.toJson(),
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
     };
   }
 }

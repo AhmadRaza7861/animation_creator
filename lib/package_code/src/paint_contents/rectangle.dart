@@ -18,7 +18,9 @@ class Rectangle extends PaintContent {
     required this.startPoint,
     required this.endPoint,
     required Paint paint,
-  }) : super.paint(paint);
+    String? id,
+    Color? fillColor,
+  }) : super.paint(paint, id: id, fillColor: fillColor);
 
   factory Rectangle.fromJson(Map<String, dynamic> data) {
     return Rectangle.data(
@@ -27,6 +29,8 @@ class Rectangle extends PaintContent {
       paint: data['paint'] != null
           ? jsonToPaint(data['paint'] as Map<String, dynamic>)
           : Paint(),
+      id: data['id'] as String?,
+      fillColor: data['fillColor'] != null ? Color((data['fillColor'] as num).toInt()) : null,
     );
   }
 
@@ -50,12 +54,29 @@ class Rectangle extends PaintContent {
   void drawing(Offset nowPoint) => endPoint = nowPoint;
 
   @override
+  bool containsPoint(Offset pt) {
+    if (startPoint == null || endPoint == null) return false;
+    final double tolerance = (paint.strokeWidth > 0 ? paint.strokeWidth * 0.5 : 2.0) + 1.0;
+    final Rect rect = Rect.fromPoints(startPoint!, endPoint!).inflate(tolerance);
+    return rect.contains(pt);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (startPoint == null || endPoint == null) {
       return;
     }
 
-    canvas.drawRect(Rect.fromPoints(startPoint!, endPoint!), paint);
+    final Rect rect = Rect.fromPoints(startPoint!, endPoint!);
+    if (fillColor != null) {
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor!
+        ..isAntiAlias = true;
+      canvas.drawRect(rect, fillPaint);
+    }
+
+    canvas.drawRect(rect, paint);
   }
 
   @override
@@ -63,6 +84,8 @@ class Rectangle extends PaintContent {
     startPoint: startPoint,
     endPoint: endPoint,
     paint: paint.copyWith(),
+    id: id,
+    fillColor: fillColor,
   );
 
   @override
@@ -73,11 +96,11 @@ class Rectangle extends PaintContent {
 
   @override
   Map<String, dynamic> toContentJson() {
-
     return <String, dynamic>{
       'startPoint': startPoint?.toJson(),
       'endPoint': endPoint?.toJson(),
       'paint': paint.toJson(),
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
     };
   }
 }

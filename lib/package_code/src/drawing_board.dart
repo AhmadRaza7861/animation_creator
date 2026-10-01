@@ -238,11 +238,14 @@ class _DrawingBoardState extends State<DrawingBoard> {
 
   void _onPointerDown(PointerDownEvent event) {
     _activePointers[event.pointer] = event.localPosition;
-    widget.controller.addFingerCount(event.localPosition);
+    final int count = _activePointers.length;
 
-    if (_activePointers.length >= 2) {
+    if (count >= 2) {
       _isNavigating = true;
-      widget.controller.isNavigating = true;
+      widget.controller.setNavigationState(
+        isNavigating: true,
+        pointerCount: count,
+      );
       if (widget.controller.hasPaintingContent) {
         widget.controller.cancelDraw();
       }
@@ -250,8 +253,10 @@ class _DrawingBoardState extends State<DrawingBoard> {
       widget.onInteractionStart?.call(ScaleStartDetails(
         focalPoint: event.position,
         localFocalPoint: event.localPosition,
-        pointerCount: _activePointers.length,
+        pointerCount: count,
       ));
+    } else {
+      widget.controller.updatePointerCount(count);
     }
   }
 
@@ -270,30 +275,66 @@ class _DrawingBoardState extends State<DrawingBoard> {
 
   void _onPointerUp(PointerUpEvent event) {
     _activePointers.remove(event.pointer);
-    widget.controller.reduceFingerCount(event.localPosition);
+    final int count = _activePointers.length;
 
-    if (_activePointers.isEmpty) {
+    if (count == 0) {
       _isNavigating = false;
-      widget.controller.isNavigating = false;
-      widget.controller.resetFingerCount();
+      widget.controller.setNavigationState(
+        isNavigating: false,
+        isZooming: false,
+        isPanning: false,
+        pointerCount: 0,
+      );
       _lastPointers.clear();
       widget.onInteractionEnd?.call(ScaleEndDetails(pointerCount: 0));
+    } else if (count == 1) {
+      _isNavigating = false;
+      widget.controller.setNavigationState(
+        isNavigating: false,
+        isZooming: false,
+        isPanning: false,
+        pointerCount: 1,
+      );
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+      widget.onInteractionEnd?.call(ScaleEndDetails(pointerCount: 1));
     } else {
+      widget.controller.setNavigationState(
+        isNavigating: true,
+        pointerCount: count,
+      );
       _lastPointers = Map<int, Offset>.from(_activePointers);
     }
   }
 
   void _onPointerCancel(PointerCancelEvent event) {
     _activePointers.remove(event.pointer);
-    widget.controller.reduceFingerCount(event.localPosition);
+    final int count = _activePointers.length;
 
-    if (_activePointers.isEmpty) {
+    if (count == 0) {
       _isNavigating = false;
-      widget.controller.isNavigating = false;
-      widget.controller.resetFingerCount();
+      widget.controller.setNavigationState(
+        isNavigating: false,
+        isZooming: false,
+        isPanning: false,
+        pointerCount: 0,
+      );
       _lastPointers.clear();
       widget.onInteractionEnd?.call(ScaleEndDetails(pointerCount: 0));
+    } else if (count == 1) {
+      _isNavigating = false;
+      widget.controller.setNavigationState(
+        isNavigating: false,
+        isZooming: false,
+        isPanning: false,
+        pointerCount: 1,
+      );
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+      widget.onInteractionEnd?.call(ScaleEndDetails(pointerCount: 1));
     } else {
+      widget.controller.setNavigationState(
+        isNavigating: true,
+        pointerCount: count,
+      );
       _lastPointers = Map<int, Offset>.from(_activePointers);
     }
   }
@@ -335,6 +376,18 @@ class _DrawingBoardState extends State<DrawingBoard> {
       while (rotDelta > math.pi) rotDelta -= 2 * math.pi;
       while (rotDelta < -math.pi) rotDelta += 2 * math.pi;
     }
+
+    final double scaleDiff = (scaleDelta - 1.0).abs();
+    final bool isZooming = scaleDiff > 0.003;
+    final double panDist = (centerCurr - centerPrev).distance;
+    final bool isPanning = panDist > 0.5;
+
+    widget.controller.setNavigationState(
+      isNavigating: true,
+      isZooming: isZooming,
+      isPanning: isPanning,
+      pointerCount: _activePointers.length,
+    );
 
     final Matrix4 currentMatrix = _effectiveTransformController.value;
 

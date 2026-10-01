@@ -389,6 +389,7 @@ void main() {
 
       // Tap to fill stroke at (50, 50)
       controller.startDraw(const Offset(50, 50));
+      controller.endDraw();
 
       // Allow async flood fill to complete
       await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -594,6 +595,234 @@ void main() {
       // Verify that 10 pixels above stroke (35, 10) is also filled because it's in the open canvas
       final int openIdx = (10 * width + 35) * 4;
       expect(fillPixels[openIdx + 3], 255);
+    });
+  });
+
+  group('Paint Bucket Closed Shape Overlapping & Touching Fill Tests', () {
+    test('Exact User Scenario: Triangle filled first, then touching Circle filled, then overlapping Rectangle filled', () async {
+      final DrawingController controller = DrawingController();
+      controller.setBoardSize(const Size(400, 400));
+
+      // 1. Add Triangle (bottom)
+      final Triangle triangle = Triangle.data(
+        startPoint: const Offset(100, 200),
+        A: const Offset(200, 160),
+        B: const Offset(100, 350),
+        C: const Offset(300, 350),
+        paint: Paint()..color = const Color(0xFF000000)..style = PaintingStyle.stroke..strokeWidth = 6.0,
+      );
+      controller.addContent(triangle);
+
+      // 2. Add Circle touching/overlapping Triangle border
+      final Circle circle = Circle.data(
+        center: const Offset(250, 160),
+        radius: 60.0,
+        startPoint: const Offset(250, 160),
+        endPoint: const Offset(310, 160),
+        startFromCenter: true,
+        paint: Paint()..color = const Color(0xFF000000)..style = PaintingStyle.stroke..strokeWidth = 6.0,
+      );
+      controller.addContent(circle);
+
+      // 3. Add Rectangle touching/overlapping Triangle and Circle
+      final Rectangle rectangle = Rectangle.data(
+        startPoint: const Offset(120, 110),
+        endPoint: const Offset(200, 180),
+        paint: Paint()..color = const Color(0xFF000000)..style = PaintingStyle.stroke..strokeWidth = 6.0,
+      );
+      controller.addContent(rectangle);
+
+      // Set Paint Bucket tool with Dark Red
+      controller.setPaintContent(FillContent());
+      controller.setStyle(color: const Color(0xFF9E2A2B));
+
+      // Action 1: Fill Triangle by tapping inside triangle at (200, 280)
+      controller.startDraw(const Offset(200, 280));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(triangle.fillColor, const Color(0xFF9E2A2B), reason: 'Triangle must be filled with red');
+      expect(circle.fillColor, isNull, reason: 'Circle must NOT be filled yet');
+      expect(rectangle.fillColor, isNull, reason: 'Rectangle must NOT be filled yet');
+
+      // Action 2: Fill Circle by tapping inside circle at (270, 160) with Blue
+      controller.setStyle(color: const Color(0xFF1E88E5));
+      controller.startDraw(const Offset(270, 160));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(triangle.fillColor, const Color(0xFF9E2A2B), reason: 'Triangle remains filled with red');
+      expect(circle.fillColor, const Color(0xFF1E88E5), reason: 'Circle must now be filled with blue');
+      expect(rectangle.fillColor, isNull, reason: 'Rectangle must NOT be filled yet');
+
+      // Action 3: Fill Rectangle by tapping inside rectangle at (150, 140) with Green
+      controller.setStyle(color: const Color(0xFF43A047));
+      controller.startDraw(const Offset(150, 140));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(triangle.fillColor, const Color(0xFF9E2A2B), reason: 'Triangle remains filled with red');
+      expect(circle.fillColor, const Color(0xFF1E88E5), reason: 'Circle remains filled with blue');
+      expect(rectangle.fillColor, const Color(0xFF43A047), reason: 'Rectangle must now be filled with green');
+
+      // Action 4: Re-color Triangle by tapping inside triangle with Yellow
+      controller.setStyle(color: const Color(0xFFFFEB3B));
+      controller.startDraw(const Offset(200, 280));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(triangle.fillColor, const Color(0xFFFFEB3B), reason: 'Triangle re-colored to yellow');
+      expect(circle.fillColor, const Color(0xFF1E88E5), reason: 'Circle remains blue');
+      expect(rectangle.fillColor, const Color(0xFF43A047), reason: 'Rectangle remains green');
+
+      // Action 5: Test Undo
+      controller.undo();
+      expect(triangle.fillColor, const Color(0xFF9E2A2B), reason: 'Undo reverts triangle to red');
+
+      controller.undo();
+      expect(rectangle.fillColor, isNull, reason: 'Undo reverts rectangle fill to null');
+
+      // Action 6: Test Redo
+      controller.redo();
+      expect(rectangle.fillColor, const Color(0xFF43A047), reason: 'Redo restores rectangle green fill');
+
+      controller.redo();
+      expect(triangle.fillColor, const Color(0xFFFFEB3B), reason: 'Redo restores triangle yellow fill');
+    });
+
+    test('Nested shapes: Tapping inner shape fills only inner shape, tapping outer shape fills outer shape', () async {
+      final DrawingController controller = DrawingController();
+      controller.setBoardSize(const Size(300, 300));
+
+      // Outer rectangle: (50, 50) to (250, 250)
+      final Rectangle outerRect = Rectangle.data(
+        startPoint: const Offset(50, 50),
+        endPoint: const Offset(250, 250),
+        paint: Paint()..color = Colors.black..style = PaintingStyle.stroke..strokeWidth = 4.0,
+      );
+      controller.addContent(outerRect);
+
+      // Inner circle: center at (150, 150), radius 40
+      final Circle innerCircle = Circle.data(
+        center: const Offset(150, 150),
+        radius: 40.0,
+        startPoint: const Offset(150, 150),
+        endPoint: const Offset(190, 150),
+        startFromCenter: true,
+        paint: Paint()..color = Colors.black..style = PaintingStyle.stroke..strokeWidth = 4.0,
+      );
+      controller.addContent(innerCircle);
+
+      controller.setPaintContent(FillContent());
+
+      // Tap inside inner circle at (150, 150) with Red
+      controller.setStyle(color: const Color(0xFFFF0000));
+      controller.startDraw(const Offset(150, 150));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(innerCircle.fillColor, const Color(0xFFFF0000));
+      expect(outerRect.fillColor, isNull);
+
+      // Tap in outer rectangle (outside inner circle) at (70, 70) with Cyan
+      controller.setStyle(color: const Color(0xFF00FFFF));
+      controller.startDraw(const Offset(70, 70));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(innerCircle.fillColor, const Color(0xFFFF0000));
+      expect(outerRect.fillColor, const Color(0xFF00FFFF));
+    });
+
+    test('Rotated ShapeStickerContent fills accurately within rotated boundary', () async {
+      final DrawingController controller = DrawingController();
+      controller.setBoardSize(const Size(300, 300));
+
+      final childTriangle = Triangle.data(
+        startPoint: const Offset(0, 0),
+        A: const Offset(50, 0),
+        B: const Offset(0, 100),
+        C: const Offset(100, 100),
+        paint: Paint()..color = Colors.black..style = PaintingStyle.stroke..strokeWidth = 4.0,
+      );
+
+      final ShapeStickerContent sticker = ShapeStickerContent.data(
+        child: childTriangle,
+        offset: const Offset(150, 150),
+        scale: 1.0,
+        rotation: 0.785398, // 45 degrees
+        size: const Size(100, 100),
+        paint: Paint()..color = Colors.black..style = PaintingStyle.stroke..strokeWidth = 4.0,
+      );
+      controller.addContent(sticker);
+
+      controller.setPaintContent(FillContent());
+
+      // Tap center of rotated sticker (150, 150) with Purple
+      controller.setStyle(color: const Color(0xFF9C27B0));
+      controller.startDraw(const Offset(150, 150));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(sticker.fillColor, const Color(0xFF9C27B0));
+      expect(childTriangle.fillColor, const Color(0xFF9C27B0));
+    });
+
+    test('All DragShape polygon types maintain independent fillable boundaries', () async {
+      final DrawingController controller = DrawingController();
+      controller.setBoardSize(const Size(400, 400));
+
+      final DiamondShape diamond = DiamondShape.data(
+        startPoint: const Offset(50, 50),
+        endPoint: const Offset(150, 150),
+        paint: Paint()..color = Colors.black..style = PaintingStyle.stroke..strokeWidth = 4.0,
+      );
+      final StarShape star = StarShape.data(
+        startPoint: const Offset(120, 50), // touching diamond
+        endPoint: const Offset(220, 150),
+        paint: Paint()..color = Colors.black..style = PaintingStyle.stroke..strokeWidth = 4.0,
+      );
+      final HeartShape heart = HeartShape.data(
+        startPoint: const Offset(80, 130), // touching diamond and star
+        endPoint: const Offset(180, 230),
+        paint: Paint()..color = Colors.black..style = PaintingStyle.stroke..strokeWidth = 4.0,
+      );
+
+      controller.addContent(diamond);
+      controller.addContent(star);
+      controller.addContent(heart);
+
+      controller.setPaintContent(FillContent());
+
+      // Fill star first at (170, 100)
+      controller.setStyle(color: const Color(0xFFFFD700));
+      controller.startDraw(const Offset(170, 100));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(star.fillColor, const Color(0xFFFFD700));
+      expect(diamond.fillColor, isNull);
+      expect(heart.fillColor, isNull);
+
+      // Fill diamond at (100, 100)
+      controller.setStyle(color: const Color(0xFF00BCD4));
+      controller.startDraw(const Offset(100, 100));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(diamond.fillColor, const Color(0xFF00BCD4));
+      expect(star.fillColor, const Color(0xFFFFD700));
+      expect(heart.fillColor, isNull);
+
+      // Fill heart at (130, 180)
+      controller.setStyle(color: const Color(0xFFE91E63));
+      controller.startDraw(const Offset(130, 180));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(heart.fillColor, const Color(0xFFE91E63));
+      expect(diamond.fillColor, const Color(0xFF00BCD4));
+      expect(star.fillColor, const Color(0xFFFFD700));
     });
   });
 }

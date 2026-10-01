@@ -11,13 +11,17 @@ class Pentagon extends PaintContent {
     required this.startPoint,
     required this.endPoint,
     required Paint paint,
-  }) : super.paint(paint);
+    String? id,
+    Color? fillColor,
+  }) : super.paint(paint, id: id, fillColor: fillColor);
 
   factory Pentagon.fromJson(Map<String, dynamic> data) {
     return Pentagon.data(
       startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>),
       endPoint: jsonToOffset(data['endPoint'] as Map<String, dynamic>),
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      id: data['id'] as String?,
+      fillColor: data['fillColor'] != null ? Color((data['fillColor'] as num).toInt()) : null,
     );
   }
 
@@ -34,9 +38,26 @@ class Pentagon extends PaintContent {
   void drawing(Offset nowPoint) => endPoint = nowPoint;
 
   @override
+  bool containsPoint(Offset pt) {
+    if (startPoint == null || endPoint == null) return false;
+    final double tolerance = (paint.strokeWidth > 0 ? paint.strokeWidth * 0.5 : 2.0) + 1.0;
+    final Rect rect = Rect.fromPoints(startPoint!, endPoint!).inflate(tolerance);
+    if (!rect.contains(pt)) return false;
+    return getPath().contains(pt);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (startPoint == null || endPoint == null) return;
-    canvas.drawPath(getPath(), paint);
+    final Path path = getPath();
+    if (fillColor != null) {
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor!
+        ..isAntiAlias = true;
+      canvas.drawPath(path, fillPaint);
+    }
+    canvas.drawPath(path, paint);
   }
 
   @override
@@ -44,6 +65,8 @@ class Pentagon extends PaintContent {
         startPoint: startPoint,
         endPoint: endPoint,
         paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
       );
 
   @override
@@ -75,6 +98,7 @@ class Pentagon extends PaintContent {
       'startPoint': startPoint?.toJson(),
       'endPoint': endPoint?.toJson(),
       'paint': paint.toJson(),
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
     };
   }
 }
@@ -86,13 +110,17 @@ class Heart extends PaintContent {
     required this.startPoint,
     required this.endPoint,
     required Paint paint,
-  }) : super.paint(paint);
+    String? id,
+    Color? fillColor,
+  }) : super.paint(paint, id: id, fillColor: fillColor);
 
   factory Heart.fromJson(Map<String, dynamic> data) {
     return Heart.data(
       startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>),
       endPoint: jsonToOffset(data['endPoint'] as Map<String, dynamic>),
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      id: data['id'] as String?,
+      fillColor: data['fillColor'] != null ? Color((data['fillColor'] as num).toInt()) : null,
     );
   }
 
@@ -109,9 +137,26 @@ class Heart extends PaintContent {
   void drawing(Offset nowPoint) => endPoint = nowPoint;
 
   @override
+  bool containsPoint(Offset pt) {
+    if (startPoint == null || endPoint == null) return false;
+    final double tolerance = (paint.strokeWidth > 0 ? paint.strokeWidth * 0.5 : 2.0) + 1.0;
+    final Rect rect = Rect.fromPoints(startPoint!, endPoint!).inflate(tolerance);
+    if (!rect.contains(pt)) return false;
+    return getPath().contains(pt);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (startPoint == null || endPoint == null) return;
-    canvas.drawPath(getPath(), paint);
+    final Path path = getPath();
+    if (fillColor != null) {
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor!
+        ..isAntiAlias = true;
+      canvas.drawPath(path, fillPaint);
+    }
+    canvas.drawPath(path, paint);
   }
 
   @override
@@ -119,6 +164,8 @@ class Heart extends PaintContent {
         startPoint: startPoint,
         endPoint: endPoint,
         paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
       );
 
   @override
@@ -156,6 +203,7 @@ class Heart extends PaintContent {
       'startPoint': startPoint?.toJson(),
       'endPoint': endPoint?.toJson(),
       'paint': paint.toJson(),
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
     };
   }
 }
@@ -167,13 +215,17 @@ class CubeShape extends PaintContent {
     required this.startPoint,
     required this.endPoint,
     required Paint paint,
-  }) : super.paint(paint);
+    String? id,
+    Color? fillColor,
+  }) : super.paint(paint, id: id, fillColor: fillColor);
 
   factory CubeShape.fromJson(Map<String, dynamic> data) {
     return CubeShape.data(
       startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>),
       endPoint: jsonToOffset(data['endPoint'] as Map<String, dynamic>),
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      id: data['id'] as String?,
+      fillColor: data['fillColor'] != null ? Color((data['fillColor'] as num).toInt()) : null,
     );
   }
 
@@ -190,9 +242,26 @@ class CubeShape extends PaintContent {
   void drawing(Offset nowPoint) => endPoint = nowPoint;
 
   @override
+  bool containsPoint(Offset pt) {
+    if (startPoint == null || endPoint == null) return false;
+    final double tolerance = (paint.strokeWidth > 0 ? paint.strokeWidth * 0.5 : 2.0) + 1.0;
+    final Rect rect = Rect.fromPoints(startPoint!, endPoint!).inflate(tolerance);
+    if (!rect.contains(pt)) return false;
+    return getPath().contains(pt);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (startPoint == null || endPoint == null) return;
-    canvas.drawPath(getPath(), paint);
+    final Path path = getPath();
+    if (fillColor != null) {
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor!
+        ..isAntiAlias = true;
+      canvas.drawPath(path, fillPaint);
+    }
+    canvas.drawPath(path, paint);
   }
 
   @override
@@ -200,6 +269,8 @@ class CubeShape extends PaintContent {
         startPoint: startPoint,
         endPoint: endPoint,
         paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
       );
 
   @override
@@ -234,6 +305,7 @@ class CubeShape extends PaintContent {
       'startPoint': startPoint?.toJson(),
       'endPoint': endPoint?.toJson(),
       'paint': paint.toJson(),
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
     };
   }
 }
@@ -245,13 +317,17 @@ class CylinderShape extends PaintContent {
     required this.startPoint,
     required this.endPoint,
     required Paint paint,
-  }) : super.paint(paint);
+    String? id,
+    Color? fillColor,
+  }) : super.paint(paint, id: id, fillColor: fillColor);
 
   factory CylinderShape.fromJson(Map<String, dynamic> data) {
     return CylinderShape.data(
       startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>),
       endPoint: jsonToOffset(data['endPoint'] as Map<String, dynamic>),
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      id: data['id'] as String?,
+      fillColor: data['fillColor'] != null ? Color((data['fillColor'] as num).toInt()) : null,
     );
   }
 
@@ -268,9 +344,26 @@ class CylinderShape extends PaintContent {
   void drawing(Offset nowPoint) => endPoint = nowPoint;
 
   @override
+  bool containsPoint(Offset pt) {
+    if (startPoint == null || endPoint == null) return false;
+    final double tolerance = (paint.strokeWidth > 0 ? paint.strokeWidth * 0.5 : 2.0) + 1.0;
+    final Rect rect = Rect.fromPoints(startPoint!, endPoint!).inflate(tolerance);
+    if (!rect.contains(pt)) return false;
+    return getPath().contains(pt);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (startPoint == null || endPoint == null) return;
-    canvas.drawPath(getPath(), paint);
+    final Path path = getPath();
+    if (fillColor != null) {
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor!
+        ..isAntiAlias = true;
+      canvas.drawPath(path, fillPaint);
+    }
+    canvas.drawPath(path, paint);
   }
 
   @override
@@ -278,6 +371,8 @@ class CylinderShape extends PaintContent {
         startPoint: startPoint,
         endPoint: endPoint,
         paint: paint.copyWith(),
+        id: id,
+        fillColor: fillColor,
       );
 
   @override
@@ -310,6 +405,7 @@ class CylinderShape extends PaintContent {
       'startPoint': startPoint?.toJson(),
       'endPoint': endPoint?.toJson(),
       'paint': paint.toJson(),
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
     };
   }
 }

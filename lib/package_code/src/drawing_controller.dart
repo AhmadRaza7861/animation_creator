@@ -18,6 +18,8 @@ import 'paint_contents/blur.dart';
 import 'paint_contents/smudge.dart';
 import 'paint_contents/lasso.dart';
 import 'paint_contents/stroke_recolor.dart';
+import 'paint_contents/shape_fill.dart';
+import 'paint_contents/shape_sticker.dart';
 import 'ruler/ruler_config.dart';
 import 'ruler/mirror_content.dart';
 
@@ -658,6 +660,9 @@ class DrawingController extends ChangeNotifier {
   Color get getColor => drawConfig.value.color;
 
   bool _isNavigating = false;
+  bool _isZooming = false;
+  bool _isPanning = false;
+  int _pointerCount = 0;
 
   /// Whether the canvas is currently being navigated (pinch-to-zoom, pan, rotate).
   /// When true, all drawing, shape creation, lasso, eraser, and editing actions are disabled.
@@ -672,15 +677,85 @@ class DrawingController extends ChangeNotifier {
     }
   }
 
-  /// 能否开始绘制（无多指触摸且不在导航中时）
-  ///
-  /// Whether drawing can start (when no multi-touch navigation gesture is active)
-  bool get couldStartDraw => drawConfig.value.fingerCount <= 1 && !_isNavigating;
+  /// Whether pinch-to-zoom is actively modifying canvas scale
+  bool get isZooming => _isZooming;
+  set isZooming(bool val) {
+    if (_isZooming != val) {
+      _isZooming = val;
+      if (val && hasPaintingContent) {
+        cancelDraw();
+      }
+      notifyListeners();
+    }
+  }
 
-  /// 能否进行绘制（无多指触摸且不在导航中时）
+  /// Whether 2-finger panning is actively moving canvas
+  bool get isPanning => _isPanning;
+  set isPanning(bool val) {
+    if (_isPanning != val) {
+      _isPanning = val;
+      if (val && hasPaintingContent) {
+        cancelDraw();
+      }
+      notifyListeners();
+    }
+  }
+
+  /// Number of active pointers currently on the canvas
+  int get pointerCount => _pointerCount;
+
+  /// Update comprehensive navigation state in one call
+  void setNavigationState({
+    required bool isNavigating,
+    bool isZooming = false,
+    bool isPanning = false,
+    int pointerCount = 0,
+  }) {
+    bool changed = false;
+    if (_isNavigating != isNavigating) {
+      _isNavigating = isNavigating;
+      changed = true;
+    }
+    if (_isZooming != isZooming) {
+      _isZooming = isZooming;
+      changed = true;
+    }
+    if (_isPanning != isPanning) {
+      _isPanning = isPanning;
+      changed = true;
+    }
+    if (_pointerCount != pointerCount) {
+      _pointerCount = pointerCount;
+      drawConfig.value = drawConfig.value.copyWith(fingerCount: pointerCount);
+      changed = true;
+    }
+    if (isNavigating && hasPaintingContent) {
+      cancelDraw();
+    }
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// 能否开始绘制（严格单指触摸，且绝无缩放/平移/导航手势活动时）
   ///
-  /// Whether drawing is allowed (when no multi-touch navigation gesture is active)
-  bool get couldDrawing => drawConfig.value.fingerCount <= 1 && !_isNavigating;
+  /// Whether drawing can start (strictly exactly one finger and no zoom/pan/navigation active)
+  bool get couldStartDraw =>
+      _pointerCount <= 1 &&
+      drawConfig.value.fingerCount <= 1 &&
+      !_isNavigating &&
+      !_isZooming &&
+      !_isPanning;
+
+  /// 能否进行绘制（严格单指触摸，且绝无缩放/平移/导航手势活动时）
+  ///
+  /// Whether drawing is allowed (strictly exactly one finger and no zoom/pan/navigation active)
+  bool get couldDrawing =>
+      _pointerCount <= 1 &&
+      drawConfig.value.fingerCount <= 1 &&
+      !_isNavigating &&
+      !_isZooming &&
+      !_isPanning;
 
   /// 是否有正在绘制的内容
   ///
@@ -724,11 +799,29 @@ class DrawingController extends ChangeNotifier {
     );
   }
 
+  /// 更新手指计数
+  void updatePointerCount(int count) {
+    _pointerCount = count;
+    drawConfig.value = drawConfig.value.copyWith(fingerCount: count);
+    if (count >= 2) {
+      _isNavigating = true;
+      if (hasPaintingContent) {
+        cancelDraw();
+      }
+    } else {
+      _isNavigating = false;
+      _isZooming = false;
+      _isPanning = false;
+    }
+    notifyListeners();
+  }
+
   /// 增加手指计数（手指按下时调用）
   ///
   /// Increment finger count (called when finger is pressed down)
   void addFingerCount(Offset offset) {
     final int newCount = drawConfig.value.fingerCount + 1;
+    _pointerCount = newCount;
     drawConfig.value = drawConfig.value.copyWith(
       fingerCount: newCount,
     );
@@ -738,6 +831,7 @@ class DrawingController extends ChangeNotifier {
         cancelDraw();
       }
     }
+    notifyListeners();
   }
 
   /// 减少手指计数（手指抬起时调用）
@@ -745,27 +839,38 @@ class DrawingController extends ChangeNotifier {
   /// Decrement finger count (called when finger is released)
   void reduceFingerCount(Offset offset) {
     if (drawConfig.value.fingerCount <= 0) {
+      _pointerCount = 0;
+      _isNavigating = false;
+      _isZooming = false;
+      _isPanning = false;
       return;
     }
 
     final int newCount = drawConfig.value.fingerCount - 1;
+    _pointerCount = newCount;
     drawConfig.value = drawConfig.value.copyWith(
       fingerCount: newCount,
     );
-    if (newCount == 0) {
+    if (newCount <= 1) {
       _isNavigating = false;
+      _isZooming = false;
+      _isPanning = false;
     }
+    notifyListeners();
   }
 
   /// 重置手指计数
   ///
   /// Reset finger count and navigation state
   void resetFingerCount() {
-    if (drawConfig.value.fingerCount != 0 || _isNavigating) {
+    _pointerCount = 0;
+    _isNavigating = false;
+    _isZooming = false;
+    _isPanning = false;
+    if (drawConfig.value.fingerCount != 0) {
       drawConfig.value = drawConfig.value.copyWith(fingerCount: 0);
-      _isNavigating = false;
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   /// 设置绘制样式
@@ -1086,7 +1191,11 @@ class DrawingController extends ChangeNotifier {
       _refresh();
       _refreshDeep();
     } else if (_paintContent is FillContent) {
-      _drawFill(startPoint);
+      newContent = _paintContent.copy();
+      newContent.paint = drawConfig.value.paint.copyWith();
+      newContent.startDraw(startPoint);
+      drawingContent = newContent;
+      _isDrawingValidContent = true;
     } else {
       newContent = _paintContent.copy();
       newContent.paint = drawConfig.value.paint;
@@ -1117,7 +1226,32 @@ class DrawingController extends ChangeNotifier {
       return;
     }
 
-    // 1. First check if user tapped directly on a vector stroke on the active layer
+    // 1. Priority 1: Check if user tapped inside any closed shape on the active layer
+    if (activeLayer.value != null && activeLayer.value!.isVisible && !activeLayer.value!.isLocked) {
+      final LayerData layer = activeLayer.value!;
+      final PaintContent? hitShape = _findHitClosedShape(layer, startPoint);
+      if (hitShape != null) {
+        final Color newColor = drawConfig.value.color;
+        final Color? oldColor = hitShape.fillColor ?? (hitShape is ShapeStickerContent ? hitShape.child.fillColor : null);
+
+        hitShape.fillColor = newColor;
+        if (hitShape is ShapeStickerContent) {
+          hitShape.child.fillColor = newColor;
+        }
+
+        final int hitIdx = layer.history.indexOf(hitShape);
+        final ShapeFillContent shapeFillContent = ShapeFillContent(
+          targetShape: hitShape,
+          oldFillColor: oldColor,
+          newFillColor: newColor,
+          targetIndex: hitIdx,
+        );
+        addContent(shapeFillContent);
+        return;
+      }
+    }
+
+    // 2. Priority 2: Check if user tapped directly on a vector stroke border on the active layer
     if (activeLayer.value != null && activeLayer.value!.isVisible && !activeLayer.value!.isLocked) {
       final LayerData layer = activeLayer.value!;
       final PaintContent? hitStroke = _findHitContent(layer, startPoint);
@@ -1144,7 +1278,7 @@ class DrawingController extends ChangeNotifier {
     final int height = size.height.round();
     if (width <= 0 || height <= 0) return;
 
-    // 2. Otherwise perform high-precision flood fill for enclosed area / raster pixels
+    // 3. Otherwise perform high-precision flood fill for enclosed area / raster pixels
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
 
@@ -1187,11 +1321,25 @@ class DrawingController extends ChangeNotifier {
     }
   }
 
+  PaintContent? _findHitClosedShape(LayerData layer, Offset pt) {
+    final int count = layer.currentIndex.clamp(0, layer.history.length);
+    for (int i = count - 1; i >= 0; i--) {
+      final item = layer.history[i];
+      if (item is FillContent || item is Eyedropper || item is StrokeRecolorContent || item is ShapeFillContent) {
+        continue;
+      }
+      if (item.containsPoint(pt)) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   PaintContent? _findHitContent(LayerData layer, Offset pt) {
     final int count = layer.currentIndex.clamp(0, layer.history.length);
     for (int i = count - 1; i >= 0; i--) {
       final item = layer.history[i];
-      if (item is FillContent || item is Eyedropper || item is StrokeRecolorContent) continue;
+      if (item is FillContent || item is Eyedropper || item is StrokeRecolorContent || item is ShapeFillContent) continue;
       if (_isPointOnContent(item, pt)) {
         return item;
       }
@@ -1563,6 +1711,13 @@ class DrawingController extends ChangeNotifier {
       return;
     }
 
+    if (drawingContent is FillContent) {
+      if (_startPoint != null && (nowPaintRaw - _startPoint!).distance > 15.0) {
+        cancelDraw();
+        return;
+      }
+    }
+
     final List<Offset> route = rulerConfig.value.projectRoute(nowPaintRaw, _startPointRaw, _lastPointRaw);
     _lastPointRaw = nowPaintRaw;
 
@@ -1607,6 +1762,7 @@ class DrawingController extends ChangeNotifier {
 
     _isDrawingValidContent = false;
 
+    final Offset? fillPt = _startPoint;
     _startPoint = null;
     _lastPointRaw = null;
     
@@ -1630,10 +1786,17 @@ class DrawingController extends ChangeNotifier {
       if (drawingContent != null) {
         bool intercepted = false;
         
-        if (drawingContent is Eyedropper) {
+        if (drawingContent is FillContent) {
+          intercepted = true;
+          drawingContent = null;
+          if (fillPt != null && !_isNavigating && !_isZooming && !_isPanning && _pointerCount <= 1 && !isCurrentLayerLocked) {
+            _drawFill(fillPt);
+          }
+        } else if (drawingContent is Eyedropper) {
           intercepted = true;
           final Color? color = (drawingContent as Eyedropper).pickedColor;
-          if (color != null) {
+          drawingContent = null;
+          if (color != null && !_isNavigating && !_isZooming && !_isPanning && _pointerCount <= 1) {
             setStyle(color: color);
           }
         } else if (drawingContent is Lasso) {
@@ -1728,6 +1891,8 @@ class DrawingController extends ChangeNotifier {
       final item = layer.history[lastIndex];
       if (item is StrokeRecolorContent) {
         item.revert();
+      } else if (item is ShapeFillContent) {
+        item.revert();
       }
       layer.currentIndex = lastIndex;
       _refreshDeep();
@@ -1764,6 +1929,8 @@ class DrawingController extends ChangeNotifier {
     if (layer.currentIndex < layer.history.length) {
       final item = layer.history[layer.currentIndex];
       if (item is StrokeRecolorContent) {
+        item.apply();
+      } else if (item is ShapeFillContent) {
         item.apply();
       }
       layer.currentIndex = layer.currentIndex + 1;

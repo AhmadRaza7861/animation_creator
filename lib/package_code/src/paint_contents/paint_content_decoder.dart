@@ -20,6 +20,7 @@ import 'image.dart';
 import 'empty_content.dart';
 import '../ruler/mirror_content.dart';
 import 'extra_shapes.dart';
+import 'shapes.dart';
 import 'dashed_line.dart';
 import 'dotted_line.dart';
 import 'highlighter_line.dart';
@@ -27,8 +28,9 @@ import 'image_tip_brush.dart';
 import 'shape_brush_line.dart';
 import 'tip_brush.dart';
 import 'stroke_recolor.dart';
+import 'shape_fill.dart';
 
-PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
+PaintContent? decodePaintContent(String type, Map<String, dynamic> data, [List<PaintContent>? history]) {
   switch (type) {
     case 'SimpleLine':
       // Backward compatibility: check if it's the old freehand SimpleLine
@@ -88,6 +90,38 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
       return CubeShape.fromJson(data);
     case 'CylinderShape':
       return CylinderShape.fromJson(data);
+    case 'TriangleShape':
+      return TriangleShape.fromJson(data);
+    case 'RightTriangleShape':
+      return RightTriangleShape.fromJson(data);
+    case 'DiamondShape':
+      return DiamondShape.fromJson(data);
+    case 'PentagonShape':
+      return PentagonShape.fromJson(data);
+    case 'HexagonShape':
+      return HexagonShape.fromJson(data);
+    case 'StarShape':
+      return StarShape.fromJson(data);
+    case 'EllipseShape':
+      return EllipseShape.fromJson(data);
+    case 'RoundedRectShape':
+      return RoundedRectShape.fromJson(data);
+    case 'ParallelogramShape':
+      return ParallelogramShape.fromJson(data);
+    case 'TrapezoidShape':
+      return TrapezoidShape.fromJson(data);
+    case 'CrossShape':
+      return CrossShape.fromJson(data);
+    case 'LightningShape':
+      return LightningShape.fromJson(data);
+    case 'HeartShape':
+      return HeartShape.fromJson(data);
+    case 'SpeechBubbleShape':
+      return SpeechBubbleShape.fromJson(data);
+    case 'CloudShape':
+      return CloudShape.fromJson(data);
+    case 'ArrowShape':
+      return ArrowShape.fromJson(data);
     case 'DashedLine':
       return DashedLine.fromJson(data);
     case 'DottedLine':
@@ -119,7 +153,9 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data) {
     case 'ScatterBrush':
       return ScatterBrush.fromJson(data);
     case 'StrokeRecolorContent':
-      return StrokeRecolorContent.fromJson(data);
+      return StrokeRecolorContent.fromJson(data, history);
+    case 'ShapeFillContent':
+      return ShapeFillContent.fromJson(data, history);
     default:
       return null;
   }
