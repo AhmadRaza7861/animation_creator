@@ -824,5 +824,90 @@ void main() {
       expect(diamond.fillColor, const Color(0xFF00BCD4));
       expect(star.fillColor, const Color(0xFFFFD700));
     });
+
+    test('DrawingController fills small narrow loop without recoloring the thick bounding stroke', () async {
+      final DrawingController controller = DrawingController();
+      controller.setBoardSize(const Size(200, 200));
+
+      // 1. Draw a thick red loop (strokeWidth: 10) with a narrow interior
+      // Circle at (100, 100) with radius 12 and strokeWidth 10.
+      // The inner hole has radius 12 - 5 = 7px (very small and narrow!).
+      final SmoothLine stroke = SmoothLine.data(
+        points: [
+          const Offset(100, 88),
+          const Offset(112, 100),
+          const Offset(100, 112),
+          const Offset(88, 100),
+          const Offset(100, 88),
+        ],
+        strokeWidthList: [10.0, 10.0, 10.0, 10.0, 10.0],
+        paint: Paint()
+          ..color = const Color(0xFFFF0000) // Red stroke
+          ..strokeWidth = 10.0
+          ..style = PaintingStyle.stroke,
+      );
+      controller.addContent(stroke);
+
+      // 2. Select Paint tool with Teal (0xFF00897B)
+      controller.setPaintContent(FillContent());
+      controller.setStyle(color: const Color(0xFF00897B));
+
+      // 3. Tap inside/near the narrow loop at (100, 100)
+      controller.startDraw(const Offset(100, 100));
+      controller.endDraw();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      // 4. Verify that the stroke remains RED (not recolored to Teal!)
+      expect(stroke.paint.color, equals(const Color(0xFFFF0000)), reason: 'Bounding stroke must preserve its original Red color');
+
+      // 5. Verify that a FillContent was added underneath the stroke
+      expect(controller.activeLayer.value!.history.length, 2);
+      expect(controller.activeLayer.value!.history[1], isA<FillContent>());
+      final FillContent fill = controller.activeLayer.value!.history[1] as FillContent;
+      expect(fill.isUnderneath, isTrue, reason: 'Fill must be placed underneath the vector stroke');
+    });
+
+    test('FloodFill fills narrow loop when tap point is close to stroke border', () async {
+      const int width = 100;
+      const int height = 100;
+
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 100, 100));
+      final Paint strokePaint = Paint()
+        ..color = const Color(0xFFFF0000)
+        ..strokeWidth = 10.0
+        ..style = PaintingStyle.stroke;
+
+      // Draw a small loop with 8px radius
+      canvas.drawCircle(const Offset(50, 50), 12, strokePaint);
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image snapshotImage = await picture.toImage(width, height);
+
+      // Tap slightly off-center at (53, 50) close to the inner border
+      const Color tealColor = Color(0xFF00897B);
+      final FloodFillResult? result = await FloodFill.fillWithResult(
+        image: snapshotImage,
+        startPoint: const Offset(53, 50),
+        fillColor: tealColor,
+        tolerance: 0.15,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.isUnderneath, isTrue);
+
+      final ByteData? filledData = await result.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final Uint8List pixels = filledData!.buffer.asUint8List();
+
+      // Center (50, 50) must be filled with Teal
+      final int centerIdx = (50 * width + 50) * 4;
+      expect(pixels[centerIdx + 3], 255);
+      expect(pixels[centerIdx], (tealColor.r * 255).round());
+      expect(pixels[centerIdx + 1], (tealColor.g * 255).round());
+      expect(pixels[centerIdx + 2], (tealColor.b * 255).round());
+
+      // Outside the loop (10, 10) must remain transparent
+      final int outsideIdx = (10 * width + 10) * 4;
+      expect(pixels[outsideIdx + 3], 0);
+    });
   });
 }

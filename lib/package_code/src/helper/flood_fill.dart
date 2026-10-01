@@ -40,7 +40,65 @@ class FloodFill {
     final int startX = startPoint.dx.round().clamp(0, width - 1);
     final int startY = startPoint.dy.round().clamp(0, height - 1);
 
-    final int startIndex = (startY * width + startX) * 4;
+    // Strict boundary threshold for line art:
+    // Any stroke pixel with opacity >= 3 is treated as a solid boundary so flood fill
+    // never leaks through anti-aliased gaps, frame boundaries, or corners.
+    const int boundaryAlphaThreshold = 3;
+
+    // Helper: is pixel (x, y) a stroke boundary?
+    bool isStrokeBoundary(int x, int y) {
+      final int idx = (y * width + x) * 4;
+      return pixels[idx + 3] >= boundaryAlphaThreshold;
+    }
+
+    // 1. SMART SEED RESOLUTION FOR NARROW / SMALL REGIONS
+    // If the tap landed on a boundary/stroke pixel, check if the user was tapping
+    // near/inside an enclosed interior loop (e.g. small spiral, narrow closed area).
+    int effectiveStartX = startX;
+    int effectiveStartY = startY;
+
+    if (isStrokeBoundary(startX, startY)) {
+      int bestSeedX = -1;
+      int bestSeedY = -1;
+      int minArea = 1 << 30;
+
+      // Search expanding rings up to radius 16 for an enclosed interior seed
+      for (int r = 1; r <= 16; r++) {
+        for (int dy = -r; dy <= r; dy++) {
+          for (int dx = -r; dx <= r; dx++) {
+            if (dx * dx + dy * dy > r * r || dx * dx + dy * dy <= (r - 1) * (r - 1)) continue;
+            final int nx = startX + dx;
+            final int ny = startY + dy;
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+
+            if (!isStrokeBoundary(nx, ny)) {
+              final int area = _getEnclosedArea(
+                pixels: pixels,
+                width: width,
+                height: height,
+                seedX: nx,
+                seedY: ny,
+                boundaryAlphaThreshold: boundaryAlphaThreshold,
+                maxArea: minArea,
+              );
+              if (area > 0 && area < minArea) {
+                minArea = area;
+                bestSeedX = nx;
+                bestSeedY = ny;
+              }
+            }
+          }
+        }
+        if (bestSeedX != -1) break;
+      }
+
+      if (bestSeedX != -1) {
+        effectiveStartX = bestSeedX;
+        effectiveStartY = bestSeedY;
+      }
+    }
+
+    final int startIndex = (effectiveStartY * width + effectiveStartX) * 4;
     final int targetR = pixels[startIndex];
     final int targetG = pixels[startIndex + 1];
     final int targetB = pixels[startIndex + 2];
@@ -57,11 +115,6 @@ class FloodFill {
     }
 
     final bool isTargetTransparent = targetA < 20;
-
-    // Strict boundary threshold for line art:
-    // Any stroke pixel with opacity >= 3 is treated as a solid boundary so flood fill
-    // never leaks through anti-aliased gaps, frame boundaries, or corners.
-    const int boundaryAlphaThreshold = 3;
 
     final double colorToleranceSq = (tolerance * 255.0) * (tolerance * 255.0) * 4.0;
 
@@ -108,21 +161,21 @@ class FloodFill {
     }
 
     // If starting point is directly on a boundary stroke and target is transparent, do not fill
-    if (isBoundary(startX, startY)) {
+    if (isBoundary(effectiveStartX, effectiveStartY)) {
       if (isTargetTransparent) {
         return null;
       }
     }
 
-    // 1. Flood Fill using Fast Queue (4-way traversal strictly bounded by boundaries)
+    // 2. Flood Fill using Fast Queue (4-way traversal strictly bounded by boundaries)
     final Uint8List mask = Uint8List(width * height);
     final Int32List queue = Int32List(width * height * 2);
     int head = 0;
     int tail = 0;
 
-    mask[startY * width + startX] = 1;
-    queue[tail++] = startX;
-    queue[tail++] = startY;
+    mask[effectiveStartY * width + effectiveStartX] = 1;
+    queue[tail++] = effectiveStartX;
+    queue[tail++] = effectiveStartY;
 
     while (head < tail) {
       final int x = queue[head++];
@@ -304,5 +357,104 @@ class FloodFill {
 
   static bool _isSameColor(int r1, int g1, int b1, int a1, int r2, int g2, int b2, int a2) {
     return r1 == r2 && g1 == g2 && b1 == b2 && a1 == a2;
+  }
+
+  /// Calculates the area of an enclosed region starting at (seedX, seedY).
+  /// Returns the pixel count if strictly enclosed, or -1 if the region touches canvas edges
+  /// or exceeds maximum allowable area.
+  static int _getEnclosedArea({
+    required Uint8List pixels,
+    required int width,
+    required int height,
+    required int seedX,
+    required int seedY,
+    required int boundaryAlphaThreshold,
+    int maxArea = 1000000,
+  }) {
+    final int totalPixels = width * height;
+    final int maxAllowableArea = (totalPixels * 0.45).toInt().clamp(500, maxArea);
+
+    final Uint8List visited = Uint8List(totalPixels);
+    final Int32List queue = Int32List(maxAllowableArea * 2 + 100);
+    int head = 0;
+    int tail = 0;
+
+    visited[seedY * width + seedX] = 1;
+    queue[tail++] = seedX;
+    queue[tail++] = seedY;
+    int count = 0;
+
+    while (head < tail) {
+      final int x = queue[head++];
+      final int y = queue[head++];
+      count++;
+
+      if (count > maxAllowableArea) {
+        return -1;
+      }
+
+      // If it touches the outer canvas borders, it's not strictly enclosed
+      if (x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1) {
+        return -1;
+      }
+
+      // Right (x + 1, y)
+      if (x + 1 < width) {
+        final int rPos = y * width + (x + 1);
+        if (visited[rPos] == 0 && pixels[rPos * 4 + 3] < boundaryAlphaThreshold) {
+          visited[rPos] = 1;
+          if (tail < queue.length - 2) {
+            queue[tail++] = x + 1;
+            queue[tail++] = y;
+          } else {
+            return -1;
+          }
+        }
+      }
+
+      // Left (x - 1, y)
+      if (x - 1 >= 0) {
+        final int lPos = y * width + (x - 1);
+        if (visited[lPos] == 0 && pixels[lPos * 4 + 3] < boundaryAlphaThreshold) {
+          visited[lPos] = 1;
+          if (tail < queue.length - 2) {
+            queue[tail++] = x - 1;
+            queue[tail++] = y;
+          } else {
+            return -1;
+          }
+        }
+      }
+
+      // Down (x, y + 1)
+      if (y + 1 < height) {
+        final int dPos = (y + 1) * width + x;
+        if (visited[dPos] == 0 && pixels[dPos * 4 + 3] < boundaryAlphaThreshold) {
+          visited[dPos] = 1;
+          if (tail < queue.length - 2) {
+            queue[tail++] = x;
+            queue[tail++] = y + 1;
+          } else {
+            return -1;
+          }
+        }
+      }
+
+      // Up (x, y - 1)
+      if (y - 1 >= 0) {
+        final int uPos = (y - 1) * width + x;
+        if (visited[uPos] == 0 && pixels[uPos * 4 + 3] < boundaryAlphaThreshold) {
+          visited[uPos] = 1;
+          if (tail < queue.length - 2) {
+            queue[tail++] = x;
+            queue[tail++] = y - 1;
+          } else {
+            return -1;
+          }
+        }
+      }
+    }
+
+    return count;
   }
 }

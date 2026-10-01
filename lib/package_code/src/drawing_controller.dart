@@ -1251,34 +1251,11 @@ class DrawingController extends ChangeNotifier {
       }
     }
 
-    // 2. Priority 2: Check if user tapped directly on a vector stroke border on the active layer
-    if (activeLayer.value != null && activeLayer.value!.isVisible && !activeLayer.value!.isLocked) {
-      final LayerData layer = activeLayer.value!;
-      final PaintContent? hitStroke = _findHitContent(layer, startPoint);
-      if (hitStroke != null) {
-        final Color newColor = drawConfig.value.color;
-        if (hitStroke.paint.color != newColor) {
-          final Color oldColor = hitStroke.paint.color;
-          hitStroke.paint.color = newColor;
-          final int hitIdx = layer.history.indexOf(hitStroke);
-          final StrokeRecolorContent recolorContent = StrokeRecolorContent(
-            targetItem: hitStroke,
-            oldColor: oldColor,
-            newColor: newColor,
-            targetIndex: hitIdx,
-          );
-          addContent(recolorContent);
-          return;
-        }
-        return;
-      }
-    }
-
     final int width = size.width.round();
     final int height = size.height.round();
     if (width <= 0 || height <= 0) return;
 
-    // 3. Otherwise perform high-precision flood fill for enclosed area / raster pixels
+    // 2. Perform high-precision flood fill (handles enclosed fills, narrow/small loops, and raster/stroke recoloring)
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
 
@@ -1312,6 +1289,32 @@ class DrawingController extends ChangeNotifier {
     );
 
     if (fillResult != null) {
+      if (!fillResult.isUnderneath) {
+        // This is a stroke re-color operation (e.g. open stroke tapped). If it's a vector stroke on the active layer,
+        // re-color the vector stroke directly so vector undo/redo and clean rendering are preserved.
+        if (activeLayer.value != null && activeLayer.value!.isVisible && !activeLayer.value!.isLocked) {
+          final LayerData layer = activeLayer.value!;
+          final PaintContent? hitStroke = _findHitContent(layer, startPoint);
+          if (hitStroke != null) {
+            final Color newColor = drawConfig.value.color;
+            if (hitStroke.paint.color != newColor) {
+              final Color oldColor = hitStroke.paint.color;
+              hitStroke.paint.color = newColor;
+              final int hitIdx = layer.history.indexOf(hitStroke);
+              final StrokeRecolorContent recolorContent = StrokeRecolorContent(
+                targetItem: hitStroke,
+                oldColor: oldColor,
+                newColor: newColor,
+                targetIndex: hitIdx,
+              );
+              addContent(recolorContent);
+              return;
+            }
+            return;
+          }
+        }
+      }
+
       final FillContent content = FillContent.data(
         image: fillResult.image,
         paint: drawConfig.value.paint.copyWith(),
