@@ -72,6 +72,18 @@ class QuadHomography {
         d = y1 - y0 + g * y1;
         e = y3 - y0 + h * y3;
         f = y0;
+
+        if (!a.isFinite || !b.isFinite || !c.isFinite || !d.isFinite ||
+            !e.isFinite || !f.isFinite || !g.isFinite || !h.isFinite) {
+          a = x1 - x0;
+          b = x3 - x0;
+          c = x0;
+          d = y1 - y0;
+          e = y3 - y0;
+          f = y0;
+          g = 0.0;
+          h = 0.0;
+        }
       }
     }
 
@@ -108,6 +120,11 @@ class QuadHomography {
   static Offset transformPoint(Matrix4 matrix, Offset point) {
     final Vector4 vec = matrix.transform(Vector4(point.dx, point.dy, 0.0, 1.0));
     final double w = vec.w.abs() < 1e-9 ? 1.0 : vec.w;
-    return Offset(vec.x / w, vec.y / w);
+    final double x = vec.x / w;
+    final double y = vec.y / w;
+    if (!x.isFinite || !y.isFinite) {
+      return point;
+    }
+    return Offset(x, y);
   }
 }

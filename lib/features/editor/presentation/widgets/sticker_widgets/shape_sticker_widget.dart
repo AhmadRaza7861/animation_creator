@@ -138,18 +138,14 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     });
   }
 
-  /// Converts a global screen delta into the sticker's local (rotated, scaled, flipped) coordinate space.
+  /// Converts a global screen delta into the sticker's local (rotated, scaled) coordinate space.
   Offset _screenDeltaToLocal(Offset screenDelta) {
     final double s = _scale == 0 ? 1.0 : _scale;
     // Unrotate: R(-_rotation)
     final double cosR = math.cos(-_rotation);
     final double sinR = math.sin(-_rotation);
-    double lx = (screenDelta.dx * cosR - screenDelta.dy * sinR) / s;
-    double ly = (screenDelta.dx * sinR + screenDelta.dy * cosR) / s;
-
-    // Handle flips
-    if (_flipX) lx = -lx;
-    if (_flipY) ly = -ly;
+    final double lx = (screenDelta.dx * cosR - screenDelta.dy * sinR) / s;
+    final double ly = (screenDelta.dx * sinR + screenDelta.dy * cosR) / s;
 
     return Offset(lx, ly);
   }
@@ -565,8 +561,47 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     final double w = widget.data.size.width;
     final double h = widget.data.size.height;
     final double scaleSafe = _scale <= 0.001 ? 1.0 : _scale;
-    final double padV = (64.0 / scaleSafe) + 24.0;
-    final double padH = (44.0 / scaleSafe) + 24.0;
+
+    // In perspective mode or when distorted, calculate extreme corner bounds
+    final double minCornerX = math.min(
+      _topLeftOffset.dx,
+      math.min(w + _topRightOffset.dx, math.min(w + _bottomRightOffset.dx, _bottomLeftOffset.dx)),
+    );
+    final double maxCornerX = math.max(
+      _topLeftOffset.dx,
+      math.max(w + _topRightOffset.dx, math.max(w + _bottomRightOffset.dx, _bottomLeftOffset.dx)),
+    );
+    final double minCornerY = math.min(
+      _topLeftOffset.dy,
+      math.min(_topRightOffset.dy, math.min(h + _bottomRightOffset.dy, h + _bottomLeftOffset.dy)),
+    );
+    final double maxCornerY = math.max(
+      _topLeftOffset.dy,
+      math.max(_topRightOffset.dy, math.max(h + _bottomRightOffset.dy, h + _bottomLeftOffset.dy)),
+    );
+
+    // Symmetrical padding expansion so the center of the content box remains strictly anchored at (w/2, h/2)
+    final double extraH = math.max(
+      0.0,
+      math.max(
+        -math.min(0.0, minCornerX),
+        math.max(0.0, maxCornerX - w),
+      ),
+    );
+    final double extraV = math.max(
+      0.0,
+      math.max(
+        -math.min(0.0, minCornerY),
+        math.max(0.0, maxCornerY - h),
+      ),
+    );
+
+    final double basePadH = (44.0 / scaleSafe) + 24.0;
+    final double basePadV = (64.0 / scaleSafe) + 24.0;
+    final double handleSafetyMargin = 44.0 / scaleSafe;
+
+    final double padH = basePadH + extraH + handleSafetyMargin;
+    final double padV = basePadV + extraV + handleSafetyMargin;
     final double totalWidth = w + padH * 2;
     final double totalHeight = h + padV * 2;
     final double contentLeft = padH;

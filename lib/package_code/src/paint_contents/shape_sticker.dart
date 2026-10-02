@@ -144,8 +144,9 @@ class ShapeStickerContent extends PaintContent {
     final Matrix4 inv = Matrix4.identity();
     final double det = inv.copyInverse(matrix);
     if (det != 0) {
-      final Vector3 local = inv.transform3(Vector3(pt.dx, pt.dy, 0.0));
-      final Offset localPt = Offset(local.x, local.y);
+      final Vector4 localVec = inv.transform(Vector4(pt.dx, pt.dy, 0.0, 1.0));
+      final double lw = localVec.w.abs() < 1e-9 ? 1.0 : localVec.w;
+      final Offset localPt = Offset(localVec.x / lw, localVec.y / lw);
       if (child.containsPoint(localPt)) {
         return true;
       }

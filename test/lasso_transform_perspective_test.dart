@@ -675,6 +675,84 @@ void main() {
       expect(globalPos.dx, equals(50.0));
       expect(globalPos.dy, equals(50.0));
     });
+
+    testWidgets('Perspective handles remain responsive and do not lock after sequential corner movements', (tester) async {
+      final sticker = ActiveShapeSticker(
+        id: 'persp_sticker_test',
+        content: EmptyContent(),
+        size: const Size(200, 200),
+        offset: const Offset(300, 300),
+        scale: 1.0,
+        rotation: 0.0,
+        transformMode: StickerTransformMode.perspective,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                StatefulBuilder(
+                  builder: (context, setState) {
+                    return ShapeStickerWidget(
+                      data: sticker,
+                      onUpdate: (offset, scale, rotation) {
+                        setState(() {});
+                      },
+                      onDelete: () {},
+                      onConfirm: () {},
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Step 1: Move Bottom-Right (P2) inward by (-80, -60)
+      final p2Start = const Offset(400, 400);
+      final g1 = await tester.startGesture(p2Start);
+      await tester.pump();
+      await g1.moveBy(const Offset(-80, -60));
+      await tester.pump();
+      await g1.up();
+      await tester.pumpAndSettle();
+
+      expect(sticker.bottomRightOffset, equals(const Offset(-80, -60)));
+
+      // Step 2: Move Top-Right (P1) far outward by (+120, -100)
+      final p1Start = const Offset(400, 200);
+      final g2 = await tester.startGesture(p1Start);
+      await tester.pump();
+      await g2.moveBy(const Offset(120, -100));
+      await tester.pump();
+      await g2.up();
+      await tester.pumpAndSettle();
+
+      expect(sticker.topRightOffset, equals(const Offset(120, -100)));
+
+      // Step 3: Verify TR handle at new position (520, 100) is NOT locked and can be moved again
+      final g3 = await tester.startGesture(const Offset(520, 100));
+      await tester.pump();
+      await g3.moveBy(const Offset(20, 20));
+      await tester.pump();
+      await g3.up();
+      await tester.pumpAndSettle();
+
+      expect(sticker.topRightOffset, equals(const Offset(140, -80)));
+
+      // Step 4: Verify BR handle at (320, 340) is also NOT locked and can be moved again
+      final g4 = await tester.startGesture(const Offset(320, 340));
+      await tester.pump();
+      await g4.moveBy(const Offset(-30, 20));
+      await tester.pump();
+      await g4.up();
+      await tester.pumpAndSettle();
+
+      expect(sticker.bottomRightOffset, equals(const Offset(-110, -40)));
+    });
   });
 }
 
