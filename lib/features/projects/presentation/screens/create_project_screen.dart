@@ -200,10 +200,25 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         imageQuality: 95,
       );
       if (pickedFile != null && mounted) {
-        setState(() {
-          _backgroundImagePath = pickedFile.path;
-          _backgroundPattern = null;
-        });
+        final double targetRatio = _canvasHeight > 0
+            ? (_canvasWidth / _canvasHeight)
+            : 1.0;
+        final String? croppedPath = await Navigator.push<String?>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ImageCropScreen(
+              imageFile: File(pickedFile.path),
+              targetAspectRatio: targetRatio,
+              title: 'Crop Background',
+            ),
+          ),
+        );
+        if (croppedPath != null && mounted) {
+          setState(() {
+            _backgroundImagePath = croppedPath;
+            _backgroundPattern = null;
+          });
+        }
       }
     } catch (e) {
       debugPrint('Failed to pick background image: $e');

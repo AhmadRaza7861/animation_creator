@@ -291,17 +291,21 @@ class CanvasArea extends ConsumerWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.touch_app_rounded, color: Colors.white70, size: 15),
+                          const Icon(Icons.touch_app_rounded, color: Colors.white70, size: 14),
                           const SizedBox(width: 6),
-                          const Text(
-                            'Drag handles to edit • Tap outside to stamp',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
+                          const Flexible(
+                            child: Text(
+                              'Drag handles to edit • Tap to stamp',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           InkWell(
                             onTap: () {
                               controller.markStickerHintShown();
