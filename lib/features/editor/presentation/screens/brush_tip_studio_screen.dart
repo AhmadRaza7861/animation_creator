@@ -1,14 +1,11 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/helper/ex_value_builder.dart';
 import '../../../../package_code/src/paint_contents/brush_stamps.dart';
-import '../../../../package_code/src/paint_contents/image_tip_brush.dart';
-import '../../../../package_code/src/paint_contents/tip_brush.dart';
 import '../controllers/editor_controller.dart';
 
 /// Tip item representation for vector kinds or bitmap stamps
@@ -30,12 +27,122 @@ class TipItem {
 
   bool get isStamp => stampKey != null;
 
+  String localizedLabel(BuildContext context) {
+    if (stampKey != null) {
+      final tr = context.tr('stamp_${stampKey}_label');
+      if (tr != 'stamp_${stampKey}_label') return tr;
+    }
+    final key = kTipLabelToKey[label];
+    if (key != null) {
+      final tr = context.tr(key);
+      if (tr != key) return tr;
+    }
+    return label;
+  }
+
   @override
   bool operator ==(Object other) => other is TipItem && other.label == label;
 
   @override
   int get hashCode => label.hashCode;
 }
+
+const Map<String, String> kTipLabelToKey = <String, String>{
+  'Hard Round': 'tip_round_hard_label',
+  'Soft Round': 'tip_round_soft_label',
+  'Medium Round': 'tip_round_medium_label',
+  'Flat': 'tip_round_flat_label',
+  'Soft Big': 'tip_round_soft_big_label',
+  'Square': 'tip_square_label',
+  'Soft Square': 'tip_square_soft_label',
+  'Diamond': 'tip_diamond_label',
+  'Triangle': 'tip_triangle_label',
+  'Pentagon': 'tip_pentagon_label',
+  'Hexagon': 'tip_hexagon_label',
+  'Heptagon': 'tip_heptagon_label',
+  'Octagon': 'tip_octagon_label',
+  'Star': 'tip_star_label',
+  '4-Star': 'tip_four_star_label',
+  '6-Star': 'tip_six_star_label',
+  'Cross': 'tip_cross_label',
+  'Ring': 'tip_ring_label',
+  'Heart': 'tip_heart_label',
+  'Flower': 'tip_flower_label',
+  'Leaf': 'tip_leaf_label',
+  'Crescent': 'tip_crescent_label',
+  'Grass': 'tip_grass_label',
+  'Confetti': 'tip_confetti_label',
+  '8-Star': 'tip_eight_star_label',
+  'Pinwheel': 'tip_pinwheel_label',
+  'Blossom': 'tip_blossom_label',
+  'Clover': 'tip_clover_label',
+  'Shell': 'tip_shell_label',
+  'Check': 'tip_checkmark_label',
+  'Sun': 'tip_sun_label',
+  'Ripple': 'tip_ripple_label',
+  'Square Ring': 'tip_square_ring_label',
+  'Spade': 'tip_spade_label',
+  'Music Note': 'tip_music_note_label',
+  'Double Arrow': 'tip_double_arrow_label',
+  'Club': 'tip_club_label',
+  'Shield': 'tip_shield_label',
+  'Blossom 8': 'tip_blossom_8_label',
+  'Diamond Ring': 'tip_diamond_ring_label',
+  'Wave': 'tip_wave_label',
+  'Infinity': 'tip_infinity_label',
+  'Flame': 'tip_flame_label',
+  'Feather': 'tip_feather_label',
+  'Crosshair': 'tip_crosshair_label',
+  'Paw': 'tip_paw_label',
+  'Crown': 'tip_crown_label',
+  'Bowtie': 'tip_bowtie_label',
+  'Butterfly': 'tip_butterfly_label',
+  'Maple Leaf': 'tip_maple_leaf_label',
+  'Gem': 'tip_gem_label',
+  'Atom': 'tip_atom_label',
+  'Puzzle': 'tip_puzzle_label',
+  'Anchor': 'tip_anchor_label',
+  'Fish': 'tip_fish_label',
+  'Mushroom': 'tip_mushroom_label',
+  'Cloud': 'tip_cloud_label',
+  'Pine Tree': 'tip_pine_tree_label',
+  'Rocket': 'tip_rocket_label',
+  'Lightbulb': 'tip_lightbulb_label',
+  'Bell': 'tip_bell_label',
+  'Key': 'tip_key_label',
+  'Hourglass': 'tip_hourglass_label',
+  'Ghost': 'tip_ghost_label',
+  'Circle Outline': 'tip_outline_circle_label',
+  'Square Outline': 'tip_outline_square_label',
+  'Triangle Outline': 'tip_outline_triangle_label',
+  'Hexagon Outline': 'tip_outline_hexagon_label',
+  'Star Outline': 'tip_outline_star_label',
+  'Heart Outline': 'tip_outline_heart_label',
+  'Glyph Star': 'tip_glyph_star_label',
+  'Glyph Flower': 'tip_glyph_flower_label',
+  'Glyph Snow': 'tip_glyph_snow_label',
+  'Glyph Heart': 'tip_glyph_heart_label',
+  'Glyph Note': 'tip_glyph_note_label',
+  'Glyph Clover': 'tip_glyph_clover_label',
+  'Teardrop': 'tip_teardrop_label',
+  'Arrow': 'tip_arrow_label',
+  'Lightning': 'tip_lightning_label',
+  'Snowflake': 'tip_snowflake_label',
+  'Spiral': 'tip_spiral_label',
+  'Gear': 'tip_gear_label',
+  'Burst': 'tip_burst_label',
+  'Spatter': 'tip_spatter_label',
+  'Chalk': 'tip_chalk_label',
+  'Scatter': 'tip_scatter_label',
+  'Bristle': 'tip_bristle_label',
+  'Dry Brush': 'tip_dry_brush_label',
+  'Stipple': 'tip_stipple_label',
+  'Charcoal': 'tip_charcoal_label',
+  'Sponge': 'tip_sponge_label',
+  'Splash': 'tip_splash_label',
+  'Grass Clump': 'tip_grass_clump_label',
+  'Leaf Scatter': 'tip_leaf_scatter_label',
+};
 
 enum TipCategory { all, basic, shapes, stars, symbols, nature, outline, glyph, textures }
 
@@ -544,6 +651,29 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
     );
   }
 
+  String _getCategoryLabel(BuildContext context, TipCategory cat) {
+    switch (cat) {
+      case TipCategory.all:
+        return context.tr('categoryAll');
+      case TipCategory.basic:
+        return context.tr('categoryBasic');
+      case TipCategory.shapes:
+        return context.tr('categoryShapes');
+      case TipCategory.stars:
+        return context.tr('categoryStars');
+      case TipCategory.symbols:
+        return context.tr('categorySymbols');
+      case TipCategory.nature:
+        return context.tr('categoryNature');
+      case TipCategory.outline:
+        return context.tr('categoryOutline');
+      case TipCategory.glyph:
+        return context.tr('categoryGlyphs');
+      case TipCategory.textures:
+        return context.tr('categoryTextures');
+    }
+  }
+
   PreferredSizeWidget _buildAppBar(BuildContext context, Color accent) {
     return AppBar(
       backgroundColor: Colors.white,
@@ -552,18 +682,18 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       leading: const AppBackButton(),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
-            'Customize Brush Tip',
-            style: TextStyle(
+            context.tr('customizeBrushTipTitle'),
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: Color(0xFF1E2024),
             ),
           ),
           Text(
-            'Fine-tune tip shape, spacing, and angle',
-            style: TextStyle(
+            context.tr('customizeBrushTipSubtitle'),
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w400,
               color: Color(0xFF888E9B),
@@ -573,7 +703,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       ),
       actions: [
         Padding(
-          padding: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsetsDirectional.only(end: 12),
           child: TextButton.icon(
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF6B7280),
@@ -582,11 +712,12 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              visualDensity: VisualDensity.compact,
             ),
             icon: const Icon(Icons.restore_rounded, size: 16),
-            label: const Text(
-              'Reset',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            label: Text(
+              context.tr('reset'),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
             onPressed: () {
               setState(() {
@@ -630,42 +761,51 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.gesture_rounded,
+                        size: 16,
+                        color: accent,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.gesture_rounded,
-                      size: 16,
-                      color: accent,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        context.tr('tipPreview', {'name': _selectedItem?.localizedLabel(context) ?? context.tr('customTip')}),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF22252A),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${_selectedItem?.label ?? 'Tip'} Preview',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF22252A),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        context.tr('sizeAndSpacingLabel', {
+                          'size': '${_size.toInt()}',
+                          'spacing': '${(_spacing * 100).toInt()}',
+                        }),
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '${_size.toInt()}px • ${(_spacing * 100).toInt()}% Spacing',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               if (_scratchpadStrokes.isNotEmpty)
                 GestureDetector(
@@ -683,12 +823,12 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF6B7280)),
-                        SizedBox(width: 4),
+                      children: [
+                        const Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF6B7280)),
+                        const SizedBox(width: 4),
                         Text(
-                          'Clear',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)),
+                          context.tr('clear'),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)),
                         ),
                       ],
                     ),
@@ -771,6 +911,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
                     flipY: _flipY,
                     color: config.color,
                     strokeWidth: _size,
+                    doodleHint: context.tr('doodleTipTestHint'),
                   ),
                   size: Size.infinite,
                 ),
@@ -797,7 +938,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
           final isSelected = _category == cat;
 
           return ChoiceChip(
-            label: Text(kCategoryLabels[cat]!),
+            label: Text(_getCategoryLabel(context, cat)),
             selected: isSelected,
             onSelected: (_) {
               setState(() {
@@ -917,22 +1058,26 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              const Text(
-                'Tip Properties',
-                style: TextStyle(
+              Text(
+                context.tr('tipProperties'),
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF1E2024),
                 ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildFlipToggle('Flip X', _flipX, (v) => setState(() => _flipX = v), accent),
-                  const SizedBox(width: 12),
-                  _buildFlipToggle('Flip Y', _flipY, (v) => setState(() => _flipY = v), accent),
+                  _buildFlipToggle(context.tr('flipX'), _flipX, (v) => setState(() => _flipX = v), accent),
+                  const SizedBox(width: 8),
+                  _buildFlipToggle(context.tr('flipY'), _flipY, (v) => setState(() => _flipY = v), accent),
                 ],
               ),
             ],
@@ -940,27 +1085,27 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
           const SizedBox(height: 12),
 
           // Size Slider
-          _buildParamSlider('Size', '${_size.toInt()}px', _size, 1, 100, (v) {
+          _buildParamSlider(context.tr('size'), '${_size.toInt()}px', _size, 1, 100, (v) {
             setState(() => _size = v);
           }, accent),
 
           // Spacing Slider
-          _buildParamSlider('Spacing', '${(_spacing * 100).round()}%', _spacing, 0.05, 2, (v) {
+          _buildParamSlider(context.tr('spacing'), '${(_spacing * 100).round()}%', _spacing, 0.05, 2, (v) {
             setState(() => _spacing = v);
           }, accent),
 
           // Hardness Slider
-          _buildParamSlider('Hardness', '${(_hardness * 100).round()}%', _hardness, 0, 1, (v) {
+          _buildParamSlider(context.tr('hardness'), '${(_hardness * 100).round()}%', _hardness, 0, 1, (v) {
             setState(() => _hardness = v);
           }, accent),
 
           // Roundness Slider
-          _buildParamSlider('Roundness', '${(_roundness * 100).round()}%', _roundness, 0.05, 1, (v) {
+          _buildParamSlider(context.tr('roundness'), '${(_roundness * 100).round()}%', _roundness, 0.05, 1, (v) {
             setState(() => _roundness = v);
           }, accent),
 
           // Angle Slider with Dial
-          _buildParamSlider('Angle', '${_angle.round()}°', _angle, 0, 360, (v) {
+          _buildParamSlider(context.tr('angle'), '${_angle.round()}°', _angle, 0, 360, (v) {
             setState(() => _angle = v);
           }, accent),
         ],
@@ -1104,7 +1249,9 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _selectedItem?.label ?? 'Custom Tip',
+                  _selectedItem?.localizedLabel(context) ?? context.tr('customTip'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1112,7 +1259,10 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
                   ),
                 ),
                 Text(
-                  'Size: ${_size.toInt()}px • Spacing: ${(_spacing * 100).toInt()}%',
+                  context.tr('sizeAndSpacingDetail', {
+                    'size': '${_size.toInt()}',
+                    'spacing': '${(_spacing * 100).toInt()}',
+                  }),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1124,7 +1274,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
 
           // Apply Button
           ElevatedButton.icon(
@@ -1136,12 +1286,16 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             icon: const Icon(Icons.check_rounded, size: 18),
-            label: const Text(
-              'Apply Tip Shape',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            label: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                context.tr('applyTipShape'),
+                maxLines: 1,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],
@@ -1212,6 +1366,7 @@ class _CustomTipScratchpadPainter extends CustomPainter {
     required this.flipY,
     required this.color,
     required this.strokeWidth,
+    this.doodleHint,
   });
 
   final List<PaintContent> strokes;
@@ -1226,6 +1381,7 @@ class _CustomTipScratchpadPainter extends CustomPainter {
   final bool flipY;
   final Color color;
   final double strokeWidth;
+  final String? doodleHint;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1270,9 +1426,9 @@ class _CustomTipScratchpadPainter extends CustomPainter {
       brush.draw(canvas, size, false);
 
       final TextPainter tp = TextPainter(
-        text: const TextSpan(
-          text: '✨ Doodle here to test custom tip feel',
-          style: TextStyle(
+        text: TextSpan(
+          text: doodleHint ?? '✨ Doodle here to test custom tip feel',
+          style: const TextStyle(
             fontSize: 10.5,
             color: Color(0xFF9CA3AF),
             fontWeight: FontWeight.w500,

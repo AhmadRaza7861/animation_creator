@@ -1,8 +1,8 @@
-import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
 import '../constants/app_colors.dart';
+import '../localization/app_localizations.dart';
 import 'primary_button.dart';
 import 'app_back_button.dart';
 
@@ -210,7 +210,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
         elevation: 0,
         surfaceTintColor: Colors.white,
         title: Text(
-          StringConstants.color_picker,
+          context.tr('colorPicker'),
           style: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 18,
@@ -298,7 +298,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
               const SizedBox(height: 15),
 
               // 2. Sliders (Hue, Chroma, Tone, Opacity)
-              _buildSliderLabel(StringConstants.hue, '${_hue.round()}°'),
+              _buildSliderLabel(context.tr('hue'), '${_hue.round()}°'),
              // const SizedBox(height: 4),
               _buildSliderTrack(
                 gradient: const LinearGradient(
@@ -321,7 +321,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
               ),
               //const SizedBox(height: 10),
 
-              _buildSliderLabel(StringConstants.tone, '${_tone.round()}%'),
+              _buildSliderLabel(context.tr('tone'), '${_tone.round()}%'),
               //const SizedBox(height: 4),
               _buildSliderTrack(
                 gradient: LinearGradient(
@@ -338,9 +338,9 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   onChanged: (val) => _updateColorState(tone: val),
                 ),
               ),
-             // const SizedBox(height: 10),
+              // const SizedBox(height: 10),
 
-              _buildSliderLabel(StringConstants.opacity, '${(_opacity * 100).round()}%'),
+              _buildSliderLabel(context.tr('opacity'), '${(_opacity * 100).round()}%'),
              // const SizedBox(height: 4),
               _buildSliderTrack(
                 isCheckered: true,
@@ -481,9 +481,9 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
               const SizedBox(height: 12),
 
               // 4. Dynamic Tonal Palette Section
-              const Text(
-                'Harmonic Tonal Palette',
-                style: TextStyle(
+              Text(
+                context.tr('harmonicTonalPalette'),
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: ColorConstants.darkText,
@@ -536,9 +536,9 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
               const SizedBox(height: 12),
 
               // 5. Preset Brand Swatches
-              const Text(
-                'Curated Presets',
-                style: TextStyle(
+              Text(
+                context.tr('curatedPresets'),
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: ColorConstants.darkText,
@@ -605,7 +605,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
           child: PrimaryButton(
-            text: 'Apply Color',
+            text: context.tr('applyColor'),
             onPressed: () {
               widget.onColorChanged(rgbColor, _opacity);
               Navigator.pop(context);

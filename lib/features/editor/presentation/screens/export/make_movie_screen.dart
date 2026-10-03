@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../../package_code/src/drawing_controller.dart';
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/widgets/app_back_button.dart';
 import '../../controllers/editor_controller.dart';
 import '../../../services/movie_export_service.dart';
@@ -208,9 +209,9 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Select Output Size',
-                          style: TextStyle(
+                        Text(
+                          ctx.tr('selectOutputSize'),
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: ColorConstants.darkText,
@@ -332,9 +333,9 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         leading: const AppBackButton(),
-        title: const Text(
-          'Make Movie',
-          style: TextStyle(
+        title: Text(
+          context.tr('makeMovie'),
+          style: const TextStyle(
             color: ColorConstants.darkText,
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -352,9 +353,9 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Movie Name Label
-                    const Text(
-                      'ANIMATION NAME',
-                      style: TextStyle(
+                    Text(
+                      context.tr('animationName'),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.0,
@@ -380,7 +381,7 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                         ),
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: 'Enter animation name...',
+                          hintText: context.tr('enterAnimationName'),
                           hintStyle: const TextStyle(color: ColorConstants.subTextColor, fontWeight: FontWeight.normal),
                           suffixIcon: _nameController.text.isNotEmpty
                               ? IconButton(
@@ -400,9 +401,9 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                     const SizedBox(height: 20),
 
                     // FORMAT SEGMENT TOGGLE
-                    const Text(
-                      'EXPORT FORMAT',
-                      style: TextStyle(
+                    Text(
+                      context.tr('exportFormat'),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.0,
@@ -422,8 +423,8 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                         children: [
                           Expanded(
                             child: _buildFormatTab(
-                              label: 'MP4 Video',
-                              subLabel: 'High Quality',
+                              label: context.tr('mp4Video'),
+                              subLabel: context.tr('highQuality'),
                               formatValue: 'MP4',
                               icon: Icons.movie_outlined,
                             ),
@@ -431,8 +432,8 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: _buildFormatTab(
-                              label: 'GIF Animation',
-                              subLabel: 'Looping',
+                              label: context.tr('gifAnimation'),
+                              subLabel: context.tr('looping'),
                               formatValue: 'GIF',
                               icon: Icons.gif_box_outlined,
                             ),
@@ -444,9 +445,9 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                     const SizedBox(height: 20),
 
                     // DETAILS Section Header
-                    const Text(
-                      'SETTINGS & OPTIONS',
-                      style: TextStyle(
+                    Text(
+                      context.tr('settingsAndOptions'),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.0,
@@ -466,7 +467,7 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                           // Output Size Row
                           _buildSettingTile(
                             icon: Icons.aspect_ratio_rounded,
-                            title: 'Output Size',
+                            title: context.tr('outputSize'),
                             subtitle: '${_selectedPreset.label} (${_selectedPreset.resolution})',
                             onTap: _showOutputSizePicker,
                             trailing: const Icon(Icons.chevron_right_rounded, color: ColorConstants.mediumText),
@@ -477,8 +478,8 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                           // Transparent Background Row
                           _buildSettingTile(
                             icon: Icons.opacity_rounded,
-                            title: 'Transparent Background',
-                            subtitle: _transparentBackground ? 'Enabled (PNG layers)' : 'Off',
+                            title: context.tr('transparentBackground'),
+                            subtitle: _transparentBackground ? context.tr('enabledPngLayers') : context.tr('off'),
                             trailing: Switch(
                               value: _transparentBackground,
                               activeColor: ColorConstants.primary,
@@ -496,8 +497,8 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                           // Clipax Watermark Row
                           _buildSettingTile(
                             icon: Icons.verified_rounded,
-                            title: 'Clipax Watermark',
-                            subtitle: _includeWatermark ? 'Included on bottom-left' : 'No watermark',
+                            title: context.tr('clipaxWatermark'),
+                            subtitle: _includeWatermark ? context.tr('includedOnBottomLeft') : context.tr('noWatermark'),
                             trailing: Switch(
                               value: _includeWatermark,
                               activeColor: ColorConstants.primary,
@@ -549,15 +550,15 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(26),
                         onTap: _onMakeMoviePressed,
-                        child: const Center(
+                        child: Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.movie_creation_outlined, color: Colors.white, size: 22),
-                              SizedBox(width: 8),
+                              const Icon(Icons.movie_creation_outlined, color: Colors.white, size: 22),
+                              const SizedBox(width: 8),
                               Text(
-                                'MAKE MOVIE',
-                                style: TextStyle(
+                                context.tr('makeMovieBtn'),
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0,
@@ -592,9 +593,9 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
                       children: [
                         _buildInfoColumn(value: '$fps', label: 'FPS'),
                         Container(height: 26, width: 1, color: Colors.white12),
-                        _buildInfoColumn(value: formattedDuration, label: 'DURATION'),
+                        _buildInfoColumn(value: formattedDuration, label: context.tr('duration')),
                         Container(height: 26, width: 1, color: Colors.white12),
-                        _buildInfoColumn(value: '$totalFrames', label: 'TOTAL FRAMES'),
+                        _buildInfoColumn(value: '$totalFrames', label: context.tr('totalFrames')),
                       ],
                     ),
                   ),

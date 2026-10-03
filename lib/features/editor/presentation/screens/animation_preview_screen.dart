@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../controllers/editor_controller.dart'; // contains CanvasBackground definition
@@ -76,9 +77,9 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
         leading: AppBackButton(
           onPressed: _stopAndGoBack,
         ),
-        title: const Text(
-          'Preview Animation',
-          style: TextStyle(
+        title: Text(
+          context.tr('previewAnimation'),
+          style: const TextStyle(
             color: ColorConstants.darkText,
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -168,7 +169,7 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
             GestureDetector(
               onTap: _stopAndGoBack,
               child: Text(
-                'Tap on screen to stop',
+                context.tr('tapOnScreenToStop'),
                 style: TextStyle(
                   color: Colors.grey[500],
                   fontSize: 14,
@@ -191,8 +192,8 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.black12),
         ),
-        child: const Center(
-          child: Text('No frames to animate'),
+        child: Center(
+          child: Text(context.tr('noFramesToAnimate')),
         ),
       );
     }
@@ -257,7 +258,10 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'Frame ${_currentFrameIndex + 1} / ${widget.canvases.length}',
+                  context.tr('frameIndexLabel', {
+                    'current': '${_currentFrameIndex + 1}',
+                    'total': '${widget.canvases.length}',
+                  }),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,

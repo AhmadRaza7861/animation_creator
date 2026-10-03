@@ -12,10 +12,10 @@ import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/app_dialogs.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/project_repository.dart';
 import '../../../templates/domain/template_model.dart';
 import '../widgets/preview_pattern_painter.dart';
-import '../../../editor/presentation/screens/editor_screen.dart';
 import '../../../editor/presentation/screens/canvas_size_screen.dart';
 import '../../../editor/presentation/screens/fps_screen.dart';
 import '../../../editor/presentation/screens/background_presets_screen.dart';
@@ -274,7 +274,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     if (widget.template != null && mounted) {
       AppDialogs.showProgressDialog(
         context,
-        message: 'Creating Project...',
+        message: context.tr('creatingProject'),
       );
     }
 
@@ -1029,13 +1029,13 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                             ),
                           ),
                         // Center +Add text
-                        const Center(
+                        Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 StringConstants.add,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                   color: ColorConstants.subTextColor,

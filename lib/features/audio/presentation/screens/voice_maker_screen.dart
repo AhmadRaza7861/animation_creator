@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../domain/models/audio_clip.dart';
 import '../../services/audio_playback_service.dart';
 import '../../services/voice_maker_service.dart';
@@ -134,9 +135,9 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E1E24)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Voice Maker (TTS)',
-          style: TextStyle(
+        title: Text(
+          context.tr('voiceMaker'),
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1E1E24),
@@ -150,9 +151,9 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Voice Preset Selector
-              const Text(
-                'Character Voice Style',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1E1E24)),
+              Text(
+                context.tr('characterVoiceStyle'),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1E1E24)),
               ),
               const SizedBox(height: 10),
               SizedBox(
@@ -215,9 +216,9 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
               const SizedBox(height: 20),
 
               // Speech Text Input
-              const Text(
-                'Speech Text',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1E1E24)),
+              Text(
+                context.tr('speechText'),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1E1E24)),
               ),
               const SizedBox(height: 8),
               Container(
@@ -232,10 +233,10 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                   onChanged: (_) {
                     _previewClip = null;
                   },
-                  decoration: const InputDecoration(
-                    hintText: 'Type words for your animated character to speak...',
+                  decoration: InputDecoration(
+                    hintText: context.tr('typeWordsForCharacter'),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(14),
+                    contentPadding: const EdgeInsets.all(14),
                   ),
                 ),
               ),
@@ -255,7 +256,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Pitch', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        Text(context.tr('pitch'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                         Text('${_pitch.toStringAsFixed(1)}x', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF9318))),
                       ],
                     ),
@@ -276,7 +277,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Speed', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        Text(context.tr('speed'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                         Text('${_speed.toStringAsFixed(1)}x', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF9318))),
                       ],
                     ),
@@ -315,7 +316,7 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                           size: 20,
                         ),
                         label: Text(
-                          _isPlaying ? 'Stop' : 'Preview',
+                          _isPlaying ? context.tr('pause') : context.tr('preview'),
                           style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF9318)),
                           maxLines: 1,
                           softWrap: false,
@@ -354,9 +355,9 @@ class _VoiceMakerScreenState extends State<VoiceMakerScreen> {
                                 height: 22,
                                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                               )
-                            : const Text(
-                                'Add to timeline',
-                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                            : Text(
+                                context.tr('addToTimeline'),
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                                 maxLines: 1,
                                 softWrap: false,
                               ),

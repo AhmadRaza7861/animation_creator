@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dummy/core/constants/app_colors.dart';
+import 'package:dummy/core/localization/app_localizations.dart';
 
 enum AudioAddSource {
   voiceMaker,
@@ -60,11 +61,11 @@ class AddAudioBottomSheet extends StatelessWidget {
                 ),
               ),
 
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
                 child: Text(
-                  'Add Audio to Animation',
-                  style: TextStyle(
+                  context.tr('addAudioToAnimation'),
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: ColorConstants.darkText,
@@ -77,32 +78,32 @@ class AddAudioBottomSheet extends StatelessWidget {
               // Option 1: Voice maker
               _buildOptionTile(
                 icon: Icons.record_voice_over_rounded,
-                title: 'Voice maker',
-                subtitle: 'Generate animated character voices & speech',
+                title: context.tr('voiceMaker'),
+                subtitle: context.tr('voiceMakerSubtitle'),
                 onTap: () => Navigator.pop(context, AudioAddSource.voiceMaker),
               ),
 
               // Option 2: Audio Library
               _buildOptionTile(
                 icon: Icons.library_music_rounded,
-                title: 'Audio Library',
-                subtitle: 'Sound effects, cartoon boings, whooshes & loops',
+                title: context.tr('audioLibrary'),
+                subtitle: context.tr('audioLibrarySubtitle'),
                 onTap: () => Navigator.pop(context, AudioAddSource.library),
               ),
 
               // Option 3: Audio Recorder
               _buildOptionTile(
                 icon: Icons.mic_rounded,
-                title: 'Audio Recorder',
-                subtitle: 'Record voice-overs directly with microphone',
+                title: context.tr('audioRecorder'),
+                subtitle: context.tr('audioRecorderSubtitle'),
                 onTap: () => Navigator.pop(context, AudioAddSource.recorder),
               ),
 
               // Option 4: Add Audio (File Picker)
               _buildOptionTile(
                 icon: Icons.audio_file_rounded,
-                title: 'Add Audio',
-                subtitle: 'Import MP3, WAV, AAC from device storage',
+                title: context.tr('addAudio'),
+                subtitle: context.tr('addAudioSubtitle'),
                 onTap: () => Navigator.pop(context, AudioAddSource.filePicker),
               ),
 

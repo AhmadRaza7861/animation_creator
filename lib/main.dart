@@ -2,15 +2,19 @@ import 'dart:io';
 import 'package:dummy/utils/theme/theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'core/localization/app_localizations.dart';
+import 'core/localization/locale_provider.dart';
 import 'core/services/runtime_font_service.dart';
 import 'features/projects/data/project_repository.dart';
 import 'features/splash/presentation/screens/splash_screen.dart';
 import 'utils/theme/customThems/app_bar_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await LanguageService.loadSavedLocale();
   RuntimeFontService.instance.init();
 
   SystemChrome.setSystemUIOverlayStyle(
@@ -30,14 +34,24 @@ void main() {
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   final ProjectRepository repository;
   const MyApp({super.key, required this.repository});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocale = ref.watch(localeProvider);
+
     return MaterialApp(
       title: 'Clipax',
+      locale: currentLocale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       navigatorKey: NavigationService.navigatorKey,

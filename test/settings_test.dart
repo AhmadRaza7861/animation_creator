@@ -6,18 +6,24 @@ import 'package:dummy/features/settings/presentation/screens/terms_of_service_sc
 import 'package:dummy/features/settings/presentation/dialogs/rate_us_dialog.dart';
 import 'package:dummy/features/settings/presentation/dialogs/contact_us_dialog.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dummy/features/settings/presentation/screens/language_screen.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Settings & Legal Module Tests', () {
-    testWidgets('SettingsScreen renders Rate Us, Contact Us, Privacy Policy, Terms and version', (tester) async {
+    testWidgets('SettingsScreen renders Language, Rate Us, Contact Us, Privacy Policy, Terms and version', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: SettingsScreen(),
+        const ProviderScope(
+          child: MaterialApp(
+            home: SettingsScreen(),
+          ),
         ),
       );
 
       expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Language'), findsOneWidget);
       expect(find.text('Rate Us'), findsOneWidget);
       expect(find.text('Contact Us'), findsOneWidget);
       expect(find.text('Share Clipax'), findsOneWidget);

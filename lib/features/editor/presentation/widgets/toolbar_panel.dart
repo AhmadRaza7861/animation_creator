@@ -11,18 +11,15 @@ import '../../../../../package_code/paint_contents.dart';
 import '../../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_assets.dart';
-import '../../../../../core/widgets/font_presets.dart';
-import '../../../../../core/services/runtime_font_service.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/widgets/app_dialogs.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
 import '../screens/export/make_movie_screen.dart';
 import '../screens/video_trimming_screen.dart';
-import '../screens/image_crop_screen.dart';
 import '../screens/font_selection_screen.dart';
 import 'sticker_widgets/text_sticker_widget.dart';
 import 'sticker_widgets/shape_sticker_widget.dart';
-import '../../services/global_clipboard.dart';
 
 class ToolbarPanel extends ConsumerStatefulWidget {
   final String? projectId;
@@ -137,7 +134,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
               child: Row(
                 children: [
                   _bottomSubToolItem(
-                    label: 'TRSF',
+                    label: context.tr('transform'),
                     icon: Icons.crop_free_rounded,
                     isActive: !isPersp,
                     onTap: () {
@@ -146,7 +143,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'PERSP',
+                    label: context.tr('perspective'),
                     icon: Icons.filter_tilt_shift_rounded,
                     isActive: isPersp,
                     onTap: () {
@@ -155,27 +152,27 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'Flip H',
+                    label: context.tr('flipH'),
                     icon: Icons.flip_rounded,
                     isActive: sticker.flipX,
                     onTap: () => controller.flipActiveShapeStickerH(),
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'Flip V',
+                    label: context.tr('flipV'),
                     icon: Icons.swap_vert_rounded,
                     isActive: sticker.flipY,
                     onTap: () => controller.flipActiveShapeStickerV(),
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'Copy',
+                    label: context.tr('copy'),
                     icon: Icons.copy_rounded,
                     isActive: false,
                     onTap: () {
                       controller.copyActiveLassoSelection();
                       Fluttertoast.showToast(
-                        msg: 'Selection copied to clipboard',
+                        msg: context.tr('selectionCopied'),
                         backgroundColor: const Color(0xFFFF9318),
                         textColor: Colors.white,
                         toastLength: Toast.LENGTH_SHORT,
@@ -184,7 +181,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'Paste',
+                    label: context.tr('paste'),
                     icon: Icons.paste_rounded,
                     isActive: false,
                     onTap: canPaste
@@ -192,7 +189,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                             final ok = await controller.pasteLassoSelection();
                             if (ok) {
                               Fluttertoast.showToast(
-                                msg: 'Selection pasted',
+                                msg: context.tr('selectionPasted'),
                                 backgroundColor: const Color(0xFFFF9318),
                                 textColor: Colors.white,
                                 toastLength: Toast.LENGTH_SHORT,
@@ -201,7 +198,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                           }
                         : () {
                             Fluttertoast.showToast(
-                              msg: 'No selection in clipboard',
+                              msg: context.tr('noSelectionInClipboard'),
                               backgroundColor: Colors.grey.shade700,
                               textColor: Colors.white,
                               toastLength: Toast.LENGTH_SHORT,
@@ -210,21 +207,21 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'Duplicate',
+                    label: context.tr('duplicate'),
                     icon: Icons.control_point_duplicate_rounded,
                     isActive: false,
                     onTap: () => controller.duplicateActiveShapeSticker(),
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'Reset',
+                    label: context.tr('reset'),
                     icon: Icons.refresh_rounded,
                     isActive: false,
                     onTap: () => controller.resetActiveShapeSticker(),
                   ),
                   const SizedBox(width: 4),
                   _bottomSubToolItem(
-                    label: 'Delete',
+                    label: context.tr('delete'),
                     icon: Icons.delete_outline_rounded,
                     isActive: false,
                     onTap: () => controller.deleteActiveSticker(),
@@ -250,7 +247,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
         children: [
           const SizedBox(width: 16),
           _bottomToolbarCategoryItem(
-            label: 'Export',
+            label: context.tr('export'),
             svgAsset: AssetConstants.export_icon,
             onTap: () => _showExportBottomSheet(ref),
             isSelected: false,
@@ -269,7 +266,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
               child: Row(
                 children: [
                   _bottomToolbarCategoryItem(
-                    label: 'Brush',
+                    label: context.tr('brush'),
                     svgAsset: AssetConstants.brush_icon,
                     isSelected: controller.activeCategory == 'Brush',
                     onTap: () {
@@ -284,7 +281,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     },
                   ),
                   _bottomToolbarCategoryItem(
-                    label: 'Erase',
+                    label: context.tr('eraser'),
                     svgAsset: AssetConstants.erase_icon,
                     isSelected: controller.activeCategory == 'Erase',
                     onTap: () {
@@ -296,7 +293,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     },
                   ),
                   _bottomToolbarCategoryItem(
-                    label: 'Paint',
+                    label: context.tr('fill'),
                     svgAsset: AssetConstants.paint_icon,
                     isSelected: controller.activeCategory == 'Paint',
                     onTap: () {
@@ -311,7 +308,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
 
                   _bottomToolbarCategoryItem(
-                    label: 'Lasso',
+                    label: context.tr('lasso'),
                     svgAsset: AssetConstants.lesso_icon,
                     isSelected: controller.activeCategory == 'Lasso',
                     onTap: () {
@@ -324,7 +321,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                   ),
 
                   _bottomToolbarCategoryItem(
-                    label: 'Eyedropper',
+                    label: context.tr('eyedropper'),
                     svgAsset: AssetConstants.eyedropper,
                     isSelected: controller.activeCategory == 'Eyedropper',
                     onTap: () {
@@ -335,21 +332,21 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     },
                   ),
                   _bottomToolbarCategoryItem(
-                    label: 'Import',
+                    label: context.tr('importMedia'),
                     svgAsset: AssetConstants.import_icon,
                     isSelected: controller.activeCategory == 'Import' || controller.activeCategory == 'Assets',
                     onTap: () => _showImportBottomSheet(context, controller),
                   ),
 
                   _bottomToolbarCategoryItem(
-                    label: 'Text',
+                    label: context.tr('text'),
                     svgAsset: AssetConstants.text_icon,
                     isSelected: controller.isTextToolSelected,
                     onTap: () {
                       if (controller.drawingController.isCurrentLayerLocked) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Current layer is locked.'),
+                          SnackBar(
+                            content: Text(context.tr('currentLayerLocked')),
                           ),
                         );
                         return;
@@ -368,7 +365,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     },
                   ),
                   _bottomToolbarCategoryItem(
-                    label: 'Shapes',
+                    label: context.tr('shapes'),
                     svgAsset: AssetConstants.shapes_icon,
                     isSelected: controller.activeCategory == 'Shapes',
                     onTap: () {
@@ -378,7 +375,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     },
                   ),
                   _bottomToolbarCategoryItem(
-                    label: 'Blur',
+                    label: context.tr('blur'),
                     svgAsset: AssetConstants.blur_icon,
                     isSelected: controller.activeCategory == 'Blur',
                     onTap: () {
@@ -398,7 +395,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     },
                   ),
                   _bottomToolbarCategoryItem(
-                    label: 'Smudge',
+                    label: context.tr('smudge'),
                     svgAsset: AssetConstants.smudge_icon,
                     isSelected: controller.activeCategory == 'Smudge',
                     onTap: () {
@@ -436,11 +433,11 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
   }) {
     final Color displayColor = isSelected
         ? ColorConstants.accent
-        : (label == 'Export' ? const Color(0xFF334155) : const Color(0xFF64748B));
+        : (label == context.tr('export') ? const Color(0xFF334155) : const Color(0xFF64748B));
     final controller = ref.read(editorControllerProvider(widget.projectId));
     return GestureDetector(
       onTap: () {
-        if (label != 'Text') {
+        if (label != context.tr('text')) {
           controller.isTextToolSelected = false;
         }
         onTap();
@@ -475,7 +472,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
               style: TextStyle(
                 color: displayColor,
                 fontSize: 11.5,
-                fontWeight: isSelected || label == "Export"
+                fontWeight: isSelected || label == context.tr('export')
                     ? FontWeight.w700
                     : FontWeight.w500,
                 letterSpacing: -0.1,
@@ -519,66 +516,72 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             ),
           ),
           Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _bottomSubToolItem(
-                  label: 'Brush',
-                  icon: Icons.brush_rounded,
-                  isActive: controller.selectedSubTool == 'brush',
-                  onTap: () {
-                    controller.selectedSubTool = 'brush';
-                    controller.drawingController.setPaintContent(SmoothLine());
-                    controller.drawingController.setStyle(
-                      strokeWidth: controller.globalStrokeWidth,
-                    );
-                    BrushPresetPanel.show(
-                      context,
-                      controller.drawingController,
-                    );
-                  },
-                ),
-                _bottomSubToolItem(
-                  label: 'Pen',
-                  icon: Icons.edit_rounded,
-                  isActive: controller.selectedSubTool == 'pen',
-                  onTap: () {
-                    controller.selectedSubTool = 'pen';
-                    controller.drawingController.setPaintContent(
-                      FreehandLine(),
-                    );
-                    controller.drawingController.setStyle(
-                      strokeWidth: controller.globalStrokeWidth,
-                    );
-                  },
-                ),
-                _bottomSubToolItem(
-                  label: 'Pencil',
-                  icon: Icons.create_rounded,
-                  isActive: controller.selectedSubTool == 'pencil',
-                  onTap: () {
-                    controller.selectedSubTool = 'pencil';
-                    controller.drawingController.setPaintContent(
-                      FreehandLine(),
-                    );
-                    controller.drawingController.setStyle(
-                      strokeWidth: controller.globalStrokeWidth,
-                    );
-                  },
-                ),
-                _bottomSubToolItem(
-                  label: 'Line',
-                  icon: Icons.horizontal_rule_rounded,
-                  isActive: controller.selectedSubTool == 'line',
-                  onTap: () {
-                    controller.selectedSubTool = 'line';
-                    controller.drawingController.setPaintContent(SimpleLine());
-                    controller.drawingController.setStyle(
-                      strokeWidth: controller.globalStrokeWidth,
-                    );
-                  },
-                ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  _bottomSubToolItem(
+                    label: context.tr('brush'),
+                    icon: Icons.brush_rounded,
+                    isActive: controller.selectedSubTool == 'brush',
+                    onTap: () {
+                      controller.selectedSubTool = 'brush';
+                      controller.drawingController.setPaintContent(SmoothLine());
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                      BrushPresetPanel.show(
+                        context,
+                        controller.drawingController,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('pen'),
+                    icon: Icons.edit_rounded,
+                    isActive: controller.selectedSubTool == 'pen',
+                    onTap: () {
+                      controller.selectedSubTool = 'pen';
+                      controller.drawingController.setPaintContent(
+                        FreehandLine(),
+                      );
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('pencil'),
+                    icon: Icons.create_rounded,
+                    isActive: controller.selectedSubTool == 'pencil',
+                    onTap: () {
+                      controller.selectedSubTool = 'pencil';
+                      controller.drawingController.setPaintContent(
+                        FreehandLine(),
+                      );
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('line'),
+                    icon: Icons.horizontal_rule_rounded,
+                    isActive: controller.selectedSubTool == 'line',
+                    onTap: () {
+                      controller.selectedSubTool = 'line';
+                      controller.drawingController.setPaintContent(SimpleLine());
+                      controller.drawingController.setStyle(
+                        strokeWidth: controller.globalStrokeWidth,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -616,50 +619,57 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             ),
           ),
           Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _bottomSubToolItem(
-                  label: 'Heart',
-                  svgAsset: AssetConstants.heart,
-                  isActive: controller.selectedShape == 'heart',
-                  onTap: () {
-                    controller.selectShape('heart');
-                  },
-                ),
-                _bottomSubToolItem(
-                  label: 'Circle',
-                  svgAsset: AssetConstants.circle,
-                  isActive: controller.selectedShape == 'circle',
-                  onTap: () {
-                    controller.selectShape('circle');
-                  },
-                ),
-                _bottomSubToolItem(
-                  label: 'Square',
-                  svgAsset: AssetConstants.square,
-                  isActive: controller.selectedShape == 'square',
-                  onTap: () {
-                    controller.selectShape('square');
-                  },
-                ),
-                _bottomSubToolItem(
-                  label: 'Triangle',
-                  svgAsset: AssetConstants.triangle,
-                  isActive: controller.selectedShape == 'triangle',
-                  onTap: () {
-                    controller.selectShape('triangle');
-                  },
-                ),
-                _bottomSubToolItem(
-                  label: 'Line',
-                  svgAsset: AssetConstants.line_icon,
-                  isActive: controller.selectedShape == 'line',
-                  onTap: () {
-                    controller.selectShape('line');
-                  },
-                ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  _bottomSubToolItem(
+                    label: context.tr('heart'),
+                    svgAsset: AssetConstants.heart,
+                    isActive: controller.selectedShape == 'heart',
+                    onTap: () {
+                      controller.selectShape('heart');
+                    },
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('circle'),
+                    svgAsset: AssetConstants.circle,
+                    isActive: controller.selectedShape == 'circle',
+                    onTap: () {
+                      controller.selectShape('circle');
+                    },
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('square'),
+                    svgAsset: AssetConstants.square,
+                    isActive: controller.selectedShape == 'square',
+                    onTap: () {
+                      controller.selectShape('square');
+                    },
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('triangle'),
+                    svgAsset: AssetConstants.triangle,
+                    isActive: controller.selectedShape == 'triangle',
+                    onTap: () {
+                      controller.selectShape('triangle');
+                    },
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('line'),
+                    svgAsset: AssetConstants.line_icon,
+                    isActive: controller.selectedShape == 'line',
+                    onTap: () {
+                      controller.selectShape('line');
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -754,40 +764,47 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             ),
           ),
           Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _bottomSubToolItem(
-                  label: 'Edit Text',
-                  icon: Icons.edit_rounded,
-                  isActive: false,
-                  onTap: () => _editTextStickerContent(sticker, controller),
-                ),
-                _bottomSubToolItem(
-                  label: 'Fonts',
-                  icon: Icons.font_download_rounded,
-                  isActive: false,
-                  onTap: () => _openFontSelectionScreen(sticker, controller),
-                ),
-                _bottomSubToolItem(
-                  label: 'Format',
-                  icon: Icons.format_size_rounded,
-                  isActive: false,
-                  onTap: () => _showSizeOpacitySheet(sticker, controller),
-                ),
-                _bottomSubToolItem(
-                  label: 'Flip H',
-                  icon: Icons.flip_rounded,
-                  isActive: sticker.flipX,
-                  onTap: () => controller.flipActiveTextStickerH(),
-                ),
-                _bottomSubToolItem(
-                  label: 'Delete',
-                  icon: Icons.delete_outline_rounded,
-                  isActive: false,
-                  onTap: () => controller.deleteActiveSticker(),
-                ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  _bottomSubToolItem(
+                    label: context.tr('editText'),
+                    icon: Icons.edit_rounded,
+                    isActive: false,
+                    onTap: () => _editTextStickerContent(sticker, controller),
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('fonts'),
+                    icon: Icons.font_download_rounded,
+                    isActive: false,
+                    onTap: () => _openFontSelectionScreen(sticker, controller),
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('format'),
+                    icon: Icons.format_size_rounded,
+                    isActive: false,
+                    onTap: () => _showSizeOpacitySheet(sticker, controller),
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('flipH'),
+                    icon: Icons.flip_rounded,
+                    isActive: sticker.flipX,
+                    onTap: () => controller.flipActiveTextStickerH(),
+                  ),
+                  const SizedBox(width: 2),
+                  _bottomSubToolItem(
+                    label: context.tr('delete'),
+                    icon: Icons.delete_outline_rounded,
+                    isActive: false,
+                    onTap: () => controller.deleteActiveSticker(),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -802,7 +819,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     final text = await AppDialogs.showTextStickerDialog(
       context,
       initialText: sticker.text,
-      title: 'Edit Text Sticker',
+      title: context.tr('editText'),
     );
     if (text != null && text.trim().isNotEmpty) {
       sticker.text = text.trim();
@@ -848,240 +865,310 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'Text Style & Size',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 1),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Icon(Icons.format_size_rounded, color: Colors.grey),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Size',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Expanded(
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            trackHeight: 3,
-                            activeTrackColor: ColorConstants.accent,
-                            thumbColor: ColorConstants.accent,
-                            thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 6,
+                          Text(
+                            context.tr('textStyleAndSize'),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          child: Slider(
-                            value: sticker.fontSize.clamp(10.0, 100.0),
-                            min: 10.0,
-                            max: 100.0,
-                            onChanged: (val) {
-                              sticker.fontSize = val;
-                              setModalState(() {});
-                              controller.updateSnapshot();
-                            },
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => Navigator.pop(context),
                           ),
-                        ),
+                        ],
                       ),
-                      Text(
-                        '${sticker.fontSize.round()}px',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Icon(Icons.opacity_rounded, color: Colors.grey),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Opacity',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Expanded(
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            trackHeight: 3,
-                            activeTrackColor: ColorConstants.accent,
-                            thumbColor: ColorConstants.accent,
-                            thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 6,
+                      const Divider(height: 1),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 128,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.format_size_rounded,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      context.tr('size'),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Slider(
-                            value: sticker.opacity.clamp(0.0, 1.0),
-                            min: 0.0,
-                            max: 1.0,
-                            onChanged: (val) {
-                              sticker.opacity = val;
-                              sticker.color = sticker.color.withValues(
-                                alpha: val,
-                              );
-                              setModalState(() {});
-                              controller.updateSnapshot();
-                            },
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                trackHeight: 3.5,
+                                activeTrackColor: ColorConstants.accent,
+                                inactiveTrackColor: const Color(0xFFE2E8F0),
+                                thumbColor: ColorConstants.accent,
+                                thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 7,
+                                  elevation: 1.5,
+                                ),
+                                overlayShape: const RoundSliderOverlayShape(
+                                  overlayRadius: 14,
+                                ),
+                              ),
+                              child: Slider(
+                                value: sticker.fontSize.clamp(10.0, 100.0),
+                                min: 10.0,
+                                max: 100.0,
+                                onChanged: (val) {
+                                  sticker.fontSize = val;
+                                  setModalState(() {});
+                                  controller.updateSnapshot();
+                                },
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Text(
-                        '${(sticker.opacity * 100).round()}%',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Format',
-                              style: TextStyle(
+                          const SizedBox(width: 6),
+                          SizedBox(
+                            width: 48,
+                            child: Text(
+                              '${sticker.fontSize.round()}px',
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
-                                color: Colors.grey,
+                                color: Color(0xFF334155),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 2,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _styleToggleButton(
-                                    label: 'B',
-                                    isActive: sticker.isBold,
-                                    onTap: () {
-                                      sticker.isBold = !sticker.isBold;
-                                      setModalState(() {});
-                                      controller.updateSnapshot();
-                                    },
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  _styleToggleButton(
-                                    label: 'I',
-                                    isActive: sticker.isItalic,
-                                    onTap: () {
-                                      sticker.isItalic = !sticker.isItalic;
-                                      setModalState(() {});
-                                      controller.updateSnapshot();
-                                    },
-                                    style: const TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  _styleToggleButton(
-                                    label: 'U',
-                                    isActive: sticker.isUnderline,
-                                    onTap: () {
-                                      sticker.isUnderline =
-                                          !sticker.isUnderline;
-                                      setModalState(() {});
-                                      controller.updateSnapshot();
-                                    },
-                                    style: const TextStyle(
-                                      decoration: TextDecoration.underline,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Alignment',
-                              style: TextStyle(
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 128,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.opacity_rounded,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      context.tr('opacity'),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                trackHeight: 3.5,
+                                activeTrackColor: ColorConstants.accent,
+                                inactiveTrackColor: const Color(0xFFE2E8F0),
+                                thumbColor: ColorConstants.accent,
+                                thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 7,
+                                  elevation: 1.5,
+                                ),
+                                overlayShape: const RoundSliderOverlayShape(
+                                  overlayRadius: 14,
+                                ),
+                              ),
+                              child: Slider(
+                                value: sticker.opacity.clamp(0.0, 1.0),
+                                min: 0.0,
+                                max: 1.0,
+                                onChanged: (val) {
+                                  sticker.opacity = val;
+                                  sticker.color = sticker.color.withValues(
+                                    alpha: val,
+                                  );
+                                  setModalState(() {});
+                                  controller.updateSnapshot();
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          SizedBox(
+                            width: 48,
+                            child: Text(
+                              '${(sticker.opacity * 100).round()}%',
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
-                                color: Colors.grey,
+                                color: Color(0xFF334155),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 2,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _alignmentButton(
-                                    icon: Icons.format_align_left_rounded,
-                                    isActive:
-                                        sticker.textAlign == TextAlign.left,
-                                    onTap: () {
-                                      sticker.textAlign = TextAlign.left;
-                                      setModalState(() {});
-                                      controller.updateSnapshot();
-                                    },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.tr('format'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Colors.grey,
                                   ),
-                                  _alignmentButton(
-                                    icon: Icons.format_align_center_rounded,
-                                    isActive:
-                                        sticker.textAlign == TextAlign.center,
-                                    onTap: () {
-                                      sticker.textAlign = TextAlign.center;
-                                      setModalState(() {});
-                                      controller.updateSnapshot();
-                                    },
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  _alignmentButton(
-                                    icon: Icons.format_align_right_rounded,
-                                    isActive:
-                                        sticker.textAlign == TextAlign.right,
-                                    onTap: () {
-                                      sticker.textAlign = TextAlign.right;
-                                      setModalState(() {});
-                                      controller.updateSnapshot();
-                                    },
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 2,
                                   ),
-                                ],
-                              ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _styleToggleButton(
+                                        label: 'B',
+                                        isActive: sticker.isBold,
+                                        onTap: () {
+                                          sticker.isBold = !sticker.isBold;
+                                          setModalState(() {});
+                                          controller.updateSnapshot();
+                                        },
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      _styleToggleButton(
+                                        label: 'I',
+                                        isActive: sticker.isItalic,
+                                        onTap: () {
+                                          sticker.isItalic = !sticker.isItalic;
+                                          setModalState(() {});
+                                          controller.updateSnapshot();
+                                        },
+                                        style: const TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      _styleToggleButton(
+                                        label: 'U',
+                                        isActive: sticker.isUnderline,
+                                        onTap: () {
+                                          sticker.isUnderline =
+                                              !sticker.isUnderline;
+                                          setModalState(() {});
+                                          controller.updateSnapshot();
+                                        },
+                                        style: const TextStyle(
+                                          decoration: TextDecoration.underline,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.tr('alignment'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _alignmentButton(
+                                        icon: Icons.format_align_left_rounded,
+                                        isActive:
+                                            sticker.textAlign == TextAlign.left,
+                                        onTap: () {
+                                          sticker.textAlign = TextAlign.left;
+                                          setModalState(() {});
+                                          controller.updateSnapshot();
+                                        },
+                                      ),
+                                      _alignmentButton(
+                                        icon: Icons.format_align_center_rounded,
+                                        isActive:
+                                            sticker.textAlign == TextAlign.center,
+                                        onTap: () {
+                                          sticker.textAlign = TextAlign.center;
+                                          setModalState(() {});
+                                          controller.updateSnapshot();
+                                        },
+                                      ),
+                                      _alignmentButton(
+                                        icon: Icons.format_align_right_rounded,
+                                        isActive:
+                                            sticker.textAlign == TextAlign.right,
+                                        onTap: () {
+                                          sticker.textAlign = TextAlign.right;
+                                          setModalState(() {});
+                                          controller.updateSnapshot();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        );
+            );
           },
         );
       },
@@ -1188,20 +1275,20 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Column(
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Import Media',
-                            style: TextStyle(
+                            context.tr('importMedia'),
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
                               color: Color(0xFF0F172A),
                             ),
                           ),
                           Text(
-                            'Add video animation or image stickers',
-                            style: TextStyle(
+                            context.tr('importMediaSubtitle'),
+                            style: const TextStyle(
                               fontSize: 11.5,
                               color: Color(0xFF64748B),
                             ),
@@ -1217,9 +1304,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     icon: Icons.movie_creation_rounded,
                     iconColor: const Color(0xFF8B5CF6),
                     iconBgColor: const Color(0xFFF3E8FF),
-                    title: 'Import Video Animation',
-                    subtitle: 'Trim and import video clips into animation frames',
-                    badge: 'Animation',
+                    title: context.tr('importVideoAnimation'),
+                    subtitle: context.tr('importVideoSubtitle'),
+                    badge: context.tr('animation'),
                     onTap: () => Navigator.of(context).pop('video'),
                   ),
                   const SizedBox(height: 10),
@@ -1229,8 +1316,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     icon: Icons.photo_library_rounded,
                     iconColor: const Color(0xFF2563EB),
                     iconBgColor: const Color(0xFFEFF6FF),
-                    title: 'Photo Gallery Image',
-                    subtitle: 'Add an image sticker to the active canvas frame',
+                    title: context.tr('photoGalleryImage'),
+                    subtitle: context.tr('photoGallerySubtitle'),
                     onTap: () => Navigator.of(context).pop('gallery'),
                   ),
                   const SizedBox(height: 10),
@@ -1240,8 +1327,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                     icon: Icons.photo_camera_rounded,
                     iconColor: const Color(0xFFEA580C),
                     iconBgColor: const Color(0xFFFFF7ED),
-                    title: 'Camera Photo',
-                    subtitle: 'Take a new photo with device camera',
+                    title: context.tr('cameraPhoto'),
+                    subtitle: context.tr('cameraPhotoSubtitle'),
                     onTap: () => Navigator.of(context).pop('camera'),
                   ),
                 ],

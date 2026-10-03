@@ -4,121 +4,164 @@ import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/paint_contents/layer_data.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class BlendModeInfo {
   final BlendMode mode;
-  final String label;
-  final String description;
-  final String category;
+  final String labelKey;
+  final String descKey;
+  final String categoryKey;
   final IconData icon;
 
   const BlendModeInfo({
     required this.mode,
-    required this.label,
-    required this.description,
-    required this.category,
+    required this.labelKey,
+    required this.descKey,
+    required this.categoryKey,
     required this.icon,
   });
+
+  String getLocalizedLabel(BuildContext context) => context.tr(labelKey);
+  String getLocalizedDescription(BuildContext context) => context.tr(descKey);
+  String getLocalizedCategory(BuildContext context) => context.tr(categoryKey);
 }
 
 const List<BlendModeInfo> _kCuratedBlendModes = [
   // Standard
   BlendModeInfo(
     mode: BlendMode.srcOver,
-    label: 'Normal',
-    description: 'Standard rendering without color blending',
-    category: 'Standard',
+    labelKey: 'blendNormal',
+    descKey: 'blendNormalDesc',
+    categoryKey: 'blendCatStandard',
     icon: Icons.layers_outlined,
   ),
   // Darken
   BlendModeInfo(
     mode: BlendMode.multiply,
-    label: 'Multiply',
-    description: 'Darkens base colors; ideal for shading & shadows',
-    category: 'Darken',
+    labelKey: 'blendMultiply',
+    descKey: 'blendMultiplyDesc',
+    categoryKey: 'blendCatDarken',
     icon: Icons.brightness_4_outlined,
   ),
   BlendModeInfo(
     mode: BlendMode.darken,
-    label: 'Darken',
-    description: 'Selects the darker of overlapping pixel colors',
-    category: 'Darken',
+    labelKey: 'blendDarken',
+    descKey: 'blendDarkenDesc',
+    categoryKey: 'blendCatDarken',
     icon: Icons.dark_mode_outlined,
   ),
   BlendModeInfo(
     mode: BlendMode.colorBurn,
-    label: 'Color Burn',
-    description: 'Increases contrast and deepens shadows',
-    category: 'Darken',
+    labelKey: 'blendColorBurn',
+    descKey: 'blendColorBurnDesc',
+    categoryKey: 'blendCatDarken',
     icon: Icons.local_fire_department_outlined,
   ),
   // Lighten
   BlendModeInfo(
     mode: BlendMode.screen,
-    label: 'Screen',
-    description: 'Lightens colors; perfect for highlights & glow',
-    category: 'Lighten',
+    labelKey: 'blendScreen',
+    descKey: 'blendScreenDesc',
+    categoryKey: 'blendCatLighten',
     icon: Icons.brightness_7_outlined,
   ),
   BlendModeInfo(
     mode: BlendMode.lighten,
-    label: 'Lighten',
-    description: 'Selects the lighter of overlapping pixel colors',
-    category: 'Lighten',
+    labelKey: 'blendLighten',
+    descKey: 'blendLightenDesc',
+    categoryKey: 'blendCatLighten',
     icon: Icons.light_mode_outlined,
   ),
   BlendModeInfo(
     mode: BlendMode.colorDodge,
-    label: 'Color Dodge',
-    description: 'Brightens underlying colors for vibrant glow effects',
-    category: 'Lighten',
+    labelKey: 'blendColorDodge',
+    descKey: 'blendColorDodgeDesc',
+    categoryKey: 'blendCatLighten',
     icon: Icons.flare_rounded,
   ),
   // Contrast
   BlendModeInfo(
     mode: BlendMode.overlay,
-    label: 'Overlay',
-    description: 'Combines Multiply and Screen to boost contrast',
-    category: 'Contrast',
+    labelKey: 'blendOverlay',
+    descKey: 'blendOverlayDesc',
+    categoryKey: 'blendCatContrast',
     icon: Icons.tune_rounded,
   ),
   BlendModeInfo(
     mode: BlendMode.softLight,
-    label: 'Soft Light',
-    description: 'Creates a subtle, soft diffuse lighting effect',
-    category: 'Contrast',
+    labelKey: 'blendSoftLight',
+    descKey: 'blendSoftLightDesc',
+    categoryKey: 'blendCatContrast',
     icon: Icons.wb_twilight_rounded,
   ),
   BlendModeInfo(
     mode: BlendMode.hardLight,
-    label: 'Hard Light',
-    description: 'Creates bold, dramatic high-contrast lighting',
-    category: 'Contrast',
+    labelKey: 'blendHardLight',
+    descKey: 'blendHardLightDesc',
+    categoryKey: 'blendCatContrast',
     icon: Icons.flash_on_rounded,
   ),
   // Special
   BlendModeInfo(
     mode: BlendMode.difference,
-    label: 'Difference',
-    description: 'Inverts colors based on underlying layer differences',
-    category: 'Special',
+    labelKey: 'blendDifference',
+    descKey: 'blendDifferenceDesc',
+    categoryKey: 'blendCatSpecial',
     icon: Icons.compare_arrows_rounded,
   ),
 ];
 
-const Map<BlendMode, String> _kBlendModeLabels = {
-  BlendMode.srcOver: 'Normal',
-  BlendMode.multiply: 'Multiply',
-  BlendMode.screen: 'Screen',
-  BlendMode.overlay: 'Overlay',
-  BlendMode.darken: 'Darken',
-  BlendMode.lighten: 'Lighten',
-  BlendMode.colorDodge: 'Color Dodge',
-  BlendMode.colorBurn: 'Color Burn',
-  BlendMode.softLight: 'Soft Light',
-  BlendMode.hardLight: 'Hard Light',
-  BlendMode.difference: 'Difference',
-};
+String getLocalizedBlendModeLabel(BuildContext context, BlendMode mode) {
+  switch (mode) {
+    case BlendMode.srcOver:
+      return context.tr('blendNormal');
+    case BlendMode.multiply:
+      return context.tr('blendMultiply');
+    case BlendMode.screen:
+      return context.tr('blendScreen');
+    case BlendMode.overlay:
+      return context.tr('blendOverlay');
+    case BlendMode.darken:
+      return context.tr('blendDarken');
+    case BlendMode.lighten:
+      return context.tr('blendLighten');
+    case BlendMode.colorDodge:
+      return context.tr('blendColorDodge');
+    case BlendMode.colorBurn:
+      return context.tr('blendColorBurn');
+    case BlendMode.softLight:
+      return context.tr('blendSoftLight');
+    case BlendMode.hardLight:
+      return context.tr('blendHardLight');
+    case BlendMode.difference:
+      return context.tr('blendDifference');
+    default:
+      return context.tr('blendNormal');
+  }
+}
+
+String getLocalizedLayerName(BuildContext context, String rawName) {
+  final trimmed = rawName.trim();
+  if (trimmed == 'Background' || trimmed.toLowerCase() == 'background') {
+    return context.tr('background');
+  }
+  if (trimmed == 'Stencil Guide' || trimmed.toLowerCase() == 'stencil guide') {
+    return context.tr('stencilGuide');
+  }
+  if (trimmed == 'Your Drawing' || trimmed.toLowerCase() == 'your drawing') {
+    return context.tr('yourDrawing');
+  }
+  final layerMatch = RegExp(r'^Layer\s*(\d+)$', caseSensitive: false).firstMatch(trimmed);
+  if (layerMatch != null) {
+    return context.tr('layerNumber', {'num': layerMatch.group(1)!});
+  }
+  final copyMatch = RegExp(r'^(.*)\s+Copy$', caseSensitive: false).firstMatch(trimmed);
+  if (copyMatch != null) {
+    final base = getLocalizedLayerName(context, copyMatch.group(1)!);
+    return context.tr('layerCopy', {'name': base});
+  }
+  return rawName;
+}
 
 class LayerPanel extends StatefulWidget {
   final DrawingController controller;
@@ -323,7 +366,7 @@ class _LayerPanelState extends State<LayerPanel> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Layers (${widget.controller.layers.length})',
+                  '${context.tr('layers')} (${widget.controller.layers.length})',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -375,7 +418,7 @@ class _LayerPanelState extends State<LayerPanel> {
                     children: [
                       Flexible(
                         child: Text(
-                          layer.name,
+                          getLocalizedLayerName(context, layer.name),
                           style: TextStyle(
                             fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                             color: isActive ? ColorConstants.accent : ColorConstants.darkText,
@@ -397,7 +440,7 @@ class _LayerPanelState extends State<LayerPanel> {
                             ),
                           ),
                           child: Text(
-                            _kBlendModeLabels[layer.blendMode] ?? 'Mode',
+                            getLocalizedBlendModeLabel(context, layer.blendMode),
                             style: const TextStyle(
                               fontSize: 9,
                               fontFamily: 'Outfit',
@@ -469,12 +512,17 @@ class _LayerPanelState extends State<LayerPanel> {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
               SizedBox(
-                width: 36,
+                width: 44,
                 child: Text(
                   '${(layer.opacity * 100).toInt()}%',
-                  style: const TextStyle(fontSize: 11, color: ColorConstants.darkText),
-                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: ColorConstants.darkText,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -514,7 +562,7 @@ class _LayerPanelState extends State<LayerPanel> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _kBlendModeLabels[layer.blendMode] ?? 'Normal',
+                      getLocalizedBlendModeLabel(context, layer.blendMode),
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontFamily: 'Outfit',
@@ -529,9 +577,9 @@ class _LayerPanelState extends State<LayerPanel> {
                       color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text(
-                      'Blend',
-                      style: TextStyle(
+                    child: Text(
+                      context.tr('blendMode'),
+                      style: const TextStyle(
                         fontSize: 10,
                         fontFamily: 'Outfit',
                         fontWeight: FontWeight.w600,
@@ -555,19 +603,19 @@ class _LayerPanelState extends State<LayerPanel> {
             children: [
               _buildActionButton(
                 icon: layer.isLocked ? Icons.lock : Icons.lock_open,
-                label: 'Lock',
+                label: context.tr('lock'),
                 color: layer.isLocked ? Colors.redAccent : Colors.black54,
                 onTap: () => _toggleLock(layer),
               ),
               _buildActionButton(
                 icon: Icons.copy,
-                label: 'Duplicate',
+                label: context.tr('duplicate'),
                 color: Colors.black54,
                 onTap: () => _duplicateLayer(layer),
               ),
               _buildActionButton(
                 icon: Icons.delete,
-                label: 'Delete',
+                label: context.tr('delete'),
                 color: widget.controller.layers.length > 1 ? Colors.red : Colors.grey,
                 onTap: widget.controller.layers.length > 1 ? () => _deleteLayer(layer) : null,
               ),
@@ -658,7 +706,10 @@ class _LayerPanelState extends State<LayerPanel> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${layer.name} Blend Mode',
+                                context.tr(
+                                  'layerBlendModeTitle',
+                                  {'name': getLocalizedLayerName(context, layer.name)},
+                                ),
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontFamily: 'Outfit',
@@ -667,9 +718,9 @@ class _LayerPanelState extends State<LayerPanel> {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              const Text(
-                                'Select how this layer blends with layers below',
-                                style: TextStyle(
+                              Text(
+                                context.tr('layerBlendModeSubtitle'),
+                                style: const TextStyle(
                                   fontSize: 11.5,
                                   fontFamily: 'Outfit',
                                   fontWeight: FontWeight.w500,
@@ -762,7 +813,7 @@ class _LayerPanelState extends State<LayerPanel> {
                                         Row(
                                           children: [
                                             Text(
-                                              item.label,
+                                              item.getLocalizedLabel(context),
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontFamily: 'Outfit',
@@ -780,7 +831,7 @@ class _LayerPanelState extends State<LayerPanel> {
                                                 borderRadius: BorderRadius.circular(5),
                                               ),
                                               child: Text(
-                                                item.category,
+                                                item.getLocalizedCategory(context),
                                                 style: TextStyle(
                                                   fontSize: 9.5,
                                                   fontFamily: 'Outfit',
@@ -793,7 +844,7 @@ class _LayerPanelState extends State<LayerPanel> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          item.description,
+                                          item.getLocalizedDescription(context),
                                           style: const TextStyle(
                                             fontSize: 11.5,
                                             fontFamily: 'Outfit',
@@ -852,12 +903,12 @@ class _LayerPanelState extends State<LayerPanel> {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.add_circle, color: ColorConstants.accent, size: 20),
-            SizedBox(width: 8),
+          children: [
+            const Icon(Icons.add_circle, color: ColorConstants.accent, size: 20),
+            const SizedBox(width: 8),
             Text(
-              'New Layer',
-              style: TextStyle(
+              context.tr('addLayer'),
+              style: const TextStyle(
                 color: ColorConstants.accent,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,

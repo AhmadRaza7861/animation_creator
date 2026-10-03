@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../drawing_controller.dart';
 import '../helper/ex_value_builder.dart';
 import 'brush_presets.dart';
@@ -24,7 +25,7 @@ class BrushPresetPanel extends StatefulWidget {
     required this.controller,
     this.presets,
     this.onSelected,
-    this.title = 'Brushes',
+    this.title,
   });
 
   /// 绘制控制器 / Drawing controller
@@ -39,13 +40,14 @@ class BrushPresetPanel extends StatefulWidget {
   final void Function(BrushPreset preset)? onSelected;
 
   /// 面板标题 / Panel title
-  final String title;
+  final String? title;
 
   /// 以底部弹窗形式展示面板 / Show the panel as a modal bottom sheet
   static Future<void> show(
     BuildContext context,
     DrawingController controller, {
     List<BrushPreset>? presets,
+    String? title,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -57,10 +59,13 @@ class BrushPresetPanel extends StatefulWidget {
       builder: (BuildContext ctx) {
         return SafeArea(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.8),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.8,
+            ),
             child: BrushPresetPanel(
               controller: controller,
               presets: presets,
+              title: title,
               onSelected: (_) {
                 Navigator.pop(ctx);
               },
@@ -132,7 +137,7 @@ class _BrushPresetPanelState extends State<BrushPresetPanel> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    widget.title,
+                    widget.title ?? context.tr('brush'),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF3C3043),
@@ -144,7 +149,13 @@ class _BrushPresetPanelState extends State<BrushPresetPanel> {
                       visualDensity: VisualDensity.compact,
                     ),
                     icon: const Icon(Icons.tune_rounded, size: 18),
-                    label: const Text('Customize Tip', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    label: Text(
+                      context.tr('customizeTip'),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     onPressed: () {
                       Navigator.pop(context);
                       BrushTipShapePanel.show(context, widget.controller);
@@ -229,15 +240,17 @@ class _BrushCell extends StatelessWidget {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+            Container(
+              height: 28,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.only(bottom: 6, left: 4, right: 4),
               child: Text(
-                preset.name,
+                preset.localizedName(context),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   height: 1.15,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   color: selected ? accent : Colors.black87,

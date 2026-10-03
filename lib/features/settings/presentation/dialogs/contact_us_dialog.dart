@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class ContactUsDialog extends StatefulWidget {
   final String supportEmail;
@@ -25,21 +26,20 @@ class ContactUsDialog extends StatefulWidget {
 }
 
 class _ContactUsDialogState extends State<ContactUsDialog> {
-  final List<String> _categories = [
-    'Bug Report 🐞',
-    'Feature Request 💡',
-    'Question ❓',
-    'General Feedback 💬',
-  ];
-
-  late String _selectedCategory;
+  int _selectedCategoryIndex = 0;
   final TextEditingController _subjectController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+
+  final List<String> _categoryKeys = [
+    'bugReportTopic',
+    'featureRequestTopic',
+    'questionTopic',
+    'generalFeedbackTopic',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _selectedCategory = _categories[0];
     _subjectController.text = 'Clipax Bug Report';
   }
 
@@ -50,14 +50,14 @@ class _ContactUsDialogState extends State<ContactUsDialog> {
     super.dispose();
   }
 
-  void _onCategoryChanged(String cat) {
+  void _onCategoryChanged(int index, BuildContext context) {
     setState(() {
-      _selectedCategory = cat;
-      if (cat.contains('Bug')) {
+      _selectedCategoryIndex = index;
+      if (index == 0) {
         _subjectController.text = 'Clipax Bug Report';
-      } else if (cat.contains('Feature')) {
+      } else if (index == 1) {
         _subjectController.text = 'Clipax Feature Request';
-      } else if (cat.contains('Question')) {
+      } else if (index == 2) {
         _subjectController.text = 'Clipax Question & Help';
       } else {
         _subjectController.text = 'Clipax Feedback';
@@ -68,6 +68,7 @@ class _ContactUsDialogState extends State<ContactUsDialog> {
   Future<void> _sendEmail() async {
     final subject = _subjectController.text.trim();
     final message = _messageController.text.trim();
+    final selectedCategoryName = context.tr(_categoryKeys[_selectedCategoryIndex]);
 
     final String platformName = Platform.isAndroid ? 'Android' : (Platform.isIOS ? 'iOS' : 'Desktop');
     final String body = '''
@@ -76,7 +77,7 @@ Hello Clipax Team,
 $message
 
 -----------------------
-Category: $_selectedCategory
+Category: $selectedCategoryName
 App: Clipax Animation Creator (v1.0.0)
 Platform: $platformName
 -----------------------
@@ -101,7 +102,7 @@ Platform: $platformName
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Support email copied to clipboard: ${widget.supportEmail}'),
+              content: Text(context.tr('emailCopied', {'email': widget.supportEmail})),
               behavior: SnackBarBehavior.floating,
               backgroundColor: ColorConstants.primary,
             ),
@@ -115,7 +116,7 @@ Platform: $platformName
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Support email copied to clipboard: ${widget.supportEmail}'),
+            content: Text(context.tr('emailCopied', {'email': widget.supportEmail})),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -148,22 +149,22 @@ Platform: $platformName
                     child: const Icon(Icons.mail_outline_rounded, color: ColorConstants.primary, size: 24),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Contact Us',
-                          style: TextStyle(
+                          context.tr('contactUs'),
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
                             color: ColorConstants.darkText,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'We are here to help & improve Clipax',
-                          style: TextStyle(
+                          context.tr('contactUsDescription'),
+                          style: const TextStyle(
                             fontSize: 12.5,
                             color: ColorConstants.mediumText,
                           ),
@@ -180,9 +181,9 @@ Platform: $platformName
               const SizedBox(height: 18),
 
               // Category Selector
-              const Text(
-                'Select Topic',
-                style: TextStyle(
+              Text(
+                context.tr('selectTopic'),
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: ColorConstants.darkText,
@@ -192,11 +193,12 @@ Platform: $platformName
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _categories.map((cat) {
-                  final isSelected = _selectedCategory == cat;
+                children: List.generate(_categoryKeys.length, (index) {
+                  final key = _categoryKeys[index];
+                  final isSelected = _selectedCategoryIndex == index;
                   return ChoiceChip(
                     label: Text(
-                      cat,
+                      context.tr(key),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -213,16 +215,16 @@ Platform: $platformName
                         color: isSelected ? ColorConstants.primary : Colors.transparent,
                       ),
                     ),
-                    onSelected: (_) => _onCategoryChanged(cat),
+                    onSelected: (_) => _onCategoryChanged(index, context),
                   );
-                }).toList(),
+                }),
               ),
               const SizedBox(height: 16),
 
               // Subject Input
-              const Text(
-                'Subject',
-                style: TextStyle(
+              Text(
+                context.tr('subject'),
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: ColorConstants.darkText,
@@ -233,7 +235,7 @@ Platform: $platformName
                 controller: _subjectController,
                 style: const TextStyle(fontSize: 13.5),
                 decoration: InputDecoration(
-                  hintText: 'Enter subject...',
+                  hintText: context.tr('enterSubject'),
                   hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
                   filled: true,
                   fillColor: const Color(0xFFF7F8FA),
@@ -255,9 +257,9 @@ Platform: $platformName
               const SizedBox(height: 14),
 
               // Message Input
-              const Text(
-                'Message',
-                style: TextStyle(
+              Text(
+                context.tr('message'),
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: ColorConstants.darkText,
@@ -269,7 +271,7 @@ Platform: $platformName
                 maxLines: 4,
                 style: const TextStyle(fontSize: 13.5),
                 decoration: InputDecoration(
-                  hintText: 'Tell us your thoughts, bug details, or ideas...',
+                  hintText: context.tr('tellUsThoughts'),
                   hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
                   filled: true,
                   fillColor: const Color(0xFFF7F8FA),
@@ -297,9 +299,9 @@ Platform: $platformName
                 child: ElevatedButton.icon(
                   onPressed: _sendEmail,
                   icon: const Icon(Icons.send_rounded, size: 18),
-                  label: const Text(
-                    'Open Email Client',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                  label: Text(
+                    context.tr('openEmailClient'),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: ColorConstants.primary,
@@ -319,7 +321,7 @@ Platform: $platformName
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Copied ${widget.supportEmail} to clipboard'),
+                          content: Text(context.tr('emailCopied', {'email': widget.supportEmail})),
                           behavior: SnackBarBehavior.floating,
                           duration: const Duration(seconds: 2),
                         ),
@@ -328,7 +330,7 @@ Platform: $platformName
                   },
                   icon: const Icon(Icons.copy_rounded, size: 14, color: ColorConstants.mediumText),
                   label: Text(
-                    'Copy: ${widget.supportEmail}',
+                    context.tr('copyEmail', {'email': widget.supportEmail}),
                     style: const TextStyle(fontSize: 12, color: ColorConstants.mediumText, fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -340,3 +342,4 @@ Platform: $platformName
     );
   }
 }
+

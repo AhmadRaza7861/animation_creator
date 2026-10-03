@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class RateUsDialog extends StatefulWidget {
   final String? appPackageName;
@@ -30,19 +31,19 @@ class _RateUsDialogState extends State<RateUsDialog> {
     super.dispose();
   }
 
-  String get _ratingLabel {
+  String _getRatingLabel(BuildContext context) {
     switch (_rating) {
       case 1:
-        return 'Needs improvement 😔';
+        return context.tr('rating1');
       case 2:
-        return 'Could be better 😐';
+        return context.tr('rating2');
       case 3:
-        return 'Good, but has room to grow 🙂';
+        return context.tr('rating3');
       case 4:
-        return 'Great animation app! 😃';
+        return context.tr('rating4');
       case 5:
       default:
-        return 'Loved it! Amazing! 🤩';
+        return context.tr('rating5');
     }
   }
 
@@ -69,8 +70,8 @@ class _RateUsDialogState extends State<RateUsDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🎉 Thank you for supporting Clipax!'),
+          SnackBar(
+            content: Text(context.tr('thankYouSupport')),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -99,8 +100,8 @@ class _RateUsDialogState extends State<RateUsDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🙏 Thank you for your feedback! We will improve Clipax.'),
+          SnackBar(
+            content: Text(context.tr('thankYouFeedback')),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -143,19 +144,19 @@ class _RateUsDialogState extends State<RateUsDialog> {
             ),
             const SizedBox(height: 16),
 
-            const Text(
-              'Enjoying Clipax?',
-              style: TextStyle(
+            Text(
+              context.tr('enjoyingClipax'),
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: ColorConstants.darkText,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Your rating helps us create better animation tools and free brush packs!',
+            Text(
+              context.tr('rateUsDescription'),
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13.5,
                 color: ColorConstants.mediumText,
                 height: 1.35,
@@ -194,7 +195,7 @@ class _RateUsDialogState extends State<RateUsDialog> {
 
             // Rating description
             Text(
-              _ratingLabel,
+              _getRatingLabel(context),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -210,7 +211,7 @@ class _RateUsDialogState extends State<RateUsDialog> {
                 maxLines: 3,
                 style: const TextStyle(fontSize: 13.5),
                 decoration: InputDecoration(
-                  hintText: 'What can we improve? (Optional)',
+                  hintText: context.tr('whatCanWeImprove'),
                   hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
                   filled: true,
                   fillColor: const Color(0xFFF7F8FA),
@@ -245,7 +246,7 @@ class _RateUsDialogState extends State<RateUsDialog> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 child: Text(
-                  _rating >= 4 ? 'Rate on App Store / Play Store' : 'Submit Feedback',
+                  _rating >= 4 ? context.tr('rateOnStore') : context.tr('submitFeedback'),
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
                 ),
               ),
@@ -255,9 +256,9 @@ class _RateUsDialogState extends State<RateUsDialog> {
             // Maybe Later button
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Maybe Later',
-                style: TextStyle(
+              child: Text(
+                context.tr('maybeLater'),
+                style: const TextStyle(
                   color: ColorConstants.mediumText,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
@@ -271,3 +272,4 @@ class _RateUsDialogState extends State<RateUsDialog> {
     );
   }
 }
+

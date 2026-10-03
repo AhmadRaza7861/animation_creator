@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../editor/presentation/screens/editor_screen.dart';
 import '../../data/tutorial_project_builder.dart';
@@ -102,7 +103,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     try {
       AppDialogs.showProgressDialog(
         context,
-        message: 'Opening ${widget.template.name}...',
+        message: context.tr('openingLesson', {'name': widget.template.getLocalizedName(context)}),
       );
 
       // 1. Prepare genuine vector project state
@@ -214,7 +215,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         scrolledUnderElevation: 0,
         leading: const AppBackButton(),
         title: Text(
-          widget.template.name,
+          widget.template.getLocalizedName(context),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -227,7 +228,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         centerTitle: true,
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 14),
+            margin: const EdgeInsetsDirectional.only(end: 14),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: ColorConstants.primary.withValues(alpha: 0.10),
@@ -239,7 +240,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                 const Icon(Icons.timer_outlined, size: 13, color: ColorConstants.primary),
                 const SizedBox(width: 4),
                 Text(
-                  '~${widget.template.estimatedMinutes}m',
+                  context.tr('minutesApprox', {'min': '${widget.template.estimatedMinutes}'}),
                   style: const TextStyle(
                     color: ColorConstants.primary,
                     fontWeight: FontWeight.w800,
@@ -279,8 +280,8 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                 padding: const EdgeInsets.only(bottom: 24.0),
                 child: PrimaryButton(
                   text: _selectedMode == TemplateMode.drawAccordingTemplate
-                      ? 'Start Guided Practice in Studio 🚀'
-                      : 'Load Complete Artwork in Studio 🎨',
+                      ? context.tr('startGuidedPractice')
+                      : context.tr('loadArtworkInStudio'),
                   icon: Icons.draw_rounded,
                   height: 54,
                   borderRadius: 16,
@@ -345,7 +346,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        widget.template.category.toUpperCase(),
+                        widget.template.getLocalizedCategory(context).toUpperCase(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -368,8 +369,8 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                     ),
                     child: Text(
                       _selectedMode == TemplateMode.drawAccordingTemplate
-                          ? '✏️ STENCIL GUIDE'
-                          : '🎨 EDITABLE ART',
+                          ? '✏️ ${context.tr('stencilGuide').toUpperCase()}'
+                          : '🎨 ${context.tr('editableArt').toUpperCase()}',
                       style: const TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w800,
@@ -465,7 +466,10 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'Frame ${_currentFrameIndex + 1}/${widget.template.frameCount}',
+                        context.tr('frameIndexLabel', {
+                          'current': '${_currentFrameIndex + 1}',
+                          'total': '${widget.template.frameCount}',
+                        }),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 11.5,
@@ -529,6 +533,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
 
   // 2. Overview & Principle Card
   Widget _buildLessonOverviewCard() {
+    final localizedDesc = widget.template.getLocalizedDescription(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -553,7 +558,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  '${widget.template.frameCount} Frames • 12 FPS',
+                  '${widget.template.frameCount} ${context.tr('frames')} • 12 FPS',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -565,10 +570,10 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
               ),
             ],
           ),
-          if (widget.template.description.isNotEmpty) ...[
+          if (localizedDesc.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              widget.template.description,
+              localizedDesc,
               style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w500,
@@ -591,12 +596,12 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
           children: [
             const Icon(Icons.movie_creation_outlined, size: 18, color: ColorConstants.primary),
             const SizedBox(width: 6),
-            const Flexible(
+            Flexible(
               child: Text(
-                'Film Strip Breakdown',
+                context.tr('filmStripBreakdown'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: ColorConstants.darkText,
@@ -605,7 +610,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Tap frame to inspect',
+              context.tr('tapFrameToInspect'),
               style: TextStyle(
                 fontSize: 11.5,
                 color: Colors.grey.shade500,
@@ -637,7 +642,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                   duration: const Duration(milliseconds: 150),
                   width: 68,
                   height: 68,
-                  margin: const EdgeInsets.only(right: 10),
+                  margin: const EdgeInsetsDirectional.only(end: 10),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
@@ -703,9 +708,9 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Choose Practice Mode',
-          style: TextStyle(
+        Text(
+          context.tr('choosePracticeMode'),
+          style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
             color: ColorConstants.darkText,
@@ -761,21 +766,25 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                                   : ColorConstants.mediumText,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              'Guided Stencil',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: _selectedMode == TemplateMode.drawAccordingTemplate
-                                  ? ColorConstants.primary
-                                  : ColorConstants.darkText,
+                            Expanded(
+                              child: Text(
+                                context.tr('guidedStencil'),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: _selectedMode == TemplateMode.drawAccordingTemplate
+                                    ? ColorConstants.primary
+                                    : ColorConstants.darkText,
+                                ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Trace ghost timing guides on your fresh layer (Best for learning)',
+                          context.tr('guidedStencilDesc'),
                           style: TextStyle(
                             fontSize: 10.5,
                             color: Colors.grey.shade600,
@@ -834,21 +843,25 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                                   : ColorConstants.mediumText,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              'Full Artwork',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: _selectedMode == TemplateMode.useTemplate
-                                  ? ColorConstants.primary
-                                  : ColorConstants.darkText,
+                            Expanded(
+                              child: Text(
+                                context.tr('fullArtwork'),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: _selectedMode == TemplateMode.useTemplate
+                                    ? ColorConstants.primary
+                                    : ColorConstants.darkText,
+                                ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Load complete editable frames to color, edit & extend',
+                          context.tr('fullArtworkDesc'),
                           style: TextStyle(
                             fontSize: 10.5,
                             color: Colors.grey.shade600,
@@ -876,17 +889,17 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
       case TutorialDifficulty.beginner:
         bg = const Color(0xFFE8F5E9);
         text = const Color(0xFF2E7D32);
-        label = 'Beginner';
+        label = context.tr('beginner');
         break;
       case TutorialDifficulty.intermediate:
         bg = ColorConstants.primaryLight;
         text = ColorConstants.primaryDark;
-        label = 'Medium';
+        label = context.tr('medium');
         break;
       case TutorialDifficulty.advanced:
         bg = const Color(0xFFFFEBEE);
         text = const Color(0xFFC62828);
-        label = 'Master';
+        label = context.tr('master');
         break;
     }
 
@@ -907,3 +920,4 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     );
   }
 }
+

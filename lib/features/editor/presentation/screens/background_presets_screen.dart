@@ -1,6 +1,6 @@
-import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/app_back_button.dart';
@@ -150,6 +150,39 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
     return _presets.where((p) => p['category'] == _selectedCategory).toList();
   }
 
+  String _getCategoryLabel(BuildContext context, String cat) {
+    switch (cat) {
+      case 'All':
+        return context.tr('categoryAll');
+      case 'Paper & Grid':
+        return context.tr('bgCatPaperGrid');
+      case 'Animation':
+        return context.tr('bgCatAnimation');
+      case 'Perspective':
+        return context.tr('bgCatPerspective');
+      case 'Manga & Comic':
+        return context.tr('bgCatMangaComic');
+      case 'Aesthetic & Dark':
+        return context.tr('bgCatAestheticDark');
+      default:
+        return cat;
+    }
+  }
+
+  String _getPresetName(BuildContext context, Map<String, dynamic> preset) {
+    final String val = preset['value'] == null ? 'plain' : '${preset['value']}';
+    final String key = 'bg_${val}_name';
+    final String tr = context.tr(key);
+    return tr == key ? (preset['name'] as String) : tr;
+  }
+
+  String _getPresetDesc(BuildContext context, Map<String, dynamic> preset) {
+    final String val = preset['value'] == null ? 'plain' : '${preset['value']}';
+    final String key = 'bg_${val}_desc';
+    final String tr = context.tr(key);
+    return tr == key ? (preset['desc'] as String) : tr;
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredPresets;
@@ -161,7 +194,7 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
         backgroundColor: Colors.white,
         leading: const AppBackButton(),
         title: Text(
-          StringConstants.background_presets,
+          context.tr('backgroundPresets'),
           style: const TextStyle(
             color: ColorConstants.darkText,
             fontWeight: FontWeight.w700,
@@ -216,7 +249,7 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          cat,
+                          _getCategoryLabel(context, cat),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: isCatSelected ? FontWeight.w700 : FontWeight.w500,
@@ -351,7 +384,7 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  preset['name'] as String,
+                                  _getPresetName(context, preset),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
@@ -362,7 +395,7 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  preset['desc'] as String,
+                                  _getPresetDesc(context, preset),
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     color: Colors.grey.shade500,
@@ -392,7 +425,7 @@ class _BackgroundPresetsScreenState extends State<BackgroundPresetsScreen> {
                 ),
               ),
               child: PrimaryButton(
-                text: StringConstants.select_preset,
+                text: context.tr('selectPreset'),
                 onPressed: () {
                   Navigator.pop(context, {'pattern': _selectedPattern});
                 },

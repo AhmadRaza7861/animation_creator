@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_path_provider.dart';
 
 class VideoProcessingScreen extends StatefulWidget {
@@ -26,7 +26,8 @@ class VideoProcessingScreen extends StatefulWidget {
   State<VideoProcessingScreen> createState() => _VideoProcessingScreenState();
 }
 
-class _VideoProcessingScreenState extends State<VideoProcessingScreen> with TickerProviderStateMixin {
+class _VideoProcessingScreenState extends State<VideoProcessingScreen>
+    with TickerProviderStateMixin {
   bool _isProcessing = true;
   String _statusMessage = 'Initializing video decoding...';
   String _detailMessage = 'Preparing high-resolution frames for canvas';
@@ -47,7 +48,10 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
   void initState() {
     super.initState();
 
-    final double durationSec = max(0.1, (widget.endMs - widget.startMs) / 1000.0);
+    final double durationSec = max(
+      0.1,
+      (widget.endMs - widget.startMs) / 1000.0,
+    );
     _expectedTotalFrames = max(1, (durationSec * widget.fps).round());
 
     _pulseController = AnimationController(
@@ -80,7 +84,9 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
   Future<void> _extractFrames() async {
     try {
       final directory = await AppPathProvider.getSafeTempDirectory();
-      _targetDir = Directory('${directory.path}/video_frames_${DateTime.now().millisecondsSinceEpoch}');
+      _targetDir = Directory(
+        '${directory.path}/video_frames_${DateTime.now().millisecondsSinceEpoch}',
+      );
       if (!await _targetDir!.exists()) {
         await _targetDir!.create(recursive: true);
       }
@@ -89,7 +95,9 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
       final double durationSec = (widget.endMs - widget.startMs) / 1000.0;
 
       // Start periodic directory polling for real-time frame extraction progress
-      _progressPollTimer = Timer.periodic(const Duration(milliseconds: 120), (timer) {
+      _progressPollTimer = Timer.periodic(const Duration(milliseconds: 120), (
+        timer,
+      ) {
         if (!mounted || !_isProcessing || _targetDir == null) return;
         try {
           if (_targetDir!.existsSync()) {
@@ -97,7 +105,8 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
             if (fileCount != _extractedCount) {
               setState(() {
                 _extractedCount = fileCount;
-                final double realProgress = (fileCount / _expectedTotalFrames).clamp(0.05, 0.98);
+                final double realProgress = (fileCount / _expectedTotalFrames)
+                    .clamp(0.05, 0.98);
                 if (realProgress > _progress) {
                   _progress = realProgress;
                 }
@@ -106,7 +115,8 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                   _statusMessage = 'Decoding video streams...';
                   _detailMessage = 'Extracting frame data @ ${widget.fps} FPS';
                 } else if (_progress < 0.85) {
-                  _statusMessage = 'Extracting frames ($_extractedCount / $_expectedTotalFrames)...';
+                  _statusMessage =
+                      'Extracting frames ($_extractedCount / $_expectedTotalFrames)...';
                   _detailMessage = 'Converting to transparent animation layers';
                 } else {
                   _statusMessage = 'Finalizing canvas layers...';
@@ -119,7 +129,8 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
       });
 
       // Extract frames using ffmpeg
-      final String command = '-ss $startSec -i "${widget.videoFile.path}" -t $durationSec -r ${widget.fps} -f image2 "${_targetDir!.path}/frame_%04d.png"';
+      final String command =
+          '-ss $startSec -i "${widget.videoFile.path}" -t $durationSec -r ${widget.fps} -f image2 "${_targetDir!.path}/frame_%04d.png"';
 
       final session = await FFmpegKit.executeAsync(command, (session) async {
         _progressPollTimer?.cancel();
@@ -146,22 +157,27 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
           if (!mounted) return;
           setState(() {
             _isProcessing = false;
-            _statusMessage = 'Frame extraction failed';
-            _detailMessage = 'Please try a shorter range or lower frame rate';
+            _statusMessage = context.tr('frameExtractionFailed');
+            _detailMessage = context.tr('frameExtractionFailedDetail');
           });
 
           showDialog(
             context: context,
             builder: (_) => AlertDialog(
               backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text(
-                'Extraction Error',
-                style: TextStyle(color: ColorConstants.darkText, fontWeight: FontWeight.bold),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              content: const Text(
-                'Failed to process the video stream. Please check video format or trim range.',
-                style: TextStyle(color: ColorConstants.mediumText),
+              title: Text(
+                context.tr('error'),
+                style: const TextStyle(
+                  color: ColorConstants.darkText,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Text(
+                context.tr('failedProcessVideo'),
+                style: const TextStyle(color: ColorConstants.mediumText),
               ),
               actions: [
                 TextButton(
@@ -169,9 +185,12 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                     Navigator.pop(context);
                     Navigator.pop(context, null);
                   },
-                  child: const Text(
-                    'OK',
-                    style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold),
+                  child: Text(
+                    context.tr('ok'),
+                    style: const TextStyle(
+                      color: ColorConstants.accent,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -224,9 +243,13 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        ColorConstants.accent.withOpacity(0.12 + pulseVal * 0.08),
-                        const Color(0xFFFFEAD4).withOpacity(0.4 + pulseVal * 0.2),
-                        Colors.white.withOpacity(0.0),
+                        ColorConstants.accent.withValues(
+                          alpha: 0.12 + pulseVal * 0.08,
+                        ),
+                        const Color(
+                          0xFFFFEAD4,
+                        ).withValues(alpha: 0.4 + pulseVal * 0.2),
+                        Colors.white.withValues(alpha: 0.0),
                       ],
                       stops: const [0.0, 0.6, 1.0],
                     ),
@@ -248,19 +271,26 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF4E8),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: const Color(0xFFFFDAB3)),
                         ),
                         child: Row(
-                          children: const [
-                            Icon(Icons.auto_awesome, color: ColorConstants.accent, size: 14),
-                            SizedBox(width: 6),
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome,
+                              color: ColorConstants.accent,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
                             Text(
-                              'ROTOSCOPE IMPORT',
-                              style: TextStyle(
+                              context.tr('importVideoAnimation').toUpperCase(),
+                              style: const TextStyle(
                                 color: Color(0xFFD96B00),
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -277,7 +307,11 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                             color: Color(0xFFF2F2F7),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.close, color: ColorConstants.darkText, size: 18),
+                          child: const Icon(
+                            Icons.close,
+                            color: ColorConstants.darkText,
+                            size: 18,
+                          ),
                         ),
                         onPressed: _onCancel,
                       ),
@@ -299,8 +333,10 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                             AnimatedBuilder(
                               animation: _pulseController,
                               builder: (context, child) {
-                                final double scale = 1.0 + _pulseController.value * 0.12;
-                                final double alpha = 0.5 - _pulseController.value * 0.3;
+                                final double scale =
+                                    1.0 + _pulseController.value * 0.12;
+                                final double alpha =
+                                    0.5 - _pulseController.value * 0.3;
                                 return Transform.scale(
                                   scale: scale,
                                   child: Container(
@@ -309,7 +345,9 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: ColorConstants.accent.withOpacity(alpha.clamp(0.0, 1.0)),
+                                        color: ColorConstants.accent.withValues(
+                                          alpha: alpha.clamp(0.0, 1.0),
+                                        ),
                                         width: 2.0,
                                       ),
                                     ),
@@ -334,15 +372,20 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: ColorConstants.accent, width: 2.5),
+                                border: Border.all(
+                                  color: ColorConstants.accent,
+                                  width: 2.5,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: ColorConstants.accent.withOpacity(0.25),
+                                    color: ColorConstants.accent.withValues(
+                                      alpha: 0.25,
+                                    ),
                                     blurRadius: 20,
                                     spreadRadius: 2,
                                   ),
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
+                                    color: Colors.black.withValues(alpha: 0.04),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -425,7 +468,9 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF0F0F6),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFE2E2EA)),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E2EA),
+                                ),
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: Stack(
@@ -438,11 +483,16 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(10),
                                         gradient: const LinearGradient(
-                                          colors: [Color(0xFFFF9E24), Color(0xFFFF6E00)],
+                                          colors: [
+                                            Color(0xFFFF9E24),
+                                            Color(0xFFFF6E00),
+                                          ],
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFFFF8500).withOpacity(0.35),
+                                            color: const Color(
+                                              0xFFFF8500,
+                                            ).withValues(alpha: 0.35),
                                             blurRadius: 8,
                                             spreadRadius: 1,
                                           ),
@@ -464,14 +514,17 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8F8FC),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0xFFE8E8EE)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
+                              color: Colors.black.withValues(alpha: 0.03),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
@@ -482,19 +535,27 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                           children: [
                             _buildInfoStat(
                               icon: Icons.timer_outlined,
-                              label: 'DURATION',
+                              label: context.tr('duration'),
                               value: '${durationSec.toStringAsFixed(1)}s',
                             ),
-                            Container(width: 1, height: 26, color: const Color(0xFFE8E8EE)),
+                            Container(
+                              width: 1,
+                              height: 26,
+                              color: const Color(0xFFE8E8EE),
+                            ),
                             _buildInfoStat(
                               icon: Icons.speed_rounded,
-                              label: 'FPS RATE',
+                              label: context.tr('frameRate'),
                               value: '${widget.fps} FPS',
                             ),
-                            Container(width: 1, height: 26, color: const Color(0xFFE8E8EE)),
+                            Container(
+                              width: 1,
+                              height: 26,
+                              color: const Color(0xFFE8E8EE),
+                            ),
                             _buildInfoStat(
                               icon: Icons.filter_none_rounded,
-                              label: 'TOTAL',
+                              label: context.tr('totalFrames'),
                               value: '$_expectedTotalFrames Frames',
                             ),
                           ],
@@ -503,10 +564,14 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
                       const SizedBox(height: 14),
                       TextButton.icon(
                         onPressed: _onCancel,
-                        icon: const Icon(Icons.close_rounded, color: ColorConstants.mediumText, size: 16),
-                        label: const Text(
-                          'Cancel Import',
-                          style: TextStyle(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: ColorConstants.mediumText,
+                          size: 16,
+                        ),
+                        label: Text(
+                          context.tr('cancel'),
+                          style: const TextStyle(
                             color: ColorConstants.mediumText,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -524,7 +589,11 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> with Tick
     );
   }
 
-  Widget _buildInfoStat({required IconData icon, required String label, required String value}) {
+  Widget _buildInfoStat({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

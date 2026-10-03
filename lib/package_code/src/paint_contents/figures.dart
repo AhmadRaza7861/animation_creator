@@ -377,6 +377,35 @@ class FigureShape extends DragShape {
       );
 
   @override
+  Path getShapePath(Rect rect, Offset start, Offset end) {
+    final Path path = Path();
+    final List<FigurePrim>? prims = kFigures[figureId];
+    if (prims == null || rect.isEmpty) {
+      return path;
+    }
+    for (final FigurePrim prim in prims) {
+      switch (prim) {
+        case OvalPrim(:final Rect rect):
+          path.addOval(_mapRect(rect, rect));
+        case PolyPrim(:final List<Offset> points, :final bool closed):
+          if (points.isEmpty) {
+            continue;
+          }
+          final Path subPath = Path();
+          for (int i = 0; i < points.length; i++) {
+            final Offset pt = _map(rect, points[i]);
+            i == 0 ? subPath.moveTo(pt.dx, pt.dy) : subPath.lineTo(pt.dx, pt.dy);
+          }
+          if (closed) {
+            subPath.close();
+          }
+          path.addPath(subPath, Offset.zero);
+      }
+    }
+    return path;
+  }
+
+  @override
   void drawShape(Canvas canvas, Rect r, Offset s, Offset e, Paint paint) {
     final List<FigurePrim>? prims = kFigures[figureId];
     if (prims == null || r.isEmpty) {

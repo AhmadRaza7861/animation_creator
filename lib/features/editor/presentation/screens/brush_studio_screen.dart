@@ -2,11 +2,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_bar/brush_presets.dart';
 import '../../../../package_code/src/drawing_bar/brush_preview_renderer.dart';
-import '../../../../package_code/src/paint_contents/brush_stamps.dart';
 import 'brush_tip_studio_screen.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/helper/ex_value_builder.dart';
@@ -255,6 +255,29 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
     );
   }
 
+  String _getCategoryLabel(BuildContext context, String cat) {
+    switch (cat) {
+      case 'Artistic & Inks':
+        return context.tr('categoryArtisticInks');
+      case 'Pencils & Sketch':
+        return context.tr('categoryPencilsSketch');
+      case 'Brushes & Spray':
+        return context.tr('categoryBrushesSpray');
+      case 'Magic & Glow':
+        return context.tr('categoryMagicGlow');
+      case 'Nature & Elements':
+        return context.tr('categoryNatureElements');
+      case 'Stamps & Shapes':
+        return context.tr('categoryStampsShapes');
+      case 'Textures & FX':
+        return context.tr('categoryTexturesFx');
+      case 'Patterns & 3D':
+        return context.tr('categoryPatterns3d');
+      default:
+        return cat;
+    }
+  }
+
   PreferredSizeWidget _buildAppBar(BuildContext context, Color accent) {
     return AppBar(
       backgroundColor: Colors.white,
@@ -263,18 +286,18 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       leading: const AppBackButton(),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
-            'Brush Studio',
-            style: TextStyle(
+            context.tr('brushStudio'),
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: Color(0xFF1E2024),
             ),
           ),
           Text(
-            'Select and test custom brush presets',
-            style: TextStyle(
+            context.tr('brushStudioSubtitle'),
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w400,
               color: Color(0xFF888E9B),
@@ -284,7 +307,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
       ),
       actions: [
         IconButton(
-          tooltip: _isListView ? 'Compact Grid View' : 'Showcase List View',
+          tooltip: _isListView ? context.tr('compactGridView') : context.tr('showcaseListView'),
           icon: Icon(
             _isListView ? Icons.grid_view_rounded : Icons.view_agenda_rounded,
             size: 20,
@@ -298,7 +321,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
           },
         ),
         Padding(
-          padding: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsetsDirectional.only(end: 12),
           child: TextButton.icon(
             style: TextButton.styleFrom(
               foregroundColor: accent,
@@ -307,11 +330,12 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              visualDensity: VisualDensity.compact,
             ),
             icon: const Icon(Icons.tune_rounded, size: 18),
-            label: const Text(
-              'Customize Tip',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            label: Text(
+              context.tr('customizeTip'),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
             onPressed: () async {
               final applied = await BrushTipStudioScreen.open(
@@ -368,8 +392,8 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                   const SizedBox(width: 8),
                   Text(
                     _selectedPreset != null
-                        ? '${_selectedPreset!.name} Preview'
-                        : 'Interactive Test Scratchpad',
+                        ? context.tr('presetPreview', {'name': _selectedPreset!.localizedName(context)})
+                        : context.tr('interactiveTestScratchpad'),
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -397,16 +421,16 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(
+                      children: [
+                        const Icon(
                           Icons.refresh_rounded,
                           size: 14,
                           color: Color(0xFF6B7280),
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          'Clear Pad',
-                          style: TextStyle(
+                          context.tr('clearPad'),
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF6B7280),
@@ -469,6 +493,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                     preset: _selectedPreset,
                     color: config.color,
                     strokeWidth: _strokeWidth,
+                    doodleHint: context.tr('doodleBrushTestHint'),
                   ),
                   size: Size.infinite,
                 ),
@@ -488,7 +513,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Size: ${_strokeWidth.toInt()}px',
+                context.tr('sizePxLabel', {'size': '${_strokeWidth.toInt()}'}),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -531,65 +556,6 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   Widget _buildFilterSection(Color accent) {
     return Column(
       children: [
-        /*
-        // Search Input (commented out as requested)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) {
-                      setState(() {
-                        _searchQuery = val.trim();
-                      });
-                    },
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF1E2024)),
-                    decoration: InputDecoration(
-                      hintText: 'Search brushes by name...',
-                      hintStyle: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF9CA3AF),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
-                        size: 18,
-                        color: Color(0xFF9CA3AF),
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.clear_rounded,
-                                size: 16,
-                                color: Color(0xFF9CA3AF),
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _searchQuery = '';
-                                });
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        */
-
         // Category Pills List
         Container(
           height: 44,
@@ -605,7 +571,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               final isSelected = _selectedCategory == cat;
 
               return ChoiceChip(
-                label: Text(cat),
+                label: Text(_getCategoryLabel(context, cat)),
                 selected: isSelected,
                 onSelected: (_) {
                   BrushPreviewRenderer.clearCache();
@@ -661,7 +627,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
             Icon(Icons.brush_outlined, size: 48, color: Colors.grey.shade300),
             const SizedBox(height: 12),
             Text(
-              'No brushes found',
+              context.tr('noBrushesFound'),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -670,7 +636,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Try changing your search or category filter',
+              context.tr('tryChangingFilter'),
               style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
             ),
           ],
@@ -783,7 +749,7 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _selectedPreset?.name ?? 'No brush selected',
+                  _selectedPreset?.localizedName(context) ?? context.tr('noBrushSelected'),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -791,7 +757,9 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                   ),
                 ),
                 Text(
-                  _selectedPreset?.description ?? 'Pick a brush to apply',
+                  _selectedPreset != null && _selectedPreset!.localizedDescription(context).isNotEmpty
+                      ? _selectedPreset!.localizedDescription(context)
+                      : context.tr('pickBrushToApply'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -818,9 +786,9 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             icon: const Icon(Icons.check_rounded, size: 18),
-            label: const Text(
-              'Apply Brush',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            label: Text(
+              context.tr('applyBrush'),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -905,7 +873,7 @@ class _StudioShowcaseCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        preset.name,
+                        preset.localizedName(context),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight:
@@ -915,9 +883,9 @@ class _StudioShowcaseCard extends StatelessWidget {
                               : const Color(0xFF1E2024),
                         ),
                       ),
-                      if (preset.description.isNotEmpty)
+                      if (preset.localizedDescription(context).isNotEmpty)
                         Text(
-                          preset.description,
+                          preset.localizedDescription(context),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -954,7 +922,7 @@ class _StudioShowcaseCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        isSelected ? 'Active' : 'Select',
+                        isSelected ? context.tr('activeStatus') : context.tr('select'),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight:
@@ -1079,7 +1047,7 @@ class _StudioBrushCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        preset.name,
+                        preset.localizedName(context),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1090,9 +1058,9 @@ class _StudioBrushCard extends StatelessWidget {
                           color: isSelected ? accent : const Color(0xFF1F2937),
                         ),
                       ),
-                      if (preset.description.isNotEmpty)
+                      if (preset.localizedDescription(context).isNotEmpty)
                         Text(
-                          preset.description,
+                          preset.localizedDescription(context),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -1165,6 +1133,7 @@ class _ScratchpadPainter extends CustomPainter {
     required this.preset,
     required this.color,
     required this.strokeWidth,
+    this.doodleHint,
   });
 
   final List<PaintContent> strokes;
@@ -1172,6 +1141,7 @@ class _ScratchpadPainter extends CustomPainter {
   final BrushPreset? preset;
   final Color color;
   final double strokeWidth;
+  final String? doodleHint;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1197,17 +1167,14 @@ class _ScratchpadPainter extends CustomPainter {
 
       // Draw helper text overlay
       final TextPainter tp = TextPainter(
-        text: TextPainter(
-          text: const TextSpan(
-            text: '✨ Doodle here to test brush feel & pressure',
-            style: TextStyle(
-              fontSize: 11,
-              color: Color(0xFF9CA3AF),
-              fontWeight: FontWeight.w500,
-            ),
+        text: TextSpan(
+          text: doodleHint ?? '✨ Doodle here to test brush feel & pressure',
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF9CA3AF),
+            fontWeight: FontWeight.w500,
           ),
-          textDirection: TextDirection.ltr,
-        ).text,
+        ),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset((size.width - tp.width) / 2, size.height - 20));

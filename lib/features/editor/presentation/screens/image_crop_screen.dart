@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_path_provider.dart';
 
 class ImageCropScreen extends StatefulWidget {
@@ -189,19 +190,19 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
+      builder: (_) => Center(
         child: Card(
           color: Colors.white,
           child: Padding(
-            padding: EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(color: ColorConstants.primary),
-                SizedBox(height: 16),
+                const CircularProgressIndicator(color: ColorConstants.primary),
+                const SizedBox(height: 16),
                 Text(
-                  StringConstants.processing_image,
-                  style: TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText),
+                  context.tr('processingImage'),
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: ColorConstants.darkText),
                 ),
               ],
             ),
@@ -307,7 +308,7 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              widget.title ?? StringConstants.image_import,
+              widget.title ?? context.tr('imageImport'),
               style: const TextStyle(
                 color: ColorConstants.darkText,
                 fontWeight: FontWeight.w700,
@@ -448,7 +449,7 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
                               children: [
                                 _buildToolButton(
                                   icon: Icons.flip_rounded,
-                                  tooltip: 'Flip Horizontal',
+                                  tooltip: context.tr('flipH'),
                                   isActive: _flipX,
                                   onTap: _toggleFlipHorizontal,
                                 ),
@@ -458,20 +459,20 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
                                     quarterTurns: 1,
                                     child: Icon(Icons.flip_rounded, size: 20),
                                   ),
-                                  tooltip: 'Flip Vertical',
+                                  tooltip: context.tr('flipV'),
                                   isActive: _flipY,
                                   onTap: _toggleFlipVertical,
                                 ),
                                 const SizedBox(width: 4),
                                 _buildToolButton(
                                   icon: Icons.rotate_left_rounded,
-                                  tooltip: 'Rotate Left',
+                                  tooltip: context.tr('rotateLeft'),
                                   onTap: _rotateLeft,
                                 ),
                                 const SizedBox(width: 4),
                                 _buildToolButton(
                                   icon: Icons.rotate_right_rounded,
-                                  tooltip: 'Rotate Right',
+                                  tooltip: context.tr('rotateRight'),
                                   onTap: _rotateRight,
                                 ),
                                 const SizedBox(width: 4),
@@ -479,14 +480,14 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
                                   icon: _isCoverMode
                                       ? Icons.open_in_full_rounded
                                       : Icons.close_fullscreen_rounded,
-                                  tooltip: _isCoverMode ? 'Fit Entire Image' : 'Cover Canvas',
+                                  tooltip: _isCoverMode ? context.tr('fitEntireImage') : context.tr('fitCover'),
                                   isActive: !_isCoverMode,
                                   onTap: _toggleFitCover,
                                 ),
                                 const SizedBox(width: 4),
                                 _buildToolButton(
                                   icon: Icons.restart_alt_rounded,
-                                  tooltip: 'Reset Transforms',
+                                  tooltip: context.tr('reset'),
                                   onTap: _resetTransforms,
                                 ),
                               ],

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../domain/models/audio_clip.dart';
 import '../../services/audio_playback_service.dart';
 import '../widgets/waveform_painter.dart';
@@ -196,9 +197,9 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
         title: TextField(
           controller: _titleController,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1E1E24)),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             border: InputBorder.none,
-            hintText: 'Recording Name',
+            hintText: context.tr('recordingName'),
             isDense: true,
           ),
         ),
@@ -539,9 +540,9 @@ class _AudioTrimmerScreenState extends State<AudioTrimmerScreen> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text(
-                    'Add to timeline',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  child: Text(
+                    context.tr('addToTimeline'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),

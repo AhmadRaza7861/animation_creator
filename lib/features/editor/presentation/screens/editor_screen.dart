@@ -12,6 +12,7 @@ import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
 import 'brush_studio_screen.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../controllers/editor_providers.dart';
 import '../controllers/editor_controller.dart';
 import '../widgets/canvas_area.dart';
@@ -60,7 +61,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     try {
-      ref.read(editorControllerProvider(widget.projectId)).saveProject(immediate: true, stampStickers: true);
+      ref
+          .read(editorControllerProvider(widget.projectId))
+          .saveProject(immediate: true, stampStickers: true);
     } catch (_) {}
     _transformationController.dispose();
     super.dispose();
@@ -73,7 +76,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       try {
-        ref.read(editorControllerProvider(widget.projectId)).saveProject(immediate: true, stampStickers: false);
+        ref
+            .read(editorControllerProvider(widget.projectId))
+            .saveProject(immediate: true, stampStickers: false);
       } catch (_) {}
     }
   }
@@ -157,9 +162,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Settings',
-                            style: TextStyle(
+                          Text(
+                            context.tr('settingsTitle'),
+                            style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                               color: ColorConstants.darkText,
@@ -186,13 +191,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                             size: 22,
                           ),
                         ),
-                        title: const Text(
-                          'Project settings',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        title: Text(
+                          context.tr('projectSettings'),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        subtitle: const Text(
-                          'Title, dimensions & export options',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        subtitle: Text(
+                          context.tr('projectSettingsSubtitle'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
                         ),
                         trailing: const Icon(
                           Icons.chevron_right,
@@ -404,13 +412,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                             size: 22,
                           ),
                         ),
-                        title: const Text(
-                          'Onion',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        title: Text(
+                          context.tr('onion'),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        subtitle: const Text(
-                          'Ghost previous/next frames',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        subtitle: Text(
+                          context.tr('onionSubtitle'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -423,9 +434,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                   currentController,
                                 );
                               },
-                              child: const Text(
-                                'Edit',
-                                style: TextStyle(
+                              child: Text(
+                                context.tr('edit'),
+                                style: const TextStyle(
                                   color: ColorConstants.accent,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -455,13 +466,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                             size: 22,
                           ),
                         ),
-                        title: const Text(
-                          'Grid',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        title: Text(
+                          context.tr('grid'),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        subtitle: const Text(
-                          'Alignment and spacing guide',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        subtitle: Text(
+                          context.tr('gridSubtitle'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -474,9 +488,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                   currentController,
                                 );
                               },
-                              child: const Text(
-                                'Edit',
-                                style: TextStyle(
+                              child: Text(
+                                context.tr('edit'),
+                                style: const TextStyle(
                                   color: ColorConstants.accent,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -525,8 +539,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   void _showOnionSettingsSheet(
     BuildContext context,
     EditorController controller,
-  )
-  {
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -643,9 +656,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      const Text(
-                        'Onion',
-                        style: TextStyle(
+                      Text(
+                        context.tr('onion'),
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: ColorConstants.darkText,
@@ -677,9 +690,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                   const SizedBox(height: 24),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Color',
-                      style: TextStyle(
+                    title: Text(
+                      context.tr('color'),
+                      style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: ColorConstants.darkText,
                       ),
@@ -695,9 +708,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Loop',
-                      style: TextStyle(
+                    title: Text(
+                      context.tr('loop'),
+                      style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: ColorConstants.darkText,
                       ),
@@ -720,9 +733,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Frames before',
-                              style: TextStyle(
+                            Text(
+                              context.tr('framesBefore'),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: ColorConstants.darkText,
                               ),
@@ -768,9 +781,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Frames after',
-                              style: TextStyle(
+                            Text(
+                              context.tr('framesAfter'),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: ColorConstants.darkText,
                               ),
@@ -821,8 +834,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   void _showGridSettingsSheet(
     BuildContext context,
     EditorController controller,
-  )
-  {
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -849,9 +861,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      const Text(
-                        'Grid',
-                        style: TextStyle(
+                      Text(
+                        context.tr('grid'),
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: ColorConstants.darkText,
@@ -902,9 +914,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Line opacity',
-                              style: TextStyle(
+                            Text(
+                              context.tr('opacity'),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: ColorConstants.darkText,
                               ),
@@ -1060,7 +1072,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
               child: Row(
                 children: [
                   AppBackButton(
-                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 6,
+                    ),
                     size: 36,
                     borderRadius: 10,
                     onPressed: () => _handleBack(context, controller),
@@ -1157,8 +1172,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                   ValueListenableBuilder<DrawConfig>(
                     valueListenable: controller.drawingController.drawConfig,
                     builder: (context, config, child) {
-                      final showSize =
-                          config.contentType != Lasso;
+                      final showSize = config.contentType != Lasso;
                       if (!showSize) return const SizedBox.shrink();
 
                       return MenuAnchor(
@@ -1212,12 +1226,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                     children: [
                                       SvgPicture.asset(
                                         (controller.activeCategory == 'Blur' ||
-                                                config.contentType == BlurContent)
+                                                config.contentType ==
+                                                    BlurContent)
                                             ? AssetConstants.blur_icon
-                                            : (controller.activeCategory == 'Smudge' ||
-                                                    config.contentType == SmudgeContent)
-                                                ? AssetConstants.smudge_icon
-                                                : AssetConstants.stock_icon,
+                                            : (controller.activeCategory ==
+                                                      'Smudge' ||
+                                                  config.contentType ==
+                                                      SmudgeContent)
+                                            ? AssetConstants.smudge_icon
+                                            : AssetConstants.stock_icon,
                                         width: 14,
                                         height: 14,
                                         colorFilter: const ColorFilter.mode(
@@ -1228,12 +1245,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                       const SizedBox(width: 4),
                                       Text(
                                         (controller.activeCategory == 'Blur' ||
-                                                config.contentType == BlurContent)
-                                            ? 'Blur • ${(controller.blurStrength * 100).round()}%'
-                                            : (controller.activeCategory == 'Smudge' ||
-                                                    config.contentType == SmudgeContent)
-                                                ? 'Smudge • ${(controller.smudgeStrength * 100).round()}%'
-                                                : '${controller.globalStrokeWidth.round()}px',
+                                                config.contentType ==
+                                                    BlurContent)
+                                            ? '${context.tr('blur')} • ${(controller.blurStrength * 100).round()}%'
+                                            : (controller.activeCategory ==
+                                                      'Smudge' ||
+                                                  config.contentType ==
+                                                      SmudgeContent)
+                                            ? '${context.tr('smudge')} • ${(controller.smudgeStrength * 100).round()}%'
+                                            : '${controller.globalStrokeWidth.round()}px',
                                         style: const TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
@@ -1268,7 +1288,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                               ];
                               final opacityPresets = [0.25, 0.50, 0.75, 1.0];
                               final blurPresets = [0.0, 0.25, 0.50, 0.75, 1.0];
-                              final smudgePresets = [0.0, 0.25, 0.50, 0.75, 1.0];
+                              final smudgePresets = [
+                                0.0,
+                                0.25,
+                                0.50,
+                                0.75,
+                                1.0,
+                              ];
 
                               final baseColor = config.color.withOpacity(1.0);
                               final previewColor = baseColor.withOpacity(
@@ -1307,10 +1333,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         borderRadius: BorderRadius.circular(15),
                                         child: Stack(
                                           children: [
-                                            if (!isBlurActive && !isSmudgeActive)
+                                            if (!isBlurActive &&
+                                                !isSmudgeActive)
                                               const Positioned.fill(
                                                 child: CustomPaint(
-                                                  painter: _CheckerboardPainter(),
+                                                  painter:
+                                                      _CheckerboardPainter(),
                                                 ),
                                               ),
                                             Positioned.fill(
@@ -1321,14 +1349,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                         currentWidth,
                                                       )
                                                     : isSmudgeActive
-                                                        ? SmudgePreviewPainter(
-                                                            controller.smudgeStrength,
-                                                            currentWidth,
-                                                          )
-                                                        : StrokePreviewPainter(
-                                                            currentWidth,
-                                                            previewColor,
-                                                          ),
+                                                    ? SmudgePreviewPainter(
+                                                        controller
+                                                            .smudgeStrength,
+                                                        currentWidth,
+                                                      )
+                                                    : StrokePreviewPainter(
+                                                        currentWidth,
+                                                        previewColor,
+                                                      ),
                                               ),
                                             ),
                                           ],
@@ -1349,8 +1378,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                               isBlurActive
                                                   ? AssetConstants.blur_icon
                                                   : isSmudgeActive
-                                                      ? AssetConstants.smudge_icon
-                                                      : AssetConstants.stock_icon,
+                                                  ? AssetConstants.smudge_icon
+                                                  : AssetConstants.stock_icon,
                                               width: 14,
                                               height: 14,
                                               colorFilter:
@@ -1362,10 +1391,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                             const SizedBox(width: 6),
                                             Text(
                                               isBlurActive
-                                                  ? 'Blur Size'
+                                                  ? context.tr('blur') +
+                                                        ' ' +
+                                                        context.tr('size')
                                                   : isSmudgeActive
-                                                      ? 'Smudge Size'
-                                                      : 'Brush Size',
+                                                  ? context.tr('smudge') +
+                                                        ' ' +
+                                                        context.tr('size')
+                                                  : context.tr('brush') +
+                                                        ' ' +
+                                                        context.tr('size'),
                                               style: const TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w700,
@@ -1430,8 +1465,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                           setPopupState(() {
                                             controller.globalStrokeWidth = val;
                                           });
-                                          controller.drawingController
-                                              .setStyle(strokeWidth: val);
+                                          controller.drawingController.setStyle(
+                                            strokeWidth: val,
+                                          );
                                           setState(() {});
                                         },
                                       ),
@@ -1534,8 +1570,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                     ),
                                               ),
                                               const SizedBox(width: 6),
-                                              const Text(
-                                                'Blur Intensity',
+                                              Text(
+                                                context.tr('blur'),
                                                 style: TextStyle(
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.w700,
@@ -1594,8 +1630,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                               const RoundedRectSliderTrackShape(),
                                         ),
                                         child: Slider(
-                                          value: controller.blurStrength
-                                              .clamp(0.0, 1.0),
+                                          value: controller.blurStrength.clamp(
+                                            0.0,
+                                            1.0,
+                                          ),
                                           min: 0.0,
                                           max: 1.0,
                                           onChanged: (val) {
@@ -1615,8 +1653,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         children: blurPresets.map((b) {
                                           final isSelected =
                                               (controller.blurStrength - b)
-                                                      .abs() <
-                                                  0.04;
+                                                  .abs() <
+                                              0.04;
                                           return GestureDetector(
                                             onTap: () {
                                               setPopupState(() {
@@ -1640,9 +1678,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                 border: Border.all(
                                                   color: isSelected
                                                       ? Colors.transparent
-                                                      : const Color(
-                                                        0xFFE2E8F0,
-                                                      ),
+                                                      : const Color(0xFFE2E8F0),
                                                   width: 1.0,
                                                 ),
                                                 boxShadow: isSelected
@@ -1669,9 +1705,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                   fontWeight: FontWeight.w700,
                                                   color: isSelected
                                                       ? Colors.white
-                                                      : const Color(
-                                                        0xFF475569,
-                                                      ),
+                                                      : const Color(0xFF475569),
                                                 ),
                                               ),
                                             ),
@@ -1698,8 +1732,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                     ),
                                               ),
                                               const SizedBox(width: 6),
-                                              const Text(
-                                                'Smudge Intensity',
+                                              Text(
+                                                context.tr('smudge'),
                                                 style: TextStyle(
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.w700,
@@ -1779,8 +1813,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         children: smudgePresets.map((b) {
                                           final isSelected =
                                               (controller.smudgeStrength - b)
-                                                      .abs() <
-                                                  0.04;
+                                                  .abs() <
+                                              0.04;
                                           return GestureDetector(
                                             onTap: () {
                                               setPopupState(() {
@@ -1804,9 +1838,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                 border: Border.all(
                                                   color: isSelected
                                                       ? Colors.transparent
-                                                      : const Color(
-                                                        0xFFE2E8F0,
-                                                      ),
+                                                      : const Color(0xFFE2E8F0),
                                                   width: 1.0,
                                                 ),
                                                 boxShadow: isSelected
@@ -1833,9 +1865,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                                   fontWeight: FontWeight.w700,
                                                   color: isSelected
                                                       ? Colors.white
-                                                      : const Color(
-                                                        0xFF475569,
-                                                      ),
+                                                      : const Color(0xFF475569),
                                                 ),
                                               ),
                                             ),
@@ -1848,18 +1878,18 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          const Row(
+                                          Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(
+                                              const Icon(
                                                 Icons.opacity_rounded,
                                                 size: 15,
                                                 color: Color(0xFF475569),
                                               ),
-                                              SizedBox(width: 6),
+                                              const SizedBox(width: 6),
                                               Text(
-                                                'Opacity',
-                                                style: TextStyle(
+                                                context.tr('opacity'),
+                                                style: const TextStyle(
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.w700,
                                                   color: Color(0xFF1E293B),
@@ -1876,9 +1906,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                               color: ColorConstants.accent
                                                   .withValues(alpha: 0.12),
                                               borderRadius:
-                                                  BorderRadius.circular(
-                                                    8,
-                                                  ),
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: Text(
                                               '${(currentOpacity * 100).round()}%',
@@ -1897,16 +1925,18 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                       SliderTheme(
                                         data: SliderTheme.of(context).copyWith(
                                           trackHeight: 5,
-                                          activeTrackColor: ColorConstants.accent,
+                                          activeTrackColor:
+                                              ColorConstants.accent,
                                           inactiveTrackColor: const Color(
                                             0xFFF1F5F9,
                                           ),
                                           thumbColor: Colors.white,
-                                          thumbShape: const RoundSliderThumbShape(
-                                            enabledThumbRadius: 8,
-                                            elevation: 3,
-                                            pressedElevation: 5,
-                                          ),
+                                          thumbShape:
+                                              const RoundSliderThumbShape(
+                                                enabledThumbRadius: 8,
+                                                elevation: 3,
+                                                pressedElevation: 5,
+                                              ),
                                           overlayColor: ColorConstants.accent
                                               .withValues(alpha: 0.15),
                                           overlayShape:
@@ -1917,16 +1947,22 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                               const RoundedRectSliderTrackShape(),
                                         ),
                                         child: Slider(
-                                          value: currentOpacity.clamp(0.05, 1.0),
+                                          value: currentOpacity.clamp(
+                                            0.05,
+                                            1.0,
+                                          ),
                                           min: 0.05,
                                           max: 1.0,
                                           onChanged: (val) {
                                             setPopupState(() {
                                               controller.colorOpacity = val;
                                             });
-                                            controller.drawingController.setStyle(
-                                              color: baseColor.withOpacity(val),
-                                            );
+                                            controller.drawingController
+                                                .setStyle(
+                                                  color: baseColor.withOpacity(
+                                                    val,
+                                                  ),
+                                                );
                                             setState(() {});
                                           },
                                         ),
@@ -1947,9 +1983,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                               });
                                               controller.drawingController
                                                   .setStyle(
-                                                    color: baseColor.withOpacity(
-                                                      o,
-                                                    ),
+                                                    color: baseColor
+                                                        .withOpacity(o),
                                                   );
                                               setState(() {});
                                             },
@@ -2018,8 +2053,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                   ListenableBuilder(
                     listenable: controller.drawingController,
                     builder: (context, _) {
-                      final bool canUndo = controller.drawingController.canUndo();
-                      final bool canRedo = controller.drawingController.canRedo();
+                      final bool canUndo = controller.drawingController
+                          .canUndo();
+                      final bool canRedo = controller.drawingController
+                          .canRedo();
 
                       return Container(
                         height: 32,
@@ -2172,19 +2209,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 ),
                 if (controller.activeCategory == 'Brush')
                   Positioned(
-                    left: (_brushPanelPosition?.dx ??
-                            (MediaQuery.of(context).size.width - 44.0 - 16.0))
-                        .clamp(
-                          2.0,
-                          (MediaQuery.of(context).size.width - 44.0 - 2.0)
-                              .clamp(2.0, 4000.0),
-                        ),
-                    top: (_brushPanelPosition?.dy ?? 12.0)
-                        .clamp(
-                          0.0,
-                          (MediaQuery.of(context).size.height - 140.0)
-                              .clamp(0.0, 4000.0),
-                        ),
+                    left:
+                        (_brushPanelPosition?.dx ??
+                                (MediaQuery.of(context).size.width -
+                                    44.0 -
+                                    16.0))
+                            .clamp(
+                              2.0,
+                              (MediaQuery.of(context).size.width - 44.0 - 2.0)
+                                  .clamp(2.0, 4000.0),
+                            ),
+                    top: (_brushPanelPosition?.dy ?? 12.0).clamp(
+                      0.0,
+                      (MediaQuery.of(context).size.height - 140.0).clamp(
+                        0.0,
+                        4000.0,
+                      ),
+                    ),
                     child: _buildRightVerticalPanel(controller),
                   ),
                 if (controller.activeCategory == 'Brush' &&
@@ -2205,7 +2246,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                       left: _rulerBarPosition!.dx.clamp(
                         8.0,
                         MediaQuery.of(context).size.width -
-                            (_isRulerBarCollapsed ? 110.0 : 325.0) -
+                            (_isRulerBarCollapsed ? 110.0 : 328.0) -
                             8.0,
                       ),
                       top: _rulerBarPosition!.dy.clamp(
@@ -2265,7 +2306,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: const Color(0xFFFF9318).withValues(alpha: 0.6),
+                            color: const Color(
+                              0xFFFF9318,
+                            ).withValues(alpha: 0.6),
                             width: 1.5,
                           ),
                           boxShadow: [
@@ -2286,18 +2329,19 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                   left: Radius.circular(24),
                                 ),
                                 onTap: () async {
-                                  final ok = await controller.pasteLassoSelection();
+                                  final ok = await controller
+                                      .pasteLassoSelection();
                                   if (ok) {
                                     Fluttertoast.showToast(
-                                      msg: 'Selection pasted',
+                                      msg: context.tr('selectionPasted'),
                                       backgroundColor: const Color(0xFFFF9318),
                                       textColor: Colors.white,
                                       toastLength: Toast.LENGTH_SHORT,
                                     );
                                   }
                                 },
-                                child: const Padding(
-                                  padding: EdgeInsets.only(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
                                     left: 14,
                                     right: 10,
                                     top: 8,
@@ -2306,14 +2350,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.paste_rounded,
                                         size: 18,
                                         color: Color(0xFFFF9318),
                                       ),
                                       SizedBox(width: 8),
                                       Text(
-                                        'Paste Selection',
+                                        context.tr('paste'),
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
@@ -2394,7 +2438,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                     },
                     onPanUpdate: (details) {
                       if (_brushPanelDragStart != null &&
-                          (details.globalPosition - _brushPanelDragStart!).distance > 4.0) {
+                          (details.globalPosition - _brushPanelDragStart!)
+                                  .distance >
+                              4.0) {
                         _isBrushPanelDragging = true;
                       }
                       _onBrushPanelPanUpdate(details);
@@ -2438,8 +2484,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                             isBrushTipsActive
                                 ? AssetConstants.brush_tips
                                 : isRulerActive
-                                    ? AssetConstants.ruler_icon
-                                    : AssetConstants.brush_icon,
+                                ? AssetConstants.ruler_icon
+                                : AssetConstants.brush_icon,
                             width: 20,
                             height: 20,
                             colorFilter: const ColorFilter.mode(
@@ -2494,7 +2540,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 6,
+                    horizontal: 4,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -2507,7 +2556,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         },
                         onPanUpdate: (details) {
                           if (_brushPanelDragStart != null &&
-                              (details.globalPosition - _brushPanelDragStart!).distance > 4.0) {
+                              (details.globalPosition - _brushPanelDragStart!)
+                                      .distance >
+                                  4.0) {
                             _isBrushPanelDragging = true;
                           }
                           _onBrushPanelPanUpdate(details);
@@ -2525,7 +2576,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                           });
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 6,
+                            horizontal: 8,
+                          ),
                           child: Container(
                             width: 18,
                             height: 4,
@@ -2559,7 +2613,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         isActive: isSingleBrushActive,
                         onTap: () {
                           controller.activeCategory = 'Brush';
-                          controller.drawingController.activeBrushPresetId = null;
+                          controller.drawingController.activeBrushPresetId =
+                              null;
                           controller.drawingController.setPaintContent(
                             FreehandLine(),
                           );
@@ -2737,7 +2792,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       );
       final double newY = (currentY + details.delta.dy).clamp(
         0.0,
-        (MediaQuery.of(context).size.height - panelH - 120.0).clamp(0.0, 4000.0),
+        (MediaQuery.of(context).size.height - panelH - 120.0).clamp(
+          0.0,
+          4000.0,
+        ),
       );
 
       _brushPanelPosition = Offset(newX, newY);
@@ -2772,7 +2830,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 onPanUpdate: (details) {
                   setState(() {
                     final double screenW = MediaQuery.of(context).size.width;
-                    final double barW = _isRulerBarCollapsed ? 110.0 : 325.0;
+                    final double barW = _isRulerBarCollapsed ? 110.0 : 328.0;
                     final double barH = 48.0;
                     final double defaultX = (screenW - barW) / 2;
                     final double stackH =
@@ -2880,7 +2938,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 // Expanded View: full options
                 // 1. LOCK Button
                 _buildHorizontalRulerItem(
-                  label: 'LOCK',
+                  label: context.tr('rulerLock'),
                   icon: rulerConfig.isLocked
                       ? Icons.lock_rounded
                       : Icons.lock_open_rounded,
@@ -2899,7 +2957,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 ),
                 // 2. LINE
                 _buildHorizontalRulerItem(
-                  label: 'LINE',
+                  label: context.tr('rulerLine'),
                   assetPath: AssetConstants.ruler_line,
                   isSelected: rulerConfig.type == RulerType.line,
                   onTap: () {
@@ -2918,7 +2976,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 const SizedBox(width: 2),
                 // 3. CIRC
                 _buildHorizontalRulerItem(
-                  label: 'CIRC',
+                  label: context.tr('rulerCirc'),
                   assetPath: AssetConstants.ruler_circle,
                   isSelected: rulerConfig.type == RulerType.circle,
                   onTap: () {
@@ -2937,7 +2995,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 const SizedBox(width: 2),
                 // 4. BOX
                 _buildHorizontalRulerItem(
-                  label: 'BOX',
+                  label: context.tr('rulerBox'),
                   assetPath: AssetConstants.ruller_box,
                   isSelected: rulerConfig.type == RulerType.box,
                   onTap: () {
@@ -2956,7 +3014,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 const SizedBox(width: 2),
                 // 5. MIRR (2-Way Mirror)
                 _buildHorizontalRulerItem(
-                  label: 'MIRR',
+                  label: context.tr('rulerMirror'),
                   assetPath: AssetConstants.ruler_mirer,
                   isSelected: rulerConfig.type == RulerType.mirror,
                   onTap: () {
@@ -2987,7 +3045,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 const SizedBox(width: 2),
                 // 6. 4-MIRR (4-Way Quadrant Symmetry)
                 _buildHorizontalRulerItem(
-                  label: '4-MIRR',
+                  label: context.tr('rulerQuadMirror'),
                   icon: Icons.grid_view_rounded,
                   isSelected: rulerConfig.type == RulerType.quadMirror,
                   onTap: () {
@@ -3044,32 +3102,32 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   }
 
   Widget _buildRulerActiveMiniIndicator(RulerConfig config) {
-    String label = 'RULER';
+    String label = context.tr('rulerTitle');
     String? asset;
     IconData? icon;
     switch (config.type) {
       case RulerType.line:
-        label = 'LINE';
+        label = context.tr('rulerLine');
         asset = AssetConstants.ruler_line;
         break;
       case RulerType.circle:
-        label = 'CIRC';
+        label = context.tr('rulerCirc');
         asset = AssetConstants.ruler_circle;
         break;
       case RulerType.box:
-        label = 'BOX';
+        label = context.tr('rulerBox');
         asset = AssetConstants.ruller_box;
         break;
       case RulerType.mirror:
-        label = 'MIRR';
+        label = context.tr('rulerMirror');
         asset = AssetConstants.ruler_mirer;
         break;
       case RulerType.quadMirror:
-        label = '4-MIRR';
+        label = context.tr('rulerQuadMirror');
         icon = Icons.grid_view_rounded;
         break;
       case RulerType.none:
-        label = 'NONE';
+        label = context.tr('none');
         break;
     }
 
@@ -3116,13 +3174,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     IconData? icon,
     required bool isSelected,
     required VoidCallback onTap,
+    double width = 42.0,
   }) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 38,
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        width: width,
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
         decoration: BoxDecoration(
           color: isSelected
               ? ColorConstants.accent.withValues(alpha: 0.08)
@@ -3157,15 +3216,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                     ),
             ),
             const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9.0,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected
-                    ? ColorConstants.accent
-                    : Colors.grey.shade600,
-                letterSpacing: 0.1,
+            SizedBox(
+              width: width - 4,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected
+                      ? ColorConstants.accent
+                      : Colors.grey.shade600,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
           ],
@@ -3331,8 +3396,8 @@ class StrokePreviewPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     // Dynamically calculate wave amplitude to ensure thick strokes never clip or overlap
-    final double maxAllowedAmp =
-        (size.height / 2 - (clampedWidth / 2) - 4).clamp(0.0, 13.0);
+    final double maxAllowedAmp = (size.height / 2 - (clampedWidth / 2) - 4)
+        .clamp(0.0, 13.0);
     final double midY = size.height / 2;
     final double startX = 22.0;
     final double endX = size.width - 22.0;
@@ -3526,7 +3591,12 @@ class BlurPreviewPainter extends CustomPainter {
     final double sigma = (blurStrength * 12.0);
     if (sigma > 0.01) {
       final double splitX = size.width * 0.38;
-      final blurRect = Rect.fromLTWH(splitX, 0, size.width - splitX, size.height);
+      final blurRect = Rect.fromLTWH(
+        splitX,
+        0,
+        size.width - splitX,
+        size.height,
+      );
       canvas.saveLayer(
         blurRect,
         Paint()
@@ -3605,11 +3675,7 @@ class SmudgePreviewPainter extends CustomPainter {
       ..shader = ui.Gradient.linear(
         Offset.zero,
         Offset(size.width, size.height),
-        const [
-          Color(0xFF0F172A),
-          Color(0xFF1E293B),
-          Color(0xFF334155),
-        ],
+        const [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155)],
         const [0.0, 0.5, 1.0],
       );
     canvas.drawRect(rect, bgPaint);
@@ -3664,8 +3730,12 @@ class SmudgePreviewPainter extends CustomPainter {
       Offset(size.width * 0.18 + dragLength, centerY),
       [
         const Color(0xFFFF5252).withValues(alpha: 0.95),
-        const Color(0xFFFF5252).withValues(alpha: (0.35 + 0.60 * smudgeStrength).clamp(0.0, 1.0)),
-        const Color(0xFFFF5252).withValues(alpha: (0.05 + 0.90 * smudgeStrength).clamp(0.0, 1.0)),
+        const Color(
+          0xFFFF5252,
+        ).withValues(alpha: (0.35 + 0.60 * smudgeStrength).clamp(0.0, 1.0)),
+        const Color(
+          0xFFFF5252,
+        ).withValues(alpha: (0.05 + 0.90 * smudgeStrength).clamp(0.0, 1.0)),
       ],
       [0.0, 0.6, 1.0],
     );
@@ -3685,11 +3755,16 @@ class SmudgePreviewPainter extends CustomPainter {
     canvas.drawPath(
       pathYellow,
       Paint()
-        ..color = const Color(0xFFFFD740).withValues(alpha: (0.4 + 0.6 * smudgeStrength).clamp(0.0, 1.0))
+        ..color = const Color(
+          0xFFFFD740,
+        ).withValues(alpha: (0.4 + 0.6 * smudgeStrength).clamp(0.0, 1.0))
         ..strokeWidth = trailWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, (1.0 - smudgeStrength * 0.5) * 2.0),
+        ..maskFilter = MaskFilter.blur(
+          BlurStyle.normal,
+          (1.0 - smudgeStrength * 0.5) * 2.0,
+        ),
     );
 
     // Blended blue streak
@@ -3706,11 +3781,16 @@ class SmudgePreviewPainter extends CustomPainter {
     canvas.drawPath(
       pathBlue,
       Paint()
-        ..color = const Color(0xFF448AFF).withValues(alpha: (0.4 + 0.6 * smudgeStrength).clamp(0.0, 1.0))
+        ..color = const Color(
+          0xFF448AFF,
+        ).withValues(alpha: (0.4 + 0.6 * smudgeStrength).clamp(0.0, 1.0))
         ..strokeWidth = trailWidth * 0.85
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, (1.0 - smudgeStrength * 0.5) * 2.0),
+        ..maskFilter = MaskFilter.blur(
+          BlurStyle.normal,
+          (1.0 - smudgeStrength * 0.5) * 2.0,
+        ),
     );
 
     // Subtle center blend zone
@@ -3718,7 +3798,9 @@ class SmudgePreviewPainter extends CustomPainter {
       Offset(size.width * 0.28 + dragLength * 0.45, centerY + 2),
       trailWidth * 0.9,
       Paint()
-        ..color = const Color(0xFFFF80AB).withValues(alpha: (0.3 + 0.4 * smudgeStrength).clamp(0.0, 1.0))
+        ..color = const Color(
+          0xFFFF80AB,
+        ).withValues(alpha: (0.3 + 0.4 * smudgeStrength).clamp(0.0, 1.0))
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
     );
 
@@ -3732,11 +3814,7 @@ class SmudgePreviewPainter extends CustomPainter {
           fontWeight: FontWeight.w900,
           letterSpacing: 1.2,
           shadows: [
-            Shadow(
-              color: Colors.black54,
-              blurRadius: 4,
-              offset: Offset(0, 1),
-            ),
+            Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 1)),
           ],
         ),
       ),
@@ -3758,4 +3836,3 @@ class SmudgePreviewPainter extends CustomPainter {
         oldDelegate.strokeWidth != strokeWidth;
   }
 }
-

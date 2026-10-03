@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../domain/models/audio_clip.dart';
 import '../../services/audio_library_service.dart';
 import '../../services/audio_playback_service.dart';
@@ -85,9 +86,9 @@ class _AudioLibraryScreenState extends State<AudioLibraryScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E1E24)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Audio Library',
-          style: TextStyle(
+        title: Text(
+          context.tr('audioLibrary'),
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1E1E24),
@@ -109,10 +110,11 @@ class _AudioLibraryScreenState extends State<AudioLibraryScreen> {
                 itemBuilder: (context, index) {
                   final cat = _categories[index];
                   final isSelected = cat == _selectedCategory;
+                  final displayLabel = cat == 'All' ? context.tr('catAll') : cat;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: ChoiceChip(
-                      label: Text(cat),
+                      label: Text(displayLabel),
                       selected: isSelected,
                       onSelected: (val) {
                         setState(() {
@@ -237,7 +239,7 @@ class _AudioLibraryScreenState extends State<AudioLibraryScreen> {
                               borderRadius: BorderRadius.circular(18),
                             ),
                           ),
-                          child: const Text('Add', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          child: Text(context.tr('add'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                         ),
                       ],
                     ),

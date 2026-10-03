@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/features/editor/presentation/screens/image_crop_screen.dart';
 
+import 'package:dummy/core/localization/app_localizations.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -35,6 +37,10 @@ void main() {
     await tester.runAsync(() async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
           home: ImageCropScreen(
             imageFile: testImageFile,
             targetAspectRatio: 16.0 / 9.0,
@@ -47,7 +53,7 @@ void main() {
     });
 
     // Verify top bar elements
-    expect(find.text('Image import'), findsOneWidget);
+    expect(find.text('Image Import'), findsOneWidget);
     expect(find.text('16:9'), findsOneWidget);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);
@@ -63,6 +69,10 @@ void main() {
     await tester.runAsync(() async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
           home: ImageCropScreen(
             imageFile: testImageFile,
             targetAspectRatio: 1.0,
@@ -75,11 +85,11 @@ void main() {
     });
 
     // Tap Flip Horizontal
-    await tester.tap(find.byTooltip('Flip Horizontal'));
+    await tester.tap(find.byTooltip('Flip H'));
     await tester.pump();
 
     // Tap Flip Vertical
-    await tester.tap(find.byTooltip('Flip Vertical'));
+    await tester.tap(find.byTooltip('Flip V'));
     await tester.pump();
 
     // Tap Rotate Right
@@ -95,10 +105,11 @@ void main() {
     await tester.pump();
 
     // Tap Reset
-    await tester.tap(find.byTooltip('Reset Transforms'));
+    await tester.tap(find.byTooltip('Reset'));
     await tester.pump();
 
     // Verify screen is still active and stable
     expect(find.text('1:1'), findsOneWidget);
   });
 }
+

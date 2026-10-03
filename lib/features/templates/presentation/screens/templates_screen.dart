@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../data/tutorials_data.dart';
@@ -137,9 +138,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                 controller: _searchController,
                 autofocus: true,
                 style: const TextStyle(color: ColorConstants.darkText, fontSize: 15, fontWeight: FontWeight.w600),
-                decoration: const InputDecoration(
-                  hintText: 'Search 22 lessons (ball, wave, timing)...',
-                  hintStyle: TextStyle(color: ColorConstants.mediumText, fontSize: 13.5),
+                decoration: InputDecoration(
+                  hintText: context.tr('searchLessonsHint'),
+                  hintStyle: const TextStyle(color: ColorConstants.mediumText, fontSize: 13.5),
                   border: InputBorder.none,
                 ),
                 onChanged: (v) => setState(() => _searchQuery = v.trim()),
@@ -149,9 +150,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                 children: [
                   const Icon(Icons.school_rounded, color: ColorConstants.primary, size: 22),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Animation Academy',
-                    style: TextStyle(
+                  Text(
+                    context.tr('animationAcademy'),
+                    style: const TextStyle(
                       color: ColorConstants.darkText,
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
@@ -218,31 +219,31 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             physics: const BouncingScrollPhysics(),
                             child: Row(
                               children: [
-                                _buildCategoryTab('All', label: '✨ All (${_allTemplates.length})'),
+                                _buildCategoryTab('All', label: '✨ ${context.tr('catAll')} (${_allTemplates.length})'),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryAnimationBasics,
-                                  label: '🟢 Fundamentals (${_allTemplates.where((t) => t.category == TutorialsData.categoryAnimationBasics).length})',
+                                  label: '🟢 ${context.tr('catAnimationBasics')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryAnimationBasics).length})',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryThe12Principles,
-                                  label: '🎬 12 Principles (${_allTemplates.where((t) => t.category == TutorialsData.categoryThe12Principles).length})',
+                                  label: '🎬 ${context.tr('catThe12Principles')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryThe12Principles).length})',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryCharacterAndLocomotion,
-                                  label: '🏃 Character & Motion (${_allTemplates.where((t) => t.category == TutorialsData.categoryCharacterAndLocomotion).length})',
+                                  label: '🏃 ${context.tr('catCharacterAndLocomotion')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryCharacterAndLocomotion).length})',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryVFXAndElements,
-                                  label: '💥 VFX & Elements (${_allTemplates.where((t) => t.category == TutorialsData.categoryVFXAndElements).length})',
+                                  label: '💥 ${context.tr('catVFXAndElements')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryVFXAndElements).length})',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryMasterPractice,
-                                  label: '🏆 Master Practice (${_allTemplates.where((t) => t.category == TutorialsData.categoryMasterPractice).length})',
+                                  label: '🏆 ${context.tr('catMasterPractice')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryMasterPractice).length})',
                                 ),
                               ],
                             ),
@@ -252,11 +253,11 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                           // Difficulty Filter Row
                           Row(
                             children: [
-                              _buildDifficultyFilter(null, 'All Levels'),
+                              _buildDifficultyFilter(null, context.tr('allLevels')),
                               const SizedBox(width: 6),
-                              _buildDifficultyFilter(TutorialDifficulty.beginner, '🟢 Beginner'),
+                              _buildDifficultyFilter(TutorialDifficulty.beginner, '🟢 ${context.tr('beginner')}'),
                               const SizedBox(width: 6),
-                              _buildDifficultyFilter(TutorialDifficulty.intermediate, '🟠 Medium'),
+                              _buildDifficultyFilter(TutorialDifficulty.intermediate, '🟠 ${context.tr('medium')}'),
                             ],
                           ),
                           const SizedBox(height: 14),
@@ -266,7 +267,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '${filteredTemplates.length} Tutorials Available',
+                                context.tr('tutorialsAvailableCount', {'count': '${filteredTemplates.length}'}),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,
@@ -274,8 +275,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                                 ),
                               ),
                               Text(
-                                'Tap to practice & inspect',
-                                style: TextStyle(
+                                context.tr('tapToPracticeAndInspect'),
+                                style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   color: ColorConstants.subTextColor,
@@ -300,7 +301,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             Icon(Icons.search_off_rounded, size: 54, color: Colors.grey.shade300),
                             const SizedBox(height: 12),
                             Text(
-                              'No lessons match "$_searchQuery"',
+                              context.tr('noLessonsMatch', {'query': _searchQuery}),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -400,9 +401,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                       color: ColorConstants.primary,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text(
-                      '⭐ SPOTLIGHT LESSON',
-                      style: TextStyle(
+                    child: Text(
+                      '⭐ ${context.tr('spotlightLesson').toUpperCase()}',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 9.5,
                         fontWeight: FontWeight.w900,
@@ -412,7 +413,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    template.name,
+                    template.getLocalizedName(context),
                     style: const TextStyle(
                       color: ColorConstants.darkText,
                       fontSize: 17.5,
@@ -422,7 +423,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    template.description,
+                    template.getLocalizedDescription(context),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -447,19 +448,19 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             ),
                           ],
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Start Lesson',
-                              style: TextStyle(
+                              context.tr('startLesson'),
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white),
                           ],
                         ),
                       ),
@@ -583,7 +584,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          '${template.frameCount} frames',
+                          context.tr('framesCount', {'count': '${template.frameCount}'}),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 8.5,
@@ -617,7 +618,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          template.name,
+                          template.getLocalizedName(context),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -628,7 +629,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          template.description,
+                          template.getLocalizedDescription(context),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -643,7 +644,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                         const Icon(Icons.timer_outlined, size: 12, color: ColorConstants.primary),
                         const SizedBox(width: 3),
                         Text(
-                          '~${template.estimatedMinutes}m',
+                          context.tr('minutesApprox', {'min': '${template.estimatedMinutes}'}),
                           style: const TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
@@ -657,19 +658,19 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             color: ColorConstants.primary.withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Draw',
-                                style: TextStyle(
+                                context.tr('draw'),
+                                style: const TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w800,
                                   color: ColorConstants.primary,
                                 ),
                               ),
-                              SizedBox(width: 2),
-                              Icon(Icons.arrow_forward_rounded, size: 10, color: ColorConstants.primary),
+                              const SizedBox(width: 2),
+                              const Icon(Icons.arrow_forward_rounded, size: 10, color: ColorConstants.primary),
                             ],
                           ),
                         ),
@@ -765,17 +766,17 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
       case TutorialDifficulty.beginner:
         bg = const Color(0xFFE8F5E9);
         text = const Color(0xFF2E7D32);
-        label = 'Beginner';
+        label = context.tr('beginner');
         break;
       case TutorialDifficulty.intermediate:
         bg = ColorConstants.primaryLight;
         text = ColorConstants.primaryDark;
-        label = 'Medium';
+        label = context.tr('medium');
         break;
       case TutorialDifficulty.advanced:
         bg = const Color(0xFFFFEBEE);
         text = const Color(0xFFC62828);
-        label = 'Master';
+        label = context.tr('master');
         break;
     }
 

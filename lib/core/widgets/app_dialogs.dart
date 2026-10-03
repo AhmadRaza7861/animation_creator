@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
+import '../localization/app_localizations.dart';
 
 enum AppDialogType {
   primary,
@@ -52,11 +52,11 @@ class AppDialogs {
           icon: Icons.power_settings_new_rounded,
           iconColor: const Color(0xFFFF9318),
           iconBgColor: const Color(0xFFFFF2E2),
-          title: 'Exit Animation Studio?',
-          message: 'Are you sure you want to exit the app? All your animation projects are safely saved.',
-          confirmText: 'Exit App',
+          title: context.tr('exitAppTitle'),
+          message: context.tr('exitAppMessage'),
+          confirmText: context.tr('exitAppConfirm'),
           confirmColor: const Color(0xFFFF9318),
-          cancelText: 'Stay & Create',
+          cancelText: context.tr('exitAppCancel'),
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
         ),
@@ -77,12 +77,12 @@ class AppDialogs {
           icon: Icons.delete_outline_rounded,
           iconColor: const Color(0xFFE53935),
           iconBgColor: const Color(0xFFFFEBEE),
-          title: 'Delete Project?',
-          message: 'This will permanently delete this animation project and all its canvas drawings.',
+          title: context.tr('deleteProjectTitle'),
+          message: context.tr('deleteProjectMessage'),
           highlightChip: title,
-          confirmText: 'Delete Project',
+          confirmText: context.tr('deleteProjectConfirm'),
           confirmColor: const Color(0xFFE53935),
-          cancelText: 'Keep Project',
+          cancelText: context.tr('keepProject'),
           isDestructive: true,
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
@@ -100,19 +100,18 @@ class AppDialogs {
     final controller = TextEditingController(text: initialTitle);
     return showCustomDialog<String>(
       context: context,
-      child: Center(
-        child: _InputDialogContainer(
-          icon: Icons.edit_note_rounded,
-          iconColor: const Color(0xFFFF9318),
-          iconBgColor: const Color(0xFFFFF2E2),
-          title: 'Rename Project',
-          hintText: 'Enter project title',
-          initialText: initialTitle,
-          confirmText: 'Save Title',
-          controller: controller,
-          onConfirm: (text) => Navigator.of(context).pop(text),
-          onCancel: () => Navigator.of(context).pop(null),
-        ),
+      child: _InputDialogContainer(
+        icon: Icons.edit_note_rounded,
+        iconColor: const Color(0xFFFF9318),
+        iconBgColor: const Color(0xFFFFF2E2),
+        title: context.tr('renameProjectTitle'),
+        hintText: context.tr('enterProjectTitle'),
+        initialText: initialTitle,
+        confirmText: context.tr('saveTitle'),
+        cancelText: context.tr('cancel'),
+        controller: controller,
+        onConfirm: (text) => Navigator.of(context).pop(text),
+        onCancel: () => Navigator.of(context).pop(null),
       ),
     );
   }
@@ -129,11 +128,11 @@ class AppDialogs {
           icon: Icons.delete_sweep_rounded,
           iconColor: const Color(0xFFE53935),
           iconBgColor: const Color(0xFFFFEBEE),
-          title: 'Delete Frame ${frameIndex + 1}?',
-          message: 'Are you sure you want to remove this frame from your timeline?',
-          confirmText: 'Delete Frame',
+          title: context.tr('deleteFrameTitle', {'num': '${frameIndex + 1}'}),
+          message: context.tr('deleteFrameMessage'),
+          confirmText: context.tr('deleteFrameConfirm'),
           confirmColor: const Color(0xFFE53935),
-          cancelText: 'Keep Frame',
+          cancelText: context.tr('keepFrame'),
           isDestructive: true,
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
@@ -152,11 +151,11 @@ class AppDialogs {
           icon: Icons.cleaning_services_rounded,
           iconColor: const Color(0xFFFF9318),
           iconBgColor: const Color(0xFFFFF2E2),
-          title: 'Clear Current Canvas?',
-          message: 'This will erase all artwork on the active layer for this frame.',
-          confirmText: 'Clear Canvas',
+          title: context.tr('clearCanvasTitle'),
+          message: context.tr('clearCanvasMessage'),
+          confirmText: context.tr('clearCanvasConfirm'),
           confirmColor: const Color(0xFFFF9318),
-          cancelText: 'Cancel',
+          cancelText: context.tr('cancel'),
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
         ),
@@ -178,12 +177,12 @@ class AppDialogs {
           icon: Icons.music_off_rounded,
           iconColor: const Color(0xFFE53935),
           iconBgColor: const Color(0xFFFFEBEE),
-          title: 'Delete Audio Clip?',
-          message: 'Are you sure you want to delete this sound clip from Track ${trackIndex + 1}?',
+          title: context.tr('deleteAudioClipTitle'),
+          message: context.tr('deleteAudioClipMessage', {'num': '${trackIndex + 1}'}),
           highlightChip: clipTitle,
-          confirmText: 'Delete Audio',
+          confirmText: context.tr('deleteAudioConfirm'),
           confirmColor: const Color(0xFFE53935),
-          cancelText: 'Keep Audio',
+          cancelText: context.tr('keepAudio'),
           isDestructive: true,
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
@@ -202,11 +201,11 @@ class AppDialogs {
           icon: Icons.stop_circle_outlined,
           iconColor: const Color(0xFFFF9318),
           iconBgColor: const Color(0xFFFFF2E2),
-          title: 'Cancel Export?',
-          message: 'Are you sure you want to stop generating this video animation?',
-          confirmText: 'Yes, Stop Export',
+          title: context.tr('cancelExportTitle'),
+          message: context.tr('cancelExportMessage'),
+          confirmText: context.tr('stopExportConfirm'),
           confirmColor: const Color(0xFFE53935),
-          cancelText: 'Continue Export',
+          cancelText: context.tr('continueExport'),
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
         ),
@@ -221,6 +220,7 @@ class AppDialogs {
     required String title,
     required String message,
     bool isError = false,
+    String? dismissText,
   }) {
     return showCustomDialog<void>(
       context: context,
@@ -229,6 +229,7 @@ class AppDialogs {
           title: title,
           message: message,
           isError: isError,
+          dismissText: dismissText,
           onDismiss: () => Navigator.of(context).pop(),
         ),
       ),
@@ -291,24 +292,27 @@ class AppDialogs {
   static Future<String?> showTextStickerDialog(
     BuildContext context, {
     String initialText = '',
-    String title = 'Add Text Sticker',
+    String? title,
+    String? hintText,
+    String? confirmText,
+    String? cancelText,
   }) {
     final controller = TextEditingController(text: initialText);
     return showCustomDialog<String>(
       context: context,
-      child: Center(
-        child: _InputDialogContainer(
-          icon: Icons.text_fields_rounded,
-          iconColor: const Color(0xFFFF9318),
-          iconBgColor: const Color(0xFFFFF2E2),
-          title: title,
-          hintText: 'Type your sticker text here...',
-          initialText: initialText,
-          confirmText: initialText.isEmpty ? 'Add to Canvas' : 'Save Text',
-          controller: controller,
-          onConfirm: (text) => Navigator.of(context).pop(text),
-          onCancel: () => Navigator.of(context).pop(null),
-        ),
+      child: _InputDialogContainer(
+        icon: Icons.text_fields_rounded,
+        iconColor: const Color(0xFFFF9318),
+        iconBgColor: const Color(0xFFFFF2E2),
+        title: title ?? context.tr('addTextSticker'),
+        hintText: hintText ?? context.tr('typeStickerText'),
+        initialText: initialText,
+        confirmText: confirmText ??
+            (initialText.isEmpty ? context.tr('addToCanvas') : context.tr('saveText')),
+        cancelText: cancelText ?? context.tr('cancel'),
+        controller: controller,
+        onConfirm: (text) => Navigator.of(context).pop(text),
+        onCancel: () => Navigator.of(context).pop(null),
       ),
     );
   }
@@ -453,11 +457,14 @@ class _DialogContainer extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: Text(
-                        cancelText,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          cancelText,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -480,11 +487,14 @@ class _DialogContainer extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: Text(
-                        confirmText,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          confirmText,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -510,6 +520,7 @@ class _InputDialogContainer extends StatefulWidget {
   final String hintText;
   final String initialText;
   final String confirmText;
+  final String cancelText;
   final TextEditingController controller;
   final ValueChanged<String> onConfirm;
   final VoidCallback onCancel;
@@ -522,6 +533,7 @@ class _InputDialogContainer extends StatefulWidget {
     required this.hintText,
     required this.initialText,
     required this.confirmText,
+    this.cancelText = 'Cancel',
     required this.controller,
     required this.onConfirm,
     required this.onCancel,
@@ -558,154 +570,173 @@ class _InputDialogContainerState extends State<_InputDialogContainer> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.86,
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 28,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Top Glow Icon Badge
-            Container(
-              width: 58,
-              height: 58,
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return AnimatedPadding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      child: Center(
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.86,
+              constraints: const BoxConstraints(maxWidth: 380),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
               decoration: BoxDecoration(
-                color: widget.iconBgColor,
-                shape: BoxShape.circle,
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.iconColor.withValues(alpha: 0.25),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
-              child: Center(
-                child: Icon(widget.icon, color: widget.iconColor, size: 28),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Title
-            Text(
-              widget.title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1E1E24),
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Input Field
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF7F8FA),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-              ),
-              child: TextField(
-                controller: widget.controller,
-                autofocus: true,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E1E24),
-                ),
-                decoration: InputDecoration(
-                  hintText: widget.hintText,
-                  hintStyle: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black.withValues(alpha: 0.35),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  border: InputBorder.none,
-                  suffixIcon: widget.controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.cancel_rounded, size: 18, color: Colors.black26),
-                          onPressed: () => widget.controller.clear(),
-                        )
-                      : null,
-                ),
-                onSubmitted: (val) {
-                  if (val.trim().isNotEmpty) {
-                    widget.onConfirm(val.trim());
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 22),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: TextButton(
-                      onPressed: widget.onCancel,
-                      style: TextButton.styleFrom(
-                        backgroundColor: const Color(0xFFF4F5F8),
-                        foregroundColor: const Color(0xFF4A4B57),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Top Glow Icon Badge
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: widget.iconBgColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.iconColor.withValues(alpha: 0.25),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Icon(widget.icon, color: widget.iconColor, size: 28),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _hasText
-                          ? () => widget.onConfirm(widget.controller.text.trim())
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF9318),
-                        disabledBackgroundColor: const Color(0xFFFF9318).withValues(alpha: 0.4),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(
-                        widget.confirmText,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                  const SizedBox(height: 16),
+
+                  // Title
+                  Text(
+                    widget.title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E1E24),
+                      letterSpacing: -0.3,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+
+                  // Input Field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F8FA),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+                    ),
+                    child: TextField(
+                      controller: widget.controller,
+                      autofocus: true,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E1E24),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: widget.hintText,
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black.withValues(alpha: 0.35),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: InputBorder.none,
+                        suffixIcon: widget.controller.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.cancel_rounded, size: 18, color: Colors.black26),
+                                onPressed: () => widget.controller.clear(),
+                              )
+                            : null,
+                      ),
+                      onSubmitted: (val) {
+                        if (val.trim().isNotEmpty) {
+                          widget.onConfirm(val.trim());
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: TextButton(
+                            onPressed: widget.onCancel,
+                            style: TextButton.styleFrom(
+                              backgroundColor: const Color(0xFFF4F5F8),
+                              foregroundColor: const Color(0xFF4A4B57),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                widget.cancelText,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _hasText
+                                ? () => widget.onConfirm(widget.controller.text.trim())
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF9318),
+                              disabledBackgroundColor: const Color(0xFFFF9318).withValues(alpha: 0.4),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                widget.confirmText,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -719,12 +750,14 @@ class _NoticeDialogContainer extends StatelessWidget {
   final String title;
   final String message;
   final bool isError;
+  final String? dismissText;
   final VoidCallback onDismiss;
 
   const _NoticeDialogContainer({
     required this.title,
     required this.message,
     required this.isError,
+    this.dismissText,
     required this.onDismiss,
   });
 
@@ -802,9 +835,9 @@ class _NoticeDialogContainer extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'OK, Got it',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                child: Text(
+                  dismissText ?? context.tr('okGotIt'),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
               ),
             ),

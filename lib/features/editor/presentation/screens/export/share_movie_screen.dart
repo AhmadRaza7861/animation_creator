@@ -4,6 +4,7 @@ import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/widgets/app_back_button.dart';
 import '../../../services/movie_export_service.dart';
 import 'fullscreen_player_screen.dart';
@@ -133,16 +134,16 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
               children: [
                 const Icon(Icons.check_circle_rounded, color: ColorConstants.primary, size: 22),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Saved to Photos / Gallery in "Clipax" album!',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                    context.tr('savedToAlbumNotice'),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                 ),
               ],
             ),
             action: SnackBarAction(
-              label: 'OPEN',
+              label: context.tr('open'),
               textColor: ColorConstants.primary,
               onPressed: () {
                 try {
@@ -210,9 +211,9 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         leading: const AppBackButton(),
-        title: const Text(
-          'Export Ready',
-          style: TextStyle(
+        title: Text(
+          context.tr('exportReady'),
+          style: const TextStyle(
             color: ColorConstants.darkText,
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -221,7 +222,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
         centerTitle: false,
         actions: [
           IconButton(
-            tooltip: 'Download to Device',
+            tooltip: context.tr('downloadToDevice'),
             icon: _isSaving
                 ? const SizedBox(
                     width: 20,
@@ -401,18 +402,18 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                                       color: Colors.black54,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(
+                                        const Icon(
                                           Icons.fullscreen_rounded,
                                           color: Colors.white,
                                           size: 16,
                                         ),
-                                        SizedBox(width: 4),
+                                        const SizedBox(width: 4),
                                         Text(
-                                          'Fullscreen',
-                                          style: TextStyle(
+                                          context.tr('fullscreen'),
+                                          style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 11,
                                             fontWeight: FontWeight.w500,
@@ -510,8 +511,8 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                                     children: [
                                       Text(
                                         _isSaved
-                                            ? 'Saved to Gallery!'
-                                            : 'Download to Device',
+                                            ? context.tr('savedToGalleryTitle')
+                                            : context.tr('downloadToDevice'),
                                         style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -521,8 +522,8 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                                       const SizedBox(height: 2),
                                       Text(
                                         _isSaved
-                                            ? 'Tap to save again or open Photos'
-                                            : 'Save directly to your Photos / Gallery',
+                                            ? context.tr('tapToSaveAgain')
+                                            : context.tr('saveDirectlyPhotos'),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: _isSaved ? Colors.green.shade700 : ColorConstants.mediumText,
@@ -538,7 +539,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    _isSaved ? 'SAVED' : 'SAVE',
+                                    _isSaved ? context.tr('savedBadge') : context.tr('saveBadge'),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,
@@ -557,9 +558,9 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                     const SizedBox(height: 28),
 
                     // SHARE DESTINATION Section Header
-                    const Text(
-                      'SHARE & UPLOAD',
-                      style: TextStyle(
+                    Text(
+                      context.tr('shareAndUpload'),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.0,
@@ -581,7 +582,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                           _buildSocialTile(
                             icon: const Icon(Icons.play_circle_filled_rounded, color: Color(0xFFFF0000), size: 26),
                             title: 'YouTube',
-                            subtitle: 'Share to YouTube Shorts or Videos',
+                            subtitle: context.tr('shareToYoutubeSubtitle'),
                             onTap: () => _shareToPlatform('YouTube'),
                           ),
 
@@ -599,7 +600,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                               child: const Icon(Icons.music_note_rounded, color: Colors.white, size: 16),
                             ),
                             title: 'TikTok',
-                            subtitle: 'Post animation to TikTok',
+                            subtitle: context.tr('shareToTiktokSubtitle'),
                             onTap: () => _shareToPlatform('TikTok'),
                           ),
 
@@ -619,7 +620,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                               child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 15),
                             ),
                             title: 'Instagram',
-                            subtitle: 'Share to Stories or Reels',
+                            subtitle: context.tr('shareToInstagramSubtitle'),
                             onTap: () => _shareToPlatform('Instagram'),
                           ),
 
@@ -629,7 +630,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                           _buildSocialTile(
                             icon: const Icon(Icons.facebook_rounded, color: Color(0xFF1877F2), size: 26),
                             title: 'Facebook',
-                            subtitle: 'Share to Facebook Feed',
+                            subtitle: context.tr('shareToFacebookSubtitle'),
                             onTap: () => _shareToPlatform('Facebook'),
                           ),
                         ],
@@ -667,15 +668,15 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(27),
                     onTap: _shareGeneric,
-                    child: const Center(
+                    child: Center(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.share_rounded, color: Colors.white, size: 20),
-                          SizedBox(width: 8),
+                          const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
                           Text(
-                            'SHARE ANIMATION',
-                            style: TextStyle(
+                            context.tr('shareAnimation'),
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.0,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../../package_code/src/drawing_controller.dart';
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/widgets/app_back_button.dart';
 import '../../../../../core/widgets/app_dialogs.dart';
 import '../../controllers/editor_controller.dart';
@@ -31,7 +32,7 @@ class ExportProgressScreen extends StatefulWidget {
 
 class _ExportProgressScreenState extends State<ExportProgressScreen> {
   double _progress = 0.0;
-  String _statusText = 'Preparing frames...';
+  String _statusText = '';
   bool _isCancelled = false;
   bool _isExporting = true;
   String? _errorMessage;
@@ -98,7 +99,7 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
   void _showErrorDialog(String error) async {
     await AppDialogs.showNoticeDialog(
       context,
-      title: 'Export Notice',
+      title: context.tr('exportFailed'),
       message: error,
       isError: true,
     );
@@ -126,9 +127,9 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
           leading: AppBackButton(
             onPressed: _onCancelPressed,
           ),
-          title: const Text(
-            'Exporting Animation',
-            style: TextStyle(
+          title: Text(
+            context.tr('exportingAnimation'),
+            style: const TextStyle(
               color: ColorConstants.darkText,
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -163,14 +164,14 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
                       ),
                     ],
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.folder_outlined, color: ColorConstants.primary, size: 16),
-                      SizedBox(width: 6),
+                      const Icon(Icons.folder_outlined, color: ColorConstants.primary, size: 16),
+                      const SizedBox(width: 6),
                       Text(
-                        'Saved in: Movies/Clipax',
-                        style: TextStyle(
+                        context.tr('savedInFolder'),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
@@ -188,9 +189,9 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Creating Media',
-                        style: TextStyle(
+                      Text(
+                        context.tr('creatingMedia'),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: ColorConstants.darkText,
@@ -252,7 +253,7 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
 
                 // Live status text
                 Text(
-                  _statusText,
+                  _statusText.isEmpty ? context.tr('preparingFrames') : _statusText,
                   style: const TextStyle(
                     fontSize: 13,
                     color: ColorConstants.mediumText,
@@ -265,9 +266,9 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
                 // Cancel Button
                 TextButton(
                   onPressed: _onCancelPressed,
-                  child: const Text(
-                    'CANCEL',
-                    style: TextStyle(
+                  child: Text(
+                    context.tr('cancel').toUpperCase(),
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.8,

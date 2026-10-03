@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../controllers/editor_controller.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
@@ -173,7 +174,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
         children: [
           // 1. Layers Button
           Tooltip(
-            message: 'Layers ($layerCount)',
+            message: '${context.tr('layers')} ($layerCount)',
             child: InkWell(
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(15)),
               onTap: widget.onOpenFrames,
@@ -232,7 +233,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
           // 2. Audio Studio Button
           if (widget.onOpenAudioStudio != null) ...[
             Tooltip(
-              message: 'Audio Studio${audioCount > 0 ? " ($audioCount clips)" : ""}',
+              message: '${context.tr('audioStudio')}${audioCount > 0 ? " ($audioCount)" : ""}',
               child: InkWell(
                 onTap: widget.onOpenAudioStudio,
                 child: SizedBox(
@@ -295,7 +296,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
 
           // 3. Play / Preview Animation Button
           Tooltip(
-            message: 'Preview Animation',
+            message: context.tr('previewAnimation'),
             child: InkWell(
               borderRadius: const BorderRadius.horizontal(right: Radius.circular(15)),
               onTap: widget.onPlay,
@@ -575,7 +576,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                               Row(
                                 children: [
                                   Text(
-                                    'Frame ${index + 1}',
+                                    '${context.tr('frame')} ${index + 1}',
                                     style: const TextStyle(
                                       fontSize: 16.5,
                                       fontWeight: FontWeight.w800,
@@ -594,9 +595,9 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                                         color: ColorConstants.primary.withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: const Text(
-                                        'ACTIVE',
-                                        style: TextStyle(
+                                      child: Text(
+                                        context.tr('active'),
+                                        style: const TextStyle(
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.w800,
                                           letterSpacing: 0.5,
@@ -609,7 +610,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                '${widget.thumbnails.length} total frames in animation',
+                                context.tr('totalFramesInAnimation', {'total': '${widget.thumbnails.length}'}),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -650,8 +651,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildQuickActionTile(
                           icon: Icons.copy_rounded,
-                          title: 'Copy',
-                          subtitle: 'To clipboard',
+                          title: context.tr('copy'),
+                          subtitle: context.tr('toClipboard'),
                           accentBg: const Color(0xFFEFF6FF),
                           accentColor: const Color(0xFF2563EB),
                           onTap: () {
@@ -664,8 +665,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildQuickActionTile(
                           icon: Icons.paste_rounded,
-                          title: 'Paste',
-                          subtitle: 'From copy',
+                          title: context.tr('paste'),
+                          subtitle: context.tr('fromClipboard'),
                           accentBg: const Color(0xFFF0FDF4),
                           accentColor: const Color(0xFF16A34A),
                           onTap: () {
@@ -678,8 +679,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildQuickActionTile(
                           icon: Icons.control_point_duplicate_rounded,
-                          title: 'Duplicate',
-                          subtitle: 'Clone frame',
+                          title: context.tr('duplicate'),
+                          subtitle: context.tr('cloneFrame'),
                           accentBg: const Color(0xFFFFF7ED),
                           accentColor: const Color(0xFFEA580C),
                           onTap: () {
@@ -696,9 +697,9 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                   // Section Title with decorative line
                   Row(
                     children: [
-                      const Text(
-                        'TIMELINE INSERTION',
-                        style: TextStyle(
+                      Text(
+                        context.tr('timelineInsertion'),
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.8,
@@ -723,8 +724,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildListActionTile(
                           icon: Icons.arrow_back_rounded,
-                          title: 'Add Left',
-                          subtitle: 'Insert blank before',
+                          title: context.tr('addLeft'),
+                          subtitle: context.tr('insertBlankBefore'),
                           onTap: () {
                             Navigator.pop(sheetContext);
                             widget.onFrameAction('left', index);
@@ -735,8 +736,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                       Expanded(
                         child: _buildListActionTile(
                           icon: Icons.arrow_forward_rounded,
-                          title: 'Add Right',
-                          subtitle: 'Insert blank after',
+                          title: context.tr('addRight'),
+                          subtitle: context.tr('insertBlankAfter'),
                           onTap: () {
                             Navigator.pop(sheetContext);
                             widget.onFrameAction('right', index);
@@ -805,7 +806,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Delete Frame ${index + 1}',
+                                    context.tr('deleteFrameTitle', {'num': '${index + 1}'}),
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w800,
@@ -815,8 +816,8 @@ class _CanvasSelectorState extends State<CanvasSelector> {
                                   const SizedBox(height: 1.5),
                                   Text(
                                     isOnlyFrame
-                                        ? 'Cannot delete the only remaining frame'
-                                        : 'Remove this frame from the animation',
+                                        ? context.tr('cannotDeleteOnlyFrame')
+                                        : context.tr('removeFrameFromAnimation'),
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500,

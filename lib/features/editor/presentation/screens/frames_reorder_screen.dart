@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class FramesReorderScreen extends StatefulWidget {
   final List<ui.Image?> thumbnails;
@@ -46,14 +47,14 @@ class _FramesReorderScreenState extends State<FramesReorderScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Frames', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(context.tr('frames'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: ColorConstants.background,
         foregroundColor: ColorConstants.darkText,
         elevation: 1,
         actions: [
           TextButton.icon(
             icon: const Icon(Icons.check, color: ColorConstants.accent),
-            label: const Text('Done', style: TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold)),
+            label: Text(context.tr('done'), style: const TextStyle(color: ColorConstants.accent, fontWeight: FontWeight.bold)),
             onPressed: () {
               Navigator.pop(context, {'order': _order, 'active': _active});
             },
@@ -115,15 +116,15 @@ class _FramesReorderScreenState extends State<FramesReorderScreen> {
                 ),
               ),
               title: Text(
-                'Frame ${index + 1}',
+                '${context.tr('frame')} ${index + 1}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
               subtitle: isSelected 
-                ? const Text('Currently Active', style: TextStyle(color: ColorConstants.accent, fontSize: 12))
-                : const Text('Tap to set active', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                ? Text(context.tr('currentlyActive'), style: const TextStyle(color: ColorConstants.accent, fontSize: 12))
+                : Text(context.tr('tapToSetActive'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
               trailing: const Icon(Icons.drag_indicator, color: Colors.black38),
               onTap: () {
                 setState(() { _active = index; });

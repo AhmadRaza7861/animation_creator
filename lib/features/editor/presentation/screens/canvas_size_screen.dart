@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
 
 class CanvasPreset {
@@ -155,9 +156,9 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                 'name': _presetName,
               });
             },
-            child: const Text(
-              'Done',
-              style: TextStyle(
+            child: Text(
+              context.tr('done'),
+              style: const TextStyle(
                 color: ColorConstants.accent,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -167,7 +168,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
           const SizedBox(width: 8),
         ],
         title: Text(
-          StringConstants.canvasSize,
+          context.tr('canvasSize'),
           style: const TextStyle(
             color: ColorConstants.text_color,
             fontWeight: FontWeight.w700,
@@ -298,8 +299,8 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          StringConstants.width,
-                          style: TextStyle(
+                          context.tr('width'),
+                          style: const TextStyle(
                             color: ColorConstants.text_sub2_color,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -331,7 +332,7 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(
+                            const Text(
                               'px',
                               style: TextStyle(
                                 color: ColorConstants.text_sub2_color,
@@ -364,8 +365,8 @@ class _CanvasSizeScreenState extends State<CanvasSizeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          StringConstants.height,
-                          style: TextStyle(
+                          context.tr('height'),
+                          style: const TextStyle(
                             color: ColorConstants.text_sub2_color,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,

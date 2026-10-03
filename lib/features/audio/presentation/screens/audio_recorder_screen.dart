@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../domain/models/audio_clip.dart';
 import '../../services/audio_recorder_service.dart';
 import 'audio_trimmer_screen.dart';
@@ -129,9 +130,9 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> with SingleTi
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E1E24)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Audio Recorder',
-          style: TextStyle(
+        title: Text(
+          context.tr('audioRecorder'),
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1E1E24),
@@ -248,7 +249,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> with SingleTi
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _isRecording ? 'Tap to stop recording' : 'Tap to start recording',
+                    _isRecording ? context.tr('tapToStopRecording') : context.tr('tapToStartRecording'),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

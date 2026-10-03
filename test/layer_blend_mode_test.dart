@@ -6,6 +6,8 @@ import 'package:dummy/package_code/src/drawing_board.dart';
 import 'package:dummy/package_code/src/drawing_controller.dart';
 import 'package:dummy/features/editor/presentation/widgets/layer_panel.dart';
 
+import 'package:dummy/core/localization/app_localizations.dart';
+
 void main() {
   testWidgets('Layer blend mode change invalidates cache and triggers repaint', (tester) async {
     final controller = DrawingController();
@@ -39,6 +41,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [AppLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Center(
             child: SizedBox(
@@ -79,6 +83,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [AppLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Center(
             child: LayerPanel(
@@ -98,7 +104,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Find the blend mode tile button
-    final blendTileFinder = find.text('Blend');
+    final blendTileFinder = find.text('Blend Mode');
     expect(blendTileFinder, findsOneWidget);
 
     // Open the blend mode bottom sheet
@@ -106,7 +112,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify sheet title and curated blend modes with descriptions are present
-    expect(find.text('${controller.activeLayer.value?.name} Blend Mode'), findsOneWidget);
+    expect(find.text('Background Blend Mode'), findsOneWidget);
     expect(find.text('Normal'), findsWidgets);
     expect(find.text('Multiply'), findsOneWidget);
     expect(find.text('Darkens base colors; ideal for shading & shadows'), findsOneWidget);

@@ -314,8 +314,8 @@ void main() {
       // Regular sticker does NOT override the bottom toolbar
       expect(find.text('Export'), findsOneWidget);
       expect(find.text('Brush'), findsOneWidget);
-      expect(find.text('Erase'), findsOneWidget);
-      expect(find.text('Paint'), findsOneWidget);
+      expect(find.text('Eraser'), findsOneWidget);
+      expect(find.text('Fill'), findsOneWidget);
       expect(find.text('Lasso'), findsOneWidget);
 
       // 2. Lasso selection: should show Lasso transformation suite

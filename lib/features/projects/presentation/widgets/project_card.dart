@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../domain/project_model.dart';
 
 class ProjectCard extends StatelessWidget {
@@ -21,7 +22,7 @@ class ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String timeAgo = _formatTimeAgo(project.lastModified);
+    final String timeAgo = _formatTimeAgo(context, project.lastModified);
     final int fps = project.fps ?? 12;
     final int rawFrames = project.frameCount ?? 0;
     final int frames = rawFrames <= 0 ? 1 : rawFrames;
@@ -76,7 +77,7 @@ class ProjectCard extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       // Base Canvas with Artwork or Clean Placeholder
-                      _buildCanvasArtwork(),
+                      _buildCanvasArtwork(context),
 
                       // Top Left: FPS Badge
                       Positioned(
@@ -201,7 +202,9 @@ class ProjectCard extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '$frames ${frames == 1 ? "frame" : "frames"}',
+                                frames == 1
+                                    ? context.tr('singleFrameCount', {'num': '$frames'})
+                                    : context.tr('framesCount', {'count': '$frames'}),
                                 style: const TextStyle(
                                   color: Color(0xFF8C93A3),
                                   fontSize: 11,
@@ -254,12 +257,12 @@ class ProjectCard extends StatelessWidget {
                             value: 'open',
                             height: 40,
                             child: Row(
-                              children: const [
-                                Icon(Icons.edit_outlined, size: 18, color: Color(0xFF2C3038)),
-                                SizedBox(width: 10),
+                              children: [
+                                const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF2C3038)),
+                                const SizedBox(width: 10),
                                 Text(
-                                  'Edit Animation',
-                                  style: TextStyle(
+                                  context.tr('editAnimation'),
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF2C3038),
@@ -272,12 +275,12 @@ class ProjectCard extends StatelessWidget {
                             value: 'duplicate',
                             height: 40,
                             child: Row(
-                              children: const [
-                                Icon(Icons.copy_rounded, size: 18, color: Color(0xFF2C3038)),
-                                SizedBox(width: 10),
+                              children: [
+                                const Icon(Icons.copy_rounded, size: 18, color: Color(0xFF2C3038)),
+                                const SizedBox(width: 10),
                                 Text(
-                                  'Duplicate',
-                                  style: TextStyle(
+                                  context.tr('duplicate'),
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF2C3038),
@@ -290,12 +293,12 @@ class ProjectCard extends StatelessWidget {
                             value: 'rename',
                             height: 40,
                             child: Row(
-                              children: const [
-                                Icon(Icons.drive_file_rename_outline_rounded, size: 18, color: Color(0xFF2C3038)),
-                                SizedBox(width: 10),
+                              children: [
+                                const Icon(Icons.drive_file_rename_outline_rounded, size: 18, color: Color(0xFF2C3038)),
+                                const SizedBox(width: 10),
                                 Text(
-                                  'Rename',
-                                  style: TextStyle(
+                                  context.tr('rename'),
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF2C3038),
@@ -309,12 +312,12 @@ class ProjectCard extends StatelessWidget {
                             value: 'delete',
                             height: 40,
                             child: Row(
-                              children: const [
-                                Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
-                                SizedBox(width: 10),
+                              children: [
+                                const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+                                const SizedBox(width: 10),
                                 Text(
-                                  'Delete',
-                                  style: TextStyle(
+                                  context.tr('delete'),
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.redAccent,
@@ -336,7 +339,7 @@ class ProjectCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCanvasArtwork() {
+  Widget _buildCanvasArtwork(BuildContext context) {
     if (project.thumbnailPath != null && File(project.thumbnailPath!).existsSync()) {
       final thumbFile = File(project.thumbnailPath!);
       return Container(
@@ -347,15 +350,15 @@ class ProjectCard extends StatelessWidget {
             key: ValueKey('${project.id}_${project.lastModified.millisecondsSinceEpoch}'),
             fit: BoxFit.contain,
             gaplessPlayback: true,
-            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
           ),
         ),
       );
     }
-    return _buildPlaceholder();
+    return _buildPlaceholder(context);
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildPlaceholder(BuildContext context) {
     return Container(
       color: Colors.white,
       child: Center(
@@ -382,9 +385,9 @@ class ProjectCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 7),
-            const Text(
-              'Blank Canvas',
-              style: TextStyle(
+            Text(
+              context.tr('blankCanvas'),
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF8E97A6),
@@ -408,22 +411,22 @@ class ProjectCard extends StatelessWidget {
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
-  String _formatTimeAgo(DateTime dateTime) {
+  String _formatTimeAgo(BuildContext context, DateTime dateTime) {
     final difference = DateTime.now().difference(dateTime);
     if (difference.inDays > 365) {
       final count = (difference.inDays / 365).floor();
-      return '$count ${count == 1 ? "year" : "years"} ago';
+      return context.tr('yearsAgo', {'num': '$count'});
     } else if (difference.inDays > 30) {
       final count = (difference.inDays / 30).floor();
-      return '$count ${count == 1 ? "mo" : "mos"} ago';
+      return context.tr('monthsAgo', {'num': '$count'});
     } else if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return context.tr('daysAgo', {'num': '${difference.inDays}'});
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return context.tr('hoursAgo', {'num': '${difference.inHours}'});
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return context.tr('minutesAgo', {'num': '${difference.inMinutes}'});
     } else {
-      return 'Just now';
+      return context.tr('justNow');
     }
   }
 }

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../controllers/editor_providers.dart';
 import 'canvas_selector.dart';
 import '../../../audio/presentation/widgets/audio_timeline_studio.dart';
@@ -117,9 +118,9 @@ class TimelinePanel extends ConsumerWidget {
       if (action == 'copy') {
         controller.copyFrame(index);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Frame copied to clipboard'),
-            duration: Duration(milliseconds: 1200),
+          SnackBar(
+            content: Text(context.tr('frameCopied')),
+            duration: const Duration(milliseconds: 1200),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -128,9 +129,9 @@ class TimelinePanel extends ConsumerWidget {
           controller.pasteFrame(index);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No frame in clipboard'),
-              duration: Duration(milliseconds: 1200),
+            SnackBar(
+              content: Text(context.tr('noFrameInClipboard')),
+              duration: const Duration(milliseconds: 1200),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -146,9 +147,9 @@ class TimelinePanel extends ConsumerWidget {
           controller.deleteFrame(index);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cannot delete the last frame'),
-              duration: Duration(milliseconds: 1200),
+            SnackBar(
+              content: Text(context.tr('cannotDeleteLastFrame')),
+              duration: const Duration(milliseconds: 1200),
               behavior: SnackBarBehavior.floating,
             ),
           );

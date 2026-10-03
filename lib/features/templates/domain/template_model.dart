@@ -1,3 +1,6 @@
+import 'package:flutter/widgets.dart';
+import '../../../../core/localization/app_localizations.dart';
+
 enum TemplateMode {
   useTemplate,
   drawAccordingTemplate,
@@ -18,6 +21,17 @@ extension TutorialDifficultyExt on TutorialDifficulty {
         return 'Intermediate';
       case TutorialDifficulty.advanced:
         return 'Advanced';
+    }
+  }
+
+  String getLocalizedLabel(BuildContext context) {
+    switch (this) {
+      case TutorialDifficulty.beginner:
+        return context.tr('beginner');
+      case TutorialDifficulty.intermediate:
+        return context.tr('medium');
+      case TutorialDifficulty.advanced:
+        return context.tr('master');
     }
   }
 }
@@ -54,6 +68,27 @@ class TemplateModel {
     this.isInProgress = false,
     this.projectState,
   });
+
+  String getLocalizedName(BuildContext context) {
+    final key = 'tut_${id}_name';
+    final val = context.tr(key);
+    return val != key ? val : name;
+  }
+
+  String getLocalizedDescription(BuildContext context) {
+    final key = 'tut_${id}_desc';
+    final val = context.tr(key);
+    return val != key ? val : description;
+  }
+
+  String getLocalizedCategory(BuildContext context) {
+    if (category == 'Animation Basics') return context.tr('catAnimationBasics');
+    if (category == 'The 12 Principles') return context.tr('catThe12Principles');
+    if (category == 'Character & Motion') return context.tr('catCharacterAndLocomotion');
+    if (category == 'VFX & Elements') return context.tr('catVFXAndElements');
+    if (category == 'Master Practice') return context.tr('catMasterPractice');
+    return category;
+  }
 
   String get previewAsset => frameAssets.isEmpty ? '' : frameAssets.first;
 

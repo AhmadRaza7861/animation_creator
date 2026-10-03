@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:dummy/core/constants/app_strings.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
 
 class FpsScreen extends StatefulWidget {
@@ -79,9 +79,9 @@ class _FpsScreenState extends State<FpsScreen> {
             onPressed: () {
               Navigator.pop(context, _selectedFps); // Apply changes
             },
-            child: const Text(
-              'Done',
-              style: TextStyle(
+            child: Text(
+              context.tr('done'),
+              style: const TextStyle(
                 color: ColorConstants.accent,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -91,7 +91,7 @@ class _FpsScreenState extends State<FpsScreen> {
           const SizedBox(width: 8),
         ],
         title: Text(
-          StringConstants.frames_per_second,
+          context.tr('framesPerSecond'),
           style: const TextStyle(
             color: ColorConstants.text_color,
             fontWeight: FontWeight.w700,
@@ -182,9 +182,9 @@ class _FpsScreenState extends State<FpsScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 40.0),
                         child: Text(
-                          'Currently you would need to draw $_selectedFps frames to make 1 second',
+                          context.tr('fpsExplanation', {'fps': '$_selectedFps'}),
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: ColorConstants.text_color,
                             fontSize: 16,
                             height: 1.4,

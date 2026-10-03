@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../package_code/src/drawing_board.dart';
@@ -11,6 +10,7 @@ import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 
@@ -31,14 +31,11 @@ class CanvasArea extends ConsumerWidget {
   ) async {
     if (controller.drawingController.isCurrentLayerLocked) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Current layer is locked.')),
+        SnackBar(content: Text(context.tr('currentLayerLocked'))),
       );
       return;
     }
-    final text = await AppDialogs.showTextStickerDialog(
-      context,
-      title: 'Add Text Sticker',
-    );
+    final text = await AppDialogs.showTextStickerDialog(context);
     if (text != null && text.trim().isNotEmpty) {
       controller.addTextSticker(text.trim(), position);
     }
@@ -83,7 +80,7 @@ class CanvasArea extends ConsumerWidget {
               onPointerDown: (e) {
                 if (controller.drawingController.isCurrentLayerLocked) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Current layer is locked.')),
+                    SnackBar(content: Text(context.tr('layerLocked'))),
                   );
                   return;
                 }

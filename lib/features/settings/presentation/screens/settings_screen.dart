@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_language.dart';
+import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../dialogs/rate_us_dialog.dart';
 import '../dialogs/contact_us_dialog.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
+import 'language_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   void _shareApp(BuildContext context) {
@@ -20,7 +25,10 @@ class SettingsScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocale = ref.watch(localeProvider);
+    final currentLang = AppLanguage.fromCode(currentLocale.languageCode);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
       appBar: AppBar(
@@ -28,9 +36,9 @@ class SettingsScreen extends StatelessWidget {
         elevation: 0,
         surfaceTintColor: Colors.white,
         leading: const AppBackButton(),
-        title: const Text(
-          'Settings',
-          style: TextStyle(
+        title: Text(
+          context.tr('settingsTitle'),
+          style: const TextStyle(
             color: ColorConstants.darkText,
             fontWeight: FontWeight.w800,
             fontSize: 18,
@@ -44,48 +52,67 @@ class SettingsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // App Banner
-            _buildAppHeaderCard(),
+            _buildAppHeaderCard(context),
+            const SizedBox(height: 24),
+
+            // Section 0: General & Preferences
+            _buildSectionHeader(context.tr('generalPreferences')),
+            const SizedBox(height: 10),
+            _buildCardGroup([
+              _buildSettingsTile(
+                icon: Icons.language_rounded,
+                iconColor: const Color(0xFF6366F1),
+                title: context.tr('language'),
+                subtitle: '${currentLang.flagEmoji} ${currentLang.nativeName} (${currentLang.name})',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LanguageScreen()),
+                  );
+                },
+              ),
+            ]),
             const SizedBox(height: 24),
 
             // Section 1: Support & Feedback
-            _buildSectionHeader('SUPPORT & FEEDBACK'),
+            _buildSectionHeader(context.tr('supportFeedback')),
             const SizedBox(height: 10),
             _buildCardGroup([
               _buildSettingsTile(
                 icon: Icons.star_rounded,
                 iconColor: const Color(0xFFFF9318),
-                title: 'Rate Us',
-                subtitle: 'Share your feedback & support development',
+                title: context.tr('rateUs'),
+                subtitle: context.tr('rateUsSubtitle'),
                 onTap: () => RateUsDialog.show(context),
               ),
               _buildDivider(),
               _buildSettingsTile(
                 icon: Icons.mail_rounded,
                 iconColor: const Color(0xFF3B82F6),
-                title: 'Contact Us',
-                subtitle: 'Report a bug, suggest features or ask questions',
+                title: context.tr('contactUs'),
+                subtitle: context.tr('contactUsSubtitle'),
                 onTap: () => ContactUsDialog.show(context),
               ),
               _buildDivider(),
               _buildSettingsTile(
                 icon: Icons.share_rounded,
                 iconColor: const Color(0xFF10B981),
-                title: 'Share Clipax',
-                subtitle: 'Invite your friends to animate and draw',
+                title: context.tr('shareClipax'),
+                subtitle: context.tr('shareClipaxSubtitle'),
                 onTap: () => _shareApp(context),
               ),
             ]),
             const SizedBox(height: 24),
 
             // Section 2: Legal & Privacy
-            _buildSectionHeader('LEGAL & PRIVACY'),
+            _buildSectionHeader(context.tr('legalPrivacy')),
             const SizedBox(height: 10),
             _buildCardGroup([
               _buildSettingsTile(
                 icon: Icons.privacy_tip_rounded,
                 iconColor: const Color(0xFF8B5CF6),
-                title: 'Privacy Policy',
-                subtitle: 'Read our offline data and privacy terms',
+                title: context.tr('privacyPolicy'),
+                subtitle: context.tr('privacyPolicySubtitle'),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -97,8 +124,8 @@ class SettingsScreen extends StatelessWidget {
               _buildSettingsTile(
                 icon: Icons.description_rounded,
                 iconColor: const Color(0xFFEC4899),
-                title: 'Terms of Service',
-                subtitle: 'Usage guidelines and content ownership',
+                title: context.tr('termsOfService'),
+                subtitle: context.tr('termsOfServiceSubtitle'),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -114,7 +141,7 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    'Clipax v1.0.0',
+                    context.tr('appVersion'),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -123,7 +150,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Made with ❤️ for Animation Creators',
+                    context.tr('madeWithLove'),
                     style: TextStyle(
                       fontSize: 11.5,
                       color: Colors.grey.shade400,
@@ -139,7 +166,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAppHeaderCard() {
+  Widget _buildAppHeaderCard(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -185,11 +212,11 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Clipax Studio',
                   style: TextStyle(
                     fontSize: 20,
@@ -198,10 +225,10 @@ class SettingsScreen extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  '2D Animation & Frame Creator',
-                  style: TextStyle(
+                  context.tr('whereIdeasTurnIntoMotion'),
+                  style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                     color: Colors.white70,

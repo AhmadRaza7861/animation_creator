@@ -84,7 +84,6 @@ class DefaultToolItem extends StatelessWidget {
       onTap: (DrawingController controller) async {
         final text = await AppDialogs.showTextStickerDialog(
           context,
-          title: 'Enter Text',
         );
 
         if (text != null && text.trim().isNotEmpty) {

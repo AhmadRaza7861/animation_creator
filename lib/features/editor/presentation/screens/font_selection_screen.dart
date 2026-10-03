@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/runtime_font_service.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/font_presets.dart';
@@ -62,6 +63,67 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
     'Retro & Cyber',
     'Downloaded',
   ];
+
+  String _getCategoryLabel(BuildContext context, String category) {
+    switch (category) {
+      case 'All':
+        return context.tr('fontCatAll');
+      case 'Script & Cursive':
+        return context.tr('fontCatScript');
+      case 'Handwritten & Casual':
+        return context.tr('fontCatHandwritten');
+      case 'Bold & Display':
+        return context.tr('fontCatDisplay');
+      case 'Serif & Elegant':
+        return context.tr('fontCatSerif');
+      case 'Clean & Sans':
+        return context.tr('fontCatSans');
+      case 'Retro & Cyber':
+        return context.tr('fontCatRetro');
+      case 'Downloaded':
+        return context.tr('fontCatDownloaded');
+      default:
+        return category;
+    }
+  }
+
+  String _getCategoryShortLabel(BuildContext context, String category) {
+    switch (category) {
+      case 'Script & Cursive':
+        return context.tr('fontCatScriptShort');
+      case 'Handwritten & Casual':
+        return context.tr('fontCatHandwrittenShort');
+      case 'Bold & Display':
+        return context.tr('fontCatDisplayShort');
+      case 'Serif & Elegant':
+        return context.tr('fontCatSerifShort');
+      case 'Clean & Sans':
+        return context.tr('fontCatSansShort');
+      case 'Retro & Cyber':
+        return context.tr('fontCatRetroShort');
+      default:
+        return category.split('&').first.trim();
+    }
+  }
+
+  String _getStyleTagLabel(BuildContext context, String styleTag) {
+    switch (styleTag) {
+      case 'Calligraphy':
+        return context.tr('styleCalligraphy');
+      case 'Vibrant Script':
+        return context.tr('styleVibrantScript');
+      case 'Flowing Calligraphy':
+        return context.tr('styleFlowingCalligraphy');
+      case 'Surf Script':
+        return context.tr('styleSurfScript');
+      case 'Retro Bold Script':
+        return context.tr('styleRetroBoldScript');
+      case 'Standard':
+        return context.tr('styleStandard');
+      default:
+        return styleTag;
+    }
+  }
 
   @override
   void initState() {
@@ -125,7 +187,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
 
     if (status == FontDownloadStatus.downloading) {
       Fluttertoast.showToast(
-        msg: 'Downloading "${preset.name}"...',
+        msg: context.tr('downloadingFont', {'name': preset.name}),
         toastLength: Toast.LENGTH_SHORT,
       );
       return;
@@ -136,15 +198,16 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
     if (!hasNet) {
       if (mounted) {
         Fluttertoast.showToast(
-          msg: 'No internet connection. Please check your network to download fonts.',
+          msg: context.tr('noInternetFontDownload'),
           toastLength: Toast.LENGTH_LONG,
         );
       }
       return;
     }
 
+    if (!mounted) return;
     Fluttertoast.showToast(
-      msg: 'Downloading "${preset.name}"...',
+      msg: context.tr('downloadingFont', {'name': preset.name}),
       toastLength: Toast.LENGTH_SHORT,
     );
 
@@ -157,14 +220,14 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
       });
       widget.controller.updateSnapshot();
       Fluttertoast.showToast(
-        msg: 'Downloaded & applied "${preset.name}"',
+        msg: context.tr('downloadedAndApplied', {'name': preset.name}),
         toastLength: Toast.LENGTH_SHORT,
       );
     } else if (!result.success && mounted) {
       Fluttertoast.showToast(
         msg: result.message.isNotEmpty
             ? result.message
-            : 'Could not download "${preset.name}".',
+            : context.tr('couldNotDownloadFont', {'name': preset.name}),
         toastLength: Toast.LENGTH_LONG,
       );
     }
@@ -175,10 +238,12 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
 
     final hasNet = await RuntimeFontService.instance.checkInternet();
     if (!hasNet) {
-      Fluttertoast.showToast(
-        msg: 'No internet connection. Please check your network to download fonts.',
-        toastLength: Toast.LENGTH_LONG,
-      );
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: context.tr('noInternetFontDownload'),
+          toastLength: Toast.LENGTH_LONG,
+        );
+      }
       return;
     }
 
@@ -186,10 +251,12 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
       _isDownloadingAll = true;
     });
 
-    Fluttertoast.showToast(
-      msg: 'Downloading remaining fonts in background...',
-      toastLength: Toast.LENGTH_SHORT,
-    );
+    if (mounted) {
+      Fluttertoast.showToast(
+        msg: context.tr('downloadingFontsBackground'),
+        toastLength: Toast.LENGTH_SHORT,
+      );
+    }
 
     await RuntimeFontService.instance.downloadAllFonts();
 
@@ -201,12 +268,12 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
       final total = fontPresets.length;
       if (loaded == total) {
         Fluttertoast.showToast(
-          msg: 'All fonts are downloaded and ready!',
+          msg: context.tr('allFontsDownloaded'),
           toastLength: Toast.LENGTH_SHORT,
         );
       } else {
         Fluttertoast.showToast(
-          msg: 'Fonts downloaded successfully.',
+          msg: context.tr('fontsDownloadedSuccess'),
           toastLength: Toast.LENGTH_SHORT,
         );
       }
@@ -350,7 +417,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
       leading: const AppBackButton(),
       centerTitle: false,
       title: Text(
-        'Typography & Fonts',
+        context.tr('typographyAndFonts'),
         style: TextStyle(
           color: textColor,
           fontWeight: FontWeight.w700,
@@ -362,7 +429,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
         // Download All Button (Only visible if not all fonts are downloaded)
         if (!allDownloaded)
           IconButton(
-            tooltip: 'Download All Fonts',
+            tooltip: context.tr('downloadAllFonts'),
             icon: _isDownloadingAll
                 ? SizedBox(
                     width: 20,
@@ -382,7 +449,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
 
         // Apply / Done Action
         Padding(
-          padding: const EdgeInsets.only(right: 12, left: 4),
+          padding: const EdgeInsetsDirectional.only(end: 12, start: 4),
           child: TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(
@@ -393,9 +460,9 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: const Text(
-              'Done',
-              style: TextStyle(
+            child: Text(
+              context.tr('done'),
+              style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
               ),
@@ -419,7 +486,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
         ? _previewTextController.text
         : widget.sticker.text.isNotEmpty
             ? widget.sticker.text
-            : 'Type to test...';
+            : context.tr('typeToTest');
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
@@ -431,12 +498,12 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
         color: surfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: primaryColor.withOpacity(0.35),
+          color: primaryColor.withValues(alpha: 0.35),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -452,7 +519,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.12),
+                  color: primaryColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -461,7 +528,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                     Icon(Icons.auto_awesome_rounded, size: 12, color: primaryColor),
                     const SizedBox(width: 4),
                     Text(
-                      'PREVIEW',
+                      context.tr('previewBadge'),
                       style: TextStyle(
                         color: primaryColor,
                         fontWeight: FontWeight.w800,
@@ -491,7 +558,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        '• ${currentPreset.styleTag}',
+                        '• ${_getStyleTagLabel(context, currentPreset.styleTag)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -691,7 +758,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
 
                 // Sample text preset buttons
                 _buildSampleTextChip(
-                  label: 'Sample',
+                  label: context.tr('sample'),
                   isDark: isDark,
                   onTap: () {
                     setState(() {
@@ -701,7 +768,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                 ),
                 const SizedBox(width: 6),
                 _buildSampleTextChip(
-                  label: 'Numbers',
+                  label: context.tr('numbers'),
                   isDark: isDark,
                   onTap: () {
                     setState(() {
@@ -711,7 +778,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                 ),
                 const SizedBox(width: 6),
                 _buildSampleTextChip(
-                  label: 'Sticker Text',
+                  label: context.tr('stickerText'),
                   isDark: isDark,
                   onTap: () {
                     setState(() {
@@ -741,7 +808,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
           color: isActive
-              ? primaryColor.withOpacity(0.15)
+              ? primaryColor.withValues(alpha: 0.15)
               : (isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9)),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
@@ -814,7 +881,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                     focusNode: _searchFocusNode,
                     style: TextStyle(color: textColor, fontSize: 13.5),
                     decoration: InputDecoration(
-                      hintText: 'Search fonts & styles...',
+                      hintText: context.tr('searchFontsAndStyles'),
                       hintStyle: TextStyle(color: subTextColor, fontSize: 12.5),
                       prefixIcon: Icon(Icons.search_rounded, color: subTextColor, size: 18),
                       suffixIcon: _searchQuery.isNotEmpty
@@ -880,7 +947,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: _categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final category = _categories[index];
               final isSelected = _selectedCategory == category;
@@ -904,7 +971,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: primaryColor.withOpacity(0.3),
+                              color: primaryColor.withValues(alpha: 0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -913,7 +980,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      category,
+                      _getCategoryLabel(context, category),
                       style: TextStyle(
                         color: isSelected
                             ? Colors.white
@@ -959,7 +1026,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isDark ? primaryColor.withOpacity(0.12) : const Color(0xFFFFF7ED))
+              ? (isDark ? primaryColor.withValues(alpha: 0.12) : const Color(0xFFFFF7ED))
               : surfaceColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -969,14 +1036,14 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: primaryColor.withOpacity(0.2),
+                    color: primaryColor.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
                 ]
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -1009,7 +1076,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
 
             // Style Tag
             Text(
-              preset.styleTag,
+              _getStyleTagLabel(context, preset.styleTag),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1041,7 +1108,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
 
             // Category Mini Chip
             Align(
-              alignment: Alignment.bottomLeft,
+              alignment: AlignmentDirectional.bottomStart,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -1049,7 +1116,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  preset.category.split('&').first.trim(),
+                  _getCategoryShortLabel(context, preset.category),
                   style: TextStyle(
                     color: subTextColor,
                     fontSize: 9.5,
@@ -1091,7 +1158,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? (isDark ? primaryColor.withOpacity(0.12) : const Color(0xFFFFF7ED))
+                ? (isDark ? primaryColor.withValues(alpha: 0.12) : const Color(0xFFFFF7ED))
                 : surfaceColor,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
@@ -1136,7 +1203,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              preset.styleTag,
+                              _getStyleTagLabel(context, preset.styleTag),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -1169,7 +1236,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
 
               // Category tag
               Text(
-                preset.category.split('&').first.trim(),
+                _getCategoryShortLabel(context, preset.category),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1200,7 +1267,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withOpacity(0.35),
+              color: primaryColor.withValues(alpha: 0.35),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -1247,11 +1314,11 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
             Icon(
               Icons.font_download_off_rounded,
               size: 54,
-              color: subTextColor.withOpacity(0.6),
+              color: subTextColor.withValues(alpha: 0.6),
             ),
             const SizedBox(height: 16),
             Text(
-              'No fonts found',
+              context.tr('noFontsFound'),
               style: TextStyle(
                 color: textColor,
                 fontSize: 18,
@@ -1260,7 +1327,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Try searching with a different name or category',
+              context.tr('noFontsFoundDesc'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: subTextColor,
@@ -1276,7 +1343,7 @@ class _FontSelectionScreenState extends State<FontSelectionScreen> {
                 });
               },
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Reset Filters'),
+              label: Text(context.tr('resetFilters')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,

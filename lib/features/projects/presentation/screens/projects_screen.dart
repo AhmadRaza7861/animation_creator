@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../../main.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../data/project_repository.dart';
 import '../../domain/project_model.dart';
@@ -376,9 +377,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
               ],
             ),
             const SizedBox(height: 2),
-            const Text(
-              'Where ideas turn into motion ✨',
-              style: TextStyle(
+            Text(
+              '${context.tr('whereIdeasTurnIntoMotion')} ✨',
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: ColorConstants.mediumText,
@@ -387,55 +388,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
           ],
         ),
         const Spacer(),
-
-        // Get Pro Button
-        // GestureDetector(
-        //   onTap: () {
-        //     ScaffoldMessenger.of(context).showSnackBar(
-        //       const SnackBar(
-        //         content: Text('👑 Clipax Pro features unlocking soon!'),
-        //         backgroundColor: ColorConstants.primary,
-        //       ),
-        //     );
-        //   },
-        //   child: Container(
-        //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        //     decoration: BoxDecoration(
-        //       color: Colors.white,
-        //       borderRadius: BorderRadius.circular(20),
-        //       border: Border.all(
-        //         color: ColorConstants.primary.withValues(alpha: 0.6),
-        //         width: 1.2,
-        //       ),
-        //       boxShadow: [
-        //         BoxShadow(
-        //           color: Colors.black.withValues(alpha: 0.04),
-        //           blurRadius: 8,
-        //           offset: const Offset(0, 2),
-        //         ),
-        //       ],
-        //     ),
-        //     child: const Row(
-        //       mainAxisSize: MainAxisSize.min,
-        //       children: [
-        //         Text(
-        //           'Get Pro',
-        //           style: TextStyle(
-        //             color: ColorConstants.darkText,
-        //             fontWeight: FontWeight.w800,
-        //             fontSize: 12,
-        //           ),
-        //         ),
-        //         SizedBox(width: 4),
-        //         Text(
-        //           '👑',
-        //           style: TextStyle(fontSize: 11),
-        //         ),
-        //       ],
-        //     ),
-        //   ),
-        // ),
-        // const SizedBox(width: 8),
 
         // Settings Button
         GestureDetector(
@@ -547,9 +499,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                               color: Colors.white.withValues(alpha: 0.22),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text(
-                              'STUDIO CANVAS',
-                              style: TextStyle(
+                            child: Text(
+                              context.tr('studioCanvas').toUpperCase(),
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -558,9 +510,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Start Animating',
-                            style: TextStyle(
+                          Text(
+                            context.tr('startAnimating'),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -569,7 +521,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Draw frame by frame, animate ideas effortlessly with 110+ brushes.',
+                            context.tr('startAnimatingSubtitle'),
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.92),
                               fontSize: 12.5,
@@ -618,18 +570,18 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                             ),
                           ],
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.add_circle_rounded,
                               color: ColorConstants.primary,
                               size: 18,
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Text(
-                              'New Project',
-                              style: TextStyle(
+                              context.tr('newProject'),
+                              style: const TextStyle(
                                 color: ColorConstants.primary,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 13,
@@ -654,18 +606,18 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                             width: 1.0,
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.auto_awesome_rounded,
                               color: Colors.white,
                               size: 16,
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Text(
-                              'Templates',
-                              style: TextStyle(
+                              context.tr('templates'),
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
@@ -698,9 +650,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
               size: 20,
             ),
             const SizedBox(width: 6),
-            const Text(
-              'Animation Academy',
-              style: TextStyle(
+            Text(
+              context.tr('animationAcademy'),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: ColorConstants.darkText,
@@ -716,19 +668,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                   color: ColorConstants.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'See All (22)',
-                      style: TextStyle(
+                      context.tr('seeAllWithCount', {'count': '22'}),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: ColorConstants.primary,
                       ),
                     ),
-                    SizedBox(width: 2),
-                    Icon(
+                    const SizedBox(width: 2),
+                    const Icon(
                       Icons.arrow_forward_ios_rounded,
                       size: 10,
                       color: ColorConstants.primary,
@@ -740,9 +692,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
           ],
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Master professional frame-by-frame animation principles',
-          style: TextStyle(
+        Text(
+          context.tr('masterAnimationPrinciples'),
+          style: const TextStyle(
             fontSize: 12.5,
             color: ColorConstants.mediumText,
           ),
@@ -842,7 +794,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '${template.frameCount} frames',
+                        context.tr('framesCount', {'count': '${template.frameCount}'}),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 9,
@@ -869,7 +821,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    template.name,
+                    template.getLocalizedName(context),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -880,7 +832,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    template.description,
+                    template.getLocalizedDescription(context),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -894,7 +846,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                       const Icon(Icons.timer_outlined, size: 12, color: ColorConstants.primary),
                       const SizedBox(width: 3),
                       Text(
-                        '~${template.estimatedMinutes} min',
+                        context.tr('minutesApprox', {'min': '${template.estimatedMinutes}'}),
                         style: const TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
@@ -902,9 +854,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                         ),
                       ),
                       const Spacer(),
-                      const Text(
-                        'Practice →',
-                        style: TextStyle(
+                      Text(
+                        '${context.tr('practice')} →',
+                        style: const TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
                           color: ColorConstants.primary,
@@ -930,17 +882,17 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
       case TutorialDifficulty.beginner:
         bg = const Color(0xFFE8F5E9);
         text = const Color(0xFF2E7D32);
-        label = 'Beginner';
+        label = context.tr('beginner');
         break;
       case TutorialDifficulty.intermediate:
         bg = ColorConstants.primaryLight;
         text = ColorConstants.primaryDark;
-        label = 'Medium';
+        label = context.tr('medium');
         break;
       case TutorialDifficulty.advanced:
         bg = const Color(0xFFFFEBEE);
         text = const Color(0xFFC62828);
-        label = 'Master';
+        label = context.tr('master');
         break;
     }
 
@@ -974,9 +926,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
               size: 20,
             ),
             const SizedBox(width: 6),
-            const Text(
-              'Recent Projects',
-              style: TextStyle(
+            Text(
+              context.tr('recentProjects'),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: ColorConstants.darkText,
@@ -1001,7 +953,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'View All (${_projects.length})',
+                        context.tr('viewAll', {'count': '${_projects.length}'}),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -1072,9 +1024,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'All Projects',
-                    style: TextStyle(
+                  Text(
+                    context.tr('allProjects'),
+                    style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
                       color: ColorConstants.darkText,
@@ -1083,7 +1035,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_projects.length} animations in your studio',
+                    context.tr('animationsInStudio', {'count': '${_projects.length}'}),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -1109,14 +1061,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                       ),
                     ],
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add, color: Colors.white, size: 16),
-                      SizedBox(width: 4),
+                      const Icon(Icons.add, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
                       Text(
-                        'Create',
-                        style: TextStyle(
+                        context.tr('add'),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -1150,7 +1102,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                 setState(() => _projectSearchQuery = val);
               },
               decoration: InputDecoration(
-                hintText: 'Search projects by name...',
+                hintText: context.tr('searchProjects'),
                 hintStyle: TextStyle(
                   color: Colors.grey.shade400,
                   fontSize: 13,
@@ -1247,7 +1199,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
               ),
               const SizedBox(height: 16),
               Text(
-                isSearching ? 'No Matching Projects' : 'No Projects Yet',
+                isSearching ? context.tr('noMatchingProjects') : context.tr('noProjectsYet'),
                 style: const TextStyle(
                   color: ColorConstants.darkText,
                   fontSize: 16,
@@ -1257,8 +1209,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
               const SizedBox(height: 6),
               Text(
                 isSearching
-                    ? 'Try searching with a different keyword'
-                    : 'Start your creative journey — tap below to create your first animation!',
+                    ? context.tr('tryDifferentKeyword')
+                    : context.tr('startCreativeJourney'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: ColorConstants.mediumText,
@@ -1272,9 +1224,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                 ElevatedButton.icon(
                   onPressed: _createNewProject,
                   icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                  label: const Text(
-                    'Create Animation',
-                    style: TextStyle(
+                  label: Text(
+                    context.tr('createAnimation'),
+                    style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 13,
                       color: Colors.white,
@@ -1356,7 +1308,7 @@ class CurvedScoopBottomNavBar extends StatelessWidget {
                 Expanded(
                   child: _buildNavItem(
                     icon: currentTab == 0 ? Icons.home_rounded : Icons.home_outlined,
-                    label: StringConstants.homeTab,
+                    label: context.tr('homeTab'),
                     isSelected: currentTab == 0,
                     onTap: () => onTabSelected(0),
                   ),
@@ -1369,7 +1321,7 @@ class CurvedScoopBottomNavBar extends StatelessWidget {
                 Expanded(
                   child: _buildNavItem(
                     icon: currentTab == 1 ? Icons.folder_rounded : Icons.folder_outlined,
-                    label: StringConstants.projectsTab,
+                    label: context.tr('projectsTab'),
                     isSelected: currentTab == 1,
                     onTap: () => onTabSelected(1),
                   ),

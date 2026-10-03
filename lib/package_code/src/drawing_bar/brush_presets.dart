@@ -1,3 +1,4 @@
+import 'package:dummy/core/localization/app_localizations.dart';
 import 'package:dummy/package_code/src/paint_contents/dashed_line.dart';
 import 'package:dummy/package_code/src/paint_contents/dotted_line.dart';
 import 'package:dummy/package_code/src/paint_contents/highlighter_line.dart';
@@ -46,6 +47,19 @@ class BrushPreset {
   /// 获取此笔刷所属的唯一确定分类 / Explicit canonical category
   String get effectiveCategory =>
       category.isNotEmpty ? category : (kBrushPresetCategories[id] ?? 'Artistic & Inks');
+
+  /// Localized name
+  String localizedName(BuildContext context) {
+    final tr = context.tr('brush_${id}_name');
+    return tr == 'brush_${id}_name' ? name : tr;
+  }
+
+  /// Localized description
+  String localizedDescription(BuildContext context) {
+    if (description.isEmpty) return '';
+    final tr = context.tr('brush_${id}_desc');
+    return tr == 'brush_${id}_desc' ? description : tr;
+  }
 }
 
 /// 权威笔刷分类字典 (精确 1 对 1 归属，杜绝跨分类重复)
