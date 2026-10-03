@@ -3,14 +3,19 @@ import 'package:dummy/utils/theme/theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'core/services/runtime_font_service.dart';
-import 'core/theme/app_theme.dart';
 import 'features/projects/data/project_repository.dart';
 import 'features/splash/presentation/screens/splash_screen.dart';
+import 'utils/theme/customThems/app_bar_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   RuntimeFontService.instance.init();
+
+  SystemChrome.setSystemUIOverlayStyle(
+    CustomAppBarTheme.lightSystemUiOverlayStyle,
+  );
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
@@ -33,13 +38,21 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Clipax',
-
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       navigatorKey: NavigationService.navigatorKey,
       navigatorObservers: [routeObserver],
       themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: isDark
+              ? CustomAppBarTheme.darkSystemUiOverlayStyle
+              : CustomAppBarTheme.lightSystemUiOverlayStyle,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: SplashScreen(repository: repository),
     );
   }

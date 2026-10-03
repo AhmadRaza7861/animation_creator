@@ -394,9 +394,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           final Size size = Size(thumbW, thumbH);
           final Canvas canvas = Canvas(recorder, Offset.zero & size);
 
-          final Color bgColor = _backgroundPattern == 'blueprint'
-              ? const Color(0xFF1E3D59)
-              : (_backgroundPattern == 'graph' ? const Color(0xFFF1F8F6) : _backgroundColor);
+          final Color bgColor = PatternBackgroundHelper.getBaseColor(_backgroundPattern, _backgroundColor);
 
           canvas.drawRect(Offset.zero & size, Paint()..color = bgColor);
 
@@ -1011,9 +1009,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                         // // Solid color
                         Positioned.fill(
                           child: Container(
-                            color: _backgroundPattern == 'blueprint'
-                                ? const Color(0xFF1E3D59)
-                                : (_backgroundPattern == 'graph' ? const Color(0xFFF1F8F6) : _backgroundColor),
+                            color: PatternBackgroundHelper.getBaseColor(_backgroundPattern, _backgroundColor),
                           ),
                         ),
                       //  Image file

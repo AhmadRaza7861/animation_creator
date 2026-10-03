@@ -996,9 +996,7 @@ class _CanvasSelectorState extends State<CanvasSelector> {
       return Container(color: Colors.white);
     }
 
-    final Color bgColor = bg.pattern == 'blueprint'
-        ? const Color(0xFF1E3D59)
-        : (bg.pattern == 'graph' ? const Color(0xFFF1F8F6) : bg.color);
+    final Color bgColor = PatternBackgroundHelper.getBaseColor(bg.pattern, bg.color);
 
     return Container(
       color: bgColor,

@@ -712,153 +712,156 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            // Guided Stencil Mode (Recommended)
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedMode = TemplateMode.drawAccordingTemplate;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _selectedMode == TemplateMode.drawAccordingTemplate
-                        ? ColorConstants.primary.withValues(alpha: 0.06)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Guided Stencil Mode (Recommended)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedMode = TemplateMode.drawAccordingTemplate;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
                       color: _selectedMode == TemplateMode.drawAccordingTemplate
-                          ? ColorConstants.primary
-                          : const Color(0xFFE2E8F0),
-                      width: _selectedMode == TemplateMode.drawAccordingTemplate ? 2.0 : 1.0,
+                          ? ColorConstants.primary.withValues(alpha: 0.06)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _selectedMode == TemplateMode.drawAccordingTemplate
+                            ? ColorConstants.primary
+                            : const Color(0xFFE2E8F0),
+                        width: _selectedMode == TemplateMode.drawAccordingTemplate ? 2.0 : 1.0,
+                      ),
+                      boxShadow: _selectedMode == TemplateMode.drawAccordingTemplate
+                          ? [
+                              BoxShadow(
+                                color: ColorConstants.primary.withValues(alpha: 0.12),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
                     ),
-                    boxShadow: _selectedMode == TemplateMode.drawAccordingTemplate
-                        ? [
-                            BoxShadow(
-                              color: ColorConstants.primary.withValues(alpha: 0.12),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : [],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.edit_note_rounded,
-                            size: 20,
-                            color: _selectedMode == TemplateMode.drawAccordingTemplate
-                                ? ColorConstants.primary
-                                : ColorConstants.mediumText,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Guided Stencil',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.edit_note_rounded,
+                              size: 20,
                               color: _selectedMode == TemplateMode.drawAccordingTemplate
                                   ? ColorConstants.primary
-                                  : ColorConstants.darkText,
+                                  : ColorConstants.mediumText,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Trace ghost timing guides on your fresh layer (Best for learning)',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: Colors.grey.shade600,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-
-            // Full Template Option
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedMode = TemplateMode.useTemplate;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _selectedMode == TemplateMode.useTemplate
-                        ? ColorConstants.primary.withValues(alpha: 0.06)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _selectedMode == TemplateMode.useTemplate
-                          ? ColorConstants.primary
-                          : const Color(0xFFE2E8F0),
-                      width: _selectedMode == TemplateMode.useTemplate ? 2.0 : 1.0,
-                    ),
-                    boxShadow: _selectedMode == TemplateMode.useTemplate
-                        ? [
-                            BoxShadow(
-                              color: ColorConstants.primary.withValues(alpha: 0.12),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : [],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.layers_rounded,
-                            size: 20,
-                            color: _selectedMode == TemplateMode.useTemplate
-                                ? ColorConstants.primary
-                                : ColorConstants.mediumText,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Full Artwork',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: _selectedMode == TemplateMode.useTemplate
+                            const SizedBox(width: 6),
+                            Text(
+                              'Guided Stencil',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: _selectedMode == TemplateMode.drawAccordingTemplate
                                   ? ColorConstants.primary
                                   : ColorConstants.darkText,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Load complete editable frames to color, edit & extend',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: Colors.grey.shade600,
-                          height: 1.25,
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          'Trace ghost timing guides on your fresh layer (Best for learning)',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: Colors.grey.shade600,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+
+              // Full Template Option
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedMode = TemplateMode.useTemplate;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _selectedMode == TemplateMode.useTemplate
+                          ? ColorConstants.primary.withValues(alpha: 0.06)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _selectedMode == TemplateMode.useTemplate
+                            ? ColorConstants.primary
+                            : const Color(0xFFE2E8F0),
+                        width: _selectedMode == TemplateMode.useTemplate ? 2.0 : 1.0,
+                      ),
+                      boxShadow: _selectedMode == TemplateMode.useTemplate
+                          ? [
+                              BoxShadow(
+                                color: ColorConstants.primary.withValues(alpha: 0.12),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.layers_rounded,
+                              size: 20,
+                              color: _selectedMode == TemplateMode.useTemplate
+                                  ? ColorConstants.primary
+                                  : ColorConstants.mediumText,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Full Artwork',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: _selectedMode == TemplateMode.useTemplate
+                                  ? ColorConstants.primary
+                                  : ColorConstants.darkText,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Load complete editable frames to color, edit & extend',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: Colors.grey.shade600,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

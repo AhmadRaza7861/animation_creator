@@ -1124,9 +1124,7 @@ class EditorController extends ChangeNotifier {
       canvas.scale(scale);
 
       // 1. Solid background (Guaranteed non-transparent)
-      final Color bgColor = _globalBackground.pattern == 'blueprint'
-          ? const Color(0xFF1E3D59)
-          : (_globalBackground.pattern == 'graph' ? const Color(0xFFF1F8F6) : _globalBackground.color);
+      final Color bgColor = PatternBackgroundHelper.getBaseColor(_globalBackground.pattern, _globalBackground.color);
 
       canvas.drawRect(Offset.zero & canvasSize, Paint()..color = bgColor);
 

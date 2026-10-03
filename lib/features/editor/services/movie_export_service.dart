@@ -274,9 +274,7 @@ class MovieExportService {
 
     // 1. Draw Background
     if (!transparentBackground) {
-      final Color bgColor = background.pattern == 'blueprint'
-          ? const Color(0xFF1E3D59)
-          : (background.pattern == 'graph' ? const Color(0xFFF1F8F6) : background.color);
+      final Color bgColor = PatternBackgroundHelper.getBaseColor(background.pattern, background.color);
       final Paint bgPaint = Paint()..color = bgColor;
       canvas.drawRect(Offset.zero & sourceSize, bgPaint);
 

@@ -26,6 +26,7 @@ import '../widgets/project_loading_view.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/custom_switch.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../utils/theme/customThems/app_bar_theme.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
@@ -2142,9 +2143,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
           ),
         ),
         body: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            systemNavigationBarColor: Colors.white,
-          ),
+          value: CustomAppBarTheme.lightSystemUiOverlayStyle,
           child: SafeArea(
             child: Stack(
               children: [
