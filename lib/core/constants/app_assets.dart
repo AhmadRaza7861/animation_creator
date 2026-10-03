@@ -41,4 +41,7 @@ class AssetConstants {
   static const String stock_icon = 'assets/icons/stock_icon.svg';
   static const String layer_icon = 'assets/icons/layer_icon.svg';
   static const String import_icon = 'assets/icons/import_icon.svg';
+  static const String onboard_pumpkin = 'assets/images/onboard_pumpkin.gif';
+  static const String onboard_mouse = 'assets/images/onboard_mouse.gif';
+  static const String onboard_cactus = 'assets/images/onboard_cactus.gif';
 }

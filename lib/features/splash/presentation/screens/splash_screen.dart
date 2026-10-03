@@ -6,6 +6,8 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../projects/domain/project_model.dart';
 import '../../../projects/presentation/screens/projects_screen.dart';
+import '../../../onboarding/data/onboarding_service.dart';
+import '../../../onboarding/presentation/screens/onboarding_screen.dart';
 import '../widgets/clipax_logo_painter.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -183,16 +185,22 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  void _navigateToHome() {
+  void _navigateToHome() async {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
     _navTimer?.cancel();
 
+    final isOnboarded = await OnboardingService.isOnboardingCompleted();
+    if (!mounted) return;
+
+    final Widget targetScreen = isOnboarded
+        ? ProjectsScreen(repository: widget.repository)
+        : OnboardingScreen(repository: widget.repository);
+
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            ProjectsScreen(repository: widget.repository),
+        pageBuilder: (context, animation, secondaryAnimation) => targetScreen,
         transitionsBuilder:
             (context, animation, secondaryAnimation, child) {
           final curved = CurvedAnimation(

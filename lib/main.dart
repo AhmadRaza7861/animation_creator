@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'core/localization/app_language.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/localization/locale_provider.dart';
 import 'core/services/runtime_font_service.dart';
@@ -46,6 +47,12 @@ class MyApp extends ConsumerWidget {
       title: 'Clipax',
       locale: currentLocale,
       supportedLocales: AppLocalizations.supportedLocales,
+      localeResolutionCallback: (deviceLocale, supportedLocales) {
+        if (AppLanguage.isSupported(currentLocale.languageCode)) {
+          return currentLocale;
+        }
+        return AppLanguage.resolveLocale(deviceLocale);
+      },
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

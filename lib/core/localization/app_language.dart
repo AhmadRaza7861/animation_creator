@@ -112,10 +112,30 @@ class AppLanguage {
     ),
   ];
 
+  static bool isSupported(String? code) {
+    if (code == null || code.trim().isEmpty) return false;
+    final normalized = code.trim().toLowerCase().split('_').first.split('-').first;
+    return supportedLanguages.any((lang) => lang.code.toLowerCase() == normalized);
+  }
+
   static AppLanguage fromCode(String code) {
+    final normalized = code.trim().toLowerCase().split('_').first.split('-').first;
     return supportedLanguages.firstWhere(
-      (lang) => lang.code.toLowerCase() == code.toLowerCase(),
+      (lang) => lang.code.toLowerCase() == normalized,
       orElse: () => supportedLanguages.first,
     );
+  }
+
+  /// Resolves the device locale to a supported AppLanguage locale.
+  /// If the device locale is supported in our app, uses it.
+  /// If not localized in our app, falls back to English ('en').
+  static Locale resolveLocale(Locale? locale) {
+    if (locale == null) return const Locale('en');
+    final code = locale.languageCode.trim().toLowerCase().split('_').first.split('-').first;
+    final match = supportedLanguages.firstWhere(
+      (lang) => lang.code.toLowerCase() == code,
+      orElse: () => supportedLanguages.first,
+    );
+    return match.locale;
   }
 }
