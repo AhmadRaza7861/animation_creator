@@ -63,9 +63,8 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   // final TextEditingController _searchController = TextEditingController();
   late bool _isListView;
 
-  // Test Scratchpad state
-  final List<PaintContent> _scratchpadStrokes = <PaintContent>[];
-  PaintContent? _currentDrawingStroke;
+  final GlobalKey<_InteractiveScratchpadState> _scratchpadKey =
+      GlobalKey<_InteractiveScratchpadState>();
 
   late double _strokeWidth;
 
@@ -197,9 +196,8 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
   void _selectPreset(BrushPreset preset) {
     setState(() {
       _selectedPreset = preset;
-      _scratchpadStrokes.clear();
-      _currentDrawingStroke = null;
     });
+    _scratchpadKey.currentState?.clear();
     if (_gridScrollController.hasClients) {
       _lastGridScrollOffset = _gridScrollController.offset;
     }
@@ -402,103 +400,51 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
                   ),
                 ],
               ),
-              if (_scratchpadStrokes.isNotEmpty)
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _scratchpadStrokes.clear();
-                      _currentDrawingStroke = null;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.refresh_rounded,
-                          size: 14,
+              GestureDetector(
+                onTap: () {
+                  _scratchpadKey.currentState?.clear();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.refresh_rounded,
+                        size: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        context.tr('clearPad'),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
                           color: Color(0xFF6B7280),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          context.tr('clearPad'),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
 
-          // Interactive Drawing Pad
-          Container(
-            height: 90,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFC),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: GestureDetector(
-                onPanStart: (details) {
-                  final preset = _selectedPreset ?? _allPresets.first;
-                  final stroke = preset.create()
-                    ..paint = (Paint()
-                      ..color = config.color
-                      ..strokeWidth = _strokeWidth
-                      ..style = PaintingStyle.stroke
-                      ..strokeCap = StrokeCap.round
-                      ..strokeJoin = StrokeJoin.round
-                      ..isAntiAlias = true);
-
-                  stroke.startDraw(details.localPosition);
-                  setState(() {
-                    _currentDrawingStroke = stroke;
-                  });
-                },
-                onPanUpdate: (details) {
-                  if (_currentDrawingStroke != null) {
-                    _currentDrawingStroke!.drawing(details.localPosition);
-                    setState(() {});
-                  }
-                },
-                onPanEnd: (_) {
-                  if (_currentDrawingStroke != null) {
-                    setState(() {
-                      _scratchpadStrokes.add(_currentDrawingStroke!);
-                      _currentDrawingStroke = null;
-                    });
-                  }
-                },
-                child: CustomPaint(
-                  painter: _ScratchpadPainter(
-                    strokes: _scratchpadStrokes,
-                    currentStroke: _currentDrawingStroke,
-                    preset: _selectedPreset,
-                    color: config.color,
-                    strokeWidth: _strokeWidth,
-                    doodleHint: context.tr('doodleBrushTestHint'),
-                  ),
-                  size: Size.infinite,
-                ),
-              ),
-            ),
+          // High performance isolated Interactive Drawing Pad
+          _InteractiveScratchpad(
+            key: _scratchpadKey,
+            preset: _selectedPreset ?? _allPresets.first,
+            color: config.color,
+            strokeWidth: _strokeWidth,
+            doodleHint: context.tr('doodleBrushTestHint'),
           ),
 
           const SizedBox(height: 10),
@@ -922,7 +868,7 @@ class _StudioShowcaseCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        isSelected ? context.tr('activeStatus') : context.tr('select'),
+                        isSelected ? context.tr('active') : context.tr('select'),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight:
@@ -1211,4 +1157,104 @@ class _ScratchpadPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ScratchpadPainter oldDelegate) => true;
+}
+
+/// Standalone, isolated interactive scratchpad widget that avoids rebuilding the parent screen during doodling
+class _InteractiveScratchpad extends StatefulWidget {
+  const _InteractiveScratchpad({
+    super.key,
+    required this.preset,
+    required this.color,
+    required this.strokeWidth,
+    required this.doodleHint,
+  });
+
+  final BrushPreset preset;
+  final Color color;
+  final double strokeWidth;
+  final String doodleHint;
+
+  @override
+  State<_InteractiveScratchpad> createState() => _InteractiveScratchpadState();
+}
+
+class _InteractiveScratchpadState extends State<_InteractiveScratchpad> {
+  final List<PaintContent> _strokes = <PaintContent>[];
+  PaintContent? _activeStroke;
+
+  void clear() {
+    setState(() {
+      _strokes.clear();
+      _activeStroke = null;
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _InteractiveScratchpad oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.preset.id != widget.preset.id) {
+      _strokes.clear();
+      _activeStroke = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 90,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: GestureDetector(
+          onPanStart: (details) {
+            final stroke = widget.preset.create()
+              ..paint = (Paint()
+                ..color = widget.color
+                ..strokeWidth = widget.strokeWidth
+                ..style = PaintingStyle.stroke
+                ..strokeCap = StrokeCap.round
+                ..strokeJoin = StrokeJoin.round
+                ..isAntiAlias = true);
+
+            stroke.startDraw(details.localPosition);
+            setState(() {
+              _activeStroke = stroke;
+            });
+          },
+          onPanUpdate: (details) {
+            if (_activeStroke != null) {
+              _activeStroke!.drawing(details.localPosition);
+              setState(() {});
+            }
+          },
+          onPanEnd: (_) {
+            if (_activeStroke != null) {
+              setState(() {
+                _strokes.add(_activeStroke!);
+                _activeStroke = null;
+              });
+            }
+          },
+          child: RepaintBoundary(
+            child: CustomPaint(
+              painter: _ScratchpadPainter(
+                strokes: _strokes,
+                currentStroke: _activeStroke,
+                preset: widget.preset,
+                color: widget.color,
+                strokeWidth: widget.strokeWidth,
+                doodleHint: widget.doodleHint,
+              ),
+              size: Size.infinite,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

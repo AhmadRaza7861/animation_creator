@@ -3,6 +3,7 @@ import '../draw_path/draw_path.dart';
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
 import 'blur.dart';
+import 'empty_content.dart';
 import 'image.dart';
 import 'paint_content.dart';
 import 'paint_content_decoder.dart';
@@ -30,6 +31,13 @@ class OffsetContent extends PaintContent {
     canvas.translate(shiftOffset.dx, shiftOffset.dy);
     child.draw(canvas, size, deeper);
     canvas.restore();
+  }
+
+  factory OffsetContent.fromJson(Map<String, dynamic> data) {
+    final childData = data['child'] as Map<String, dynamic>;
+    final child = decodePaintContent(childData['type'] as String, childData);
+    final shiftOffset = jsonToOffset(data['shiftOffset'] as Map<String, dynamic>);
+    return OffsetContent(child ?? EmptyContent(), shiftOffset);
   }
 
   @override
@@ -217,6 +225,12 @@ class ClippedContent extends PaintContent {
     canvas.clipPath(clipPath);
     child.draw(canvas, size, deeper);
     canvas.restore();
+  }
+
+  factory ClippedContent.fromJson(Map<String, dynamic> data) {
+    final childData = data['child'] as Map<String, dynamic>;
+    final child = decodePaintContent(childData['type'] as String, childData);
+    return ClippedContent(child ?? EmptyContent(), Path());
   }
 
   @override

@@ -19,6 +19,7 @@ import 'smudge.dart';
 import 'image.dart';
 import 'empty_content.dart';
 import '../ruler/mirror_content.dart';
+import '../ruler/radial_content.dart';
 import 'extra_shapes.dart';
 import 'shapes.dart';
 import 'dashed_line.dart';
@@ -29,6 +30,8 @@ import 'shape_brush_line.dart';
 import 'tip_brush.dart';
 import 'stroke_recolor.dart';
 import 'shape_fill.dart';
+import 'preset_strokes.dart';
+import 'stroke_styles.dart';
 
 PaintContent? decodePaintContent(String type, Map<String, dynamic> data, [List<PaintContent>? history]) {
   switch (type) {
@@ -82,6 +85,9 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data, [List<P
     case 'QuadMirror':
     case 'QuadMirrorContent':
       return QuadMirrorContent.fromJson(data);
+    case 'Radial':
+    case 'RadialContent':
+      return RadialContent.fromJson(data);
     case 'Pentagon':
       return Pentagon.fromJson(data);
     case 'Heart':
@@ -156,6 +162,75 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data, [List<P
       return StrokeRecolorContent.fromJson(data, history);
     case 'ShapeFillContent':
       return ShapeFillContent.fromJson(data, history);
+
+    // Preset Strokes (Brush Tips)
+    case 'ChoppyLine':
+      return ChoppyLine.fromJson(data);
+    case 'RoughPenLine':
+      return RoughPenLine.fromJson(data);
+    case 'InkLine':
+      return InkLine.fromJson(data);
+    case 'PencilLine':
+      return PencilLine.fromJson(data);
+    case 'HalftoneLine':
+      return HalftoneLine.fromJson(data);
+    case 'HatchLine':
+      return HatchLine.fromJson(data);
+    case 'MosaicLine':
+      return MosaicLine.fromJson(data);
+    case 'TubeLine':
+      return TubeLine.fromJson(data);
+    case 'CandyCaneLine':
+      return CandyCaneLine.fromJson(data);
+    case 'SparklesLine':
+      return SparklesLine.fromJson(data);
+    case 'SprinklesLine':
+      return SprinklesLine.fromJson(data);
+    case 'StaticLine':
+      return StaticLine.fromJson(data);
+    case 'NeonGlowLine':
+      return NeonGlowLine.fromJson(data);
+    case 'RainbowLine':
+      return RainbowLine.fromJson(data);
+    case 'RibbonLine':
+      return RibbonLine.fromJson(data);
+    case 'ConstellationLine':
+      return ConstellationLine.fromJson(data);
+    case 'ChainLine':
+      return ChainLine.fromJson(data);
+    case 'ElectricArcLine':
+      return ElectricArcLine.fromJson(data);
+    case 'BubbleTrailLine':
+      return BubbleTrailLine.fromJson(data);
+    case 'AudioSpectrumLine':
+      return AudioSpectrumLine.fromJson(data);
+    case 'StitchLine':
+      return StitchLine.fromJson(data);
+
+    // Stroke Styles
+    case 'SawLine':
+      return SawLine.fromJson(data);
+    case 'ZigzagLine':
+      return ZigzagLine.fromJson(data);
+    case 'GearLine':
+      return GearLine.fromJson(data);
+    case 'HeartbeatLine':
+      return HeartbeatLine.fromJson(data);
+    case 'HairLine':
+      return HairLine.fromJson(data);
+    case 'PixelLine':
+      return PixelLine.fromJson(data);
+    case 'GradientLine':
+      return GradientLine.fromJson(data);
+    case 'SketchLine':
+      return SketchLine.fromJson(data);
+
+    // Offset & Clipped wrappers
+    case 'OffsetContent':
+      return OffsetContent.fromJson(data);
+    case 'ClippedContent':
+      return ClippedContent.fromJson(data);
+
     default:
       return null;
   }

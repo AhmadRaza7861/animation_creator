@@ -461,6 +461,9 @@ class DrawingController extends ChangeNotifier {
   /// Eraser drawing content
   PaintContent? eraserContent;
 
+  /// Cached compiled vector picture data for high-speed, crisp display list rendering
+  ui.Picture? cachedPicture;
+
   /// 缓存的图片数据，用于优化橡皮擦性能
   ///
   /// Cached image data for optimizing eraser performance
@@ -471,6 +474,7 @@ class DrawingController extends ChangeNotifier {
 
   /// 清除栅格与图层快照缓存
   void _invalidateRasterCache() {
+    cachedPicture = null;
     cachedImage = null;
     cachedRgbaData = null;
     cachedRgbaWidth = null;
@@ -2178,6 +2182,7 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Refresh board and notify listeners
   void refresh() {
+    cachedPicture = null;
     cachedImage = null;
     painter?._refresh();
     notifyListeners();

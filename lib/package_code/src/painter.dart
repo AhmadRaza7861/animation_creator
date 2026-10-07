@@ -443,42 +443,19 @@ class _DeepPainter extends CustomPainter {
     final bool cacheValid = !isModifierActive &&
         controller.lastRenderedSize == size && 
         controller.lastTotalIndex == controller.totalCurrentIndex &&
-        controller.cachedImage != null;
+        controller.cachedPicture != null;
 
     if (cacheValid) {
-      debugPrint('_DeepPainter.paint: Cache is valid, using cachedImage');
-      // 直接使用缓存图片，配合 High FilterQuality 和 exact drawImageRect
-      canvas.drawImageRect(
-        controller.cachedImage!,
-        Rect.fromLTWH(
-          0,
-          0,
-          controller.cachedImage!.width.toDouble(),
-          controller.cachedImage!.height.toDouble(),
-        ),
-        Offset.zero & size,
-        Paint()..filterQuality = ui.FilterQuality.high,
-      );
+      canvas.drawPicture(controller.cachedPicture!);
       return;
     }
-    
-    debugPrint('_DeepPainter.paint: Cache invalid or modifier active. Building picture from $totalContents items.');
-
-    final double pixelRatio = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
-    final int targetWidth = (size.width * pixelRatio).round();
-    final int targetHeight = (size.height * pixelRatio).round();
 
     final ui.PictureRecorder recorder = ui.PictureRecorder();
-    final Canvas tempCanvas = Canvas(
-      recorder,
-      Rect.fromLTWH(0, 0, targetWidth.toDouble(), targetHeight.toDouble()),
-    );
-    tempCanvas.scale(pixelRatio);
+    final Canvas recCanvas = Canvas(recorder, Offset.zero & size);
 
     // To properly support BlendMode.clear (Erasers) in the history, we need an isolated layer
     // otherwise it clears the canvas to black on certain Flutter backends.
-    canvas.saveLayer(Offset.zero & size, Paint());
-    tempCanvas.saveLayer(Offset.zero & size, Paint());
+    recCanvas.saveLayer(Offset.zero & size, Paint());
 
     for (int i = controller.layers.length - 1; i >= 0; i--) {
       final layer = controller.layers[i];
@@ -486,42 +463,30 @@ class _DeepPainter extends CustomPainter {
       // 如果当前是修改器激活状态，活跃图层由 _UpPainter 独立渲染，避免与底层重复或造成透明镂空穿透
       if (isModifierActive && layer == activeLayer) continue;
       
-      canvas.saveLayer(
-        Offset.zero & size, 
-        Paint()
-          ..blendMode = layer.blendMode
-          ..color = Colors.white.withValues(alpha: layer.opacity)
-      );
-      tempCanvas.saveLayer(
+      recCanvas.saveLayer(
         Offset.zero & size, 
         Paint()
           ..blendMode = layer.blendMode
           ..color = Colors.white.withValues(alpha: layer.opacity)
       );
       
-      layer.drawHistory(canvas, size, true, tempCanvas);
+      layer.drawHistory(recCanvas, size, true);
       
-      canvas.restore();
-      tempCanvas.restore();
+      recCanvas.restore();
     }
 
-    canvas.restore();
-    tempCanvas.restore();
+    recCanvas.restore();
+
+    final ui.Picture picture = recorder.endRecording();
 
     if (!isModifierActive) {
       // 更新缓存版本信息
       controller.lastRenderedSize = size;
       controller.lastTotalIndex = controller.totalCurrentIndex;
-
-      final ui.Picture picture = recorder.endRecording();
-
-      // 只在尺寸有效时生成高 DPI 缓存图片，避免 Invalid image dimensions 异常
-      if (targetWidth > 0 && targetHeight > 0) {
-        picture.toImage(targetWidth, targetHeight).then((ui.Image value) {
-          controller.cachedImage = value;
-        });
-      }
+      controller.cachedPicture = picture;
     }
+
+    canvas.drawPicture(picture);
   }
 
   @override

@@ -1410,12 +1410,7 @@ class EditorController extends ChangeNotifier {
       final currentCanvas = _canvases[index];
       currentCanvas.forceRefreshLayers();
       currentCanvas.updateSnapshot(includeBackground: false);
-      if (currentCanvas.activeLayer.value == null || currentCanvas.activeLayer.value!.isLocked) {
-        final unlocked = currentCanvas.layers.where((l) => !l.isLocked).firstOrNull;
-        if (unlocked != null) {
-          currentCanvas.activeLayer.value = unlocked;
-        }
-      }
+      _ensureWritableActiveLayer(currentCanvas);
       notifyListeners();
     }
   }
@@ -1676,7 +1671,7 @@ class EditorController extends ChangeNotifier {
       targetController.activeLayer.value = targetController.layers.first;
     } else {
       if (copiedLayers.length == 1) {
-        targetController.activeLayer.value!.isLocked = false;
+        _ensureWritableActiveLayer(targetController);
         targetController.addContents(copiedLayers.first.history);
       } else {
         for (final cl in copiedLayers.reversed) {
@@ -1996,13 +1991,51 @@ class EditorController extends ChangeNotifier {
 
   bool _canRedoFallback() => true;
 
+  void _ensureWritableActiveLayer([DrawingController? targetController]) {
+    final controller = targetController ?? drawingController;
+    if (controller.layers.isEmpty) {
+      final newLayer = LayerData(
+        id: 'layer_${DateTime.now().millisecondsSinceEpoch}',
+        name: 'Drawing',
+        isVisible: true,
+        isLocked: false,
+      );
+      controller.layers.add(newLayer);
+      controller.activeLayer.value = newLayer;
+      return;
+    }
+
+    final active = controller.activeLayer.value;
+    if (active == null || active.isLocked || !active.isVisible) {
+      final unlocked = controller.layers.where((l) => !l.isLocked && l.isVisible).firstOrNull;
+      if (unlocked != null) {
+        controller.activeLayer.value = unlocked;
+      } else {
+        if (active != null) {
+          active.isLocked = false;
+          active.isVisible = true;
+        } else {
+          final newLayer = LayerData(
+            id: 'layer_${DateTime.now().millisecondsSinceEpoch}',
+            name: 'Drawing',
+            isVisible: true,
+            isLocked: false,
+          );
+          controller.layers.insert(0, newLayer);
+          controller.activeLayer.value = newLayer;
+        }
+      }
+    }
+  }
+
   // Stamping / confirm active stickers
   void stampActiveSticker() {
+    if (_activeSticker == null) return;
     if (!_hasShownStickerHint) {
       _hasShownStickerHint = true;
       _persistStickerHintShown();
     }
-    if (drawingController.isCurrentLayerLocked) return;
+    _ensureWritableActiveLayer();
 
     if (_activeSticker is ActiveTextSticker) {
       final sticker = _activeSticker as ActiveTextSticker;
@@ -2253,7 +2286,9 @@ class EditorController extends ChangeNotifier {
 
     _activeCategory = 'Lasso';
     drawingController.setPaintContent(Lasso());
+    _ensureWritableActiveLayer();
     _activeSticker = pastedSticker;
+    _initActiveStickerHistory(pastedSticker);
     recordActiveStickerState();
     updateSnapshot();
     drawingController.refresh();
