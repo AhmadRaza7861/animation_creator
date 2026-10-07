@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/rating_strategy_service.dart';
 import '../../../../../core/widgets/app_back_button.dart';
 import '../../../services/movie_export_service.dart';
 import 'fullscreen_player_screen.dart';
@@ -37,6 +38,11 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
     if (!_isGif) {
       _initVideo();
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        RatingStrategyService.recordExport(context);
+      }
+    });
   }
 
   Future<void> _initVideo() async {

@@ -29,6 +29,7 @@ import '../../../../core/widgets/custom_switch.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../utils/theme/customThems/app_bar_theme.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
+import '../../../settings/presentation/dialogs/contact_us_dialog.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
   final String? projectId;
@@ -504,6 +505,41 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                             ),
                           ],
                         ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.bug_report_rounded,
+                            color: Color(0xFFEF4444),
+                            size: 22,
+                          ),
+                        ),
+                        title: Text(
+                          context.tr('reportError'),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          context.tr('reportErrorSubtitle'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.black45,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          ContactUsDialog.show(context);
+                        },
                       ),
                       // const Divider(height: 1),
                       // ListTile(
@@ -3046,7 +3082,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 // 6. 4-MIRR (4-Way Quadrant Symmetry)
                 _buildHorizontalRulerItem(
                   label: context.tr('rulerQuadMirror'),
-                  icon: Icons.grid_view_rounded,
+                  assetPath: AssetConstants.mirr_4,
                   isSelected: rulerConfig.type == RulerType.quadMirror,
                   onTap: () {
                     final newType = rulerConfig.type == RulerType.quadMirror
@@ -3124,7 +3160,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
         break;
       case RulerType.quadMirror:
         label = context.tr('rulerQuadMirror');
-        icon = Icons.grid_view_rounded;
+        asset = AssetConstants.mirr_4;
         break;
       case RulerType.none:
         label = context.tr('none');

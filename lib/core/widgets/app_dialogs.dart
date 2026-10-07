@@ -355,9 +355,9 @@ class _DialogContainer extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.86,
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        width: MediaQuery.of(context).size.width * 0.92,
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -579,13 +579,13 @@ class _InputDialogContainerState extends State<_InputDialogContainer> {
       child: Center(
         child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Material(
             color: Colors.transparent,
             child: Container(
-              width: MediaQuery.of(context).size.width * 0.86,
-              constraints: const BoxConstraints(maxWidth: 380),
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+              width: MediaQuery.of(context).size.width * 0.92,
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
@@ -769,9 +769,9 @@ class _NoticeDialogContainer extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.86,
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        width: MediaQuery.of(context).size.width * 0.92,
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),

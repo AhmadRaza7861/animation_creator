@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'core/services/firebase_options.dart';
 import 'core/localization/app_language.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/localization/locale_provider.dart';
@@ -15,6 +17,13 @@ import 'utils/theme/customThems/app_bar_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase.initializeApp warning/error: $e');
+  }
   await LanguageService.loadSavedLocale();
   RuntimeFontService.instance.init();
 

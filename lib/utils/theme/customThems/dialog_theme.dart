@@ -7,6 +7,7 @@ class CustomDialogTheme {
   static final lightDialogTheme = DialogThemeData(
     shadowColor: Colors.black.withValues(alpha: 0.15),
     elevation: 8,
+    insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
     surfaceTintColor: Colors.transparent,
     backgroundColor: Colors.white,
     titleTextStyle: const TextStyle(
@@ -28,6 +29,7 @@ class CustomDialogTheme {
   static final darkDialogTheme = DialogThemeData(
     shadowColor: Colors.black.withValues(alpha: 0.3),
     elevation: 8,
+    insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
     surfaceTintColor: Colors.transparent,
     backgroundColor: const Color(0xFF1E293B),
     titleTextStyle: const TextStyle(

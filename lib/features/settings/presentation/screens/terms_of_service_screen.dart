@@ -51,7 +51,7 @@ class TermsOfServiceScreen extends StatelessWidget {
             ),
             _buildSection(
               '6. Contact Information',
-              'For any legal, license, or support questions regarding these terms, please contact us at support@clipax.app.',
+              'For any legal, license, or support questions regarding these terms, please contact us at nextgenappsmaker@gmail.com.',
             ),
             const SizedBox(height: 32),
           ],

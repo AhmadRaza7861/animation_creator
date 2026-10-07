@@ -6,6 +6,7 @@ import '../../../../main.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/services/rating_strategy_service.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../data/project_repository.dart';
 import '../../domain/project_model.dart';
@@ -133,6 +134,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
           ),
         ),
       );
+      if (mounted) {
+        await RatingStrategyService.recordProjectCreated(context);
+      }
     }
     if (mounted) {
       await _loadProjects();
@@ -672,7 +676,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      context.tr('seeAllWithCount', {'count': '22'}),
+                      context.tr('seeAll'),
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -953,7 +957,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        context.tr('viewAll', {'count': '${_projects.length}'}),
+                        context.tr('viewAll'),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,

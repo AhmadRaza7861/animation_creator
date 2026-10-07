@@ -13,7 +13,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Settings & Legal Module Tests', () {
-    testWidgets('SettingsScreen renders Language, Rate Us, Contact Us, Privacy Policy, Terms and version', (tester) async {
+    testWidgets('SettingsScreen renders Language, Rate Us, Contact Us, Privacy Policy, and Terms', (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -29,7 +29,6 @@ void main() {
       expect(find.text('Share Clipax'), findsOneWidget);
       expect(find.text('Privacy Policy'), findsOneWidget);
       expect(find.text('Terms of Service'), findsOneWidget);
-      expect(find.textContaining('Clipax v1.0.0'), findsOneWidget);
     });
 
     testWidgets('PrivacyPolicyScreen renders offline storage sections and contact button', (tester) async {
@@ -69,14 +68,21 @@ void main() {
       );
 
       expect(find.text('Enjoying Clipax?'), findsOneWidget);
+      // Initially no stars selected by default
+      expect(find.byIcon(Icons.star_outline_rounded), findsNWidgets(5));
+      expect(find.byIcon(Icons.star_rounded), findsNWidgets(1)); // Top badge only
+
+      // Tap 5th star
+      final starOutlines = find.byIcon(Icons.star_outline_rounded);
+      await tester.tap(starOutlines.at(4));
+      await tester.pump();
+
       expect(find.text('Loved it! Amazing! 🤩'), findsOneWidget);
       expect(find.text('Rate on App Store / Play Store'), findsOneWidget);
 
-      final starIcons = find.byIcon(Icons.star_rounded);
-      expect(starIcons, findsNWidgets(6));
-
-      // Tap 2nd star of rating bar (index 2 in list of star icons)
-      await tester.tap(starIcons.at(2));
+      // Tap 2nd star
+      final stars = find.byIcon(Icons.star_rounded);
+      await tester.tap(stars.at(2));
       await tester.pump();
 
       expect(find.text('Could be better 😐'), findsOneWidget);
@@ -96,8 +102,9 @@ void main() {
       expect(find.text('Contact Us'), findsOneWidget);
       expect(find.text('Bug Report 🐞'), findsOneWidget);
       expect(find.text('Feature Request 💡'), findsOneWidget);
+      expect(find.text('Your Email'), findsOneWidget);
       expect(find.text('Open Email Client'), findsOneWidget);
-      expect(find.textContaining('support@clipax.app'), findsOneWidget);
+      expect(find.textContaining('nextgenappsmaker@gmail.com'), findsOneWidget);
     });
   });
 }

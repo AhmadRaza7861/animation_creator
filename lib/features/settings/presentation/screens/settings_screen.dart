@@ -134,31 +134,6 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
             ]),
-            const SizedBox(height: 24),
-
-            // App Version Footer
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    context.tr('appVersion'),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    context.tr('madeWithLove'),
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 32),
           ],
         ),

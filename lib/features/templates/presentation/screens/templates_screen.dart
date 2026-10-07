@@ -219,31 +219,31 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             physics: const BouncingScrollPhysics(),
                             child: Row(
                               children: [
-                                _buildCategoryTab('All', label: '✨ ${context.tr('catAll')} (${_allTemplates.length})'),
+                                _buildCategoryTab('All', label: '✨ ${context.tr('catAll')}'),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryAnimationBasics,
-                                  label: '🟢 ${context.tr('catAnimationBasics')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryAnimationBasics).length})',
+                                  label: '🟢 ${context.tr('catAnimationBasics')}',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryThe12Principles,
-                                  label: '🎬 ${context.tr('catThe12Principles')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryThe12Principles).length})',
+                                  label: '🎬 ${context.tr('catThe12Principles')}',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryCharacterAndLocomotion,
-                                  label: '🏃 ${context.tr('catCharacterAndLocomotion')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryCharacterAndLocomotion).length})',
+                                  label: '🏃 ${context.tr('catCharacterAndLocomotion')}',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryVFXAndElements,
-                                  label: '💥 ${context.tr('catVFXAndElements')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryVFXAndElements).length})',
+                                  label: '💥 ${context.tr('catVFXAndElements')}',
                                 ),
                                 const SizedBox(width: 8),
                                 _buildCategoryTab(
                                   TutorialsData.categoryMasterPractice,
-                                  label: '🏆 ${context.tr('catMasterPractice')} (${_allTemplates.where((t) => t.category == TutorialsData.categoryMasterPractice).length})',
+                                  label: '🏆 ${context.tr('catMasterPractice')}',
                                 ),
                               ],
                             ),
@@ -267,7 +267,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                context.tr('tutorialsAvailableCount', {'count': '${filteredTemplates.length}'}),
+                                context.tr('tutorialsAvailableCount'),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,
