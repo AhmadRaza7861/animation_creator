@@ -264,7 +264,7 @@ class TipBrush extends FreehandLine {
   }
 
   @override
-  TipBrush copy() => TipBrush(
+  TipBrush copy() => TipBrush.data(
         minPointDistance: minPointDistance,
         kind: kind,
         angle: angle,
@@ -274,6 +274,8 @@ class TipBrush extends FreehandLine {
         flipX: flipX,
         flipY: flipY,
         followPath: followPath,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override

@@ -84,10 +84,12 @@ class DashedLine extends FreehandLine {
   }
 
   @override
-  DashedLine copy() => DashedLine(
+  DashedLine copy() => DashedLine.data(
         minPointDistance: minPointDistance,
         dashRatio: dashRatio,
         gapRatio: gapRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override

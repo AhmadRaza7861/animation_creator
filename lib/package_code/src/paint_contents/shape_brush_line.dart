@@ -230,7 +230,12 @@ class SquareBrush extends ShapeBrushLine {
   String get contentType => 'SquareBrush';
 
   @override
-  SquareBrush copy() => SquareBrush(minPointDistance: minPointDistance, spacingRatio: spacingRatio);
+  SquareBrush copy() => SquareBrush.data(
+        minPointDistance: minPointDistance,
+        spacingRatio: spacingRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 菱形笔刷 / Diamond tip brush
@@ -260,8 +265,12 @@ class DiamondBrush extends ShapeBrushLine {
   String get contentType => 'DiamondBrush';
 
   @override
-  DiamondBrush copy() =>
-      DiamondBrush(minPointDistance: minPointDistance, spacingRatio: spacingRatio);
+  DiamondBrush copy() => DiamondBrush.data(
+        minPointDistance: minPointDistance,
+        spacingRatio: spacingRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 三角形笔刷 / Triangle tip brush
@@ -291,8 +300,12 @@ class TriangleBrush extends ShapeBrushLine {
   String get contentType => 'TriangleBrush';
 
   @override
-  TriangleBrush copy() =>
-      TriangleBrush(minPointDistance: minPointDistance, spacingRatio: spacingRatio);
+  TriangleBrush copy() => TriangleBrush.data(
+        minPointDistance: minPointDistance,
+        spacingRatio: spacingRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 星形笔刷 / Star tip brush
@@ -322,7 +335,12 @@ class StarBrush extends ShapeBrushLine {
   String get contentType => 'StarBrush';
 
   @override
-  StarBrush copy() => StarBrush(minPointDistance: minPointDistance, spacingRatio: spacingRatio);
+  StarBrush copy() => StarBrush.data(
+        minPointDistance: minPointDistance,
+        spacingRatio: spacingRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 书法（斜口）笔刷 / Calligraphy (chisel) tip brush
@@ -352,8 +370,12 @@ class CalligraphyBrush extends ShapeBrushLine {
   String get contentType => 'CalligraphyBrush';
 
   @override
-  CalligraphyBrush copy() =>
-      CalligraphyBrush(minPointDistance: minPointDistance, spacingRatio: spacingRatio);
+  CalligraphyBrush copy() => CalligraphyBrush.data(
+        minPointDistance: minPointDistance,
+        spacingRatio: spacingRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 柔边圆形笔刷（类似 PS 的 Soft Round）
@@ -419,10 +441,12 @@ class SoftRoundBrush extends ShapeBrushLine {
   }
 
   @override
-  SoftRoundBrush copy() => SoftRoundBrush(
+  SoftRoundBrush copy() => SoftRoundBrush.data(
         minPointDistance: minPointDistance,
         spacingRatio: spacingRatio,
         softness: softness,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override
@@ -459,8 +483,12 @@ class HardRoundBrush extends ShapeBrushLine {
   String get contentType => 'HardRoundBrush';
 
   @override
-  HardRoundBrush copy() =>
-      HardRoundBrush(minPointDistance: minPointDistance, spacingRatio: spacingRatio);
+  HardRoundBrush copy() => HardRoundBrush.data(
+        minPointDistance: minPointDistance,
+        spacingRatio: spacingRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 喷枪 / 喷溅笔刷（类似 PS 的 Airbrush / Spatter）
@@ -524,10 +552,12 @@ class AirbrushBrush extends ShapeBrushLine {
   }
 
   @override
-  AirbrushBrush copy() => AirbrushBrush(
+  AirbrushBrush copy() => AirbrushBrush.data(
         minPointDistance: minPointDistance,
         spacingRatio: spacingRatio,
         density: density,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override
@@ -595,8 +625,13 @@ class ChalkBrush extends ShapeBrushLine {
   }
 
   @override
-  ChalkBrush copy() =>
-      ChalkBrush(minPointDistance: minPointDistance, spacingRatio: spacingRatio, density: density);
+  ChalkBrush copy() => ChalkBrush.data(
+        minPointDistance: minPointDistance,
+        spacingRatio: spacingRatio,
+        density: density,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => <String, dynamic>{
@@ -672,11 +707,13 @@ class ScatterBrush extends ShapeBrushLine {
   }
 
   @override
-  ScatterBrush copy() => ScatterBrush(
+  ScatterBrush copy() => ScatterBrush.data(
         minPointDistance: minPointDistance,
         spacingRatio: spacingRatio,
         density: density,
         scatter: scatter,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override

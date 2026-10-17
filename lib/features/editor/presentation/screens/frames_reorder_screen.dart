@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/widgets/safe_thumbnail_widget.dart';
 
 class FramesReorderScreen extends StatefulWidget {
   final List<ui.Image?> thumbnails;
@@ -111,7 +112,7 @@ class _FramesReorderScreenState extends State<FramesReorderScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: thumb != null 
-                    ? RawImage(image: thumb, fit: BoxFit.contain) 
+                    ? SafeThumbnailWidget(image: thumb, fit: BoxFit.contain) 
                     : const Icon(Icons.palette_outlined, color: Colors.black26),
                 ),
               ),

@@ -138,7 +138,7 @@ class ImageTipBrush extends FreehandLine {
   }
 
   @override
-  ImageTipBrush copy() => ImageTipBrush(
+  ImageTipBrush copy() => ImageTipBrush.data(
         minPointDistance: minPointDistance,
         stampKey: stampKey,
         spacing: spacing,
@@ -147,6 +147,8 @@ class ImageTipBrush extends FreehandLine {
         flipX: flipX,
         flipY: flipY,
         followPath: followPath,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override

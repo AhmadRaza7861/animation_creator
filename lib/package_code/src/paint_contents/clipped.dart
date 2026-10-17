@@ -159,7 +159,7 @@ class ClippedHistoryContent extends PaintContent {
 
   @override
   ClippedHistoryContent copy() => ClippedHistoryContent(
-    history, 
+    history.map((e) => e.copy()).toList(), 
     clipPath.copy(), 
     clipRect, 
     canvasSize: canvasSize,

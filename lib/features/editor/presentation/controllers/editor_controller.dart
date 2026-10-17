@@ -20,6 +20,7 @@ import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../services/global_clipboard.dart';
+import '../widgets/fast_scroll_counter_overlay.dart';
 
 class CanvasBackground {
   final Color color;
@@ -88,6 +89,10 @@ class EditorController extends ChangeNotifier {
   CanvasBackground _globalBackground = CanvasBackground();
   int _currentIndex = 0;
   bool _isLoadingProject = false;
+  final ValueNotifier<double> _loadingProgressNotifier = ValueNotifier<double>(0.0);
+  ValueNotifier<double> get loadingProgressNotifier => _loadingProgressNotifier;
+  final ValueNotifier<String> _loadingStatusNotifier = ValueNotifier<String>('Restoring drawing layers...');
+  ValueNotifier<String> get loadingStatusNotifier => _loadingStatusNotifier;
 
   @override
   void notifyListeners() {
@@ -106,6 +111,10 @@ class EditorController extends ChangeNotifier {
   String _exportType = 'Mp4';
   String? _savedJsonData;
   bool _enableStickers = false;
+
+  /// Fast-scroll frame counter overlay state notifier
+  final ValueNotifier<FastScrollState> fastScrollNotifier =
+      ValueNotifier<FastScrollState>(const FastScrollState());
   // Auto-save and persistence state
   Timer? _autoSaveTimer;
   bool _isSaving = false;
@@ -113,6 +122,7 @@ class EditorController extends ChangeNotifier {
   bool _isDirty = false;
 
   bool get isDirty => _isDirty;
+  bool get isSaving => _isSaving;
 
   void markDirty() {
     _isDirty = true;
@@ -298,6 +308,47 @@ class EditorController extends ChangeNotifier {
   // Getters
   List<DrawingController> get canvases => _canvases;
   List<ui.Image?> get thumbnails => _thumbnails;
+  final List<String?> _frameImagePaths = [];
+  List<String?> get frameImagePaths => List.unmodifiable(_frameImagePaths);
+  List<Key> _canvasKeys = [];
+  List<Key> get canvasKeys {
+    if (_canvasKeys.length != _canvases.length) {
+      _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
+    }
+    return _canvasKeys;
+  }
+
+  String? getFrameImagePath(int index) {
+    if (index >= 0 && index < _frameImagePaths.length) {
+      return _frameImagePaths[index];
+    }
+    return null;
+  }
+
+  String? _extractImagePath(DrawingController canvas) {
+    for (final layer in canvas.layers) {
+      for (final content in layer.history) {
+        if (content is ImageContent && content.imageUrl != null && content.imageUrl!.isNotEmpty) {
+          return content.imageUrl;
+        }
+      }
+    }
+    return null;
+  }
+
+  bool frameHasCustomStrokes(int index) {
+    if (index < 0 || index >= _canvases.length) return false;
+    final canvas = _canvases[index];
+    for (final layer in canvas.layers) {
+      for (final content in layer.history) {
+        if (content is! ImageContent) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   CanvasBackground get globalBackground => _globalBackground;
   int get currentIndex => _currentIndex;
   DrawingController get drawingController {
@@ -309,7 +360,16 @@ class EditorController extends ChangeNotifier {
   }
   bool get isLoadingProject => _isLoadingProject;
 
-  double get aspectRatio => _aspectRatio;
+  double get aspectRatio {
+    if (_aspectRatio > 0.05 && _aspectRatio.isFinite) {
+      return _aspectRatio;
+    }
+    final size = drawingControllerSize;
+    if (size != null && size.width > 0 && size.height > 0) {
+      return size.width / size.height;
+    }
+    return 1.0;
+  }
   String? get templateFolder => _templateFolder;
   String? get templateExtension => _templateExtension;
   String? get templateMode => _templateMode;
@@ -719,10 +779,8 @@ class EditorController extends ChangeNotifier {
         }
       }
 
-      for (int i = 0; i < _canvases.length; i++) {
-        if (_thumbnails[i] == null) {
-          _canvases[i].updateSnapshot(includeBackground: false);
-        }
+      if (_canvases.isNotEmpty && _currentIndex < _canvases.length) {
+        _canvases[_currentIndex].updateSnapshot(includeBackground: false);
       }
       if (propagated) {
         notifyListeners();
@@ -730,7 +788,18 @@ class EditorController extends ChangeNotifier {
     }
   }
 
-  Future<void> loadProjectData() async {
+  Future<void>? _loadProjectFuture;
+
+  Future<void> loadProjectData() {
+    if (_isDisposed || projectId == null) return Future.value();
+    if (_loadProjectFuture != null) return _loadProjectFuture!;
+    _loadProjectFuture = _performLoadProjectData().whenComplete(() {
+      _loadProjectFuture = null;
+    });
+    return _loadProjectFuture!;
+  }
+
+  Future<void> _performLoadProjectData() async {
     if (_isDisposed || projectId == null) return;
     _isLoadingProject = true;
     notifyListeners();
@@ -848,13 +917,85 @@ class EditorController extends ChangeNotifier {
         }
       }
 
-      // Rehydrate canvases in parallel
-      _canvases.clear();
-      _thumbnails.clear();
-      final canvasesList = data.state['canvases'] as List<dynamic>;
-      final loadedCanvases = await Future.wait(
-        canvasesList.map((c) => _createControllerFromData(c as Map<String, dynamic>)),
+      // Restore tool preferences up front so all frames can be configured in a single pass without secondary cascades
+      if (data.state.containsKey('strokeWidth')) {
+        _globalStrokeWidth = (data.state['strokeWidth'] as num).toDouble();
+      }
+      if (data.state.containsKey('colorOpacity')) {
+        _colorOpacity = (data.state['colorOpacity'] as num).toDouble();
+      }
+      if (data.state.containsKey('blurStrength')) {
+        _blurStrength = (data.state['blurStrength'] as num).toDouble().clamp(0.0, 1.0);
+      }
+      if (data.state.containsKey('smudgeStrength')) {
+        _smudgeStrength = (data.state['smudgeStrength'] as num).toDouble().clamp(0.0, 1.0);
+      }
+      Color restoredColor = Colors.black;
+      if (data.state.containsKey('strokeColor')) {
+        restoredColor = Color(data.state['strokeColor'] as int);
+      }
+      _activeCategory = 'Brush';
+      _currentSubMenu = 'none';
+      _isTextToolSelected = false;
+      GlobalToolState.instance.resetToDefaultBrush();
+      GlobalToolState.instance.setStyle(
+        strokeWidth: _globalStrokeWidth,
+        color: restoredColor,
       );
+
+      // Rehydrate canvases
+      _canvases.clear();
+      for (final t in _thumbnails) {
+        t?.dispose();
+      }
+      _thumbnails.clear();
+      _frameImagePaths.clear();
+
+      final canvasesList = data.state['canvases'] as List<dynamic>;
+      final int totalFrames = canvasesList.length;
+
+      // High-performance loading for projects with many frames (e.g. 150+ frames):
+      // Only decode full raster images for the initial active frame and immediate onion skin window (0..2).
+      // For other frames, restore their vector structure and metadata, and load image assets on demand.
+      final int initialWindowEnd = math.min(totalFrames - 1, 2);
+      final List<DrawingController> loadedCanvases = [];
+
+      // Yielding interval: for large frame counts, yield to the event loop every 6 frames
+      // so Flutter and Android Choreographer maintain a buttery 60/120 FPS render loop without skipping frames
+      final int yieldInterval = totalFrames > 60 ? 6 : (totalFrames > 15 ? 4 : 2);
+
+      _loadingProgressNotifier.value = 0.0;
+      _loadingStatusNotifier.value = 'Preparing $totalFrames frames...';
+
+      for (int i = 0; i < totalFrames; i++) {
+        if (_isDisposed) {
+          for (final c in loadedCanvases) {
+            c.dispose();
+          }
+          return;
+        }
+        final cMap = canvasesList[i] as Map<String, dynamic>;
+        final bool shouldLoadFullImages = (i <= initialWindowEnd);
+        final c = await _createControllerFromData(
+          cMap,
+          loadImages: shouldLoadFullImages,
+          initialStrokeWidth: _globalStrokeWidth,
+          initialColor: restoredColor,
+        );
+        loadedCanvases.add(c);
+        _frameImagePaths.add(_extractImagePath(c));
+        _thumbnails.add(null);
+
+        // Update progress & yield to event loop so loading UI stays 100% responsive and smooth
+        if (i % yieldInterval == 0 || i == totalFrames - 1) {
+          final double progress = (i + 1) / totalFrames;
+          _loadingProgressNotifier.value = progress;
+          _loadingStatusNotifier.value = 'Restoring frame ${i + 1} of $totalFrames...';
+          // Yield execution to allow Android Choreographer to draw frames
+          await Future<void>.delayed(const Duration(milliseconds: 1));
+        }
+      }
+
       if (_isDisposed) {
         for (final c in loadedCanvases) {
           c.dispose();
@@ -862,8 +1003,17 @@ class EditorController extends ChangeNotifier {
         return;
       }
       _canvases.addAll(loadedCanvases);
-      for (int i = 0; i < _canvases.length; i++) {
-        _thumbnails.add(null);
+      _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
+
+      // Pre-warm the imageCache asynchronously for instant display of initial timeline frames
+      for (int i = 0; i < math.min(_frameImagePaths.length, 12); i++) {
+        final p = _frameImagePaths[i];
+        if (p != null && p.isNotEmpty) {
+          final int? preWarmW = _aspectRatio > 1.0 ? 120 : null;
+          final int? preWarmH = _aspectRatio > 1.0 ? null : 120;
+          final provider = ResizeImage(FileImage(File(p)), width: preWarmW, height: preWarmH);
+          provider.resolve(ImageConfiguration.empty);
+        }
       }
 
       if (_canvases.isEmpty) {
@@ -871,74 +1021,23 @@ class EditorController extends ChangeNotifier {
       } else {
         _currentIndex = 0;
         _activeSticker = null;
-        if (data.state.containsKey('strokeWidth')) {
-          _globalStrokeWidth = (data.state['strokeWidth'] as num).toDouble();
-        } else {
-          _globalStrokeWidth = _canvases.first.drawConfig.value.strokeWidth;
-        }
-
-        if (data.state.containsKey('colorOpacity')) {
-          _colorOpacity = (data.state['colorOpacity'] as num).toDouble();
-        } else {
-          _colorOpacity = 1.0;
-        }
-
-        if (data.state.containsKey('blurStrength')) {
-          _blurStrength = (data.state['blurStrength'] as num).toDouble().clamp(0.0, 1.0);
-        } else {
-          _blurStrength = 0.75;
-        }
-
-        if (data.state.containsKey('smudgeStrength')) {
-          _smudgeStrength = (data.state['smudgeStrength'] as num).toDouble().clamp(0.0, 1.0);
-        } else {
-          _smudgeStrength = 0.75;
-        }
-
-        Color restoredColor = Colors.black;
-        if (data.state.containsKey('strokeColor')) {
-          restoredColor = Color(data.state['strokeColor'] as int);
-        } else {
-          restoredColor = _canvases.first.drawConfig.value.color;
-        }
-
-        _activeCategory = 'Brush';
-        _currentSubMenu = 'none';
-        _isTextToolSelected = false;
-        GlobalToolState.instance.resetToDefaultBrush();
-        GlobalToolState.instance.setStyle(
-          strokeWidth: _globalStrokeWidth,
-          color: restoredColor,
-        );
-        for (var controller in _canvases) {
-          controller.drawConfig.value = controller.drawConfig.value.copyWith(
-            strokeWidth: _globalStrokeWidth,
-            color: restoredColor,
-            contentType: FreehandLine,
-          );
-        }
-
-        for (var controller in _canvases) {
-          if (controller.activeLayer.value == null || controller.activeLayer.value!.isLocked) {
-            final unlocked = controller.layers.where((l) => !l.isLocked).firstOrNull;
-            if (unlocked != null) {
-              controller.activeLayer.value = unlocked;
-            }
-          }
-        }
 
         // Instantly refresh and snapshot the active canvas so drawing is available immediately
-        if (_canvases.isNotEmpty) {
-          final active = _canvases[_currentIndex];
-          active.forceRefreshLayers();
-          active.updateSnapshot(includeBackground: false);
-        }
+        final active = _canvases[_currentIndex];
+        active.forceRefreshLayers();
+        active.updateSnapshot(includeBackground: false);
 
         // Stagger background frame layer redraws asynchronously to maintain smooth 60/120fps UI
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _refreshBackgroundCanvasesAsync();
         });
       }
+
+      _isDirty = false;
+      _autoSaveTimer?.cancel();
+      _loadingProgressNotifier.value = 1.0;
+      _loadingStatusNotifier.value = 'Ready!';
+      await Future<void>.delayed(const Duration(milliseconds: 80));
     } else {
       _addNewCanvas(initial: true);
     }
@@ -948,10 +1047,14 @@ class EditorController extends ChangeNotifier {
   }
 
   void _refreshBackgroundCanvasesAsync() async {
+    // For large projects (e.g. 15+ frames), do not run background layer redraws all at once.
+    // Thumbnails are loaded lazily as needed, avoiding GPU thrashing and memory spikes.
+    if (_canvases.length > 15) return;
+
     for (int i = 0; i < _canvases.length; i++) {
       if (_isDisposed) return;
       if (i == _currentIndex) continue;
-      await Future.delayed(const Duration(milliseconds: 5));
+      await Future.delayed(const Duration(milliseconds: 15));
       if (_isDisposed) return;
       if (!_isLoadingProject && i < _canvases.length) {
         _canvases[i].forceRefreshLayers();
@@ -990,6 +1093,11 @@ class EditorController extends ChangeNotifier {
 
     if (stampStickers) {
       _hasPendingStampSave = true;
+    }
+
+    final bool willStamp = (stampStickers && _activeSticker != null) || (_hasPendingStampSave && _activeSticker != null);
+    if (!_isDirty && !willStamp && !_hasPendingSave && !_isSaving && _projectId != null) {
+      return;
     }
 
     if (_isSaving) {
@@ -1183,26 +1291,37 @@ class EditorController extends ChangeNotifier {
     }
   }
 
-  Future<DrawingController> _createControllerFromData(Map<String, dynamic> cMap) async {
+  Future<DrawingController> _createControllerFromData(
+    Map<String, dynamic> cMap, {
+    bool loadImages = false,
+    double? initialStrokeWidth,
+    Color? initialColor,
+  }) async {
     final controller = DrawingController();
     controller.backgroundColor = Color(cMap['backgroundColor'] as int);
 
-    if (cMap['strokeWidth'] != null || cMap['strokeColor'] != null) {
-      controller.drawConfig.value = controller.drawConfig.value.copyWith(
-        strokeWidth: cMap['strokeWidth'] != null ? (cMap['strokeWidth'] as num).toDouble() : null,
-        color: cMap['strokeColor'] != null ? Color(cMap['strokeColor'] as int) : null,
+    final double sWidth = (cMap['strokeWidth'] != null)
+        ? (cMap['strokeWidth'] as num).toDouble()
+        : (initialStrokeWidth ?? _globalStrokeWidth);
+    final Color sColor = (cMap['strokeColor'] != null)
+        ? Color(cMap['strokeColor'] as int)
+        : (initialColor ?? Colors.black);
+
+    Size? sSize;
+    if (cMap['size'] != null) {
+      final sMap = cMap['size'] as Map<String, dynamic>;
+      sSize = Size(
+        (sMap['width'] as num).toDouble(),
+        (sMap['height'] as num).toDouble(),
       );
     }
 
-    if (cMap['size'] != null) {
-      final sMap = cMap['size'] as Map<String, dynamic>;
-      controller.drawConfig.value = controller.drawConfig.value.copyWith(
-        size: Size(
-          (sMap['width'] as num).toDouble(),
-          (sMap['height'] as num).toDouble(),
-        ),
-      );
-    }
+    controller.drawConfig.value = controller.drawConfig.value.copyWith(
+      strokeWidth: sWidth,
+      color: sColor,
+      size: sSize,
+      contentType: FreehandLine,
+    );
 
     final layersData = cMap['layers'] as List<dynamic>;
     controller.layers.clear();
@@ -1228,9 +1347,11 @@ class EditorController extends ChangeNotifier {
         final hMap = hData as Map<String, dynamic>;
         final content = decodePaintContent(hMap['type'] as String, hMap);
         if (content != null) {
-          // Only rehydrate image if it is the latest raster state or non-raster content
-          final bool shouldRehydrateImage = (i == latestRasterDataIndex) ||
-              (content is! SmudgeContent && content is! BlurContent);
+          // Only rehydrate image if requested (for active/nearby frames)
+          // and if it is the latest raster state or non-raster content
+          final bool shouldRehydrateImage = loadImages &&
+              ((i == latestRasterDataIndex) ||
+                  (content is! SmudgeContent && content is! BlurContent));
           if (shouldRehydrateImage) {
             await _rehydrateContent(content, hMap);
           }
@@ -1359,15 +1480,62 @@ class EditorController extends ChangeNotifier {
       markDirty();
     });
     controller.realTimeSnapshot.addListener(() {
+      if (_isDisposed) return;
       final idx = _canvases.indexOf(controller);
       if (idx != -1) {
-        _thumbnails[idx] = controller.realTimeSnapshot.value;
-        notifyListeners();
+        if (_canvasNeedsImageHydration(controller)) {
+          return;
+        }
+        final snapshot = controller.realTimeSnapshot.value;
+        if (snapshot != null) {
+          _recordThumbnailUsage(idx, snapshot);
+        } else {
+          _thumbnails[idx] = null;
+          _thumbnailLru.remove(idx);
+        }
+        _scheduleThumbnailNotification();
       }
     });
   }
 
+  bool _canvasNeedsImageHydration(DrawingController canvas) {
+    for (final layer in canvas.layers) {
+      for (final content in layer.history) {
+        if (_contentNeedsImageHydration(content)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool _contentNeedsImageHydration(PaintContent content) {
+    if (content is ImageContent) {
+      return content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty;
+    } else if (content is ShapeStickerContent) {
+      return _contentNeedsImageHydration(content.child);
+    } else if (content is OffsetContent) {
+      return _contentNeedsImageHydration(content.child);
+    } else if (content is ClippedContent) {
+      return _contentNeedsImageHydration(content.child);
+    } else if (content is GroupContent) {
+      for (final child in content.children) {
+        if (_contentNeedsImageHydration(child)) return true;
+      }
+    } else if (content is ClippedHistoryContent) {
+      for (final item in content.history) {
+        if (_contentNeedsImageHydration(item)) return true;
+      }
+    }
+    return false;
+  }
+
   void _addNewCanvas({bool initial = false, int? atIndex}) {
+    if (fastScrollNotifier.value.isVisible) {
+      fastScrollNotifier.value = fastScrollNotifier.value.copyWith(
+        isVisible: false,
+      );
+    }
     final controller = DrawingController();
     controller.drawConfig.value = controller.drawConfig.value.copyWith(
       strokeWidth: _globalStrokeWidth,
@@ -1379,6 +1547,7 @@ class EditorController extends ChangeNotifier {
     if (initial) {
       _canvases.add(controller);
       _thumbnails.add(null);
+      _frameImagePaths.add(null);
       _currentIndex = 0;
     } else {
       if (_activeSticker != null) {
@@ -1387,9 +1556,12 @@ class EditorController extends ChangeNotifier {
       final targetIndex = atIndex ?? _canvases.length;
       _canvases.insert(targetIndex, controller);
       _thumbnails.insert(targetIndex, null);
+      _frameImagePaths.insert(targetIndex, null);
       _currentIndex = targetIndex;
       markDirty();
     }
+    _thumbnailLru.clear();
+    _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
     notifyListeners();
   }
 
@@ -1402,16 +1574,431 @@ class EditorController extends ChangeNotifier {
 
   // Frame manipulation methods
   void selectCanvas(int index) {
+    if (fastScrollNotifier.value.isVisible) {
+      fastScrollNotifier.value = fastScrollNotifier.value.copyWith(
+        isVisible: false,
+      );
+    }
     if (index >= 0 && index < _canvases.length) {
       if (_activeSticker != null) {
         stampActiveSticker();
       }
       _currentIndex = index;
       final currentCanvas = _canvases[index];
+
+      // 1. Immediately switch the active canvas and notify UI so the frame index,
+      // timeline selection, and vector strokes appear INSTANTLY with 0ms lag!
       currentCanvas.forceRefreshLayers();
-      currentCanvas.updateSnapshot(includeBackground: false);
       _ensureWritableActiveLayer(currentCanvas);
       notifyListeners();
+
+      // 2. Hydrate images for the selected frame in parallel if needed
+      final bool needsHydration = _canvasNeedsImageHydration(currentCanvas);
+      if (needsHydration) {
+        _ensureCanvasImagesLoaded(currentCanvas).then((_) {
+          if (_isDisposed || _currentIndex != index) return;
+          currentCanvas.forceRefreshLayers();
+          currentCanvas.updateSnapshot(includeBackground: false);
+          notifyListeners();
+        });
+      } else {
+        currentCanvas.updateSnapshot(includeBackground: false);
+      }
+
+      _preloadAdjacentCanvases(index);
+      _evictDistantCanvasImages(index);
+    }
+  }
+
+  final Set<int> _pendingThumbnailLoads = {};
+  final List<int> _thumbnailQueue = [];
+  final Set<int> _thumbnailLru = <int>{};
+  static const int _maxCachedThumbnails = 32;
+  int _activeThumbnailJobs = 0;
+  static const int _maxConcurrentThumbnailJobs = 2;
+  Timer? _thumbnailNotifyDebounce;
+
+  void _recordThumbnailUsage(int index, ui.Image image) {
+    if (_isDisposed || index < 0 || index >= _thumbnails.length) {
+      return;
+    }
+
+    _thumbnails[index] = image;
+    _thumbnailLru.remove(index);
+    _thumbnailLru.add(index);
+
+    // Evict least-recently-used thumbnails if capacity exceeded (keeping active and neighbor frames)
+    while (_thumbnailLru.length > _maxCachedThumbnails) {
+      final evictCandidates = _thumbnailLru.where((idx) => idx != _currentIndex && (idx - _currentIndex).abs() > 3).toList();
+      if (evictCandidates.isEmpty) break;
+      final evictIdx = evictCandidates.first;
+      _thumbnailLru.remove(evictIdx);
+      if (evictIdx >= 0 && evictIdx < _thumbnails.length) {
+        _thumbnails[evictIdx] = null;
+      }
+    }
+  }
+
+  void _scheduleThumbnailNotification() {
+    if (_isDisposed) return;
+    if (_thumbnailNotifyDebounce?.isActive ?? false) return;
+    _thumbnailNotifyDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (!_isDisposed) {
+        notifyListeners();
+      }
+    });
+  }
+
+  void _processThumbnailQueue() {
+    if (_isDisposed) return;
+    while (_activeThumbnailJobs < _maxConcurrentThumbnailJobs && _thumbnailQueue.isNotEmpty) {
+      final nextIndex = _thumbnailQueue.removeAt(0);
+      _activeThumbnailJobs++;
+      _loadThumbnailAsync(nextIndex).whenComplete(() {
+        _activeThumbnailJobs--;
+        _processThumbnailQueue();
+      });
+    }
+  }
+
+  void requestThumbnail(int index) {
+    if (index < 0 || index >= _canvases.length || _thumbnails[index] != null) return;
+    if (_pendingThumbnailLoads.contains(index)) return;
+    _pendingThumbnailLoads.add(index);
+
+    // Prioritize visible item at the front of queue
+    _thumbnailQueue.insert(0, index);
+
+    // Bound queue size to prevent massive backlogs during fast flings across 400+ frames
+    if (_thumbnailQueue.length > 20) {
+      final dropped = _thumbnailQueue.removeLast();
+      _pendingThumbnailLoads.remove(dropped);
+    }
+
+    _processThumbnailQueue();
+  }
+
+  static (int?, int?) _calculateThumbnailTargetDimensions(Uint8List bytes, double fallbackAspectRatio) {
+    int? imgWidth;
+    int? imgHeight;
+
+    if (bytes.length >= 24 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47) {
+      imgWidth = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+      imgHeight = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+    } else if (bytes.length >= 4 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
+      int offset = 2;
+      while (offset + 9 < bytes.length) {
+        if (bytes[offset] == 0xFF) {
+          final marker = bytes[offset + 1];
+          if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2) {
+            imgHeight = (bytes[offset + 5] << 8) | bytes[offset + 6];
+            imgWidth = (bytes[offset + 7] << 8) | bytes[offset + 8];
+            break;
+          }
+          final length = (bytes[offset + 2] << 8) | bytes[offset + 3];
+          offset += 2 + length;
+        } else {
+          offset++;
+        }
+      }
+    }
+
+    const int maxThumbSide = 80;
+    if (imgWidth != null && imgHeight != null && imgWidth > 0 && imgHeight > 0) {
+      if (imgWidth >= imgHeight) {
+        return (maxThumbSide, null);
+      } else {
+        return (null, maxThumbSide);
+      }
+    }
+
+    if (fallbackAspectRatio >= 1.0) {
+      return (maxThumbSide, null);
+    } else {
+      return (null, maxThumbSide);
+    }
+  }
+
+  Future<void> _loadThumbnailAsync(int index) async {
+    try {
+      if (_isDisposed || index >= _canvases.length || _thumbnails[index] != null) return;
+      final canvas = _canvases[index];
+
+      // 1. Check if canvas has a video/image layer with imageUrl
+      String? targetImagePath;
+      for (final layer in canvas.layers) {
+        for (final content in layer.history) {
+          if (content is ImageContent && content.imageUrl != null) {
+            targetImagePath = content.imageUrl;
+            break;
+          }
+        }
+        if (targetImagePath != null) break;
+      }
+
+      if (targetImagePath != null) {
+        final file = File(targetImagePath);
+        if (await file.exists()) {
+          final bytes = await file.readAsBytes();
+          final (targetW, targetH) = _calculateThumbnailTargetDimensions(bytes, _aspectRatio);
+          final codec = await ui.instantiateImageCodec(bytes, targetWidth: targetW, targetHeight: targetH);
+          final fi = await codec.getNextFrame();
+
+          try {
+            final Size canvasSize = canvas.drawConfig.value.size ??
+                drawingControllerSize ??
+                (aspectRatio >= 1.0
+                    ? Size(1080 * aspectRatio, 1080)
+                    : Size(1080, 1080 / aspectRatio));
+            const double maxSide = 80.0;
+            final double scale = maxSide / canvasSize.longestSide;
+            final Size renderSize = canvasSize * scale;
+
+            final recorder = ui.PictureRecorder();
+            final c = Canvas(recorder, Offset.zero & renderSize);
+
+            // Draw base video/photo image fitted within canvas bounds
+            paintImage(
+              canvas: c,
+              rect: Offset.zero & renderSize,
+              image: fi.image,
+              fit: BoxFit.contain,
+            );
+
+            // Draw vector strokes on top, scaled to thumbnail
+            c.save();
+            c.scale(scale);
+            for (int i = canvas.layers.length - 1; i >= 0; i--) {
+              final layer = canvas.layers[i];
+              if (!layer.isVisible) continue;
+              c.saveLayer(
+                Offset.zero & canvasSize,
+                Paint()
+                  ..blendMode = layer.blendMode
+                  ..color = Colors.white.withValues(alpha: layer.opacity),
+              );
+              layer.drawHistory(c, canvasSize, false);
+              c.restore();
+            }
+            c.restore();
+
+            final picture = recorder.endRecording();
+            final compositedImage = await picture.toImage(
+              renderSize.width.round().clamp(1, 4096),
+              renderSize.height.round().clamp(1, 4096),
+            );
+            picture.dispose();
+            fi.image.dispose();
+            if (!_isDisposed && index < _thumbnails.length) {
+              _recordThumbnailUsage(index, compositedImage);
+              _scheduleThumbnailNotification();
+            }
+            return;
+          } catch (e) {
+            debugPrint('Error compositing thumbnail strokes: $e');
+            try {
+              fi.image.dispose();
+            } catch (_) {}
+          }
+        }
+      }
+
+      // 2. Pure vector drawing canvas: generate a lightweight snapshot asynchronously
+      if (!_canvasNeedsImageHydration(canvas)) {
+        final img = await _generateCanvasThumbnailImage(canvas);
+        if (img != null && !_isDisposed && index < _thumbnails.length) {
+          _recordThumbnailUsage(index, img);
+          _scheduleThumbnailNotification();
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to load lazy thumbnail for index $index: $e');
+    } finally {
+      _pendingThumbnailLoads.remove(index);
+    }
+  }
+
+  Future<ui.Image?> _generateCanvasThumbnailImage(DrawingController canvas) async {
+    final Size? size = canvas.drawConfig.value.size ?? drawingControllerSize;
+    if (size == null || size.isEmpty) return null;
+
+    const double maxSide = 80.0;
+    final double scale = maxSide / size.longestSide;
+    final Size renderSize = size * scale;
+
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas c = Canvas(recorder, Offset.zero & renderSize);
+    c.scale(scale);
+
+    c.saveLayer(Offset.zero & size, Paint());
+    for (int i = canvas.layers.length - 1; i >= 0; i--) {
+      final layer = canvas.layers[i];
+      if (!layer.isVisible) continue;
+      c.saveLayer(
+        Offset.zero & size,
+        Paint()
+          ..blendMode = layer.blendMode
+          ..color = Colors.white.withValues(alpha: layer.opacity),
+      );
+      layer.drawHistory(c, size, false);
+      c.restore();
+    }
+    c.restore();
+
+    final ui.Picture picture = recorder.endRecording();
+    try {
+      final img = await picture.toImage(
+        renderSize.width.round().clamp(1, 200),
+        renderSize.height.round().clamp(1, 200),
+      );
+      return img;
+    } catch (_) {
+      return null;
+    } finally {
+      try {
+        picture.dispose();
+      } catch (_) {}
+    }
+  }
+
+  final Map<DrawingController, Completer<void>> _activeHydrations = {};
+
+  Future<void> _ensureCanvasImagesLoaded(DrawingController canvas) async {
+    final existing = _activeHydrations[canvas];
+    if (existing != null) {
+      await existing.future;
+      return;
+    }
+
+    final completer = Completer<void>();
+    _activeHydrations[canvas] = completer;
+
+    try {
+      for (final layer in canvas.layers) {
+        for (final content in layer.history) {
+          await _ensureContentImageLoaded(content);
+        }
+      }
+      canvas.forceRefreshLayers();
+    } finally {
+      _activeHydrations.remove(canvas);
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    }
+  }
+
+  Future<void> _ensureContentImageLoaded(PaintContent content) async {
+    if (content is ImageContent) {
+      if (content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty) {
+        try {
+          if (content.imageUrl!.startsWith('http') || content.imageUrl!.startsWith('https')) {
+            content.image = await _getImage(content.imageUrl!);
+          } else if (content.imageUrl!.startsWith('assets/')) {
+            content.image = await _getAssetImage(content.imageUrl!);
+          } else {
+            content.image = await _getFileImage(content.imageUrl!);
+          }
+        } catch (e) {
+          debugPrint('Error loading image content on demand: $e');
+        }
+      }
+    } else if (content is FillContent) {
+      if (content.image == null && content.cachedBase64Image != null && content.cachedBase64Image!.isNotEmpty) {
+        try {
+          final Uint8List bytes = base64Decode(content.cachedBase64Image!);
+          final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+          final ui.FrameInfo fi = await codec.getNextFrame();
+          content.image = fi.image;
+        } catch (e) {
+          debugPrint('Error loading fill image on demand: $e');
+        }
+      }
+    } else if (content is ShapeStickerContent) {
+      await _ensureContentImageLoaded(content.child);
+    } else if (content is OffsetContent) {
+      await _ensureContentImageLoaded(content.child);
+    } else if (content is ClippedContent) {
+      await _ensureContentImageLoaded(content.child);
+    } else if (content is GroupContent) {
+      for (final child in content.children) {
+        await _ensureContentImageLoaded(child);
+      }
+    } else if (content is ClippedHistoryContent) {
+      for (final item in content.history) {
+        await _ensureContentImageLoaded(item);
+      }
+    }
+  }
+
+  void _preloadAdjacentCanvases(int centerIndex) {
+    final int before = math.max(0, centerIndex - math.max(_onionBefore, 3));
+    final int after = math.min(_canvases.length - 1, centerIndex + math.max(_onionAfter, 5));
+    for (int i = before; i <= after; i++) {
+      if (i != centerIndex) {
+        _ensureCanvasImagesLoaded(_canvases[i]);
+      }
+    }
+  }
+
+  Future<void> ensureCanvasImagesLoaded(int index) async {
+    if (index >= 0 && index < _canvases.length) {
+      await _ensureCanvasImagesLoaded(_canvases[index]);
+    }
+  }
+
+  void _evictContentImages(PaintContent content) {
+    if (content is ImageContent && content.imageUrl != null && content.image != null) {
+      final imgToDispose = content.image;
+      content.image = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          imgToDispose?.dispose();
+        } catch (_) {}
+      });
+    } else if (content is ShapeStickerContent) {
+      _evictContentImages(content.child);
+    } else if (content is OffsetContent) {
+      _evictContentImages(content.child);
+    } else if (content is ClippedContent) {
+      _evictContentImages(content.child);
+    } else if (content is GroupContent) {
+      for (final child in content.children) {
+        _evictContentImages(child);
+      }
+    } else if (content is ClippedHistoryContent) {
+      for (final child in content.history) {
+        _evictContentImages(child);
+      }
+    }
+  }
+
+  void evictCanvasImages(int index) {
+    if (index >= 0 && index < _canvases.length && index != _currentIndex) {
+      final canvas = _canvases[index];
+      for (final layer in canvas.layers) {
+        for (final content in layer.history) {
+          _evictContentImages(content);
+        }
+      }
+    }
+  }
+
+  void _evictDistantCanvasImages(int centerIndex) {
+    if (_canvases.length < 25) return;
+    for (int i = 0; i < _canvases.length; i++) {
+      if ((i - centerIndex).abs() > 15 && i != centerIndex) {
+        final canvas = _canvases[i];
+        for (final layer in canvas.layers) {
+          for (final content in layer.history) {
+            _evictContentImages(content);
+          }
+        }
+      }
     }
   }
 
@@ -1430,29 +2017,88 @@ class EditorController extends ChangeNotifier {
       stampActiveSticker();
     }
 
+    final String projId = _projectId ?? repository.generateId();
+    _projectId ??= projId;
+
+    List<String> effectivePaths = framePaths;
+    try {
+      final Directory projDir = await repository.getProjectDirectory(projId);
+      final Directory assetsDir = Directory('${projDir.path}/assets');
+      if (!await assetsDir.exists()) {
+        await assetsDir.create(recursive: true);
+      }
+
+      final sourceDir = File(framePaths.first).parent;
+      if (!sourceDir.path.startsWith(projDir.path) && await sourceDir.exists()) {
+        final folderName = sourceDir.uri.pathSegments.where((s) => s.isNotEmpty).last;
+        final Directory destDir = Directory('${assetsDir.path}/$folderName');
+        if (await destDir.exists()) {
+          try {
+            await destDir.delete(recursive: true);
+          } catch (_) {}
+        }
+        try {
+          // Fast atomic directory move (1ms) across directory tree without copying individual files
+          await sourceDir.rename(destDir.path);
+          effectivePaths = framePaths.map((p) => p.replaceFirst(sourceDir.path, destDir.path)).toList();
+        } catch (_) {
+          effectivePaths = framePaths;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error relocating video frame directory: $e');
+    }
+
     final int targetStartIndex = _currentIndex.clamp(0, _canvases.isNotEmpty ? _canvases.length - 1 : 0);
 
-    for (int i = 0; i < framePaths.length; i++) {
-      final path = framePaths[i];
+    for (int i = 0; i < effectivePaths.length; i++) {
+      final path = effectivePaths[i];
       try {
         final File file = File(path);
         if (!await file.exists()) continue;
-        final Uint8List bytes = await file.readAsBytes();
-        final ui.Codec codec = await ui.instantiateImageCodec(bytes);
-        final ui.FrameInfo fi = await codec.getNextFrame();
-        final ui.Image image = fi.image;
+        ui.Image? fullImage;
+        ui.Image? compactThumb;
 
-        final imageContent = ImageContent(image, imageUrl: path);
+        if (i < 6) {
+          final Uint8List bytes = await file.readAsBytes();
+          if (i <= 2) {
+            final ui.Codec fullCodec = await ui.instantiateImageCodec(bytes);
+            final ui.FrameInfo fullFi = await fullCodec.getNextFrame();
+            fullImage = fullFi.image;
+          }
+
+          final (targetW, targetH) = _calculateThumbnailTargetDimensions(bytes, _aspectRatio);
+          final thumbCodec = await ui.instantiateImageCodec(bytes, targetWidth: targetW, targetHeight: targetH);
+          final thumbFi = await thumbCodec.getNextFrame();
+          compactThumb = thumbFi.image;
+        }
+
+        final imageContent = ImageContent(fullImage, imageUrl: path);
         imageContent.startPoint = Offset.zero;
         imageContent.size = Offset.zero;
 
         final int frameIndex = targetStartIndex + i;
 
         if (frameIndex < _canvases.length) {
-          // Existing frame: assign video frame to dedicated Video Layer
+          // Existing frame: assign video frame to dedicated Video Layer without triggering GPU snapshot flood
           final existingCanvas = _canvases[frameIndex];
-          existingCanvas.setVideoLayer(imageContent);
-          _thumbnails[frameIndex] = image;
+          existingCanvas.setVideoLayer(imageContent, updateCanvasSnapshot: false, notify: false);
+          if (frameIndex < _thumbnails.length) {
+            _thumbnails[frameIndex] = compactThumb;
+            if (compactThumb != null) {
+              _thumbnailLru.add(frameIndex);
+            }
+          } else {
+            _thumbnails.add(compactThumb);
+            if (compactThumb != null) {
+              _thumbnailLru.add(frameIndex);
+            }
+          }
+          if (frameIndex < _frameImagePaths.length) {
+            _frameImagePaths[frameIndex] = path;
+          } else {
+            _frameImagePaths.add(path);
+          }
         } else {
           // Additional frame: create new canvas frame with dedicated Video Layer and active Drawing layer
           final newCanvas = DrawingController();
@@ -1462,18 +2108,24 @@ class EditorController extends ChangeNotifier {
           );
           _setupCanvasController(newCanvas);
 
-          newCanvas.setVideoLayer(imageContent);
+          newCanvas.setVideoLayer(imageContent, updateCanvasSnapshot: false, notify: false);
           _canvases.add(newCanvas);
-          _thumbnails.add(image);
+          _thumbnails.add(compactThumb);
+          if (compactThumb != null) {
+            _thumbnailLru.add(frameIndex);
+          }
+          _frameImagePaths.add(path);
         }
       } catch (e) {
         debugPrint('Error importing video frame $path: $e');
       }
     }
 
+    _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
     if (_canvases.isNotEmpty) {
-      _currentIndex = targetStartIndex.clamp(0, _canvases.length - 1);
+      selectCanvas(targetStartIndex.clamp(0, _canvases.length - 1));
     }
+    _isDirty = true;
     notifyListeners();
   }
 
@@ -1491,6 +2143,11 @@ class EditorController extends ChangeNotifier {
     controller.drawConfig.removeListener(_onDrawConfigChanged);
     controller.dispose();
     _thumbnails.removeAt(index);
+    if (index < _frameImagePaths.length) {
+      _frameImagePaths.removeAt(index);
+    }
+    _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
+    _thumbnailLru.clear();
 
     if (_currentIndex >= _canvases.length) {
       _currentIndex = _canvases.length - 1;
@@ -1512,6 +2169,14 @@ class EditorController extends ChangeNotifier {
     final thumb = _thumbnails.removeAt(oldIndex);
     _thumbnails.insert(newIndex, thumb);
 
+    if (oldIndex < _frameImagePaths.length) {
+      final path = _frameImagePaths.removeAt(oldIndex);
+      _frameImagePaths.insert(newIndex.clamp(0, _frameImagePaths.length), path);
+    }
+
+    _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
+    _thumbnailLru.clear();
+
     if (_currentIndex == oldIndex) {
       _currentIndex = newIndex;
     } else if (_currentIndex > oldIndex && _currentIndex <= newIndex) {
@@ -1530,14 +2195,20 @@ class EditorController extends ChangeNotifier {
     if (order.length != _canvases.length) return;
     final List<DrawingController> newCanvases = [];
     final List<ui.Image?> newThumbs = [];
+    final List<String?> newPaths = [];
     for (final idx in order) {
       newCanvases.add(_canvases[idx]);
       newThumbs.add(_thumbnails[idx]);
+      newPaths.add(idx < _frameImagePaths.length ? _frameImagePaths[idx] : null);
     }
     _canvases.clear();
     _canvases.addAll(newCanvases);
     _thumbnails.clear();
     _thumbnails.addAll(newThumbs);
+    _frameImagePaths.clear();
+    _frameImagePaths.addAll(newPaths);
+    _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
+    _thumbnailLru.clear();
     _currentIndex = activeIndex.clamp(0, _canvases.length - 1);
     markDirty();
     notifyListeners();
@@ -1593,6 +2264,10 @@ class EditorController extends ChangeNotifier {
 
     _canvases.insert(index + 1, duplicated);
     _thumbnails.insert(index + 1, null);
+    final p = (index < _frameImagePaths.length) ? _frameImagePaths[index] : null;
+    _frameImagePaths.insert(index + 1, p);
+    _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
+    _thumbnailLru.clear();
     _currentIndex = index + 1;
     markDirty();
     notifyListeners();
@@ -2715,10 +3390,18 @@ class EditorController extends ChangeNotifier {
     _isDisposed = true;
     _autoSaveTimer?.cancel();
     _autoSaveTimer = null;
+    _thumbnailNotifyDebounce?.cancel();
+    _thumbnailNotifyDebounce = null;
     for (var controller in _canvases) {
       controller.drawConfig.removeListener(_onDrawConfigChanged);
       controller.dispose();
     }
+    _thumbnailNotifyDebounce?.cancel();
+    _thumbnailNotifyDebounce = null;
+    _thumbnails.clear();
+    _loadingProgressNotifier.dispose();
+    _loadingStatusNotifier.dispose();
+    fastScrollNotifier.dispose();
     GlobalToolState.instance.resetToDefaultBrush();
     super.dispose();
   }

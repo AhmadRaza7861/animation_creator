@@ -1,5 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/core/services/rating_strategy_service.dart';
+import 'package:dummy/features/settings/presentation/dialogs/rate_us_dialog.dart';
+import 'package:dummy/core/localization/app_localizations.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,30 +20,73 @@ void main() {
       expect(await RatingStrategyService.shouldShowPrompt(), isTrue);
     });
 
-    test('Rule 1: Once user has rated or given feedback, shouldShowPrompt is permanently false', () async {
+    test('If user dismisses dialog or clicks maybe later, shouldShowPrompt remains true for next time', () async {
+      await RatingStrategyService.markPromptShown();
+      expect(RatingStrategyService.promptCount, equals(1));
+      expect(RatingStrategyService.hasRated, isFalse);
+
+      // Dismissing / not rating keeps shouldShowPrompt true
       expect(await RatingStrategyService.shouldShowPrompt(), isTrue);
-      
+
+      // Multiple dismissals still show again next time
+      await RatingStrategyService.markPromptShown();
+      await RatingStrategyService.markPromptShown();
+      expect(await RatingStrategyService.shouldShowPrompt(), isTrue);
+    });
+
+    test('When user rates 3 stars or less, markRated stops prompts permanently', () async {
+      expect(await RatingStrategyService.shouldShowPrompt(), isTrue);
+
       await RatingStrategyService.markRated();
       expect(RatingStrategyService.hasRated, isTrue);
       expect(await RatingStrategyService.shouldShowPrompt(), isFalse);
     });
 
-    test('Rule 2: Cooldown period of 2 days is enforced after prompt is shown', () async {
-      await RatingStrategyService.markPromptShown();
-      expect(RatingStrategyService.promptCount, equals(1));
-      expect(RatingStrategyService.lastPromptTime, isNotNull);
+    testWidgets('Button text is always "Rate Us" whether 1 star, 3 stars, or 5 stars selected', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: RateUsDialog(),
+          ),
+        ),
+      );
 
-      // Should be blocked immediately during the 2-day cooldown
-      expect(await RatingStrategyService.shouldShowPrompt(), isFalse);
-    });
+      await tester.pumpAndSettle();
 
-    test('Rule 3: Max lifetime limit of 3 prompts is strictly enforced', () async {
-      await RatingStrategyService.markPromptShown();
-      await RatingStrategyService.markPromptShown();
-      await RatingStrategyService.markPromptShown();
+      // Initially no stars selected, button text should be "Rate Us"
+      expect(find.text('Rate Us'), findsOneWidget);
 
-      expect(RatingStrategyService.promptCount, equals(3));
-      expect(await RatingStrategyService.shouldShowPrompt(), isFalse);
+      // Tap 1st star
+      final stars = find.byType(GestureDetector);
+      await tester.tap(stars.at(0)); // 1 star
+      await tester.pumpAndSettle();
+
+      // Button text MUST still be "Rate Us"
+      expect(find.text('Rate Us'), findsOneWidget);
+      expect(find.text('Submit Feedback'), findsNothing);
+
+      // Tap 3rd star (3 stars or less)
+      await tester.tap(stars.at(2)); // 3 stars
+      await tester.pumpAndSettle();
+
+      // Button text MUST still be "Rate Us"
+      expect(find.text('Rate Us'), findsOneWidget);
+      expect(find.text('Submit Feedback'), findsNothing);
+
+      // Tap 5th star (5 stars)
+      await tester.tap(stars.at(4)); // 5 stars
+      await tester.pumpAndSettle();
+
+      // Button text MUST still be "Rate Us"
+      expect(find.text('Rate Us'), findsOneWidget);
+      expect(find.text('Rate on Google Play'), findsNothing);
     });
   });
 }

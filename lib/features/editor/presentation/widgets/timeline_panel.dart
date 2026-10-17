@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +7,9 @@ import '../controllers/editor_providers.dart';
 import 'canvas_selector.dart';
 import '../../../audio/presentation/widgets/audio_timeline_studio.dart';
 import '../screens/gallery_screen.dart';
-import '../screens/video_trimming_screen.dart';
 import '../screens/animation_preview_screen.dart';
-import 'package:image_picker/image_picker.dart';
+import '../../services/video_import_helper.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 
 class TimelinePanel extends ConsumerWidget {
   final String? projectId;
@@ -77,20 +76,10 @@ class TimelinePanel extends ConsumerWidget {
     }
 
     void importVideo() async {
-      final ImagePicker picker = ImagePicker();
-      final XFile? file = await picker.pickVideo(source: ImageSource.gallery);
-      if (file == null) return;
-
-      final trimmedFrames = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => VideoTrimmingScreen(videoFile: File(file.path)),
-        ),
+      await VideoImportHelper.importVideo(
+        context: context,
+        controller: controller,
       );
-
-      if (trimmedFrames != null && trimmedFrames is List<String>) {
-        await controller.importVideoFrames(trimmedFrames);
-      }
     }
 
     void openPreview() async {
@@ -144,7 +133,14 @@ class TimelinePanel extends ConsumerWidget {
         controller.addFrameAt(index, isRight: true);
       } else if (action == 'delete') {
         if (controller.canvases.length > 1) {
-          controller.deleteFrame(index);
+          AppDialogs.showDeleteFrameDialog(
+            context,
+            frameIndex: index,
+          ).then((confirmed) {
+            if (confirmed) {
+              controller.deleteFrame(index);
+            }
+          });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -158,7 +154,9 @@ class TimelinePanel extends ConsumerWidget {
     }
 
     return CanvasSelector(
+      aspectRatio: controller.aspectRatio,
       thumbnails: controller.thumbnails,
+      frameImagePaths: controller.frameImagePaths,
       currentIndex: controller.currentIndex,
       onSelect: (index) => controller.selectCanvas(index),
       onAdd: () => controller.addFrame(),
@@ -169,7 +167,7 @@ class TimelinePanel extends ConsumerWidget {
       onImportVideo: importVideo,
       onPlay: openPreview,
       onFrameAction: onFrameAction,
-      canvasKeys: controller.canvases.map((c) => ObjectKey(c)).toList(),
+      canvasKeys: controller.canvasKeys,
       onReorder: (oldIdx, newIdx) => controller.reorderFrames(oldIdx, newIdx),
       globalBackground: controller.globalBackground,
       layerCount: controller.drawingController.layers.length,
@@ -178,6 +176,10 @@ class TimelinePanel extends ConsumerWidget {
         controller.isAudioStudioOpen = true;
       },
       audioClipCount: controller.audioState.allClips.length,
+      onRequestThumbnail: (index) => controller.requestThumbnail(index),
+      frameHasCustomStrokes: (index) => controller.frameHasCustomStrokes(index),
+      fps: controller.fps,
+      fastScrollNotifier: controller.fastScrollNotifier,
     );
   }
 }

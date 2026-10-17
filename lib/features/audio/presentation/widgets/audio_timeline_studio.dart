@@ -14,6 +14,7 @@ import '../screens/audio_trimmer_screen.dart';
 import '../screens/audio_library_screen.dart';
 import '../screens/audio_recorder_screen.dart';
 import '../screens/voice_maker_screen.dart';
+import '../../../../core/widgets/safe_thumbnail_widget.dart';
 
 class AudioTimelineStudio extends StatefulWidget {
   final AudioProjectState audioState;
@@ -3003,7 +3004,7 @@ class _AudioTimelineStudioState extends State<AudioTimelineStudio> {
                           Positioned.fill(
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: RawImage(
+                              child: SafeThumbnailWidget(
                                 image: image,
                                 fit: BoxFit.cover,
                               ),

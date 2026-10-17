@@ -24,9 +24,11 @@ import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../widgets/project_loading_view.dart';
+import '../widgets/fast_scroll_counter_overlay.dart';
 import '../../../../core/widgets/color_picker_screen.dart';
 import '../../../../core/widgets/custom_switch.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../core/widgets/app_dialogs.dart';
 import '../../../../utils/theme/customThems/app_bar_theme.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
 import '../../../settings/presentation/dialogs/contact_us_dialog.dart';
@@ -1066,15 +1068,45 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     );
   }
 
+  bool _isExiting = false;
+
   Future<void> _handleBack(
     BuildContext context,
     EditorController controller,
   ) async {
+    if (_isExiting) return;
+
     if (controller.isAudioStudioOpen) {
       controller.isAudioStudioOpen = false;
       return;
     }
-    await controller.saveProject(immediate: true, stampStickers: true);
+
+    _isExiting = true;
+
+    VoidCallback? dismissLoader;
+    try {
+      final bool needsSave = controller.isDirty ||
+          controller.activeSticker != null ||
+          controller.projectId == null ||
+          controller.isSaving;
+
+      if (needsSave && context.mounted) {
+        dismissLoader = AppDialogs.showProcessingDialog(
+          context,
+          title: 'Saving Project',
+          message: 'Saving your animation frames...',
+          icon: Icons.save_rounded,
+        );
+        // Brief pause to ensure dialog renders before heavy asynchronous save
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        await controller.saveProject(immediate: true, stampStickers: true);
+      }
+    } catch (e) {
+      debugPrint('Error saving project during backpress: $e');
+    } finally {
+      dismissLoader?.call();
+    }
+
     if (context.mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
@@ -1085,7 +1117,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     final controller = ref.watch(editorControllerProvider(widget.projectId));
 
     if (controller.isLoadingProject) {
-      return const ProjectLoadingView();
+      return ProjectLoadingView(
+        progressNotifier: controller.loadingProgressNotifier,
+        statusNotifier: controller.loadingStatusNotifier,
+      );
     }
 
     return PopScope(
@@ -2220,28 +2255,50 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
           child: SafeArea(
             child: Stack(
               children: [
-                Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: ColorConstants.selected_type,
-                        ),
-                        child: CanvasArea(
-                          projectId: widget.projectId,
-                          transformationController: _transformationController,
+                Listener(
+                  behavior: HitTestBehavior.translucent,
+                  onPointerDown: (_) {
+                    if (controller.fastScrollNotifier.value.isVisible) {
+                      controller.fastScrollNotifier.value =
+                          controller.fastScrollNotifier.value.copyWith(
+                        isVisible: false,
+                      );
+                    }
+                  },
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: ColorConstants.selected_type,
+                          ),
+                          child: CanvasArea(
+                            projectId: widget.projectId,
+                            transformationController: _transformationController,
+                          ),
                         ),
                       ),
-                    ),
-                    ToolbarPanel(projectId: widget.projectId),
-                    const SizedBox(height: 80),
-                  ],
+                      ToolbarPanel(projectId: widget.projectId),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
                 Positioned(
                   left: 0,
                   right: 0,
                   bottom: 0,
                   child: TimelinePanel(projectId: widget.projectId),
+                ),
+                // Floating Fast-Scroll Frame Counter Overlay (matches reference design)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 190.0,
+                  child: Center(
+                    child: FastScrollCounterOverlay(
+                      notifier: controller.fastScrollNotifier,
+                    ),
+                  ),
                 ),
                 if (controller.activeCategory == 'Brush')
                   Positioned(

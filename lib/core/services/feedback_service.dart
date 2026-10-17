@@ -57,7 +57,7 @@ class FeedbackService {
 
       if (Firebase.apps.isNotEmpty) {
         // Set timeout so slow network / offline mode never hangs the UI
-        await FirebaseFirestore.instance
+        await _firestore
             .collection('feedback')
             .add(data)
             .timeout(const Duration(seconds: 3));
@@ -118,7 +118,7 @@ class FeedbackService {
       };
 
       if (Firebase.apps.isNotEmpty) {
-        await FirebaseFirestore.instance
+        await _firestore
             .collection('contact_messages')
             .add(data)
             .timeout(const Duration(seconds: 3));

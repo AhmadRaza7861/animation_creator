@@ -1,13 +1,23 @@
-import 'dart:math';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/src/drawing_controller.dart';
-import '../controllers/editor_controller.dart'; // contains CanvasBackground definition
+import '../../../../package_code/src/paint_contents/image.dart';
+import '../../../../package_code/src/paint_contents/fill.dart';
+import '../../../../package_code/src/paint_contents/paint_content.dart';
+import '../../../../package_code/src/paint_contents/shape_sticker.dart';
+import '../../../../package_code/src/paint_contents/group.dart';
+import '../../../../package_code/src/paint_contents/clipped.dart';
+import '../controllers/editor_controller.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
+import '../../../../core/widgets/safe_thumbnail_widget.dart';
 
 class AnimationPreviewScreen extends StatefulWidget {
   final List<DrawingController> canvases;
@@ -33,6 +43,9 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
   Timer? _playbackTimer;
   int _currentFrameIndex = 0;
 
+  final Set<int> _loadingIndices = {};
+  final Set<int> _activeLoadedIndices = {};
+
   @override
   void initState() {
     super.initState();
@@ -41,14 +54,219 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
       initialPage: _fps - 1,
       viewportFraction: 0.3,
     );
-    _startPlayback();
+    _prewarmAndStart();
+  }
+
+  void _prewarmAndStart() async {
+    if (widget.canvases.isEmpty) return;
+    // Pre-warm the first 10 frames before playback starts
+    final int prewarmCount = math.min(widget.canvases.length, 10);
+    for (int i = 0; i < prewarmCount; i++) {
+      await _prepareCanvasImages(widget.canvases[i]);
+      _activeLoadedIndices.add(i);
+    }
+    if (mounted) {
+      setState(() {});
+      _requestFramePreload(0);
+      _startPlayback();
+    }
   }
 
   @override
   void dispose() {
     _playbackTimer?.cancel();
+    _playbackTimer = null;
     _fpsPageController.dispose();
+    _loadingIndices.clear();
+    // Only evict frames that were temporarily loaded during preview (frames > 2)
+    if (widget.canvases.length > 25) {
+      for (final idx in _activeLoadedIndices) {
+        if (idx > 2 && idx < widget.canvases.length) {
+          _evictCanvasImages(widget.canvases[idx]);
+        }
+      }
+    }
+    _activeLoadedIndices.clear();
     super.dispose();
+  }
+
+  bool _isCanvasReady(DrawingController canvas) {
+    for (final layer in canvas.layers) {
+      final int count = layer.currentIndex > 0 ? layer.currentIndex : layer.history.length;
+      for (int j = 0; j < count; j++) {
+        if (!_isContentReady(layer.history[j])) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  bool _isContentReady(PaintContent content) {
+    if (content is ImageContent) {
+      if (content.imageUrl != null && content.imageUrl!.isNotEmpty && content.image == null) {
+        return false;
+      }
+    } else if (content is FillContent) {
+      if (content.cachedBase64Image != null && content.cachedBase64Image!.isNotEmpty && content.image == null) {
+        return false;
+      }
+    } else if (content is GroupContent) {
+      for (final child in content.children) {
+        if (!_isContentReady(child)) return false;
+      }
+    } else if (content is ClippedHistoryContent) {
+      for (final item in content.history) {
+        if (!_isContentReady(item)) return false;
+      }
+    } else if (content is ShapeStickerContent) {
+      return _isContentReady(content.child);
+    } else if (content is OffsetContent) {
+      return _isContentReady(content.child);
+    } else if (content is ClippedContent) {
+      return _isContentReady(content.child);
+    }
+    return true;
+  }
+
+  Future<void> _prepareCanvasImages(DrawingController canvas) async {
+    for (final layer in canvas.layers) {
+      final int count = layer.currentIndex > 0 ? layer.currentIndex : layer.history.length;
+      for (int j = 0; j < count; j++) {
+        await _prepareContentImages(layer.history[j]);
+      }
+    }
+  }
+
+  Future<void> _prepareContentImages(PaintContent content) async {
+    if (content is ImageContent) {
+      if (content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty) {
+        try {
+          if (content.imageUrl!.startsWith('assets/')) {
+            final ByteData data = await rootBundle.load(content.imageUrl!);
+            final Uint8List bytes = data.buffer.asUint8List();
+            final ui.Codec codec = await ui.instantiateImageCodec(bytes, targetWidth: 384);
+            final ui.FrameInfo fi = await codec.getNextFrame();
+            content.image = fi.image;
+          } else {
+            final File file = File(content.imageUrl!);
+            if (await file.exists()) {
+              final Uint8List bytes = await file.readAsBytes();
+              final ui.Codec codec = await ui.instantiateImageCodec(bytes, targetWidth: 384);
+              final ui.FrameInfo fi = await codec.getNextFrame();
+              content.image = fi.image;
+            }
+          }
+        } catch (e) {
+          debugPrint('Error preparing preview image: $e');
+        }
+      }
+    } else if (content is FillContent) {
+      if (content.image == null && content.cachedBase64Image != null && content.cachedBase64Image!.isNotEmpty) {
+        try {
+          final Uint8List bytes = base64Decode(content.cachedBase64Image!);
+          final ui.Codec codec = await ui.instantiateImageCodec(bytes, targetWidth: 384);
+          final ui.FrameInfo fi = await codec.getNextFrame();
+          content.image = fi.image;
+        } catch (e) {
+          debugPrint('Error preparing preview fill image: $e');
+        }
+      }
+    } else if (content is ShapeStickerContent) {
+      await _prepareContentImages(content.child);
+    } else if (content is OffsetContent) {
+      await _prepareContentImages(content.child);
+    } else if (content is ClippedContent) {
+      await _prepareContentImages(content.child);
+    } else if (content is GroupContent) {
+      for (final child in content.children) {
+        await _prepareContentImages(child);
+      }
+    } else if (content is ClippedHistoryContent) {
+      for (final child in content.history) {
+        await _prepareContentImages(child);
+      }
+    }
+  }
+
+  void _evictCanvasImages(DrawingController canvas) {
+    for (final layer in canvas.layers) {
+      for (final content in layer.history) {
+        _evictContentImages(content);
+      }
+    }
+  }
+
+  void _evictContentImages(PaintContent content) {
+    if (content is ImageContent && content.imageUrl != null && content.image != null) {
+      final imgToDispose = content.image;
+      content.image = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          imgToDispose?.dispose();
+        } catch (_) {}
+      });
+    } else if (content is ShapeStickerContent) {
+      _evictContentImages(content.child);
+    } else if (content is OffsetContent) {
+      _evictContentImages(content.child);
+    } else if (content is ClippedContent) {
+      _evictContentImages(content.child);
+    } else if (content is GroupContent) {
+      for (final child in content.children) {
+        _evictContentImages(child);
+      }
+    } else if (content is ClippedHistoryContent) {
+      for (final child in content.history) {
+        _evictContentImages(child);
+      }
+    }
+  }
+
+  void _requestFramePreload(int centerIndex) {
+    if (!mounted || widget.canvases.isEmpty) return;
+
+    // 1. Sliding window eviction: evict frames trailing behind centerIndex by > 6 frames
+    if (widget.canvases.length > 25) {
+      final List<int> toEvict = [];
+      for (final idx in _activeLoadedIndices) {
+        if (idx <= 2) continue; // Keep initial editor frames in memory
+        final int dist = (idx - centerIndex + widget.canvases.length) % widget.canvases.length;
+        if (dist > 22 && dist < widget.canvases.length - 6) {
+          toEvict.add(idx);
+        }
+      }
+      for (final idx in toEvict) {
+        _activeLoadedIndices.remove(idx);
+        _evictCanvasImages(widget.canvases[idx]);
+      }
+    }
+
+    // 2. Preload upcoming 20 frames with up to 4 parallel decodes:
+    for (int step = 0; step <= 20; step++) {
+      final int idx = (centerIndex + step) % widget.canvases.length;
+      if (_isCanvasReady(widget.canvases[idx])) {
+        _activeLoadedIndices.add(idx);
+        continue;
+      }
+      if (_loadingIndices.contains(idx)) continue;
+      if (_loadingIndices.length >= 4) break; // Maximum 4 parallel decodes
+
+      _loadingIndices.add(idx);
+      _prepareCanvasImages(widget.canvases[idx]).then((_) {
+        _loadingIndices.remove(idx);
+        _activeLoadedIndices.add(idx);
+        if (mounted) {
+          if (_currentFrameIndex == idx) {
+            setState(() {});
+          }
+          // Continue feeding the preloading pipeline
+          _requestFramePreload(_currentFrameIndex);
+        }
+      }).catchError((_) {
+        _loadingIndices.remove(idx);
+      });
+    }
   }
 
   void _startPlayback() {
@@ -57,9 +275,16 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
 
     final int intervalMs = (1000 / _fps).round();
     _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
-      if (mounted) {
+      if (!mounted) return;
+
+      final nextIndex = (_currentFrameIndex + 1) % widget.canvases.length;
+      _requestFramePreload(nextIndex);
+
+      // Only advance if the next frame is ready. If decoding is in progress, hold the current frame
+      // for 1 tick so the user never sees a blank white screen.
+      if (_isCanvasReady(widget.canvases[nextIndex])) {
         setState(() {
-          _currentFrameIndex = (_currentFrameIndex + 1) % widget.canvases.length;
+          _currentFrameIndex = nextIndex;
         });
       }
     });
@@ -227,8 +452,8 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
               Positioned.fill(
                 child: Opacity(
                   opacity: widget.globalBackground.imageOpacity,
-                  child: RawImage(
-                    image: widget.globalBackground.image,
+                  child: SafeThumbnailWidget(
+                    image: widget.globalBackground.image!,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -240,7 +465,7 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
                 ),
               ),
 
-            // Canvas Vector Paint Content
+            // Canvas Vector & Image Paint Content
             Positioned.fill(
               child: CustomPaint(
                 painter: FramePainter(activeController),
@@ -283,8 +508,11 @@ class FramePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Size? originalSize = controller.drawConfig.value.size;
-    if (originalSize == null || originalSize.isEmpty) return;
+    final Size originalSize = (controller.drawConfig.value.size != null && !controller.drawConfig.value.size!.isEmpty)
+        ? controller.drawConfig.value.size!
+        : size;
+
+    if (originalSize.isEmpty) return;
 
     final double scaleX = size.width / originalSize.width;
     final double scaleY = size.height / originalSize.height;
@@ -304,7 +532,8 @@ class FramePainter extends CustomPainter {
           ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
       );
 
-      for (int j = 0; j < layer.currentIndex; j++) {
+      final int count = layer.currentIndex > 0 ? layer.currentIndex : layer.history.length;
+      for (int j = 0; j < count; j++) {
         layer.history[j].draw(canvas, originalSize, true);
       }
 
@@ -317,4 +546,3 @@ class FramePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant FramePainter oldDelegate) => true;
 }
-

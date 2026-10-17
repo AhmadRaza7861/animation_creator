@@ -165,7 +165,13 @@ class SawLine extends PatternLine {
   String get contentType => 'SawLine';
 
   @override
-  SawLine copy() => SawLine(minPointDistance: minPointDistance, amplitude: amplitude, period: period);
+  SawLine copy() => SawLine.data(
+        minPointDistance: minPointDistance,
+        amplitude: amplitude,
+        period: period,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 之字笔迹 / Zigzag stroke
@@ -197,8 +203,13 @@ class ZigzagLine extends PatternLine {
   String get contentType => 'ZigzagLine';
 
   @override
-  ZigzagLine copy() =>
-      ZigzagLine(minPointDistance: minPointDistance, amplitude: amplitude, period: period);
+  ZigzagLine copy() => ZigzagLine.data(
+        minPointDistance: minPointDistance,
+        amplitude: amplitude,
+        period: period,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 齿轮（方波）笔迹 / Gear (square wave) stroke
@@ -230,8 +241,13 @@ class GearLine extends PatternLine {
   String get contentType => 'GearLine';
 
   @override
-  GearLine copy() =>
-      GearLine(minPointDistance: minPointDistance, amplitude: amplitude, period: period);
+  GearLine copy() => GearLine.data(
+        minPointDistance: minPointDistance,
+        amplitude: amplitude,
+        period: period,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 /// 心电图笔迹 / Heartbeat (ECG) stroke
@@ -263,8 +279,13 @@ class HeartbeatLine extends PatternLine {
   String get contentType => 'HeartbeatLine';
 
   @override
-  HeartbeatLine copy() =>
-      HeartbeatLine(minPointDistance: minPointDistance, amplitude: amplitude, period: period);
+  HeartbeatLine copy() => HeartbeatLine.data(
+        minPointDistance: minPointDistance,
+        amplitude: amplitude,
+        period: period,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -350,7 +371,12 @@ class HairLine extends FreehandLine {
   }
 
   @override
-  HairLine copy() => HairLine(minPointDistance: minPointDistance, strands: strands);
+  HairLine copy() => HairLine.data(
+        minPointDistance: minPointDistance,
+        strands: strands,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => <String, dynamic>{...baseJson(), 'strands': strands};
@@ -417,7 +443,11 @@ class PixelLine extends FreehandLine {
   }
 
   @override
-  PixelLine copy() => PixelLine(minPointDistance: minPointDistance);
+  PixelLine copy() => PixelLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -481,7 +511,12 @@ class GradientLine extends FreehandLine {
   }
 
   @override
-  GradientLine copy() => GradientLine(minPointDistance: minPointDistance, hueShift: hueShift);
+  GradientLine copy() => GradientLine.data(
+        minPointDistance: minPointDistance,
+        hueShift: hueShift,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => <String, dynamic>{...baseJson(), 'hueShift': hueShift};
@@ -569,7 +604,12 @@ class SketchLine extends FreehandLine {
   }
 
   @override
-  SketchLine copy() => SketchLine(minPointDistance: minPointDistance, passes: passes);
+  SketchLine copy() => SketchLine.data(
+        minPointDistance: minPointDistance,
+        passes: passes,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => <String, dynamic>{...baseJson(), 'passes': passes};

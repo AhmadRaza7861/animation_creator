@@ -16,7 +16,7 @@ import '../../../../../core/widgets/app_dialogs.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
 import '../screens/export/make_movie_screen.dart';
-import '../screens/video_trimming_screen.dart';
+import '../../services/video_import_helper.dart';
 import '../screens/font_selection_screen.dart';
 import 'sticker_widgets/text_sticker_widget.dart';
 import 'sticker_widgets/shape_sticker_widget.dart';
@@ -1339,32 +1339,14 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
       },
     );
 
-    if (selectedOption == null) return;
+    if (selectedOption == null || !mounted) return;
 
     if (selectedOption == 'video') {
-      try {
-        final XFile? file = await _picker.pickVideo(source: ImageSource.gallery);
-        if (file == null) return;
-
-        if (!mounted) return;
-        final trimmedFrames = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VideoTrimmingScreen(videoFile: File(file.path)),
-          ),
-        );
-
-        if (trimmedFrames != null && trimmedFrames is List<String>) {
-          await controller.importVideoFrames(trimmedFrames);
-        }
-      } catch (e) {
-        debugPrint('Error importing video: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not import video: $e')),
-          );
-        }
-      }
+      await VideoImportHelper.importVideo(
+        context: context,
+        controller: controller,
+        picker: _picker,
+      );
     } else if (selectedOption == 'gallery' || selectedOption == 'camera') {
       try {
         final source = selectedOption == 'camera' ? ImageSource.camera : ImageSource.gallery;

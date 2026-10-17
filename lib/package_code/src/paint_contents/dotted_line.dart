@@ -81,9 +81,11 @@ class DottedLine extends FreehandLine {
   }
 
   @override
-  DottedLine copy() => DottedLine(
+  DottedLine copy() => DottedLine.data(
         minPointDistance: minPointDistance,
         spacingRatio: spacingRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override

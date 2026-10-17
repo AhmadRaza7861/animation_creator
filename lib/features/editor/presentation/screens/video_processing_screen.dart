@@ -81,7 +81,12 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen>
     super.dispose();
   }
 
+  bool _hasStartedExtraction = false;
+
   Future<void> _extractFrames() async {
+    if (_hasStartedExtraction) return;
+    _hasStartedExtraction = true;
+
     try {
       final directory = await AppPathProvider.getSafeTempDirectory();
       _targetDir = Directory(
@@ -107,9 +112,7 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen>
                 _extractedCount = fileCount;
                 final double realProgress = (fileCount / _expectedTotalFrames)
                     .clamp(0.05, 0.98);
-                if (realProgress > _progress) {
-                  _progress = realProgress;
-                }
+                _progress = realProgress;
 
                 if (_progress < 0.25) {
                   _statusMessage = 'Decoding video streams...';
@@ -128,9 +131,15 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen>
         } catch (_) {}
       });
 
-      // Extract frames using ffmpeg
+      // Extract frames using ffmpeg:
+      // -y: auto overwrite
+      // -map 0:v:0: guarantees extraction only from primary video stream (prevents restart loops on multi-stream/motion photo videos)
+      // -vf "fps=...": stable PTS monotonic frame extraction without VFR timestamp jumps
+      // scale='min(1080,iw)':'min(1080,ih)': prevents multi-gigabyte disk overflow on 4K/high-res video
+      // -q:v 2: high-quality JPEG reduces storage by 95% vs PNG and speeds up encoding 5x
+      // frame_%05d.jpg: supports up to 99,999 frames with consistent alphabetical ordering
       final String command =
-          '-ss $startSec -i "${widget.videoFile.path}" -t $durationSec -r ${widget.fps} -f image2 "${_targetDir!.path}/frame_%04d.png"';
+          '-y -ss $startSec -i "${widget.videoFile.path}" -t $durationSec -map 0:v:0 -vf "fps=${widget.fps},scale=\'min(1080,iw)\':\'min(1080,ih)\':force_original_aspect_ratio=decrease" -q:v 2 "${_targetDir!.path}/frame_%05d.jpg"';
 
       final session = await FFmpegKit.executeAsync(command, (session) async {
         _progressPollTimer?.cancel();

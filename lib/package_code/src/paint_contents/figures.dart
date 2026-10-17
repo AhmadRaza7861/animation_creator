@@ -440,7 +440,12 @@ class FigureShape extends DragShape {
   }
 
   @override
-  FigureShape copy() => FigureShape(figureId);
+  FigureShape copy() => FigureShape.data(
+        figureId: figureId,
+        startPoint: startPoint,
+        endPoint: endPoint,
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() =>

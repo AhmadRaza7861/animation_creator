@@ -196,8 +196,63 @@ void main() {
       controller.copyActiveLassoSelection();
       expect(controller.canPasteLassoSelection, isTrue);
 
-      controller.clearLassoClipboard();
-      expect(controller.canPasteLassoSelection, isFalse);
+      controller.dispose();
+    });
+
+    test('Lasso intercepts preset brush tip strokes and retains stroke points in ClippedHistoryContent', () async {
+      final repo = ProjectRepository();
+      final controller = EditorController(repository: repo);
+
+      // Draw with RoughPenLine
+      final roughPen = RoughPenLine.data(
+        minPointDistance: 2.0,
+        points: const [Offset(50, 50), Offset(60, 60), Offset(70, 80)],
+        paint: Paint()..color = Colors.black..strokeWidth = 20.0,
+      );
+      controller.drawingController.addContent(roughPen);
+
+      expect(controller.drawingController.getHistory.length, equals(1));
+
+      // Draw Lasso around the rough pen stroke
+      final lasso = Lasso();
+      lasso.startDraw(const Offset(30, 30));
+      lasso.drawing(const Offset(100, 30));
+      lasso.drawing(const Offset(100, 100));
+      lasso.drawing(const Offset(30, 100));
+      lasso.drawing(const Offset(30, 30));
+
+      // Intercept draw
+      final intercepted = controller.drawingController.interceptDraw?.call(lasso) ?? false;
+      expect(intercepted, isTrue);
+
+      // Verify active sticker was created as lasso selection
+      expect(controller.activeSticker, isNotNull);
+      final active = controller.activeSticker as ActiveShapeSticker;
+      expect(active.isLasso, isTrue);
+      expect(active.content, isA<ClippedHistoryContent>());
+
+      final clipped = active.content as ClippedHistoryContent;
+      expect(clipped.history.length, equals(1));
+      expect(clipped.history.first, isA<RoughPenLine>());
+
+      final clippedStroke = clipped.history.first as RoughPenLine;
+      expect(clippedStroke.points.length, equals(3));
+      expect(clippedStroke.points[0], equals(const Offset(50, 50)));
+      expect(clippedStroke.paint.strokeWidth, equals(20.0));
+
+      // Also verify copy & paste on the lasso sticker
+      controller.copyActiveLassoSelection();
+      expect(controller.canPasteLassoSelection, isTrue);
+
+      controller.stampActiveSticker();
+      final pasted = await controller.pasteLassoSelection();
+      expect(pasted, isTrue);
+
+      final pastedActive = controller.activeSticker as ActiveShapeSticker;
+      final pastedClipped = pastedActive.content as ClippedHistoryContent;
+      expect(pastedClipped.history.first, isA<RoughPenLine>());
+      final pastedStroke = pastedClipped.history.first as RoughPenLine;
+      expect(pastedStroke.points.length, equals(3));
 
       controller.dispose();
     });

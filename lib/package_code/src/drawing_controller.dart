@@ -20,6 +20,7 @@ import 'paint_contents/lasso.dart';
 import 'paint_contents/stroke_recolor.dart';
 import 'paint_contents/shape_fill.dart';
 import 'paint_contents/shape_sticker.dart';
+import 'paint_contents/image.dart';
 import 'ruler/ruler_config.dart';
 import 'ruler/mirror_content.dart';
 
@@ -474,11 +475,19 @@ class DrawingController extends ChangeNotifier {
 
   /// 清除栅格与图层快照缓存
   void _invalidateRasterCache() {
+    try {
+      cachedPicture?.dispose();
+    } catch (_) {}
     cachedPicture = null;
+    try {
+      cachedImage?.dispose();
+    } catch (_) {}
     cachedImage = null;
     cachedRgbaData = null;
     cachedRgbaWidth = null;
     cachedRgbaHeight = null;
+    lastRenderedSize = null;
+    lastTotalIndex = -1;
   }
 
   /// Callback to obtain the canvas background image/template if present
@@ -999,7 +1008,7 @@ class DrawingController extends ChangeNotifier {
   /// and locked by default to protect the video reference from accidental brush/eraser modifications.
   /// An active, unlocked 'Drawing' layer is positioned above it, enabling rotoscoping, tracing,
   /// and drawing directly over the video frames.
-  void setVideoLayer(PaintContent content) {
+  void setVideoLayer(PaintContent content, {bool updateCanvasSnapshot = true, bool notify = true}) {
     // 1. Check if a video layer already exists
     LayerData? videoLayer;
     for (final l in layers) {
@@ -1054,8 +1063,25 @@ class DrawingController extends ChangeNotifier {
     // Refresh rendering and invalidate caches
     _invalidateRasterCache();
     _refreshDeep();
-    updateSnapshot();
-    notifyListeners();
+    if (updateCanvasSnapshot) {
+      updateSnapshot();
+    }
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  /// 检查画板是否包含除视频/背景/辅助线之外的用户绘制笔迹
+  /// Check if canvas contains user drawing strokes beyond video/background/guide layers
+  bool get hasUserDrawings {
+    for (final layer in layers) {
+      if (layer.isGuide || layer.name == 'Video Layer' || layer.id.startsWith('video_layer_')) {
+        continue;
+      }
+      final int count = layer.currentIndex > 0 ? layer.currentIndex : layer.history.length;
+      if (count > 0) return true;
+    }
+    return false;
   }
 
   /// 批量添加多条绘制内容
@@ -1208,13 +1234,13 @@ class DrawingController extends ChangeNotifier {
     }
 
     // Wrap in MirrorContent if mirroring
-    if (rulerConfig.value.type == RulerType.mirror && newContent != null && newContent is! Eyedropper) {
+    if (rulerConfig.value.type == RulerType.mirror && newContent is! Eyedropper) {
       if (newContent == eraserContent) {
         eraserContent = MirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
       } else {
         drawingContent = MirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
       }
-    } else if (rulerConfig.value.type == RulerType.quadMirror && newContent != null && newContent is! Eyedropper) {
+    } else if (rulerConfig.value.type == RulerType.quadMirror && newContent is! Eyedropper) {
       if (newContent == eraserContent) {
         eraserContent = QuadMirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
       } else {
@@ -1675,6 +1701,9 @@ class DrawingController extends ChangeNotifier {
 
     final ui.Picture picture = recorder.endRecording();
     picture.toImage(renderSize.width.toInt(), renderSize.height.toInt()).then((img) {
+      try {
+        picture.dispose();
+      } catch (_) {}
       realTimeSnapshot.value = img;
       _isUpdatingSnapshot = false;
       if (_hasPendingSnapshotUpdate) {
@@ -1685,6 +1714,9 @@ class DrawingController extends ChangeNotifier {
         updateSnapshot(additionalDraw: pendingDraw, includeBackground: pendingBg);
       }
     }).catchError((e) {
+      try {
+        picture.dispose();
+      } catch (_) {}
       _isUpdatingSnapshot = false;
       if (_hasPendingSnapshotUpdate) {
         _hasPendingSnapshotUpdate = false;
@@ -2085,7 +2117,7 @@ class DrawingController extends ChangeNotifier {
       }
       for (int j = 0; j < layer.history.length; j++) {
         final content = layer.history[j];
-        if (j == latestRasterIndex || (content is! SmudgeContent && content is! BlurContent)) {
+        if (content is! ImageContent && (j == latestRasterIndex || (content is! SmudgeContent && content is! BlurContent))) {
           await content.prepareExport();
         }
         out.add(content.toJson());
@@ -2116,7 +2148,8 @@ class DrawingController extends ChangeNotifier {
         final content = activeHistory[j];
         // Only the latest raster snapshot needs base64 export!
         // Shadowed intermediate raster states do not need to bloat the JSON file.
-        if (j == latestRasterIndex || (content is! SmudgeContent && content is! BlurContent)) {
+        // ImageContent has its file path and does not need to decode images for export!
+        if (content is! ImageContent && (j == latestRasterIndex || (content is! SmudgeContent && content is! BlurContent))) {
           await content.prepareExport();
         }
         historyJson.add(content.toJson());
@@ -2136,10 +2169,11 @@ class DrawingController extends ChangeNotifier {
     return out;
   }
 
-  /// 强制刷新所有图层（在数据恢复后调用）
+  /// 强制刷新所有图层（在数据恢复后或图片水合后调用）
   ///
-  /// Force refresh all layers (call after data restoration)
+  /// Force refresh all layers (call after data restoration or image hydration)
   void forceRefreshLayers() {
+    _invalidateRasterCache();
     _refreshDeep();
     _refresh();
   }
@@ -2169,6 +2203,16 @@ class DrawingController extends ChangeNotifier {
 
     GlobalToolState.instance.toolConfig.removeListener(_onGlobalToolChange);
 
+    final oldSnapshot = realTimeSnapshot.value;
+    realTimeSnapshot.value = null;
+    oldSnapshot?.dispose();
+
+    cachedImage?.dispose();
+    cachedImage = null;
+    cachedPicture?.dispose();
+    cachedPicture = null;
+
+    realTimeSnapshot.dispose();
     drawConfig.dispose();
     realPainter?.dispose();
     painter?.dispose();
@@ -2182,7 +2226,9 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Refresh board and notify listeners
   void refresh() {
+    cachedPicture?.dispose();
     cachedPicture = null;
+    cachedImage?.dispose();
     cachedImage = null;
     painter?._refresh();
     notifyListeners();

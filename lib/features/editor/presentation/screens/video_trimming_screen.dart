@@ -59,23 +59,31 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> with SingleTi
     super.dispose();
   }
 
+  bool _isNavigating = false;
+
   void _onConfirm() async {
+    if (_isNavigating) return;
+    _isNavigating = true;
     _controller.pause();
 
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => VideoProcessingScreen(
-          videoFile: widget.videoFile,
-          startMs: _startValue.toInt(),
-          endMs: _endValue.toInt(),
-          fps: _selectedFps,
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VideoProcessingScreen(
+            videoFile: widget.videoFile,
+            startMs: _startValue.toInt(),
+            endMs: _endValue.toInt(),
+            fps: _selectedFps,
+          ),
         ),
-      ),
-    );
+      );
 
-    if (result != null && mounted) {
-      Navigator.pop(context, result);
+      if (result != null && mounted) {
+        Navigator.pop(context, result);
+      }
+    } finally {
+      _isNavigating = false;
     }
   }
 
@@ -406,7 +414,7 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> with SingleTi
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8F8FC),
                   borderRadius: BorderRadius.circular(16),
@@ -414,33 +422,39 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> with SingleTi
                 ),
                 child: Column(
                   children: [
-                    // Time Range Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildTimeChip(
-                          label: 'START',
-                          timeStr: _formatDuration(Duration(milliseconds: _startValue.toInt())),
-                          color: const Color(0xFFFF9E24),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFE2E2EA)),
+                    // Time Range Header (scaled safely to prevent overflow on narrow screens)
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildTimeChip(
+                            label: 'START',
+                            timeStr: _formatDuration(Duration(milliseconds: _startValue.toInt())),
+                            color: const Color(0xFFFF9E24),
                           ),
-                          child: Text(
-                            'Duration: ${selectedDurationSec.toStringAsFixed(1)}s',
-                            style: const TextStyle(color: ColorConstants.darkText, fontSize: 11, fontWeight: FontWeight.w600),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2E2EA)),
+                            ),
+                            child: Text(
+                              'Duration: ${selectedDurationSec.toStringAsFixed(1)}s',
+                              style: const TextStyle(color: ColorConstants.darkText, fontSize: 10.5, fontWeight: FontWeight.w600),
+                            ),
                           ),
-                        ),
-                        _buildTimeChip(
-                          label: 'END',
-                          timeStr: _formatDuration(Duration(milliseconds: _endValue.toInt())),
-                          color: const Color(0xFFFF6E00),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          _buildTimeChip(
+                            label: 'END',
+                            timeStr: _formatDuration(Duration(milliseconds: _endValue.toInt())),
+                            color: const Color(0xFFFF6E00),
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 12),
@@ -506,7 +520,7 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> with SingleTi
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8F8FC),
                   borderRadius: BorderRadius.circular(16),
@@ -532,30 +546,37 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> with SingleTi
                           Row(
                             children: _fpsOptions.map((fps) {
                               final bool isSelected = _selectedFps == fps;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    setState(() {
-                                      _selectedFps = fps;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? ColorConstants.accent : Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: isSelected ? ColorConstants.accent : const Color(0xFFE0E0E8),
+                              final bool isLast = fps == _fpsOptions.last;
+                              return Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(right: isLast ? 0 : 6),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() {
+                                        _selectedFps = fps;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? ColorConstants.accent : Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: isSelected ? ColorConstants.accent : const Color(0xFFE0E0E8),
+                                        ),
                                       ),
-                                    ),
-                                    child: Text(
-                                      '$fps FPS',
-                                      style: TextStyle(
-                                        color: isSelected ? Colors.white : ColorConstants.darkText,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                        fontSize: 12,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          '$fps FPS',
+                                          style: TextStyle(
+                                            color: isSelected ? Colors.white : ColorConstants.darkText,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                            fontSize: 11.5,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -567,9 +588,11 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> with SingleTi
                       ),
                     ),
 
+                    const SizedBox(width: 10),
+
                     // Frames Summary Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF4E8),
                         borderRadius: BorderRadius.circular(14),
@@ -674,20 +697,20 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> with SingleTi
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(6),
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(5),
           ),
           child: Text(
             label,
-            style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
+            style: TextStyle(color: color, fontSize: 8.5, fontWeight: FontWeight.bold),
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 4),
         Text(
           timeStr,
-          style: const TextStyle(color: ColorConstants.darkText, fontWeight: FontWeight.bold, fontSize: 13),
+          style: const TextStyle(color: ColorConstants.darkText, fontWeight: FontWeight.bold, fontSize: 12),
         ),
       ],
     );

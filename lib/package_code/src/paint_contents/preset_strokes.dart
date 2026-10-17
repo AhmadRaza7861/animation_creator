@@ -120,7 +120,11 @@ class ChoppyLine extends PresetStroke {
   }
 
   @override
-  ChoppyLine copy() => ChoppyLine(minPointDistance: minPointDistance);
+  ChoppyLine copy() => ChoppyLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -163,7 +167,11 @@ class RoughPenLine extends PresetStroke {
   }
 
   @override
-  RoughPenLine copy() => RoughPenLine(minPointDistance: minPointDistance);
+  RoughPenLine copy() => RoughPenLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -223,8 +231,13 @@ class InkLine extends PresetStroke {
   }
 
   @override
-  InkLine copy() =>
-      InkLine(minPointDistance: minPointDistance, startBlob: startBlob, endTaper: endTaper);
+  InkLine copy() => InkLine.data(
+        minPointDistance: minPointDistance,
+        startBlob: startBlob,
+        endTaper: endTaper,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() =>
@@ -313,12 +326,14 @@ class PencilLine extends PresetStroke {
   }
 
   @override
-  PencilLine copy() => PencilLine(
+  PencilLine copy() => PencilLine.data(
         minPointDistance: minPointDistance,
         density: density,
         opacity: opacity,
         spread: spread,
         speck: speck,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override
@@ -380,7 +395,12 @@ class HalftoneLine extends PresetStroke {
   }
 
   @override
-  HalftoneLine copy() => HalftoneLine(minPointDistance: minPointDistance, gridRatio: gridRatio);
+  HalftoneLine copy() => HalftoneLine.data(
+        minPointDistance: minPointDistance,
+        gridRatio: gridRatio,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() =>
@@ -435,7 +455,12 @@ class HatchLine extends PresetStroke {
   }
 
   @override
-  HatchLine copy() => HatchLine(minPointDistance: minPointDistance, rightward: rightward);
+  HatchLine copy() => HatchLine.data(
+        minPointDistance: minPointDistance,
+        rightward: rightward,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() =>
@@ -497,7 +522,11 @@ class MosaicLine extends PresetStroke {
   }
 
   @override
-  MosaicLine copy() => MosaicLine(minPointDistance: minPointDistance);
+  MosaicLine copy() => MosaicLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -555,7 +584,11 @@ class TubeLine extends PresetStroke {
   }
 
   @override
-  TubeLine copy() => TubeLine(minPointDistance: minPointDistance);
+  TubeLine copy() => TubeLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -601,7 +634,11 @@ class CandyCaneLine extends TubeLine {
   }
 
   @override
-  CandyCaneLine copy() => CandyCaneLine(minPointDistance: minPointDistance);
+  CandyCaneLine copy() => CandyCaneLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -657,7 +694,11 @@ class SparklesLine extends PresetStroke {
   }
 
   @override
-  SparklesLine copy() => SparklesLine(minPointDistance: minPointDistance);
+  SparklesLine copy() => SparklesLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -712,7 +753,11 @@ class SprinklesLine extends PresetStroke {
   }
 
   @override
-  SprinklesLine copy() => SprinklesLine(minPointDistance: minPointDistance);
+  SprinklesLine copy() => SprinklesLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -764,7 +809,11 @@ class StaticLine extends PresetStroke {
   }
 
   @override
-  StaticLine copy() => StaticLine(minPointDistance: minPointDistance);
+  StaticLine copy() => StaticLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -849,7 +898,11 @@ class NeonGlowLine extends PresetStroke {
   }
 
   @override
-  NeonGlowLine copy() => NeonGlowLine(minPointDistance: minPointDistance);
+  NeonGlowLine copy() => NeonGlowLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -900,7 +953,11 @@ class RainbowLine extends PresetStroke {
   }
 
   @override
-  RainbowLine copy() => RainbowLine(minPointDistance: minPointDistance);
+  RainbowLine copy() => RainbowLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -986,7 +1043,11 @@ class RibbonLine extends PresetStroke {
   }
 
   @override
-  RibbonLine copy() => RibbonLine(minPointDistance: minPointDistance);
+  RibbonLine copy() => RibbonLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -1062,7 +1123,11 @@ class ConstellationLine extends PresetStroke {
   }
 
   @override
-  ConstellationLine copy() => ConstellationLine(minPointDistance: minPointDistance);
+  ConstellationLine copy() => ConstellationLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -1115,7 +1180,11 @@ class ChainLine extends PresetStroke {
   }
 
   @override
-  ChainLine copy() => ChainLine(minPointDistance: minPointDistance);
+  ChainLine copy() => ChainLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -1198,7 +1267,11 @@ class ElectricArcLine extends PresetStroke {
   }
 
   @override
-  ElectricArcLine copy() => ElectricArcLine(minPointDistance: minPointDistance);
+  ElectricArcLine copy() => ElectricArcLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -1264,7 +1337,11 @@ class BubbleTrailLine extends PresetStroke {
   }
 
   @override
-  BubbleTrailLine copy() => BubbleTrailLine(minPointDistance: minPointDistance);
+  BubbleTrailLine copy() => BubbleTrailLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -1311,7 +1388,11 @@ class AudioSpectrumLine extends PresetStroke {
   }
 
   @override
-  AudioSpectrumLine copy() => AudioSpectrumLine(minPointDistance: minPointDistance);
+  AudioSpectrumLine copy() => AudioSpectrumLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();
@@ -1360,7 +1441,11 @@ class StitchLine extends PresetStroke {
   }
 
   @override
-  StitchLine copy() => StitchLine(minPointDistance: minPointDistance);
+  StitchLine copy() => StitchLine.data(
+        minPointDistance: minPointDistance,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
+      );
 
   @override
   Map<String, dynamic> toContentJson() => baseJson();

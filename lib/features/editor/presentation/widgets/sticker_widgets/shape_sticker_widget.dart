@@ -702,13 +702,6 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                                     color: ColorConstants.primary,
                                     width: 1.5 / (_scale == 0 ? 1 : _scale),
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: ColorConstants.primary.withValues(alpha: 0.12),
-                                      blurRadius: 4,
-                                      spreadRadius: 0.5,
-                                    ),
-                                  ],
                                 ),
                               ),
                             ),

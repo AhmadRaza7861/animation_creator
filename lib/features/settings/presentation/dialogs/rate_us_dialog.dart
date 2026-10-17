@@ -53,13 +53,7 @@ class _RateUsDialogState extends State<RateUsDialog> {
   }
 
   String _getButtonLabel(BuildContext context) {
-    if (_rating >= 4) {
-      return context.tr('rateOnStore');
-    } else if (_rating > 0) {
-      return context.tr('submitFeedback');
-    } else {
-      return context.tr('rateUs');
-    }
+    return context.tr('rateUs');
   }
 
   Future<void> _handleRateAction() async {

@@ -77,10 +77,12 @@ class HighlighterLine extends FreehandLine {
   }
 
   @override
-  HighlighterLine copy() => HighlighterLine(
+  HighlighterLine copy() => HighlighterLine.data(
         minPointDistance: minPointDistance,
         opacity: opacity,
         widthFactor: widthFactor,
+        points: List<Offset>.from(points),
+        paint: paint.copyWith(),
       );
 
   @override

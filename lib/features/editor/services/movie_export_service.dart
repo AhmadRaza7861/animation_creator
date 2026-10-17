@@ -7,6 +7,11 @@ import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import '../../../../core/utils/app_path_provider.dart';
 import '../../../../package_code/src/drawing_controller.dart';
+import '../../../../package_code/src/paint_contents/image.dart';
+import '../../../../package_code/src/paint_contents/shape_sticker.dart';
+import '../../../../package_code/src/paint_contents/group.dart';
+import '../../../../package_code/src/paint_contents/clipped.dart';
+import '../../../../package_code/src/paint_contents/paint_content.dart';
 import '../presentation/controllers/editor_controller.dart';
 import '../../projects/presentation/widgets/preview_pattern_painter.dart';
 import '../../audio/domain/models/audio_project_state.dart';
@@ -262,71 +267,113 @@ class MovieExportService {
     required bool transparentBackground,
     required bool includeWatermark,
   }) async {
-    final Size sourceSize = controller.drawConfig.value.size ?? targetSize;
-    final ui.PictureRecorder recorder = ui.PictureRecorder();
-    final Canvas canvas = Canvas(recorder, Offset.zero & targetSize);
+    final List<ImageContent> temporarilyLoaded = [];
+    Future<void> prepareContentImages(PaintContent content) async {
+      if (content is ImageContent) {
+        if (content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty) {
+          await content.prepareExport();
+          if (content.image != null) {
+            temporarilyLoaded.add(content);
+          }
+        }
+      } else if (content is ShapeStickerContent) {
+        await prepareContentImages(content.child);
+      } else if (content is OffsetContent) {
+        await prepareContentImages(content.child);
+      } else if (content is ClippedContent) {
+        await prepareContentImages(content.child);
+      } else if (content is GroupContent) {
+        for (final child in content.children) {
+          await prepareContentImages(child);
+        }
+      } else if (content is ClippedHistoryContent) {
+        for (final child in content.history) {
+          await prepareContentImages(child);
+        }
+      }
+    }
 
-    final double scaleX = targetSize.width / (sourceSize.width > 0 ? sourceSize.width : targetSize.width);
-    final double scaleY = targetSize.height / (sourceSize.height > 0 ? sourceSize.height : targetSize.height);
+    try {
+      for (final layer in controller.layers) {
+        final int count = layer.currentIndex.clamp(0, layer.history.length);
+        for (int j = 0; j < count; j++) {
+          await prepareContentImages(layer.history[j]);
+        }
+      }
 
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
+      final Size sourceSize = controller.drawConfig.value.size ?? targetSize;
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, Offset.zero & targetSize);
 
-    // 1. Draw Background
-    if (!transparentBackground) {
-      final Color bgColor = PatternBackgroundHelper.getBaseColor(background.pattern, background.color);
-      final Paint bgPaint = Paint()..color = bgColor;
-      canvas.drawRect(Offset.zero & sourceSize, bgPaint);
+      final double scaleX = targetSize.width / (sourceSize.width > 0 ? sourceSize.width : targetSize.width);
+      final double scaleY = targetSize.height / (sourceSize.height > 0 ? sourceSize.height : targetSize.height);
 
-      if (background.image != null) {
-        paintImage(
-          canvas: canvas,
-          rect: Offset.zero & sourceSize,
-          image: background.image!,
-          fit: BoxFit.cover,
-          opacity: background.imageOpacity.clamp(0.0, 1.0),
+      canvas.save();
+      canvas.scale(scaleX, scaleY);
+
+      // 1. Draw Background
+      if (!transparentBackground) {
+        final Color bgColor = PatternBackgroundHelper.getBaseColor(background.pattern, background.color);
+        final Paint bgPaint = Paint()..color = bgColor;
+        canvas.drawRect(Offset.zero & sourceSize, bgPaint);
+
+        if (background.image != null) {
+          paintImage(
+            canvas: canvas,
+            rect: Offset.zero & sourceSize,
+            image: background.image!,
+            fit: BoxFit.cover,
+            opacity: background.imageOpacity.clamp(0.0, 1.0),
+          );
+        }
+
+        if (background.pattern != null && background.pattern != 'none') {
+          final painter = PreviewPatternPainter(background.pattern!);
+          painter.paint(canvas, sourceSize);
+        }
+      }
+
+      // 2. Draw Layers
+      canvas.saveLayer(Offset.zero & sourceSize, Paint());
+      for (int i = controller.layers.length - 1; i >= 0; i--) {
+        final layer = controller.layers[i];
+        if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') continue;
+
+        canvas.saveLayer(
+          Offset.zero & sourceSize,
+          Paint()
+            ..blendMode = layer.blendMode
+            ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
         );
+
+        final int count = layer.currentIndex.clamp(0, layer.history.length);
+        for (int j = 0; j < count; j++) {
+          layer.history[j].draw(canvas, sourceSize, false);
+        }
+
+        canvas.restore();
+      }
+      canvas.restore(); // restore layer stack
+
+      // 3. Draw Watermark if enabled
+      if (includeWatermark) {
+        _drawWatermark(canvas, sourceSize);
       }
 
-      if (background.pattern != null && background.pattern != 'none') {
-        final painter = PreviewPatternPainter(background.pattern!);
-        painter.paint(canvas, sourceSize);
+      canvas.restore(); // restore scale
+
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image img = await picture.toImage(targetSize.width.toInt(), targetSize.height.toInt());
+      final ByteData? byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+      picture.dispose();
+      img.dispose();
+      return byteData!.buffer.asUint8List();
+    } finally {
+      for (final temp in temporarilyLoaded) {
+        temp.image?.dispose();
+        temp.image = null;
       }
     }
-
-    // 2. Draw Layers
-    canvas.saveLayer(Offset.zero & sourceSize, Paint());
-    for (int i = controller.layers.length - 1; i >= 0; i--) {
-      final layer = controller.layers[i];
-      if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') continue;
-
-      canvas.saveLayer(
-        Offset.zero & sourceSize,
-        Paint()
-          ..blendMode = layer.blendMode
-          ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
-      );
-
-      final int count = layer.currentIndex.clamp(0, layer.history.length);
-      for (int j = 0; j < count; j++) {
-        layer.history[j].draw(canvas, sourceSize, false);
-      }
-
-      canvas.restore();
-    }
-    canvas.restore(); // restore layer stack
-
-    // 3. Draw Watermark if enabled
-    if (includeWatermark) {
-      _drawWatermark(canvas, sourceSize);
-    }
-
-    canvas.restore(); // restore scale
-
-    final ui.Picture picture = recorder.endRecording();
-    final ui.Image img = await picture.toImage(targetSize.width.toInt(), targetSize.height.toInt());
-    final ByteData? byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    return byteData!.buffer.asUint8List();
   }
 
   static void _drawWatermark(Canvas canvas, Size canvasSize) {

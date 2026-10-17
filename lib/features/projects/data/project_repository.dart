@@ -29,6 +29,10 @@ class ProjectRepository {
     return dir;
   }
 
+  String generateId() => _uuid.v4();
+
+  Future<Directory> getProjectDirectory(String projectId) => _getProjectDirectory(projectId);
+
   Future<List<ProjectMeta>> listProjects() async {
     try {
       final dir = await _getProjectsDirectory();
@@ -213,7 +217,9 @@ class ProjectRepository {
                                   : 'img_${DateTime.now().millisecondsSinceEpoch}.png';
                               final destFile = File('${assetsDir.path}/$fileName');
                               try {
-                                srcFile.copySync(destFile.path);
+                                if (!destFile.existsSync() || destFile.lengthSync() != srcFile.lengthSync()) {
+                                  srcFile.copySync(destFile.path);
+                                }
                                 item['imageUrl'] = destFile.path;
                               } catch (_) {}
                             }

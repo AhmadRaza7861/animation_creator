@@ -14,8 +14,6 @@ class RatingStrategyService {
   RatingStrategyService._();
 
   static const String _fileName = 'rating_strategy.json';
-  static const int _maxLifetimePrompts = 3;
-  static const Duration _cooldownDuration = Duration(days: 2);
 
   // In-memory cache
   static bool _hasRated = false;
@@ -68,21 +66,14 @@ class RatingStrategyService {
     }
   }
 
+  static bool _isShowingDialog = false;
+
   /// Evaluates whether the rating dialog is eligible to be shown.
   static Future<bool> shouldShowPrompt() async {
     if (!_isLoaded) await load();
 
-    // Rule 1: Never prompt if user has already rated or submitted feedback
+    // Stop only when the user has rated the app (1-5 stars or feedback submitted)
     if (_hasRated) return false;
-
-    // Rule 2: Hard lifetime cap on automatic prompts
-    if (_promptCount >= _maxLifetimePrompts) return false;
-
-    // Rule 3: Enforce 2-day cooldown between prompts
-    if (_lastPromptTime != null) {
-      final difference = DateTime.now().difference(_lastPromptTime!);
-      if (difference < _cooldownDuration) return false;
-    }
 
     return true;
   }
@@ -94,7 +85,7 @@ class RatingStrategyService {
     await _save();
   }
 
-  /// Mark prompt shown (increments count and sets cooldown)
+  /// Mark prompt shown
   static Future<void> markPromptShown() async {
     if (!_isLoaded) await load();
     _promptCount++;
@@ -102,32 +93,23 @@ class RatingStrategyService {
     await _save();
   }
 
-  /// Trigger 1: Called when animation export or gallery save completes (Peak Joy)
+  /// Trigger 1: Called when animation export completes (after the result screen)
   static Future<void> recordExport(BuildContext context) async {
     if (!_isLoaded) await load();
     _exportCount++;
     await _save();
 
-    // Trigger on 1st successful export and 3rd export
-    if (_exportCount == 1 || _exportCount == 3) {
-      if (await shouldShowPrompt() && context.mounted) {
-        await _showDialogWithDelay(context);
-      }
+    // Show every time after the result until user rates the app
+    if (await shouldShowPrompt() && context.mounted) {
+      await _showDialogWithDelay(context);
     }
   }
 
-  /// Trigger 2: Called when user creates their 2nd or 3rd project
+  /// Trigger 2: Called when user creates a project
   static Future<void> recordProjectCreated(BuildContext context) async {
     if (!_isLoaded) await load();
     _projectCreatedCount++;
     await _save();
-
-    // Trigger on 2nd project creation milestone
-    if (_projectCreatedCount == 2) {
-      if (await shouldShowPrompt() && context.mounted) {
-        await _showDialogWithDelay(context);
-      }
-    }
   }
 
   /// Trigger 3: Called when user completes an animation tutorial
@@ -135,21 +117,21 @@ class RatingStrategyService {
     if (!_isLoaded) await load();
     _tutorialCompletedCount++;
     await _save();
-
-    // Trigger on 1st completed tutorial
-    if (_tutorialCompletedCount == 1) {
-      if (await shouldShowPrompt() && context.mounted) {
-        await _showDialogWithDelay(context);
-      }
-    }
   }
 
   static Future<void> _showDialogWithDelay(BuildContext context) async {
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!context.mounted) return;
-    await markPromptShown();
-    if (context.mounted) {
-      await RateUsDialog.show(context);
+    if (_isShowingDialog) return;
+    _isShowingDialog = true;
+    try {
+      await Future.delayed(const Duration(milliseconds: 700));
+      if (!context.mounted) return;
+      if (!await shouldShowPrompt()) return;
+      await markPromptShown();
+      if (context.mounted) {
+        await RateUsDialog.show(context);
+      }
+    } finally {
+      _isShowingDialog = false;
     }
   }
 

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
-/// Generated from google-services.json (project: drawclipax).
+/// Updated from google-services.json (project: clipax-f0f02).
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -21,26 +21,26 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAQVWmpYlB1ZVBBM_ILcfuNm3noJH49KkI',
-    appId: '1:437409731351:android:ddc80ca0ed600518b39d52',
-    messagingSenderId: '437409731351',
-    projectId: 'drawclipax',
-    storageBucket: 'drawclipax.firebasestorage.app',
+    apiKey: 'AIzaSyCrm5rW_aKcGoz07m9C3mCXfwWXEGhaPJs',
+    appId: '1:584393370046:android:f0131a7cbffae025bfb1ef',
+    messagingSenderId: '584393370046',
+    projectId: 'clipax-f0f02',
+    storageBucket: 'clipax-f0f02.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAQVWmpYlB1ZVBBM_ILcfuNm3noJH49KkI',
-    appId: '1:437409731351:ios:ddc80ca0ed600518b39d52',
-    messagingSenderId: '437409731351',
-    projectId: 'drawclipax',
-    storageBucket: 'drawclipax.firebasestorage.app',
+    apiKey: 'AIzaSyCrm5rW_aKcGoz07m9C3mCXfwWXEGhaPJs',
+    appId: '1:584393370046:ios:f0131a7cbffae025bfb1ef',
+    messagingSenderId: '584393370046',
+    projectId: 'clipax-f0f02',
+    storageBucket: 'clipax-f0f02.firebasestorage.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAQVWmpYlB1ZVBBM_ILcfuNm3noJH49KkI',
-    appId: '1:437409731351:web:ddc80ca0ed600518b39d52',
-    messagingSenderId: '437409731351',
-    projectId: 'drawclipax',
-    storageBucket: 'drawclipax.firebasestorage.app',
+    apiKey: 'AIzaSyCrm5rW_aKcGoz07m9C3mCXfwWXEGhaPJs',
+    appId: '1:584393370046:web:f0131a7cbffae025bfb1ef',
+    messagingSenderId: '584393370046',
+    projectId: 'clipax-f0f02',
+    storageBucket: 'clipax-f0f02.firebasestorage.app',
   );
 }

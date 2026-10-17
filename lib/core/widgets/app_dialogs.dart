@@ -288,6 +288,104 @@ class AppDialogs {
     );
   }
 
+  /// Displays an animated processing dialog (used during video selection prep, frame import, and project saving).
+  /// Returns a safe dismiss callback that will pop the dialog only once if still mounted.
+  static VoidCallback showProcessingDialog(
+    BuildContext context, {
+    required String title,
+    required String message,
+    IconData icon = Icons.movie_filter_rounded,
+  }) {
+    bool isDismissed = false;
+    final dialogFuture = showCustomDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      child: Center(
+        child: PopScope(
+          canPop: false,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 290,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.16),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 58,
+                        height: 58,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9318)),
+                        ),
+                      ),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFF2E2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: const Color(0xFFFF9318), size: 24),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E1E24),
+                      letterSpacing: -0.2,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6E6E78),
+                      height: 1.35,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    dialogFuture.then((_) {
+      isDismissed = true;
+    });
+
+    return () {
+      if (!isDismissed && context.mounted) {
+        isDismissed = true;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    };
+  }
+
   /// Attractive Text Sticker Input / Edit Dialog
   static Future<String?> showTextStickerDialog(
     BuildContext context, {

@@ -400,6 +400,7 @@ class _DeepPainter extends CustomPainter {
     for (int i = frameController.layers.length - 1; i >= 0; i--) {
       final layer = frameController.layers[i];
       if (!layer.isVisible) continue;
+      if (layer.name == 'Video Layer' || layer.id.startsWith('video_layer_')) continue;
       
       canvas.saveLayer(
         Offset.zero & size,
@@ -439,8 +440,11 @@ class _DeepPainter extends CustomPainter {
       return;
     }
 
-    // 检查缓存是否有效：尺寸相同、历史索引相同且不为空（修改器激活时跳过缓存，以渲染非活跃图层）
+    final bool hasPendingImages = _hasPendingImages(controller);
+
+    // 检查缓存是否有效：尺寸相同、历史索引相同且不为空（修改器激活或有未水合图片时跳过缓存）
     final bool cacheValid = !isModifierActive &&
+        !hasPendingImages &&
         controller.lastRenderedSize == size && 
         controller.lastTotalIndex == controller.totalCurrentIndex &&
         controller.cachedPicture != null;
@@ -479,14 +483,51 @@ class _DeepPainter extends CustomPainter {
 
     final ui.Picture picture = recorder.endRecording();
 
-    if (!isModifierActive) {
+    if (!isModifierActive && !hasPendingImages) {
       // 更新缓存版本信息
       controller.lastRenderedSize = size;
       controller.lastTotalIndex = controller.totalCurrentIndex;
       controller.cachedPicture = picture;
+    } else {
+      controller.lastRenderedSize = null;
+      controller.lastTotalIndex = -1;
+      controller.cachedPicture = null;
     }
 
     canvas.drawPicture(picture);
+  }
+
+  bool _hasPendingImages(DrawingController controller) {
+    for (final layer in controller.layers) {
+      if (!layer.isVisible) continue;
+      for (final content in layer.history) {
+        if (_isContentPendingImage(content)) return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isContentPendingImage(PaintContent content) {
+    if (content is ImageContent) {
+      return content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty;
+    } else if (content is FillContent) {
+      return content.image == null && content.cachedBase64Image != null && content.cachedBase64Image!.isNotEmpty;
+    } else if (content is ShapeStickerContent) {
+      return _isContentPendingImage(content.child);
+    } else if (content is OffsetContent) {
+      return _isContentPendingImage(content.child);
+    } else if (content is ClippedContent) {
+      return _isContentPendingImage(content.child);
+    } else if (content is GroupContent) {
+      for (final child in content.children) {
+        if (_isContentPendingImage(child)) return true;
+      }
+    } else if (content is ClippedHistoryContent) {
+      for (final item in content.history) {
+        if (_isContentPendingImage(item)) return true;
+      }
+    }
+    return false;
   }
 
   @override

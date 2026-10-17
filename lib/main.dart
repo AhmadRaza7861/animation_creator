@@ -22,10 +22,20 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint('Firebase.initializeApp warning/error: $e');
+    debugPrint('Firebase.initializeApp with options failed: $e, attempting native fallback...');
+    try {
+      await Firebase.initializeApp();
+    } catch (e2) {
+      debugPrint('Firebase.initializeApp native fallback error: $e2');
+    }
   }
   await LanguageService.loadSavedLocale();
   RuntimeFontService.instance.init();
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   SystemChrome.setSystemUIOverlayStyle(
     CustomAppBarTheme.lightSystemUiOverlayStyle,

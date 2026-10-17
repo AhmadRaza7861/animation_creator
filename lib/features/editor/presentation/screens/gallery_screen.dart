@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../core/widgets/safe_thumbnail_widget.dart';
 
 class GalleryScreen extends StatelessWidget {
   final List<ui.Image> images;
@@ -75,7 +76,7 @@ class GalleryScreen extends StatelessWidget {
         children: [
           // The Image
           Positioned.fill(
-            child: RawImage(
+            child: SafeThumbnailWidget(
               image: images[index],
               fit: BoxFit.contain,
             ),
@@ -137,7 +138,7 @@ class GalleryScreen extends StatelessWidget {
                 ],
               ),
               clipBehavior: Clip.antiAlias,
-              child: RawImage(image: image, fit: BoxFit.contain),
+              child: SafeThumbnailWidget(image: image, fit: BoxFit.contain),
             ),
           ),
         );

@@ -21,11 +21,17 @@ class ImageContent extends PaintContent {
 
   factory ImageContent.fromJson(Map<String, dynamic> data) {
     return ImageContent.data(
-      startPoint: jsonToOffset(data['startPoint'] as Map<String, dynamic>),
-      size: jsonToOffset(data['size'] as Map<String, dynamic>),
+      startPoint: data['startPoint'] != null
+          ? jsonToOffset(data['startPoint'] as Map<String, dynamic>)
+          : Offset.zero,
+      size: data['size'] != null
+          ? jsonToOffset(data['size'] as Map<String, dynamic>)
+          : Offset.zero,
       imageUrl: data['imageUrl'] as String?,
       image: null, // Asynchronously rehydrated
-      paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+      paint: data['paint'] != null
+          ? jsonToPaint(data['paint'] as Map<String, dynamic>)
+          : Paint(),
     );
   }
 
