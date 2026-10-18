@@ -13,6 +13,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../data/project_repository.dart';
 import '../../../templates/domain/template_model.dart';
 import '../widgets/preview_pattern_painter.dart';
@@ -430,6 +431,14 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         title: title,
         state: state,
         thumbnailBytes: initialThumbnailBytes,
+      );
+
+      AnalyticsService.instance.logProjectCreated(
+        projectId: projectId,
+        name: title,
+        aspectRatio: aspectRatio,
+        fps: _fps,
+        templateMode: state['templateMode'] as String?,
       );
 
       if (mounted) {

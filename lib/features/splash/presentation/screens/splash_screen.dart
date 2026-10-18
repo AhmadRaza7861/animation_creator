@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../projects/domain/project_model.dart';
 import '../../../projects/presentation/screens/projects_screen.dart';
@@ -52,6 +53,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.logScreenView(screenName: 'SplashScreen');
 
     // 1. Master timeline orchestration (3200ms)
     _mainController = AnimationController(
@@ -200,6 +202,7 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
+        settings: RouteSettings(name: isOnboarded ? 'ProjectsScreen' : 'OnboardingScreen'),
         pageBuilder: (context, animation, secondaryAnimation) => targetScreen,
         transitionsBuilder:
             (context, animation, secondaryAnimation, child) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../../package_code/src/drawing_controller.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/analytics_service.dart';
 import '../../../../../core/widgets/app_back_button.dart';
 import '../../controllers/editor_controller.dart';
 import '../../../services/movie_export_service.dart';
@@ -101,6 +102,7 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.logScreenView(screenName: 'MakeMovieScreen');
     _nameController = TextEditingController(
       text: widget.initialMovieName.trim().isEmpty ? 'My Animation' : widget.initialMovieName,
     );
@@ -303,6 +305,13 @@ class _MakeMovieScreenState extends State<MakeMovieScreen> {
       fps: widget.fps,
       transparentBackground: _transparentBackground,
       includeWatermark: _includeWatermark,
+    );
+
+    AnalyticsService.instance.logExportStarted(
+      format: _format,
+      fps: widget.fps,
+      resolution: '${_selectedPreset.size.width.toInt()}x${_selectedPreset.size.height.toInt()}',
+      totalFrames: widget.canvases.length,
     );
 
     Navigator.push(

@@ -46,7 +46,7 @@ class CanvasArea extends ConsumerWidget {
     final controller = ref.watch(editorControllerProvider(projectId));
     final activeSticker = controller.activeSticker;
 
-    Widget buildBoard(BoxConstraints c) {
+    Widget buildBoard(Size canvasSize, Size viewportSize) {
       return GestureDetector(
         onTapDown: (controller.isTextToolSelected && activeSticker == null)
             ? (details) {
@@ -55,12 +55,23 @@ class CanvasArea extends ConsumerWidget {
                   final localPosition = details.localPosition;
                   final Matrix4 matrix = transformationController.value;
                   final Matrix4 inverse = Matrix4.inverted(matrix);
-                  final Offset canvasPoint = MatrixUtils.transformPoint(inverse, localPosition);
-                  _showAddTextStickerDialogAtPosition(context, controller, canvasPoint);
+                  final Offset transformedPoint = MatrixUtils.transformPoint(inverse, localPosition);
+                  final Offset origin = Offset(
+                    (viewportSize.width - canvasSize.width) / 2,
+                    (viewportSize.height - canvasSize.height) / 2,
+                  );
+                  final Offset canvasPoint = transformedPoint - origin;
+                  if (canvasPoint.dx >= 0 &&
+                      canvasPoint.dx <= canvasSize.width &&
+                      canvasPoint.dy >= 0 &&
+                      canvasPoint.dy <= canvasSize.height) {
+                    _showAddTextStickerDialogAtPosition(context, controller, canvasPoint);
+                  }
                 }
               }
             : null,
         child: Stack(
+          fit: StackFit.expand,
           children: [
             DrawingBoard(
               transformationController: transformationController,
@@ -109,32 +120,51 @@ class CanvasArea extends ConsumerWidget {
 
                   final bg = controller.globalBackground;
 
-                  return Container(
-                    width: c.maxWidth,
-                    height: c.maxHeight,
-                    color: PatternBackgroundHelper.getBaseColor(bg.pattern, bg.color),
-                    child: Stack(
-                      children: [
-                        if (guideWidget != null) guideWidget,
-                        if (bg.image != null)
-                          Positioned.fill(
-                            child: Opacity(
-                              opacity: bg.imageOpacity,
-                              child: RawImage(
-                                image: bg.image,
-                                fit: BoxFit.cover,
-                              ),
+                  return SizedBox(
+                    width: canvasSize.width,
+                    height: canvasSize.height,
+                    child: AspectRatio(
+                      aspectRatio: controller.aspectRatio,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: PatternBackgroundHelper.getBaseColor(bg.pattern, bg.color),
+                          borderRadius: BorderRadius.circular(2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 16,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 4),
                             ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: Stack(
+                            children: [
+                              ?guideWidget,
+                              if (bg.image != null)
+                                Positioned.fill(
+                                  child: Opacity(
+                                    opacity: bg.imageOpacity,
+                                    child: RawImage(
+                                      image: bg.image,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              if (bg.pattern != null && bg.pattern != 'none')
+                                Positioned.fill(
+                                  child: CustomPaint(
+                                    painter: PreviewPatternPainter(
+                                      bg.pattern!,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                        if (bg.pattern != null && bg.pattern != 'none')
-                          Positioned.fill(
-                            child: CustomPaint(
-                              painter: PreviewPatternPainter(
-                                bg.pattern!,
-                              ),
-                            ),
-                          ),
-                      ],
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -344,31 +374,27 @@ class CanvasArea extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        return Center(
-          child: AspectRatio(
-            aspectRatio: controller.aspectRatio,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints aspectConstraints) {
-                    return buildBoard(aspectConstraints);
-                  },
-                ),
-              ),
-            ),
+        final double maxW = constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
+        final double maxH = constraints.maxHeight.isFinite ? constraints.maxHeight : 400.0;
+        final double ratio = controller.aspectRatio;
+
+        double canvasWidth;
+        double canvasHeight;
+
+        if (maxW / maxH > ratio) {
+          canvasHeight = maxH;
+          canvasWidth = maxH * ratio;
+        } else {
+          canvasWidth = maxW;
+          canvasHeight = maxW / ratio;
+        }
+
+        return SizedBox(
+          width: maxW,
+          height: maxH,
+          child: buildBoard(
+            Size(canvasWidth, canvasHeight),
+            Size(maxW, maxH),
           ),
         );
       },

@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../main.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/rating_strategy_service.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../data/project_repository.dart';
@@ -42,6 +42,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.logScreenView(screenName: 'ProjectsScreen');
     _loadData();
   }
 
@@ -144,6 +145,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
   }
 
   Future<void> _openProject(ProjectMeta project) async {
+    AnalyticsService.instance.logProjectOpened(
+      projectId: project.id,
+      frameCount: project.frameCount,
+    );
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -158,6 +163,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
   }
 
   Future<void> _openTutorial(TemplateModel template) async {
+    AnalyticsService.instance.logTutorialViewed(tutorialTitle: template.name);
     final projectId = await Navigator.push<String>(
       context,
       MaterialPageRoute(
@@ -247,6 +253,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
           state: projectData.state,
           thumbnailBytes: thumbnailBytes,
         );
+        AnalyticsService.instance.logProjectDuplicated(projectId: project.id);
       }
     } catch (e) {
       debugPrint('Error duplicating project: $e');
@@ -262,6 +269,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
 
     if (confirm == true) {
       await widget.repository.deleteProject(project.id);
+      AnalyticsService.instance.logProjectDeleted(projectId: project.id);
       _loadProjects();
     }
   }

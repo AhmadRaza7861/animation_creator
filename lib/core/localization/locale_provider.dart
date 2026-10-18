@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/analytics_service.dart';
 import '../utils/app_path_provider.dart';
 import 'app_language.dart';
 import 'app_localizations.dart';
@@ -89,6 +90,7 @@ class LocaleNotifier extends StateNotifier<Locale> {
     if (state == newLocale) return;
     state = newLocale;
     await LanguageService.saveLocale(newLocale);
+    AnalyticsService.instance.logLanguageChanged(languageCode: newLocale.languageCode);
   }
 
   Future<void> setLanguageCode(String code) async {

@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/services/analytics_service.dart';
 import '../../../../../core/services/rating_strategy_service.dart';
 import '../../../../../core/widgets/app_back_button.dart';
 import '../../../services/movie_export_service.dart';
@@ -34,6 +35,7 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.logScreenView(screenName: 'ShareMovieScreen');
     _isGif = widget.filePath.toLowerCase().endsWith('.gif');
     if (!_isGif) {
       _initVideo();
@@ -192,6 +194,10 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
   }
 
   void _shareToPlatform(String platformName) {
+    AnalyticsService.instance.logShareClicked(
+      contentType: 'animation_video',
+      format: platformName,
+    );
     Share.shareXFiles(
       [XFile(widget.filePath)],
       text: '${widget.options.movieName} #Clipax #Animation',
@@ -200,6 +206,10 @@ class _ShareMovieScreenState extends State<ShareMovieScreen> {
   }
 
   void _shareGeneric() {
+    AnalyticsService.instance.logShareClicked(
+      contentType: 'animation_video',
+      format: widget.options.format,
+    );
     Share.shareXFiles(
       [XFile(widget.filePath)],
       text: widget.options.movieName,

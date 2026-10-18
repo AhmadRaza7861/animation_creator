@@ -29,11 +29,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCrm5rW_aKcGoz07m9C3mCXfwWXEGhaPJs',
-    appId: '1:584393370046:ios:f0131a7cbffae025bfb1ef',
+    apiKey: 'AIzaSyCn4grHW5-95fXp4sXJTenU6mEbk55OGAc',
+    appId: '1:584393370046:ios:46da14843d83b514bfb1ef',
     messagingSenderId: '584393370046',
     projectId: 'clipax-f0f02',
     storageBucket: 'clipax-f0f02.firebasestorage.app',
+    iosBundleId: 'com.flipbook.draw.animation',
   );
 
   static const FirebaseOptions web = FirebaseOptions(

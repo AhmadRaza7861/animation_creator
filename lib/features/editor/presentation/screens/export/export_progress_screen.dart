@@ -5,6 +5,7 @@ import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/widgets/app_back_button.dart';
 import '../../../../../core/widgets/app_dialogs.dart';
+import '../../../../../core/services/analytics_service.dart';
 import '../../controllers/editor_controller.dart';
 import '../../../services/movie_export_service.dart';
 import 'widgets/projector_animation.dart';
@@ -62,6 +63,12 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
       );
 
       if (mounted && !_isCancelled) {
+        final int durationSeconds = (widget.canvases.length / (widget.options.fps > 0 ? widget.options.fps : 12)).round();
+        AnalyticsService.instance.logExportCompleted(
+          format: widget.options.format,
+          durationSeconds: durationSeconds,
+        );
+
         setState(() {
           _isExporting = false;
           _progress = 1.0;
@@ -79,6 +86,11 @@ class _ExportProgressScreenState extends State<ExportProgressScreen> {
       }
     } catch (e) {
       if (!_isCancelled && mounted) {
+        AnalyticsService.instance.logExportFailed(
+          format: widget.options.format,
+          error: e.toString(),
+        );
+
         setState(() {
           _isExporting = false;
           _errorMessage = e.toString().replaceAll('Exception: ', '');

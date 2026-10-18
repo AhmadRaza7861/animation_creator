@@ -13,6 +13,7 @@ import '../../../../package_code/src/ruler/ruler_config.dart';
 import 'brush_studio_screen.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../controllers/editor_providers.dart';
 import '../controllers/editor_controller.dart';
 import '../widgets/canvas_area.dart';
@@ -57,6 +58,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.logScreenView(screenName: 'EditorScreen');
     WidgetsBinding.instance.addObserver(this);
   }
 

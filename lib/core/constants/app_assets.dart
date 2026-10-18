@@ -45,4 +45,13 @@ class AssetConstants {
   static const String onboard_pumpkin = 'assets/images/onboard_pumpkin.gif';
   static const String onboard_mouse = 'assets/images/onboard_mouse.gif';
   static const String onboard_cactus = 'assets/images/onboard_cactus.gif';
+  static const String onboard_step1_filmstrip = 'assets/images/onboard_step1_filmstrip.jpg';
+  static const String onboard_step2_drawing = 'assets/images/onboard_step2_drawing.jpg';
+  static const String onboard_step3_timeline = 'assets/images/onboard_step3_timeline.jpg';
+  static const String onboard_step4_export = 'assets/images/onboard_step4_export.jpg';
+
+  static const String onboardStep1Filmstrip = onboard_step1_filmstrip;
+  static const String onboardStep2Drawing = onboard_step2_drawing;
+  static const String onboardStep3Timeline = onboard_step3_timeline;
+  static const String onboardStep4Export = onboard_step4_export;
 }

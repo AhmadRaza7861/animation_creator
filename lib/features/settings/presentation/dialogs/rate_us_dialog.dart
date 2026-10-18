@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../common_widgets/show_toast.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/feedback_service.dart';
 import '../../../../core/services/rating_strategy_service.dart';
 
@@ -28,6 +29,12 @@ class _RateUsDialogState extends State<RateUsDialog> {
   final TextEditingController _feedbackController = TextEditingController();
   bool _submittedFeedback = false;
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.logRatingDialogShown();
+  }
 
   @override
   void dispose() {
@@ -60,6 +67,10 @@ class _RateUsDialogState extends State<RateUsDialog> {
     if (_rating <= 0) return;
 
     if (_rating >= 4) {
+      AnalyticsService.instance.logRatingSubmitted(
+        stars: _rating,
+        hadFeedback: false,
+      );
       // Direct user to store
       final pkgName = widget.appPackageName ?? 'com.flipbook.draw.animation';
       final Uri storeUri = Uri.parse(
@@ -98,6 +109,10 @@ class _RateUsDialogState extends State<RateUsDialog> {
           rating: _rating,
           feedback: feedbackText,
           ratingLabel: ratingLabel,
+        );
+        AnalyticsService.instance.logRatingSubmitted(
+          stars: _rating,
+          hadFeedback: feedbackText.isNotEmpty,
         );
         await RatingStrategyService.markRated();
       } catch (e) {

@@ -13,6 +13,7 @@ import '../../../../package_code/src/paint_contents/paint_content_decoder.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/utils/app_path_provider.dart';
 import '../../../audio/domain/models/audio_project_state.dart';
 import '../widgets/sticker_widgets/text_sticker_widget.dart';
@@ -667,6 +668,9 @@ class EditorController extends ChangeNotifier {
     if (_activeCategory != value && value != 'Brush') {
       drawingController.rulerConfig.value =
           drawingController.rulerConfig.value.copyWith(type: RulerType.none);
+    }
+    if (_activeCategory != value) {
+      AnalyticsService.instance.logToolSelected(toolName: value);
     }
     _activeCategory = value;
     notifyListeners();
@@ -2004,11 +2008,21 @@ class EditorController extends ChangeNotifier {
 
   void addFrame() {
     _addNewCanvas(atIndex: _canvases.length);
+    AnalyticsService.instance.logFrameAction(
+      action: 'add_frame',
+      frameIndex: _canvases.length - 1,
+      totalFrames: _canvases.length,
+    );
   }
 
   void addFrameAt(int index, {bool isRight = true}) {
     final targetIndex = isRight ? (index + 1) : index;
     _addNewCanvas(atIndex: targetIndex);
+    AnalyticsService.instance.logFrameAction(
+      action: 'add_frame_at',
+      frameIndex: targetIndex,
+      totalFrames: _canvases.length,
+    );
   }
 
   Future<void> importVideoFrames(List<String> framePaths) async {
@@ -2152,6 +2166,11 @@ class EditorController extends ChangeNotifier {
     if (_currentIndex >= _canvases.length) {
       _currentIndex = _canvases.length - 1;
     }
+    AnalyticsService.instance.logFrameAction(
+      action: 'delete_frame',
+      frameIndex: index,
+      totalFrames: _canvases.length,
+    );
     markDirty();
     notifyListeners();
   }
@@ -2162,6 +2181,11 @@ class EditorController extends ChangeNotifier {
     }
     if (oldIndex < newIndex) newIndex -= 1;
     if (oldIndex == newIndex) return;
+
+    AnalyticsService.instance.logFrameAction(
+      action: 'reorder_frames',
+      totalFrames: _canvases.length,
+    );
 
     final controller = _canvases.removeAt(oldIndex);
     _canvases.insert(newIndex, controller);

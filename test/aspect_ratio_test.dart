@@ -6,6 +6,7 @@ import 'package:dummy/features/editor/presentation/controllers/editor_providers.
 import 'package:dummy/features/editor/presentation/widgets/canvas_area.dart';
 import 'package:dummy/features/editor/presentation/screens/export/make_movie_screen.dart';
 import 'package:dummy/features/projects/data/project_repository.dart';
+import 'package:dummy/package_code/src/drawing_board.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +58,46 @@ void main() {
 
       final AspectRatio aspectRatioWidget = tester.widget(aspectRatioFinder.first);
       expect(aspectRatioWidget.aspectRatio, closeTo(1.0, 0.001));
+
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('CanvasArea DrawingBoard spans full viewport for unclipped zoom', (tester) async {
+      final repo = ProjectRepository();
+      final controller = EditorController(repository: repo);
+      final transformController = TransformationController();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            editorControllerProvider('test_project').overrideWith((ref) => controller),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 500,
+                child: CanvasArea(
+                  projectId: 'test_project',
+                  transformationController: transformController,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      final drawingBoardFinder = find.byType(DrawingBoard);
+      expect(drawingBoardFinder, findsOneWidget);
+      final RenderBox boardBox = tester.renderObject(drawingBoardFinder);
+      expect(boardBox.size, equals(const Size(400, 500)));
+
+      transformController.value = Matrix4.identity()..scale(2.0, 2.0, 1.0);
+      await tester.pump();
+
+      expect(boardBox.size, equals(const Size(400, 500)));
 
       await tester.pump(const Duration(seconds: 1));
     });
