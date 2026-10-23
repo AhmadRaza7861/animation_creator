@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'drawing_controller.dart';
-import 'helper/ex_value_builder.dart';
 import '../paint_contents.dart';
 
 /// 绘图板组件
@@ -143,11 +142,9 @@ class _PainterState extends State<Painter> {
       return;
     }
 
-    if (!widget.drawingController.hasPaintingContent) {
-      return;
+    if (widget.drawingController.hasPaintingContent) {
+      widget.drawingController.drawing(pme.localPosition, pme.pressure);
     }
-
-    widget.drawingController.drawing(pme.localPosition, pme.pressure);
     widget.onPointerMove?.call(pme);
   }
 
@@ -157,20 +154,18 @@ class _PainterState extends State<Painter> {
   void _onPointerUp(PointerUpEvent pue) {
     _activePointers.remove(pue.pointer);
 
-    if (!widget.drawingController.hasPaintingContent) {
-      return;
-    }
+    if (widget.drawingController.hasPaintingContent) {
+      if (!widget.drawingController.couldDrawing || _activePointers.isNotEmpty) {
+        widget.drawingController.cancelDraw();
+        return;
+      }
 
-    if (!widget.drawingController.couldDrawing || _activePointers.isNotEmpty) {
-      widget.drawingController.cancelDraw();
-      return;
-    }
+      if (!widget.drawingController.isDrawingValidContent || widget.drawingController.startPoint == pue.localPosition) {
+        widget.drawingController.drawing(pue.localPosition, pue.pressure);
+      }
 
-    if (!widget.drawingController.isDrawingValidContent || widget.drawingController.startPoint == pue.localPosition) {
-      widget.drawingController.drawing(pue.localPosition, pue.pressure);
+      widget.drawingController.endDraw();
     }
-
-    widget.drawingController.endDraw();
     widget.onPointerUp?.call(pue);
   }
 

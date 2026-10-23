@@ -89,6 +89,10 @@ class CanvasArea extends ConsumerWidget {
               allControllers: controller.canvases,
               currentIndex: controller.currentIndex,
               onPointerDown: (e) {
+                if (controller.activeCategory == 'Select' && activeSticker == null) {
+                  controller.onSelectPointerDown(e.localPosition);
+                  return;
+                }
                 if (controller.drawingController.isCurrentLayerLocked) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(context.tr('layerLocked'))),
@@ -96,10 +100,23 @@ class CanvasArea extends ConsumerWidget {
                   return;
                 }
               },
+              onPointerMove: (e) {
+                if (controller.activeCategory == 'Select' && activeSticker == null) {
+                  controller.onSelectPointerMove(e.localPosition);
+                }
+              },
+              onPointerUp: (e) {
+                if (controller.activeCategory == 'Select' && activeSticker == null) {
+                  controller.onSelectPointerUp(e.localPosition, context);
+                }
+              },
               boardPanEnabled: true,
               boardScaleEnabled: true,
               boardRotateEnabled: true,
-              isDrawingEnabled: activeSticker == null && !controller.isTextToolSelected && !controller.drawingController.isCurrentLayerLocked,
+              isDrawingEnabled: activeSticker == null &&
+                  !controller.isTextToolSelected &&
+                  controller.activeCategory != 'Select' &&
+                  !controller.drawingController.isCurrentLayerLocked,
               background: ValueListenableBuilder<DrawConfig>(
                 valueListenable: controller.drawingController.drawConfig,
                 builder: (context, config, child) {
@@ -169,9 +186,14 @@ class CanvasArea extends ConsumerWidget {
                   );
                 },
               ),
-              foreground: activeSticker == null
+              foreground: (activeSticker == null && controller.selectMarqueeRect == null)
                   ? null
-                  : AnimatedBuilder(
+                  : (activeSticker == null && controller.selectMarqueeRect != null)
+                      ? CustomPaint(
+                          size: Size.infinite,
+                          painter: _SelectMarqueePainter(controller.selectMarqueeRect!),
+                        )
+                      : AnimatedBuilder(
                       animation: controller.drawingController,
                       builder: (context, child) {
                         final isNavigating = controller.drawingController.isNavigating ||
@@ -367,6 +389,46 @@ class CanvasArea extends ConsumerWidget {
                   ),
                 ),
               ),
+            if (controller.activeCategory == 'Select' && activeSticker == null)
+              Positioned(
+                top: 12,
+                left: 16,
+                right: 16,
+                child: Center(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B).withValues(alpha: 0.88),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.touch_app_rounded, color: Colors.white70, size: 14),
+                          const SizedBox(width: 8),
+                          Text(
+                            context.tr('selectToolHint'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       );
@@ -407,3 +469,43 @@ class CanvasArea extends ConsumerWidget {
 
 typedef CanvasPatternPainter = PreviewPatternPainter;
 
+class _SelectMarqueePainter extends CustomPainter {
+  final Rect rect;
+
+  _SelectMarqueePainter(this.rect);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fillPaint = Paint()
+      ..color = const Color(0xFF3B82F6).withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = const Color(0xFF3B82F6)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawRect(rect, fillPaint);
+
+    final path = Path()..addRect(rect);
+    const double dashWidth = 5.0;
+    const double dashSpace = 4.0;
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final double length = (distance + dashWidth < metric.length)
+            ? dashWidth
+            : metric.length - distance;
+        final Path extractPath = metric.extractPath(distance, distance + length);
+        canvas.drawPath(extractPath, borderPaint);
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SelectMarqueePainter oldDelegate) {
+    return oldDelegate.rect != rect;
+  }
+}

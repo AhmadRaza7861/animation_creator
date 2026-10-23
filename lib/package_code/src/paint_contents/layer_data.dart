@@ -9,6 +9,7 @@ import 'paint_content.dart';
 import 'shape_fill.dart';
 import 'smudge.dart';
 import 'stroke_recolor.dart';
+import 'delete_content.dart';
 
 /// Represents a single drawing layer.
 class LayerData {
@@ -43,6 +44,57 @@ class LayerData {
   int currentIndex;
   int sessionStartIndex;
 
+  /// Resolves the set of deleted item IDs, with self-healing for legacy/deserialized projects.
+  Set<String> _resolveDeletedIds(int count) {
+    final Set<String> deletedIds = <String>{};
+    final Set<String> allExistingIds = <String>{};
+
+    for (int i = 0; i < count; i++) {
+      allExistingIds.add(history[i].id);
+      final item = history[i];
+      if (item is DeleteContent) {
+        deletedIds.add(item.targetId);
+      }
+    }
+
+    // Self-healing fallback: if any DeleteContent references a targetId that was lost
+    // during legacy serialization, associate it with the closest un-deleted content preceding it.
+    for (int i = 0; i < count; i++) {
+      final item = history[i];
+      if (item is DeleteContent && !allExistingIds.contains(item.targetId)) {
+        for (int j = i - 1; j >= 0; j--) {
+          final candidate = history[j];
+          if (candidate is! DeleteContent &&
+              candidate is! Eraser &&
+              candidate is! EraserHole &&
+              !deletedIds.contains(candidate.id)) {
+            deletedIds.add(candidate.id);
+            break;
+          }
+        }
+      }
+    }
+
+    return deletedIds;
+  }
+
+  /// Returns only visible, non-deleted contents in this layer up to currentIndex.
+  List<PaintContent> getEffectiveHistory() {
+    final int count = currentIndex.clamp(0, history.length);
+    if (count == 0) return <PaintContent>[];
+
+    final Set<String> deletedIds = _resolveDeletedIds(count);
+
+    final List<PaintContent> result = [];
+    for (int i = 0; i < count; i++) {
+      final item = history[i];
+      if (item is! DeleteContent && !deletedIds.contains(item.id)) {
+        result.add(item);
+      }
+    }
+    return result;
+  }
+
   /// Draws the layer history onto the canvas.
   /// If a SmudgeContent or BlurContent is present, it is rendered first as the base raster state.
   /// Then, drawing is rendered chronologically in segments partitioned by destructive/erasing operations
@@ -55,11 +107,15 @@ class LayerData {
     final int count = currentIndex.clamp(0, history.length);
     if (count == 0) return;
 
+    final Set<String> deletedIds = _resolveDeletedIds(count);
+
     int rasterIndex = -1;
     for (int j = count - 1; j >= 0; j--) {
       if (history[j] is SmudgeContent || history[j] is BlurContent) {
-        rasterIndex = j;
-        break;
+        if (!deletedIds.contains(history[j].id)) {
+          rasterIndex = j;
+          break;
+        }
       }
     }
 
@@ -86,6 +142,7 @@ class LayerData {
       // Pass 1: Draw interior FillContent items (underneath strokes of this segment)
       for (int j = segStart; j < segEnd; j++) {
         final item = history[j];
+        if (deletedIds.contains(item.id) || item is DeleteContent) continue;
         if (item is FillContent && item.isUnderneath) {
           item.draw(canvas, size, deeper);
           if (tempCanvas != null) {
@@ -97,6 +154,7 @@ class LayerData {
       // Pass 2: Draw non-fill items (strokes, shapes, lines, etc.) in this segment
       for (int j = segStart; j < segEnd; j++) {
         final item = history[j];
+        if (deletedIds.contains(item.id) || item is DeleteContent) continue;
         if (item is! FillContent && item is! StrokeRecolorContent && item is! ShapeFillContent) {
           item.draw(canvas, size, deeper);
           if (tempCanvas != null) {
@@ -108,6 +166,7 @@ class LayerData {
       // Pass 3: Draw re-coloring / overlay FillContent items (on top of strokes) in this segment
       for (int j = segStart; j < segEnd; j++) {
         final item = history[j];
+        if (deletedIds.contains(item.id) || item is DeleteContent) continue;
         if (item is FillContent && !item.isUnderneath) {
           item.draw(canvas, size, deeper);
           if (tempCanvas != null) {
@@ -118,9 +177,11 @@ class LayerData {
 
       // If segEnd is an Eraser or EraserHole, draw it now (it erases everything drawn up to this point)
       if (segEnd < count && (history[segEnd] is Eraser || history[segEnd] is EraserHole)) {
-        history[segEnd].draw(canvas, size, deeper);
-        if (tempCanvas != null) {
-          history[segEnd].draw(tempCanvas, size, deeper);
+        if (!deletedIds.contains(history[segEnd].id)) {
+          history[segEnd].draw(canvas, size, deeper);
+          if (tempCanvas != null) {
+            history[segEnd].draw(tempCanvas, size, deeper);
+          }
         }
         segStart = segEnd + 1;
       } else {

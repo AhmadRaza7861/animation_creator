@@ -2106,6 +2106,12 @@ class DrawingController extends ChangeNotifier {
     return layer.history.isNotEmpty;
   }
 
+  /// 获取当前活跃图层的有效历史记录（排除被DeleteContent删除的内容）
+  /// Get effective history of the active layer (excluding items hidden by DeleteContent)
+  List<PaintContent> getEffectiveHistory() {
+    return activeLayer.value?.getEffectiveHistory() ?? <PaintContent>[];
+  }
+
   /// 剪贴板，用于存储复制的内容
   ///
   /// Clipboard for storing copied content

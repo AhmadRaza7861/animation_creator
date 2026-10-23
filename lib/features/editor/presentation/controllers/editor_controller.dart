@@ -15,6 +15,7 @@ import '../../../projects/data/project_repository.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/utils/app_path_provider.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../audio/domain/models/audio_project_state.dart';
 import '../widgets/sticker_widgets/text_sticker_widget.dart';
 import '../widgets/sticker_widgets/shape_sticker_widget.dart';
@@ -22,6 +23,7 @@ import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../services/global_clipboard.dart';
 import '../widgets/fast_scroll_counter_overlay.dart';
+import '../widgets/layer_panel.dart';
 
 class CanvasBackground {
   final Color color;
@@ -132,6 +134,7 @@ class EditorController extends ChangeNotifier {
 
   void _scheduleAutoSave() {
     _autoSaveTimer?.cancel();
+    if (_activeSticker != null) return;
     _autoSaveTimer = Timer(const Duration(milliseconds: 1500), () {
       saveProject();
     });
@@ -164,6 +167,13 @@ class EditorController extends ChangeNotifier {
   DateTime? _activeStickerCreatedAt;
   List<Object> _activeStickerHistory = [];
   int _activeStickerHistoryIndex = -1;
+
+  // Select Tool state
+  Offset? _selectStartPoint;
+  Rect? _selectMarqueeRect;
+  Rect? get selectMarqueeRect => _selectMarqueeRect;
+  String? _selectionSourceTargetId;
+  LayerData? _selectionSourceLayer;
 
   // Audio Studio state
   AudioProjectState _audioState = AudioProjectState();
@@ -1129,6 +1139,11 @@ class EditorController extends ChangeNotifier {
       _hasPendingStampSave = true;
     }
 
+    // Do not auto-save or dismiss active sticker while user is manipulating it
+    if (_activeSticker != null && !stampStickers && !_hasPendingStampSave) {
+      return;
+    }
+
     final bool willStamp = (stampStickers && _activeSticker != null) || (_hasPendingStampSave && _activeSticker != null);
     if (!_isDirty && !willStamp && !_hasPendingSave && !_isSaving && _projectId != null) {
       return;
@@ -1510,6 +1525,11 @@ class EditorController extends ChangeNotifier {
         _drawActiveSticker(canvas, size, _activeSticker!);
       }
     };
+    controller.activeLayer.addListener(() {
+      if (_activeSticker != null && _canvases.indexOf(controller) == _currentIndex) {
+        stampActiveSticker();
+      }
+    });
     controller.addListener(() {
       markDirty();
     });
@@ -2280,7 +2300,7 @@ class EditorController extends ChangeNotifier {
     final layersJson = await source.getLayersConfig();
     duplicated.layers.clear();
     for (final lData in layersJson) {
-      final lMap = lData as Map<String, dynamic>;
+      final lMap = lData;
       final historyData = lMap['history'] as List<dynamic>;
       final List<PaintContent> history = [];
       for (final hData in historyData) {
@@ -2659,6 +2679,16 @@ class EditorController extends ChangeNotifier {
       drawingController.refresh();
       notifyListeners();
     } else if (_activeStickerHistoryIndex == 0) {
+      if (_selectionSourceTargetId != null && _selectionSourceLayer != null) {
+        if (_selectionSourceLayer!.currentIndex > _selectionSourceLayer!.sessionStartIndex) {
+          final lastItem = _selectionSourceLayer!.history[_selectionSourceLayer!.currentIndex - 1];
+          if (lastItem is DeleteContent && lastItem.targetId == _selectionSourceTargetId) {
+            _selectionSourceLayer!.currentIndex--;
+          }
+        }
+        _selectionSourceTargetId = null;
+        _selectionSourceLayer = null;
+      }
       _isUndoingActiveStickerPlacement = true;
       _undoneSticker = _activeSticker;
       _undoneStickerHistory = List.from(_activeStickerHistory);
@@ -2760,6 +2790,8 @@ class EditorController extends ChangeNotifier {
   // Stamping / confirm active stickers
   void stampActiveSticker() {
     if (_activeSticker == null) return;
+    _selectionSourceTargetId = null;
+    _selectionSourceLayer = null;
     if (!_hasShownStickerHint) {
       _hasShownStickerHint = true;
       _persistStickerHintShown();
@@ -3054,6 +3086,298 @@ class EditorController extends ChangeNotifier {
     }
   }
 
+  // ==========================================
+  // SELECT TOOL IMPLEMENTATION (Layer-Aware)
+  // ==========================================
+
+  void onSelectPointerDown(Offset canvasPoint) {
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
+    _selectStartPoint = canvasPoint;
+    _selectMarqueeRect = null;
+    notifyListeners();
+  }
+
+  void onSelectPointerMove(Offset canvasPoint) {
+    if (_selectStartPoint == null) return;
+    final double dist = (canvasPoint - _selectStartPoint!).distance;
+    if (dist >= 35.0) {
+      _selectMarqueeRect = Rect.fromPoints(_selectStartPoint!, canvasPoint);
+      notifyListeners();
+    }
+  }
+
+  void onSelectPointerUp(Offset canvasPoint, BuildContext context) {
+    if (_selectStartPoint == null) return;
+    final Offset start = _selectStartPoint!;
+    final Rect? marquee = _selectMarqueeRect;
+    _selectStartPoint = null;
+    _selectMarqueeRect = null;
+
+    // 1. Prioritize single-element tap at touch-down point
+    final bool tappedAtStart = selectElementAt(start, context);
+    if (tappedAtStart) {
+      notifyListeners();
+      return;
+    }
+
+    // 2. Prioritize single-element tap at touch-up point (handles finger roll/jitter)
+    final bool tappedAtEnd = selectElementAt(canvasPoint, context);
+    if (tappedAtEnd) {
+      notifyListeners();
+      return;
+    }
+
+    // 3. Only if neither point hit an element, and user made a deliberate marquee box:
+    if (marquee != null && marquee.width >= 35.0 && marquee.height >= 35.0) {
+      selectElementsInRect(marquee, context);
+    }
+    notifyListeners();
+  }
+
+  /// Selects an element at the given [tapPos].
+  /// Selects element at [tapPos] on the currently active layer.
+  /// If the tapped element belongs to another layer, notifies the user without auto-switching layers.
+  bool selectElementAt(Offset tapPos, BuildContext context) {
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
+
+    final activeLayer = drawingController.activeLayer.value;
+
+    // 1. If active layer is locked, show notification and do NOT select
+    if (activeLayer == null || activeLayer.isLocked) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('layerLocked')),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return false;
+    }
+
+    // 2. Active layer is unlocked: inspect ONLY active layer in reverse order (topmost first)
+    final history = activeLayer.getEffectiveHistory();
+    for (int i = history.length - 1; i >= 0; i--) {
+      final item = history[i];
+      if (item is Eraser || item is EraserHole || item is EmptyContent || item is StrokeRecolorContent || item is ShapeFillContent || item is DeleteContent) continue;
+      if (hitTestPaintContent(item, tapPos)) {
+        _liftElementToSticker(activeLayer, item);
+        return true;
+      }
+    }
+
+    // 3. Not hit on active layer: check other visible layers (topmost first) to inform the user
+    final reversedLayers = drawingController.layers.reversed.toList();
+    for (final layer in reversedLayers) {
+      if (layer == activeLayer || !layer.isVisible || layer.isGuide || layer.name == 'Video Layer' || layer.id.startsWith('video_layer_')) continue;
+      final otherHistory = layer.getEffectiveHistory();
+      for (int i = otherHistory.length - 1; i >= 0; i--) {
+        final item = otherHistory[i];
+        if (item is Eraser || item is EraserHole || item is EmptyContent || item is StrokeRecolorContent || item is ShapeFillContent || item is DeleteContent) continue;
+        if (hitTestPaintContent(item, tapPos)) {
+          final layerName = getLocalizedLayerName(context, layer.name);
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.tr('elementOnOtherLayer', {'layer': layerName})),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return false;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Selects elements inside or intersecting [marqueeRect] on the currently active layer.
+  bool selectElementsInRect(Rect marqueeRect, BuildContext context) {
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
+
+    final activeLayer = drawingController.activeLayer.value;
+    if (activeLayer == null || !activeLayer.isVisible || activeLayer.isLocked) {
+      if (activeLayer?.isLocked == true) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('layerLocked')),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return false;
+    }
+
+    final history = activeLayer.getEffectiveHistory();
+    final List<PaintContent> hitItems = [];
+    for (final item in history) {
+      if (item is Eraser || item is EraserHole || item is EmptyContent || item is StrokeRecolorContent || item is ShapeFillContent || item is DeleteContent) continue;
+      if (isContentInOrIntersectsRect(item, marqueeRect)) {
+        hitItems.add(item);
+      }
+    }
+
+    if (hitItems.isEmpty) {
+      // Check other visible layers to notify user if items on another layer were enclosed
+      final reversedLayers = drawingController.layers.reversed.toList();
+      for (final layer in reversedLayers) {
+        if (layer == activeLayer || !layer.isVisible || layer.isGuide || layer.name == 'Video Layer' || layer.id.startsWith('video_layer_')) continue;
+        final otherHistory = layer.getEffectiveHistory();
+        for (final item in otherHistory) {
+          if (item is Eraser || item is EraserHole || item is EmptyContent || item is StrokeRecolorContent || item is ShapeFillContent || item is DeleteContent) continue;
+          if (isContentInOrIntersectsRect(item, marqueeRect)) {
+            final layerName = getLocalizedLayerName(context, layer.name);
+            ScaffoldMessenger.of(context).clearSnackBars();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.tr('elementOnOtherLayer', {'layer': layerName})),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            return false;
+          }
+        }
+      }
+      return false;
+    }
+
+    if (hitItems.length == 1) {
+      _liftElementToSticker(activeLayer, hitItems.first);
+      return true;
+    }
+
+    // Multiple items: group together
+    Rect? combinedBounds;
+    for (final item in hitItems) {
+      final b = getShapeBounds(item);
+      combinedBounds = combinedBounds == null ? b : combinedBounds.expandToInclude(b);
+    }
+    if (combinedBounds == null || combinedBounds.isEmpty) return false;
+
+    for (final item in hitItems) {
+      drawingController.addContent(DeleteContent(targetId: item.id));
+    }
+
+    final group = GroupContent(
+      children: hitItems.map((e) => e.copy()).toList(),
+      boundsOffset: -combinedBounds.topLeft,
+    );
+
+    _activeSticker = ActiveShapeSticker(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: group,
+      size: Size(math.max(combinedBounds.width, 10.0), math.max(combinedBounds.height, 10.0)),
+      offset: combinedBounds.center,
+      scale: 1.0,
+      rotation: 0.0,
+      isLassoSelection: false,
+    );
+
+    _initActiveStickerHistory(_activeSticker!);
+    recordActiveStickerState();
+    updateSnapshot();
+    drawingController.refresh();
+    notifyListeners();
+    return true;
+  }
+
+  void _liftElementToSticker(LayerData layer, PaintContent item) {
+    final bounds = getShapeBounds(item);
+    final effectiveHistory = layer.getEffectiveHistory();
+    final int itemIndex = effectiveHistory.indexOf(item);
+    final List<PaintContent> associatedErasers = [];
+    final List<PaintContent> erasersToDelete = [];
+
+    if (itemIndex >= 0) {
+      for (int j = itemIndex + 1; j < effectiveHistory.length; j++) {
+        final e = effectiveHistory[j];
+        if (e is Eraser || e is EraserHole) {
+          final eBounds = getShapeBounds(e);
+          if (eBounds.overlaps(bounds.inflate(10.0))) {
+            associatedErasers.add(e.copy());
+            erasersToDelete.add(e);
+          }
+        }
+      }
+    }
+
+    for (final e in erasersToDelete) {
+      drawingController.addContent(DeleteContent(targetId: e.id));
+    }
+    drawingController.addContent(DeleteContent(targetId: item.id));
+
+    _selectionSourceTargetId = item.id;
+    _selectionSourceLayer = layer;
+
+    if (item is ShapeStickerContent) {
+      _activeSticker = ActiveShapeSticker(
+        id: item.id,
+        content: associatedErasers.isNotEmpty
+            ? GroupContent(children: [item.child, ...associatedErasers])
+            : item.child,
+        offset: item.offset,
+        scale: item.scale,
+        rotation: item.rotation,
+        size: item.size,
+        flipX: item.flipX,
+        flipY: item.flipY,
+        topLeftOffset: item.topLeftOffset,
+        topRightOffset: item.topRightOffset,
+        bottomRightOffset: item.bottomRightOffset,
+        bottomLeftOffset: item.bottomLeftOffset,
+        isLassoSelection: false,
+      );
+    } else if (item is TextContent && associatedErasers.isEmpty) {
+      _activeSticker = ActiveTextSticker(
+        id: item.id,
+        text: item.text,
+        color: item.paint.color,
+        fontSize: item.fontSize,
+        offset: item.offset,
+        scale: item.scale,
+        rotation: item.rotation,
+        fontFamily: item.fontFamily,
+        isBold: item.isBold,
+        isItalic: item.isItalic,
+        isUnderline: item.isUnderline,
+        textAlign: item.textAlign,
+        opacity: item.opacity,
+        flipX: item.flipX,
+      );
+    } else {
+      final double width = math.max(bounds.width, 10.0);
+      final double height = math.max(bounds.height, 10.0);
+
+      final PaintContent contentToTransform = associatedErasers.isNotEmpty
+          ? GroupContent(children: [item, ...associatedErasers])
+          : item;
+
+      _activeSticker = ActiveShapeSticker(
+        id: item.id,
+        content: OffsetContent(contentToTransform, -bounds.topLeft),
+        size: Size(width, height),
+        offset: bounds.center,
+        scale: 1.0,
+        rotation: 0.0,
+        flipX: false,
+        flipY: false,
+        isLassoSelection: false,
+      );
+    }
+
+    _initActiveStickerHistory(_activeSticker!);
+    recordActiveStickerState();
+    updateSnapshot();
+    drawingController.refresh();
+    notifyListeners();
+  }
+
   void addTextSticker(String text, Offset position) {
     if (drawingController.isCurrentLayerLocked) return;
     if (_activeSticker != null) {
@@ -3135,6 +3459,7 @@ class EditorController extends ChangeNotifier {
   bool Function(PaintContent) _createInterceptDraw(DrawingController controller) {
     return (content) {
       if (controller.isCurrentLayerLocked) return false;
+      if (_activeCategory == 'Select') return true;
       if (_activeSticker != null) {
         stampActiveSticker();
       }
@@ -3190,7 +3515,7 @@ class EditorController extends ChangeNotifier {
       } else if (content is FreehandLine || content is SmoothLine) {
         if (!_enableStickers) return false;
         final List<Offset> points = content is FreehandLine
-            ? (content as FreehandLine).points ?? const []
+            ? content.points ?? const []
             : (content as SmoothLine).points;
         if (points.isEmpty) return false;
 

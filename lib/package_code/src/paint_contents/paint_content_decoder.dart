@@ -18,6 +18,7 @@ import 'blur.dart';
 import 'smudge.dart';
 import 'image.dart';
 import 'empty_content.dart';
+import 'delete_content.dart';
 import '../ruler/mirror_content.dart';
 import '../ruler/radial_content.dart';
 import 'extra_shapes.dart';
@@ -34,6 +35,17 @@ import 'preset_strokes.dart';
 import 'stroke_styles.dart';
 
 PaintContent? decodePaintContent(String type, Map<String, dynamic> data, [List<PaintContent>? history]) {
+  final content = _decodeRawPaintContent(type, data, history);
+  if (content != null) {
+    final dynamic idVal = data['id'];
+    if (idVal is String && idVal.isNotEmpty) {
+      content.id = idVal;
+    }
+  }
+  return content;
+}
+
+PaintContent? _decodeRawPaintContent(String type, Map<String, dynamic> data, [List<PaintContent>? history]) {
   switch (type) {
     case 'SimpleLine':
       // Backward compatibility: check if it's the old freehand SimpleLine
@@ -79,6 +91,8 @@ PaintContent? decodePaintContent(String type, Map<String, dynamic> data, [List<P
       return SmudgeContent.fromJson(data);
     case 'EmptyContent':
       return EmptyContent.fromJson(data);
+    case 'DeleteContent':
+      return DeleteContent.fromJson(data);
     case 'Mirror':
     case 'MirrorContent':
       return MirrorContent.fromJson(data);

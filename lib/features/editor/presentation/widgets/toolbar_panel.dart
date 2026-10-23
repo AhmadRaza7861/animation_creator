@@ -81,7 +81,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
 
     if (activeSticker is ActiveTextSticker) {
       return _buildTextStickerToolbar(activeSticker, controller);
-    } else if (activeSticker is ActiveShapeSticker && activeSticker.isLasso) {
+    } else if (activeSticker is ActiveShapeSticker && (activeSticker.isLasso || controller.activeCategory == 'Select')) {
       return _buildLassoStickerToolbar(activeSticker, controller);
     } else if (controller.currentSubMenu == 'brush') {
       return _buildBrushSubMenu(controller);
@@ -319,6 +319,19 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         strokeWidth: controller.globalStrokeWidth,
                       );
                       controller.activeCategory = 'Paint';
+                    },
+                  ),
+
+                  _bottomToolbarCategoryItem(
+                    label: context.tr('select'),
+                    icon: Icons.touch_app_rounded,
+                    isSelected: controller.activeCategory == 'Select',
+                    onTap: () {
+                      if (controller.activeSticker != null) {
+                        controller.stampActiveSticker();
+                      }
+                      controller.activeCategory = 'Select';
+                      controller.drawingController.setPaintContent(EmptyContent());
                     },
                   ),
 
