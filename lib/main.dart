@@ -19,18 +19,18 @@ import 'utils/theme/customThems/app_bar_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (Firebase.apps.isEmpty) {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint(
+      'Firebase.initializeApp with options failed: $e, attempting native fallback...',
+    );
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } catch (e) {
-      debugPrint('Firebase.initializeApp with options failed: $e, attempting native fallback...');
-      try {
-        await Firebase.initializeApp();
-      } catch (e2) {
-        debugPrint('Firebase.initializeApp native fallback error: $e2');
-      }
+      await Firebase.initializeApp();
+    } catch (e2) {
+      debugPrint('Firebase.initializeApp native fallback error: $e2');
     }
   }
   await LanguageService.loadSavedLocale();
@@ -56,16 +56,21 @@ void main() async {
     }
   };
 
-  final clarityConfig = ClarityConfig(
-    projectId: 'yzh1itpfc3',
-    logLevel: LogLevel.None,
+  final String clarityProjectId = (!kIsWeb && Platform.isAndroid)
+      ? "z1h0d12027"
+      : "yzh1itpfc3";
+
+  final config = ClarityConfig(
+    projectId: clarityProjectId,
+    logLevel: LogLevel
+        .None, // Note: Use "LogLevel.Verbose" value while testing to debug initialization issues.
   );
 
   runApp(
     ProviderScope(
       child: ClarityWidget(
-        clarityConfig: clarityConfig,
         app: MyApp(repository: ProjectRepository()),
+        clarityConfig: config,
       ),
     ),
   );
@@ -101,10 +106,7 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       navigatorKey: NavigationService.navigatorKey,
-      navigatorObservers: [
-        routeObserver,
-        AnalyticsService.instance.observer,
-      ],
+      navigatorObservers: [routeObserver, AnalyticsService.instance.observer],
       themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
       builder: (context, child) {

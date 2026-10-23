@@ -460,6 +460,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       //backgroundColor: AppColors.background,
@@ -477,11 +479,18 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         elevation: 0,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: isTablet ? 760 : double.infinity),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 36.0 : 20.0,
+                vertical: isTablet ? 20.0 : 8.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // 1. Project Name Field
               Text(
                 StringConstants.project_name,
@@ -996,23 +1005,23 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                   _openCustomBackgroundColorPicker();
                 },
                 child: Container(
-                  height: 116,
+                  height: isTablet ? 260 : 116,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color:ColorConstants.background_color,
-                    borderRadius: BorderRadius.circular(21),
+                    color: ColorConstants.background_color,
+                    borderRadius: BorderRadius.circular(isTablet ? 24 : 21),
                     border: Border.all(color: ColorConstants.border_color),
                     boxShadow: [
                       BoxShadow(
                         color: ColorConstants.shodow.withValues(alpha: 0.05),
-                        offset: Offset(2, 2),
+                        offset: const Offset(2, 2),
                         spreadRadius: 0,
-                        blurRadius: 13
-                      )
-                    ]
+                        blurRadius: 13,
+                      ),
+                    ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(isTablet ? 18 : 15),
                     child: Stack(
                       children: [
                         // // Solid color
@@ -1042,10 +1051,18 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (isTablet) ...[
+                                Icon(
+                                  Icons.add_photo_alternate_outlined,
+                                  size: 34,
+                                  color: ColorConstants.subTextColor.withValues(alpha: 0.7),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
                               Text(
                                 StringConstants.add,
-                                style: const TextStyle(
-                                  fontSize: 15,
+                                style: TextStyle(
+                                  fontSize: isTablet ? 16 : 15,
                                   fontWeight: FontWeight.w700,
                                   color: ColorConstants.subTextColor,
                                 ),
@@ -1070,6 +1087,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

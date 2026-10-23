@@ -121,6 +121,12 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final int crossAxisCount = isTablet ? (screenWidth >= 900 ? 4 : 3) : 2;
+    final double childAspectRatio = isTablet ? 0.84 : 0.78;
+    final double horizontalPadding = isTablet ? 24.0 : 16.0;
+
     final filteredTemplates = _getFilteredTemplates();
     final featuredTemplate = _allTemplates.isNotEmpty
         ? _allTemplates.firstWhere((t) => t.id == 'bouncing_ball', orElse: () => _allTemplates.first)
@@ -201,7 +207,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                   if (!_isSearching && featuredTemplate != null)
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                        padding: EdgeInsets.fromLTRB(horizontalPadding, 12, horizontalPadding, 14),
                         child: _buildFeaturedSpotlightCard(featuredTemplate),
                       ),
                     ),
@@ -209,7 +215,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                   // 2. Category & Difficulty Filter Tabs
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -314,13 +320,13 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                     )
                   else
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 90),
                       sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          childAspectRatio: 0.78,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: isTablet ? 18 : 14,
+                          mainAxisSpacing: isTablet ? 18 : 14,
+                          childAspectRatio: childAspectRatio,
                         ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {

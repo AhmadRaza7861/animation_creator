@@ -1,6 +1,9 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_language.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -16,8 +19,11 @@ class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   void _shareApp(BuildContext context) {
-    const String shareText =
-        '🎨 Check out Clipax - Animation Creator! Draw frame-by-frame animations, use 110+ brushes, stickers, and export high-quality MP4/GIFs: https://play.google.com/store/apps/details?id=com.clipax.animationcreator';
+    final String storeUrl = (!kIsWeb && Platform.isIOS)
+        ? 'https://apps.apple.com/app/id6824198526'
+        : 'https://play.google.com/store/apps/details?id=com.flipbook.draw.animation';
+    final String shareText =
+        '🎨 Check out Clipax - Animation Creator! Draw frame-by-frame animations, use 110+ brushes, stickers, and export high-quality MP4/GIFs: $storeUrl';
     Share.share(
       shareText,
       subject: 'Clipax Animation Creator',
@@ -113,11 +119,28 @@ class SettingsScreen extends ConsumerWidget {
                 iconColor: const Color(0xFF8B5CF6),
                 title: context.tr('privacyPolicy'),
                 subtitle: context.tr('privacyPolicySubtitle'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
-                  );
+                onTap: () async {
+                  if (!kIsWeb && Platform.isIOS) {
+                    final Uri privacyUri = Uri.parse(
+                      'https://nextgenappsmaker.blogspot.com/p/privacy-policy-nextgen-apps-maker.html',
+                    );
+                    try {
+                      final bool launched = await launchUrl(
+                        privacyUri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                      if (!launched) {
+                        await launchUrl(privacyUri);
+                      }
+                    } catch (e) {
+                      debugPrint('Error launching iOS privacy policy URL: $e');
+                    }
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
+                    );
+                  }
                 },
               ),
               _buildDivider(),

@@ -3401,6 +3401,123 @@ class TutorialProjectBuilder {
         return buildBouncingBallProject();
     }
   }
+
+  /// Scales any tutorial project state from the base coordinate space (360x202.5)
+  /// to the target canvas size (e.g. tablet 820x461.25 or custom device width).
+  static Map<String, dynamic> scaleProjectState(
+    Map<String, dynamic> rawState,
+    Size targetSize,
+  ) {
+    if (targetSize.width <= 0 || targetSize.height <= 0) return rawState;
+    final double scaleX = targetSize.width / canvasW;
+    final double scaleY = targetSize.height / canvasH;
+    if ((scaleX - 1.0).abs() < 0.001 && (scaleY - 1.0).abs() < 0.001) {
+      return rawState;
+    }
+    final double strokeScale = (scaleX + scaleY) / 2.0;
+
+    final state = Map<String, dynamic>.from(rawState);
+    if (state['strokeWidth'] != null) {
+      state['strokeWidth'] = ((state['strokeWidth'] as num).toDouble() * strokeScale).clamp(1.0, 50.0);
+    }
+
+    final rawCanvases = (state['canvases'] as List<dynamic>?) ?? [];
+    final scaledCanvases = <Map<String, dynamic>>[];
+
+    for (final c in rawCanvases) {
+      final cMap = Map<String, dynamic>.from(c as Map<String, dynamic>);
+      cMap['size'] = {'width': targetSize.width, 'height': targetSize.height};
+
+      final rawLayers = (cMap['layers'] as List<dynamic>?) ?? [];
+      final scaledLayers = <Map<String, dynamic>>[];
+
+      for (final l in rawLayers) {
+        final lMap = Map<String, dynamic>.from(l as Map<String, dynamic>);
+        final rawHistory = (lMap['history'] as List<dynamic>?) ?? [];
+        final scaledHistory = <Map<String, dynamic>>[];
+
+        for (final item in rawHistory) {
+          final hMap = Map<String, dynamic>.from(item as Map<String, dynamic>);
+          final type = hMap['type'] as String?;
+
+          // Scale paint strokeWidth
+          if (hMap['paint'] != null) {
+            final paintMap = Map<String, dynamic>.from(hMap['paint'] as Map<String, dynamic>);
+            if (paintMap['strokeWidth'] != null) {
+              paintMap['strokeWidth'] = ((paintMap['strokeWidth'] as num).toDouble() * strokeScale).clamp(1.0, 50.0);
+            }
+            hMap['paint'] = paintMap;
+          }
+
+          if (type == 'StraightLine' || type == 'SimpleLine' || type == 'Rectangle') {
+            if (hMap['startPoint'] != null) {
+              final sp = hMap['startPoint'] as Map<String, dynamic>;
+              hMap['startPoint'] = {
+                'dx': (sp['dx'] as num).toDouble() * scaleX,
+                'dy': (sp['dy'] as num).toDouble() * scaleY,
+              };
+            }
+            if (hMap['endPoint'] != null) {
+              final ep = hMap['endPoint'] as Map<String, dynamic>;
+              hMap['endPoint'] = {
+                'dx': (ep['dx'] as num).toDouble() * scaleX,
+                'dy': (ep['dy'] as num).toDouble() * scaleY,
+              };
+            }
+          } else if (type == 'Circle') {
+            if (hMap['center'] != null) {
+              final c = hMap['center'] as Map<String, dynamic>;
+              hMap['center'] = {
+                'dx': (c['dx'] as num).toDouble() * scaleX,
+                'dy': (c['dy'] as num).toDouble() * scaleY,
+              };
+            }
+            if (hMap['radius'] != null) {
+              hMap['radius'] = (hMap['radius'] as num).toDouble() * scaleX;
+            }
+            if (hMap['startPoint'] != null) {
+              final sp = hMap['startPoint'] as Map<String, dynamic>;
+              hMap['startPoint'] = {
+                'dx': (sp['dx'] as num).toDouble() * scaleX,
+                'dy': (sp['dy'] as num).toDouble() * scaleY,
+              };
+            }
+            if (hMap['endPoint'] != null) {
+              final ep = hMap['endPoint'] as Map<String, dynamic>;
+              hMap['endPoint'] = {
+                'dx': (ep['dx'] as num).toDouble() * scaleX,
+                'dy': (ep['dy'] as num).toDouble() * scaleY,
+              };
+            }
+          } else if (type == 'SmoothLine' || type == 'FreehandLine') {
+            if (hMap['points'] != null) {
+              final pts = (hMap['points'] as List<dynamic>).map((p) {
+                final pt = p as Map<String, dynamic>;
+                return {
+                  'dx': (pt['dx'] as num).toDouble() * scaleX,
+                  'dy': (pt['dy'] as num).toDouble() * scaleY,
+                };
+              }).toList();
+              hMap['points'] = pts;
+            }
+            if (hMap['strokeWidthList'] != null) {
+              final swList = (hMap['strokeWidthList'] as List<dynamic>).map((sw) {
+                return ((sw as num).toDouble() * strokeScale).clamp(1.0, 50.0);
+              }).toList();
+              hMap['strokeWidthList'] = swList;
+            }
+          }
+          scaledHistory.add(hMap);
+        }
+        lMap['history'] = scaledHistory;
+        scaledLayers.add(lMap);
+      }
+      cMap['layers'] = scaledLayers;
+      scaledCanvases.add(cMap);
+    }
+    state['canvases'] = scaledCanvases;
+    return state;
+  }
 }
 
 /// CustomPainter that renders any vector canvas frame accurately
@@ -3418,11 +3535,22 @@ class TutorialVectorPainter extends CustomPainter {
 
     if (canvasData == null) return;
 
-    final double scaleX = size.width / TutorialProjectBuilder.canvasW;
-    final double scaleY = size.height / TutorialProjectBuilder.canvasH;
+    final double refW = (canvasData?['size']?['width'] as num?)?.toDouble() ?? TutorialProjectBuilder.canvasW;
+    final double refH = (canvasData?['size']?['height'] as num?)?.toDouble() ?? TutorialProjectBuilder.canvasH;
+    final double validRefW = refW > 0 ? refW : TutorialProjectBuilder.canvasW;
+    final double validRefH = refH > 0 ? refH : TutorialProjectBuilder.canvasH;
+    final double scale = math.min(
+      size.width / validRefW,
+      size.height / validRefH,
+    );
+    final double actualW = validRefW * scale;
+    final double actualH = validRefH * scale;
+    final double offsetX = (size.width - actualW) / 2.0;
+    final double offsetY = (size.height - actualH) / 2.0;
 
     canvas.save();
-    canvas.scale(scaleX, scaleY);
+    canvas.translate(offsetX, offsetY);
+    canvas.scale(scale, scale);
 
     final layers = canvasData!['layers'] as List<dynamic>? ?? [];
     for (final layer in layers) {

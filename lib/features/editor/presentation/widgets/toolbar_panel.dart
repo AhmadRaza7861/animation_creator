@@ -128,107 +128,116 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  _bottomSubToolItem(
-                    label: context.tr('transform'),
-                    icon: Icons.crop_free_rounded,
-                    isActive: !isPersp,
-                    onTap: () {
-                      controller.setShapeStickerTransformMode(StickerTransformMode.transform);
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  _bottomSubToolItem(
-                    label: context.tr('perspective'),
-                    icon: Icons.filter_tilt_shift_rounded,
-                    isActive: isPersp,
-                    onTap: () {
-                      controller.setShapeStickerTransformMode(StickerTransformMode.perspective);
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  _bottomSubToolItem(
-                    label: context.tr('flipH'),
-                    icon: Icons.flip_rounded,
-                    isActive: sticker.flipX,
-                    onTap: () => controller.flipActiveShapeStickerH(),
-                  ),
-                  const SizedBox(width: 4),
-                  _bottomSubToolItem(
-                    label: context.tr('flipV'),
-                    icon: Icons.swap_vert_rounded,
-                    isActive: sticker.flipY,
-                    onTap: () => controller.flipActiveShapeStickerV(),
-                  ),
-                  const SizedBox(width: 4),
-                  _bottomSubToolItem(
-                    label: context.tr('copy'),
-                    icon: Icons.copy_rounded,
-                    isActive: false,
-                    onTap: () {
-                      controller.copyActiveLassoSelection();
-                      Fluttertoast.showToast(
-                        msg: context.tr('selectionCopied'),
-                        backgroundColor: const Color(0xFFFF9318),
-                        textColor: Colors.white,
-                        toastLength: Toast.LENGTH_SHORT,
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  _bottomSubToolItem(
-                    label: context.tr('paste'),
-                    icon: Icons.paste_rounded,
-                    isActive: false,
-                    onTap: canPaste
-                        ? () async {
-                            final ok = await controller.pasteLassoSelection();
-                            if (ok) {
-                              Fluttertoast.showToast(
-                                msg: context.tr('selectionPasted'),
-                                backgroundColor: const Color(0xFFFF9318),
-                                textColor: Colors.white,
-                                toastLength: Toast.LENGTH_SHORT,
-                              );
-                            }
-                          }
-                        : () {
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: isTablet ? 0 : 8),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: Row(
+                      mainAxisAlignment: isTablet ? MainAxisAlignment.spaceEvenly : MainAxisAlignment.start,
+                      children: [
+                        _bottomSubToolItem(
+                          label: context.tr('transform'),
+                          icon: Icons.crop_free_rounded,
+                          isActive: !isPersp,
+                          onTap: () {
+                            controller.setShapeStickerTransformMode(StickerTransformMode.transform);
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
+                          label: context.tr('perspective'),
+                          icon: Icons.filter_tilt_shift_rounded,
+                          isActive: isPersp,
+                          onTap: () {
+                            controller.setShapeStickerTransformMode(StickerTransformMode.perspective);
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
+                          label: context.tr('flipH'),
+                          icon: Icons.flip_rounded,
+                          isActive: sticker.flipX,
+                          onTap: () => controller.flipActiveShapeStickerH(),
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
+                          label: context.tr('flipV'),
+                          icon: Icons.swap_vert_rounded,
+                          isActive: sticker.flipY,
+                          onTap: () => controller.flipActiveShapeStickerV(),
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
+                          label: context.tr('copy'),
+                          icon: Icons.copy_rounded,
+                          isActive: false,
+                          onTap: () {
+                            controller.copyActiveLassoSelection();
                             Fluttertoast.showToast(
-                              msg: context.tr('noSelectionInClipboard'),
-                              backgroundColor: Colors.grey.shade700,
+                              msg: context.tr('selectionCopied'),
+                              backgroundColor: const Color(0xFFFF9318),
                               textColor: Colors.white,
                               toastLength: Toast.LENGTH_SHORT,
                             );
                           },
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
+                          label: context.tr('paste'),
+                          icon: Icons.paste_rounded,
+                          isActive: false,
+                          onTap: canPaste
+                              ? () async {
+                                  final ok = await controller.pasteLassoSelection();
+                                  if (ok && context.mounted) {
+                                    Fluttertoast.showToast(
+                                      msg: context.tr('selectionPasted'),
+                                      backgroundColor: const Color(0xFFFF9318),
+                                      textColor: Colors.white,
+                                      toastLength: Toast.LENGTH_SHORT,
+                                    );
+                                  }
+                                }
+                              : () {
+                                  Fluttertoast.showToast(
+                                    msg: context.tr('noSelectionInClipboard'),
+                                    backgroundColor: Colors.grey.shade700,
+                                    textColor: Colors.white,
+                                    toastLength: Toast.LENGTH_SHORT,
+                                  );
+                                },
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
+                          label: context.tr('duplicate'),
+                          icon: Icons.control_point_duplicate_rounded,
+                          isActive: false,
+                          onTap: () => controller.duplicateActiveShapeSticker(),
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
+                          label: context.tr('reset'),
+                          icon: Icons.refresh_rounded,
+                          isActive: false,
+                          onTap: () => controller.resetActiveShapeSticker(),
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
+                          label: context.tr('delete'),
+                          icon: Icons.delete_outline_rounded,
+                          isActive: false,
+                          onTap: () => controller.deleteActiveSticker(),
+                        ),
+                        if (!isTablet) const SizedBox(width: 12),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 4),
-                  _bottomSubToolItem(
-                    label: context.tr('duplicate'),
-                    icon: Icons.control_point_duplicate_rounded,
-                    isActive: false,
-                    onTap: () => controller.duplicateActiveShapeSticker(),
-                  ),
-                  const SizedBox(width: 4),
-                  _bottomSubToolItem(
-                    label: context.tr('reset'),
-                    icon: Icons.refresh_rounded,
-                    isActive: false,
-                    onTap: () => controller.resetActiveShapeSticker(),
-                  ),
-                  const SizedBox(width: 4),
-                  _bottomSubToolItem(
-                    label: context.tr('delete'),
-                    icon: Icons.delete_outline_rounded,
-                    isActive: false,
-                    onTap: () => controller.deleteActiveSticker(),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -259,22 +268,28 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             margin: const EdgeInsets.symmetric(horizontal: 8),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              key: const PageStorageKey('bottom_toolbar_categories_scroll'),
-              controller: _toolbarScrollController,
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _bottomToolbarCategoryItem(
-                    label: context.tr('brush'),
-                    svgAsset: AssetConstants.brush_icon,
-                    isSelected: controller.activeCategory == 'Brush',
-                    onTap: () {
-                      controller.activeCategory = 'Brush';
-                      controller.drawingController.activeBrushPresetId = null;
-                      controller.drawingController.setPaintContent(
-                        FreehandLine(),
-                      );
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+                return SingleChildScrollView(
+                  key: const PageStorageKey('bottom_toolbar_categories_scroll'),
+                  controller: _toolbarScrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: Row(
+                      mainAxisAlignment: isTablet ? MainAxisAlignment.spaceEvenly : MainAxisAlignment.start,
+                      children: [
+                        _bottomToolbarCategoryItem(
+                          label: context.tr('brush'),
+                          svgAsset: AssetConstants.brush_icon,
+                          isSelected: controller.activeCategory == 'Brush',
+                          onTap: () {
+                            controller.activeCategory = 'Brush';
+                            controller.drawingController.activeBrushPresetId = null;
+                            controller.drawingController.setPaintContent(
+                              FreehandLine(),
+                            );
                       controller.drawingController.setStyle(
                         strokeWidth: controller.globalStrokeWidth,
                       );
@@ -418,9 +433,12 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                 ],
               ),
             ),
-          ),
-        ],
+          );
+        },
       ),
+    ),
+  ],
+),
     );
   }
 
@@ -516,72 +534,81 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  _bottomSubToolItem(
-                    label: context.tr('brush'),
-                    icon: Icons.brush_rounded,
-                    isActive: controller.selectedSubTool == 'brush',
-                    onTap: () {
-                      controller.selectedSubTool = 'brush';
-                      controller.drawingController.setPaintContent(SmoothLine());
-                      controller.drawingController.setStyle(
-                        strokeWidth: controller.globalStrokeWidth,
-                      );
-                      BrushPresetPanel.show(
-                        context,
-                        controller.drawingController,
-                      );
-                    },
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: isTablet ? 0 : 4),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: Row(
+                      mainAxisAlignment: isTablet ? MainAxisAlignment.spaceEvenly : MainAxisAlignment.start,
+                      children: [
+                        _bottomSubToolItem(
+                          label: context.tr('brush'),
+                          icon: Icons.brush_rounded,
+                          isActive: controller.selectedSubTool == 'brush',
+                          onTap: () {
+                            controller.selectedSubTool = 'brush';
+                            controller.drawingController.setPaintContent(SmoothLine());
+                            controller.drawingController.setStyle(
+                              strokeWidth: controller.globalStrokeWidth,
+                            );
+                            BrushPresetPanel.show(
+                              context,
+                              controller.drawingController,
+                            );
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('pen'),
+                          icon: Icons.edit_rounded,
+                          isActive: controller.selectedSubTool == 'pen',
+                          onTap: () {
+                            controller.selectedSubTool = 'pen';
+                            controller.drawingController.setPaintContent(
+                              FreehandLine(),
+                            );
+                            controller.drawingController.setStyle(
+                              strokeWidth: controller.globalStrokeWidth,
+                            );
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('pencil'),
+                          icon: Icons.create_rounded,
+                          isActive: controller.selectedSubTool == 'pencil',
+                          onTap: () {
+                            controller.selectedSubTool = 'pencil';
+                            controller.drawingController.setPaintContent(
+                              FreehandLine(),
+                            );
+                            controller.drawingController.setStyle(
+                              strokeWidth: controller.globalStrokeWidth,
+                            );
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('line'),
+                          icon: Icons.horizontal_rule_rounded,
+                          isActive: controller.selectedSubTool == 'line',
+                          onTap: () {
+                            controller.selectedSubTool = 'line';
+                            controller.drawingController.setPaintContent(SimpleLine());
+                            controller.drawingController.setStyle(
+                              strokeWidth: controller.globalStrokeWidth,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('pen'),
-                    icon: Icons.edit_rounded,
-                    isActive: controller.selectedSubTool == 'pen',
-                    onTap: () {
-                      controller.selectedSubTool = 'pen';
-                      controller.drawingController.setPaintContent(
-                        FreehandLine(),
-                      );
-                      controller.drawingController.setStyle(
-                        strokeWidth: controller.globalStrokeWidth,
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('pencil'),
-                    icon: Icons.create_rounded,
-                    isActive: controller.selectedSubTool == 'pencil',
-                    onTap: () {
-                      controller.selectedSubTool = 'pencil';
-                      controller.drawingController.setPaintContent(
-                        FreehandLine(),
-                      );
-                      controller.drawingController.setStyle(
-                        strokeWidth: controller.globalStrokeWidth,
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('line'),
-                    icon: Icons.horizontal_rule_rounded,
-                    isActive: controller.selectedSubTool == 'line',
-                    onTap: () {
-                      controller.selectedSubTool = 'line';
-                      controller.drawingController.setPaintContent(SimpleLine());
-                      controller.drawingController.setStyle(
-                        strokeWidth: controller.globalStrokeWidth,
-                      );
-                    },
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -619,57 +646,66 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  _bottomSubToolItem(
-                    label: context.tr('heart'),
-                    svgAsset: AssetConstants.heart,
-                    isActive: controller.selectedShape == 'heart',
-                    onTap: () {
-                      controller.selectShape('heart');
-                    },
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: isTablet ? 0 : 4),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: Row(
+                      mainAxisAlignment: isTablet ? MainAxisAlignment.spaceEvenly : MainAxisAlignment.start,
+                      children: [
+                        _bottomSubToolItem(
+                          label: context.tr('heart'),
+                          svgAsset: AssetConstants.heart,
+                          isActive: controller.selectedShape == 'heart',
+                          onTap: () {
+                            controller.selectShape('heart');
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('circle'),
+                          svgAsset: AssetConstants.circle,
+                          isActive: controller.selectedShape == 'circle',
+                          onTap: () {
+                            controller.selectShape('circle');
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('square'),
+                          svgAsset: AssetConstants.square,
+                          isActive: controller.selectedShape == 'square',
+                          onTap: () {
+                            controller.selectShape('square');
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('triangle'),
+                          svgAsset: AssetConstants.triangle,
+                          isActive: controller.selectedShape == 'triangle',
+                          onTap: () {
+                            controller.selectShape('triangle');
+                          },
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('line'),
+                          svgAsset: AssetConstants.line_icon,
+                          isActive: controller.selectedShape == 'line',
+                          onTap: () {
+                            controller.selectShape('line');
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('circle'),
-                    svgAsset: AssetConstants.circle,
-                    isActive: controller.selectedShape == 'circle',
-                    onTap: () {
-                      controller.selectShape('circle');
-                    },
-                  ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('square'),
-                    svgAsset: AssetConstants.square,
-                    isActive: controller.selectedShape == 'square',
-                    onTap: () {
-                      controller.selectShape('square');
-                    },
-                  ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('triangle'),
-                    svgAsset: AssetConstants.triangle,
-                    isActive: controller.selectedShape == 'triangle',
-                    onTap: () {
-                      controller.selectShape('triangle');
-                    },
-                  ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('line'),
-                    svgAsset: AssetConstants.line_icon,
-                    isActive: controller.selectedShape == 'line',
-                    onTap: () {
-                      controller.selectShape('line');
-                    },
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -764,47 +800,56 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  _bottomSubToolItem(
-                    label: context.tr('editText'),
-                    icon: Icons.edit_rounded,
-                    isActive: false,
-                    onTap: () => _editTextStickerContent(sticker, controller),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: isTablet ? 0 : 4),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: Row(
+                      mainAxisAlignment: isTablet ? MainAxisAlignment.spaceEvenly : MainAxisAlignment.start,
+                      children: [
+                        _bottomSubToolItem(
+                          label: context.tr('editText'),
+                          icon: Icons.edit_rounded,
+                          isActive: false,
+                          onTap: () => _editTextStickerContent(sticker, controller),
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('fonts'),
+                          icon: Icons.font_download_rounded,
+                          isActive: false,
+                          onTap: () => _openFontSelectionScreen(sticker, controller),
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('format'),
+                          icon: Icons.format_size_rounded,
+                          isActive: false,
+                          onTap: () => _showSizeOpacitySheet(sticker, controller),
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('flipH'),
+                          icon: Icons.flip_rounded,
+                          isActive: sticker.flipX,
+                          onTap: () => controller.flipActiveTextStickerH(),
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('delete'),
+                          icon: Icons.delete_outline_rounded,
+                          isActive: false,
+                          onTap: () => controller.deleteActiveSticker(),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('fonts'),
-                    icon: Icons.font_download_rounded,
-                    isActive: false,
-                    onTap: () => _openFontSelectionScreen(sticker, controller),
-                  ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('format'),
-                    icon: Icons.format_size_rounded,
-                    isActive: false,
-                    onTap: () => _showSizeOpacitySheet(sticker, controller),
-                  ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('flipH'),
-                    icon: Icons.flip_rounded,
-                    isActive: sticker.flipX,
-                    onTap: () => controller.flipActiveTextStickerH(),
-                  ),
-                  const SizedBox(width: 2),
-                  _bottomSubToolItem(
-                    label: context.tr('delete'),
-                    icon: Icons.delete_outline_rounded,
-                    isActive: false,
-                    onTap: () => controller.deleteActiveSticker(),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],

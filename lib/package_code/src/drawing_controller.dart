@@ -23,6 +23,10 @@ import 'paint_contents/shape_sticker.dart';
 import 'paint_contents/image.dart';
 import 'ruler/ruler_config.dart';
 import 'ruler/mirror_content.dart';
+import 'paint_contents/circle.dart';
+import 'paint_contents/rectangle.dart';
+import 'paint_contents/straight_line.dart';
+import 'draw_path/draw_path.dart';
 
 /// 绘制配置类
 ///
@@ -810,6 +814,90 @@ class DrawingController extends ChangeNotifier {
       style: drawConfig.value.style,
       size: null, // Wipe the size clean!
     );
+  }
+
+  /// Scales all content across all layers by scaleX and scaleY.
+  /// Used when adapting coordinate spaces across different screen geometries.
+  void scaleContent(double scaleX, double scaleY) {
+    if (scaleX <= 0 || scaleY <= 0) return;
+    final double strokeScale = (scaleX + scaleY) / 2.0;
+    for (final layer in layers) {
+      for (final content in layer.history) {
+        _scalePaintContent(content, scaleX, scaleY, strokeScale);
+      }
+    }
+  }
+
+  static void _scalePaintContent(
+    PaintContent content,
+    double scaleX,
+    double scaleY,
+    double strokeScale,
+  ) {
+    if (content is StraightLine) {
+      if (content.startPoint != null) {
+        content.startPoint = Offset(content.startPoint!.dx * scaleX, content.startPoint!.dy * scaleY);
+      }
+      if (content.endPoint != null) {
+        content.endPoint = Offset(content.endPoint!.dx * scaleX, content.endPoint!.dy * scaleY);
+      }
+      content.paint = content.paint.copyWith(
+        strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
+      );
+    } else if (content is Circle) {
+      content.center = Offset(content.center.dx * scaleX, content.center.dy * scaleY);
+      content.radius = content.radius * scaleX;
+      content.startPoint = Offset(content.startPoint.dx * scaleX, content.startPoint.dy * scaleY);
+      content.endPoint = Offset(content.endPoint.dx * scaleX, content.endPoint.dy * scaleY);
+      content.paint = content.paint.copyWith(
+        strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
+      );
+    } else if (content is SmoothLine) {
+      content.points = content.points.map((p) => Offset(p.dx * scaleX, p.dy * scaleY)).toList();
+      content.strokeWidthList = content.strokeWidthList
+          .map((sw) => (sw * strokeScale).clamp(1.0, 50.0))
+          .toList();
+      content.paint = content.paint.copyWith(
+        strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
+      );
+    } else if (content is Rectangle) {
+      if (content.startPoint != null) {
+        content.startPoint = Offset(content.startPoint!.dx * scaleX, content.startPoint!.dy * scaleY);
+      }
+      if (content.endPoint != null) {
+        content.endPoint = Offset(content.endPoint!.dx * scaleX, content.endPoint!.dy * scaleY);
+      }
+      content.paint = content.paint.copyWith(
+        strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
+      );
+    } else if (content is SimpleLine) {
+      if (content.startPoint != null) {
+        content.startPoint = Offset(content.startPoint!.dx * scaleX, content.startPoint!.dy * scaleY);
+      }
+      if (content.endPoint != null) {
+        content.endPoint = Offset(content.endPoint!.dx * scaleX, content.endPoint!.dy * scaleY);
+      }
+      content.paint = content.paint.copyWith(
+        strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
+      );
+    } else if (content is FreehandLine) {
+      if (content.points != null) {
+        content.points = content.points!.map((p) => Offset(p.dx * scaleX, p.dy * scaleY)).toList();
+        final newPath = DrawPath();
+        for (int i = 0; i < content.points!.length; i++) {
+          final pt = content.points![i];
+          if (i == 0) {
+            newPath.moveTo(pt.dx, pt.dy);
+          } else {
+            newPath.lineTo(pt.dx, pt.dy);
+          }
+        }
+        content.path = newPath;
+      }
+      content.paint = content.paint.copyWith(
+        strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
+      );
+    }
   }
 
   /// 更新手指计数

@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.flipbook.draw.animation</string>
+	<string>com.flipbook.draw.animation.maker</string>
 	<key>PROJECT_ID</key>
 	<string>clipax-f0f02</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:584393370046:ios:46da14843d83b514bfb1ef</string>
+	<string>1:584393370046:ios:067519481708cdbabfb1ef</string>
 </dict>
 </plist>

@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../projects/data/project_repository.dart';
-import '../../../editor/presentation/screens/editor_screen.dart';
 import '../../data/tutorial_project_builder.dart';
 import '../../domain/template_model.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -115,6 +113,15 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
               widget.template.frameCount,
             );
 
+      final screenSize = MediaQuery.of(context).size;
+      final safePadding = MediaQuery.of(context).padding;
+      final double availableWidth = screenSize.width - safePadding.left - safePadding.right;
+      final double targetWidth = availableWidth > 0 ? availableWidth : 360.0;
+      final double targetHeight = targetWidth / (16.0 / 9.0);
+      final targetSize = Size(targetWidth, targetHeight);
+
+      baseState = TutorialProjectBuilder.scaleProjectState(baseState, targetSize);
+
       Map<String, dynamic> stateToSave;
 
       if (_selectedMode == TemplateMode.drawAccordingTemplate) {
@@ -207,6 +214,8 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
     final rawCanvas = widget.template.getCanvasForFrame(_currentFrameIndex);
     final activeCanvas = _getDisplayCanvas(rawCanvas);
 
+    final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FC),
       appBar: AppBar(
@@ -253,43 +262,52 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Interactive Studio Playback Stage
-              _buildStudioPlaybackStage(activeCanvas),
-              const SizedBox(height: 16),
-
-              // 2. Overview / Principle Description Card
-              _buildLessonOverviewCard(),
-              const SizedBox(height: 16),
-
-              // 3. Film-Strip Frame Scrubber
-              _buildFrameScrubberStrip(),
-              const SizedBox(height: 18),
-
-              // 4. Learning Mode Selector (Guided Stencil vs Full Template)
-              _buildLearningModeSelector(),
-              const SizedBox(height: 24),
-
-              // 5. Start Action Button
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24.0),
-                child: PrimaryButton(
-                  text: _selectedMode == TemplateMode.drawAccordingTemplate
-                      ? context.tr('startGuidedPractice')
-                      : context.tr('loadArtworkInStudio'),
-                  icon: Icons.draw_rounded,
-                  height: 54,
-                  borderRadius: 16,
-                  onPressed: _startLesson,
-                  isLoading: _isCreating,
-                ),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: isTablet ? 780 : double.infinity),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 36.0 : 18.0,
+                vertical: isTablet ? 16.0 : 12.0,
               ),
-            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Interactive Studio Playback Stage
+                  _buildStudioPlaybackStage(activeCanvas),
+                  const SizedBox(height: 16),
+
+                  // 2. Overview / Principle Description Card
+                  _buildLessonOverviewCard(),
+                  const SizedBox(height: 16),
+
+                  // 3. Film-Strip Frame Scrubber
+                  _buildFrameScrubberStrip(),
+                  const SizedBox(height: 18),
+
+                  // 4. Learning Mode Selector (Guided Stencil vs Full Template)
+                  _buildLearningModeSelector(),
+                  const SizedBox(height: 24),
+
+                  // 5. Start Action Button
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 24.0),
+                    child: PrimaryButton(
+                      text: _selectedMode == TemplateMode.drawAccordingTemplate
+                          ? context.tr('startGuidedPractice')
+                          : context.tr('loadArtworkInStudio'),
+                      icon: Icons.draw_rounded,
+                      height: isTablet ? 58 : 54,
+                      borderRadius: 16,
+                      onPressed: _startLesson,
+                      isLoading: _isCreating,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -298,9 +316,10 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
 
   // 1. Interactive Studio Playback Stage
   Widget _buildStudioPlaybackStage(Map<String, dynamic>? activeCanvas) {
+    final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
     return Container(
       width: double.infinity,
-      height: 250,
+      height: isTablet ? 380 : 240,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -589,6 +608,9 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
 
   // 3. Film-Strip Frame Scrubber
   Widget _buildFrameScrubberStrip() {
+    final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final double itemSize = isTablet ? 78 : 68;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -621,7 +643,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 72,
+          height: itemSize + 4,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -640,9 +662,9 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  width: 68,
-                  height: 68,
-                  margin: const EdgeInsetsDirectional.only(end: 10),
+                  width: itemSize,
+                  height: itemSize,
+                  margin: EdgeInsetsDirectional.only(end: isTablet ? 12 : 10),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),

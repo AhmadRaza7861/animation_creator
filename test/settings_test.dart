@@ -7,7 +7,6 @@ import 'package:dummy/features/settings/presentation/dialogs/rate_us_dialog.dart
 import 'package:dummy/features/settings/presentation/dialogs/contact_us_dialog.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dummy/features/settings/presentation/screens/language_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -78,7 +77,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Loved it! Amazing! 🤩'), findsOneWidget);
-      expect(find.text('Rate on App Store / Play Store'), findsOneWidget);
+      expect(find.text('Rate Us'), findsOneWidget);
 
       // Tap 2nd star
       final stars = find.byIcon(Icons.star_rounded);

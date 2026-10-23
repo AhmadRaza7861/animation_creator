@@ -389,11 +389,14 @@ class CanvasArea extends ConsumerWidget {
           canvasHeight = maxW / ratio;
         }
 
+        final Size currentCanvasSize = Size(canvasWidth, canvasHeight);
+        controller.checkAndScaleLegacyCanvasSize(currentCanvasSize);
+
         return SizedBox(
           width: maxW,
           height: maxH,
           child: buildBoard(
-            Size(canvasWidth, canvasHeight),
+            currentCanvasSize,
             Size(maxW, maxH),
           ),
         );

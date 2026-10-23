@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../common_widgets/show_toast.dart';
@@ -60,18 +62,49 @@ class _RateUsDialogState extends State<RateUsDialog> {
   }
 
   String _getButtonLabel(BuildContext context) {
+    final isIOS = !kIsWeb && Platform.isIOS;
+    if (!isIOS && _rating > 0 && _rating <= 3) {
+      return context.tr('submitFeedback');
+    }
     return context.tr('rateUs');
   }
 
   Future<void> _handleRateAction() async {
     if (_rating <= 0) return;
 
+    final isIOS = !kIsWeb && Platform.isIOS;
+
+    // iOS Policy: Apple Guidelines prohibit review gating.
+    // Every rating on iOS always directs directly to the App Store write-review page.
+    if (isIOS) {
+      AnalyticsService.instance.logRatingSubmitted(
+        stars: _rating,
+        hadFeedback: false,
+      );
+      final Uri appStoreUri = Uri.parse(
+        'https://apps.apple.com/app/id6824198526?action=write-review',
+      );
+      try {
+        if (await canLaunchUrl(appStoreUri)) {
+          await launchUrl(appStoreUri, mode: LaunchMode.externalApplication);
+        }
+        await RatingStrategyService.markRated();
+      } catch (e) {
+        debugPrint('Could not launch App Store review URL: $e');
+      }
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      return;
+    }
+
     if (_rating >= 4) {
       AnalyticsService.instance.logRatingSubmitted(
         stars: _rating,
         hadFeedback: false,
       );
-      // Direct user to store
+      // Direct user to store (Android)
       final pkgName = widget.appPackageName ?? 'com.flipbook.draw.animation';
       final Uri storeUri = Uri.parse(
         'market://details?id=$pkgName',
@@ -134,6 +167,7 @@ class _RateUsDialogState extends State<RateUsDialog> {
   @override
   Widget build(BuildContext context) {
     final ratingLabel = _getRatingLabel(context);
+    final isIOS = !kIsWeb && Platform.isIOS;
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -225,7 +259,7 @@ class _RateUsDialogState extends State<RateUsDialog> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: _rating >= 4 ? ColorConstants.primary : Colors.grey.shade700,
+                    color: (isIOS || _rating >= 4) ? ColorConstants.primary : Colors.grey.shade700,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -233,8 +267,8 @@ class _RateUsDialogState extends State<RateUsDialog> {
                 const SizedBox(height: 6),
               ],
 
-              // Conditional feedback box if 1, 2, or 3 stars
-              if (_rating > 0 && _rating <= 3) ...[
+              // Conditional feedback box if 1, 2, or 3 stars (Android only)
+              if (!isIOS && _rating > 0 && _rating <= 3) ...[
                 TextField(
                   controller: _feedbackController,
                   maxLines: 3,

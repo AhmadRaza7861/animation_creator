@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../dialogs/contact_us_dialog.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
+
+  static const String onlinePrivacyPolicyUrl =
+      'https://nextgenappsmaker.blogspot.com/p/privacy-policy-nextgen-apps-maker.html';
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +28,19 @@ class PrivacyPolicyScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'View Online Policy',
+            icon: const Icon(Icons.open_in_new_rounded, color: ColorConstants.primary, size: 20),
+            onPressed: () async {
+              final uri = Uri.parse(onlinePrivacyPolicyUrl);
+              try {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } catch (_) {}
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),

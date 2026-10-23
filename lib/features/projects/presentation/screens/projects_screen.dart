@@ -994,11 +994,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: recentProjects.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: MediaQuery.of(context).size.shortestSide >= 600
+                  ? (MediaQuery.of(context).size.width >= 900 ? 4 : 3)
+                  : 2,
               crossAxisSpacing: 14,
               mainAxisSpacing: 14,
-              childAspectRatio: 0.78,
+              childAspectRatio: MediaQuery.of(context).size.shortestSide >= 600 ? 0.84 : 0.78,
             ),
             itemBuilder: (context, index) {
               final project = recentProjects[index];
@@ -1152,11 +1154,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.only(bottom: 96),
                       itemCount: filteredProjects.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: MediaQuery.of(context).size.shortestSide >= 600
+                            ? (MediaQuery.of(context).size.width >= 900 ? 4 : 3)
+                            : 2,
                         crossAxisSpacing: 14,
                         mainAxisSpacing: 14,
-                        childAspectRatio: 0.78,
+                        childAspectRatio: MediaQuery.of(context).size.shortestSide >= 600 ? 0.84 : 0.78,
                       ),
                       itemBuilder: (context, index) {
                         final project = filteredProjects[index];

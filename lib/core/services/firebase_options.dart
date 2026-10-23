@@ -34,7 +34,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '584393370046',
     projectId: 'clipax-f0f02',
     storageBucket: 'clipax-f0f02.firebasestorage.app',
-    iosBundleId: 'com.flipbook.draw.animation',
+    iosBundleId: 'com.flipbook.draw.animation.maker',
   );
 
   static const FirebaseOptions web = FirebaseOptions(

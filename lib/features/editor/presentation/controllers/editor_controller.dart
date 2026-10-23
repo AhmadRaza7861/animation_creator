@@ -792,6 +792,36 @@ class EditorController extends ChangeNotifier {
     }
   }
 
+  bool _hasCheckedLegacyScale = false;
+
+  /// Detects whether this project was authored in the legacy 360x202.5 mobile tutorial
+  /// coordinate space and scales vector content to seamlessly fill tablet canvases.
+  void checkAndScaleLegacyCanvasSize(Size targetSize) {
+    if (_hasCheckedLegacyScale || _canvases.isEmpty || targetSize.width <= 0 || targetSize.height <= 0) return;
+
+    final firstSize = _canvases.first.drawConfig.value.size;
+    if (firstSize != null &&
+        (firstSize.width - 360.0).abs() < 1.0 &&
+        (firstSize.height - 202.5).abs() < 1.0 &&
+        (targetSize.width - 360.0).abs() > 5.0) {
+      _hasCheckedLegacyScale = true;
+      final double scaleX = targetSize.width / 360.0;
+      final double scaleY = targetSize.height / 202.5;
+      for (final canvas in _canvases) {
+        canvas.scaleContent(scaleX, scaleY);
+        canvas.drawConfig.value = canvas.drawConfig.value.copyWith(size: targetSize);
+        canvas.updateSnapshot(includeBackground: false);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_isDisposed) {
+          notifyListeners();
+        }
+      });
+    } else if (firstSize != null) {
+      _hasCheckedLegacyScale = true;
+    }
+  }
+
   Future<void>? _loadProjectFuture;
 
   Future<void> loadProjectData() {
