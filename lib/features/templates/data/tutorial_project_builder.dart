@@ -149,7 +149,7 @@ class TutorialProjectBuilder {
       'strokeColor': Colors.black.toARGB32(),
       'colorOpacity': 1.0,
       'exportType': 'Mp4',
-      'enableStickers': true,
+      'enableStickers': false,
       'canvases': canvases,
     };
   }

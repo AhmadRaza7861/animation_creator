@@ -63,7 +63,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     if (widget.projectId != null) {
       _loadExistingProjectSettings();
     } else if (widget.template != null) {
-      _enableStickers = true;
+      _enableStickers = false;
       _nameController.text = '${widget.template!.name} Animation';
       _loadTemplateDimensions();
     } else {
@@ -79,8 +79,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           _nameController.text = project.meta.title;
           _fps = project.state['fps'] as int? ?? 14;
           _exportType = project.state['exportType'] as String? ?? 'Mp4';
-          _enableStickers = project.state['enableStickers'] as bool? ??
-              (project.state['templateFolder'] != null || project.state['templateMode'] != null);
+          _enableStickers = project.state['enableStickers'] as bool? ?? false;
           final bgMap = project.state['globalBackground'] as Map<String, dynamic>?;
           if (bgMap != null) {
             _backgroundColor = Color(bgMap['color'] as int? ?? Colors.white.value);

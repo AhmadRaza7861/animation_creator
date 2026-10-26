@@ -327,20 +327,6 @@ class _RateUsDialogState extends State<RateUsDialog> {
                         ),
                 ),
               ),
-              const SizedBox(height: 8),
-
-              // Maybe Later button
-              TextButton(
-                onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-                child: Text(
-                  context.tr('maybeLater'),
-                  style: const TextStyle(
-                    color: ColorConstants.mediumText,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
             ],
           ),
         ),

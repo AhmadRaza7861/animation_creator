@@ -75,6 +75,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
     ]);
     if (mounted) {
       setState(() {});
+      RatingStrategyService.recordHomeVisit(context);
     }
   }
 
@@ -138,6 +139,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
       if (mounted) {
         await RatingStrategyService.recordProjectCreated(context);
       }
+      if (mounted) {
+        await RatingStrategyService.recordReturnedFromEditor(context);
+      }
     }
     if (mounted) {
       await _loadProjects();
@@ -158,6 +162,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
       ),
     );
     if (mounted) {
+      await RatingStrategyService.recordReturnedFromEditor(context);
       await _loadProjects();
     }
   }
@@ -182,6 +187,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
           ),
         ),
       );
+      if (mounted) {
+        await RatingStrategyService.recordReturnedFromEditor(context);
+      }
     }
     if (mounted) {
       await _loadProjects();
@@ -206,6 +214,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
           ),
         ),
       );
+      if (mounted) {
+        await RatingStrategyService.recordReturnedFromEditor(context);
+      }
     }
     if (mounted) {
       await _loadProjects();

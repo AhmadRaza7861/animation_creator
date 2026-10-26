@@ -112,8 +112,8 @@ class EditorController extends ChangeNotifier {
   int _fps = 9;
   String _projectName = 'Movie Name';
   String _exportType = 'Mp4';
-  String? _savedJsonData;
   bool _enableStickers = false;
+  bool _userToggledStickers = false;
 
   /// Fast-scroll frame counter overlay state notifier
   final ValueNotifier<FastScrollState> fastScrollNotifier =
@@ -700,6 +700,7 @@ class EditorController extends ChangeNotifier {
 
   set enableStickers(bool val) {
     _enableStickers = val;
+    _userToggledStickers = true;
     if (!val && _activeSticker != null) {
       stampActiveSticker();
     }
@@ -889,8 +890,14 @@ class EditorController extends ChangeNotifier {
       } else {
         _templateFrameAssets = [];
       }
+      if (data.state.containsKey('userToggledStickers')) {
+        _userToggledStickers = data.state['userToggledStickers'] as bool? ?? false;
+      }
       if (data.state.containsKey('enableStickers')) {
         _enableStickers = data.state['enableStickers'] as bool;
+        if ((_templateFolder != null || _templateMode != null) && !_userToggledStickers) {
+          _enableStickers = false;
+        }
       }
       if (data.state.containsKey('isOnionEnabled')) {
         _isOnionEnabled = data.state['isOnionEnabled'] as bool;
@@ -1212,6 +1219,7 @@ class EditorController extends ChangeNotifier {
       'templateFrameCount': _templateFrameCount,
       'templateFrameAssets': _templateFrameAssets,
       'enableStickers': _enableStickers,
+      'userToggledStickers': _userToggledStickers,
       'isOnionEnabled': _isOnionEnabled,
       'onionColorMode': _onionColorMode,
       'onionLoop': _onionLoop,

@@ -22,6 +22,8 @@ class RatingStrategyService {
   static int _exportCount = 0;
   static int _projectCreatedCount = 0;
   static int _tutorialCompletedCount = 0;
+  static int _appOpenCount = 0;
+  static bool _sessionRecordedThisLaunch = false;
   static bool _isLoaded = false;
 
   /// Load persisted state
@@ -39,6 +41,7 @@ class RatingStrategyService {
         _exportCount = data['export_count'] as int? ?? 0;
         _projectCreatedCount = data['project_created_count'] as int? ?? 0;
         _tutorialCompletedCount = data['tutorial_completed_count'] as int? ?? 0;
+        _appOpenCount = data['app_open_count'] as int? ?? 0;
       }
     } catch (e) {
       debugPrint('RatingStrategyService load error: $e');
@@ -58,6 +61,7 @@ class RatingStrategyService {
         'export_count': _exportCount,
         'project_created_count': _projectCreatedCount,
         'tutorial_completed_count': _tutorialCompletedCount,
+        'app_open_count': _appOpenCount,
         'updated_at': DateTime.now().toIso8601String(),
       };
       await file.writeAsString(jsonEncode(data));
@@ -119,6 +123,29 @@ class RatingStrategyService {
     await _save();
   }
 
+  /// Trigger 4: Called when user visits the home page (projects screen)
+  static Future<void> recordHomeVisit(BuildContext context) async {
+    if (!_isLoaded) await load();
+    if (!_sessionRecordedThisLaunch) {
+      _sessionRecordedThisLaunch = true;
+      _appOpenCount++;
+      await _save();
+    }
+
+    // Show rating dialog on home page when user visits 2nd time (or subsequent times before rating)
+    if (_appOpenCount >= 2 && await shouldShowPrompt() && context.mounted) {
+      await _showDialogWithDelay(context);
+    }
+  }
+
+  /// Trigger 5: Called when user returns home from the editor screen
+  static Future<void> recordReturnedFromEditor(BuildContext context) async {
+    if (!_isLoaded) await load();
+    if (await shouldShowPrompt() && context.mounted) {
+      await _showDialogWithDelay(context);
+    }
+  }
+
   static Future<void> _showDialogWithDelay(BuildContext context) async {
     if (_isShowingDialog) return;
     _isShowingDialog = true;
@@ -135,6 +162,13 @@ class RatingStrategyService {
     }
   }
 
+  /// For testing: resets session flag to simulate new app launch
+  @visibleForTesting
+  static void resetSessionForTesting() {
+    _sessionRecordedThisLaunch = false;
+    _isShowingDialog = false;
+  }
+
   /// For testing/debugging purposes: resets all strategy metrics
   @visibleForTesting
   static Future<void> resetForTesting() async {
@@ -144,6 +178,9 @@ class RatingStrategyService {
     _exportCount = 0;
     _projectCreatedCount = 0;
     _tutorialCompletedCount = 0;
+    _appOpenCount = 0;
+    _sessionRecordedThisLaunch = false;
+    _isShowingDialog = false;
     _isLoaded = true;
     try {
       final dir = await AppPathProvider.getSafeDocumentsDirectory();
@@ -160,5 +197,6 @@ class RatingStrategyService {
   static int get exportCount => _exportCount;
   static int get projectCreatedCount => _projectCreatedCount;
   static int get tutorialCompletedCount => _tutorialCompletedCount;
+  static int get appOpenCount => _appOpenCount;
   static DateTime? get lastPromptTime => _lastPromptTime;
 }

@@ -20,7 +20,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # For ios version
 # version: 1.0.1+25
 
-version: 1.0.1+24
+version: 1.0.2+26
 
 environment:
   sdk: ^3.10.8

@@ -5,8 +5,16 @@ import 'package:path_provider/path_provider.dart';
 /// Centralized, crash-proof directory provider with multi-level fallbacks.
 /// Handles transient platform channel disconnects, Pigeon errors, and sandboxed OS paths.
 class AppPathProvider {
+  @visibleForTesting
+  static Directory? overrideDocumentsDirectory;
+
+  @visibleForTesting
+  static Directory? overrideTempDirectory;
+
   /// Safely get temporary directory with multiple layers of fallbacks
   static Future<Directory> getSafeTempDirectory() async {
+    if (overrideTempDirectory != null) return overrideTempDirectory!;
+
     // 1. Try standard getTemporaryDirectory()
     try {
       final dir = await getTemporaryDirectory();
@@ -78,6 +86,8 @@ class AppPathProvider {
 
   /// Safely get documents / storage directory with fallbacks
   static Future<Directory> getSafeDocumentsDirectory() async {
+    if (overrideDocumentsDirectory != null) return overrideDocumentsDirectory!;
+
     // 1. Try standard getApplicationDocumentsDirectory()
     try {
       final dir = await getApplicationDocumentsDirectory();

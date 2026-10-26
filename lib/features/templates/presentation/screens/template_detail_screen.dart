@@ -171,7 +171,7 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
         stateToSave = Map<String, dynamic>.from(baseState);
       }
 
-      stateToSave['enableStickers'] = true;
+      stateToSave['enableStickers'] = false;
 
       // 2. Save project in local repository
       final newProjectId = await widget.repository.saveProject(

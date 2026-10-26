@@ -539,29 +539,30 @@ void main() {
       await reloadedToggledOn.loadProjectData();
       expect(reloadedToggledOn.enableStickers, isTrue);
 
-      // 2. Tutorial project creation with enableStickers = true
+      // 2. Tutorial project creation with enableStickers = false by default
       final tutorialState = {
         'projectName': 'Tutorial Lesson',
-        'enableStickers': true,
+        'templateMode': 'guided',
+        'enableStickers': false,
         'fps': 12,
         'canvases': [],
       };
       final tutorialProjectId = await repo.saveProject(title: 'Tutorial Lesson', state: tutorialState);
 
-      // Loading tutorial project initializes with enableStickers = true
+      // Loading tutorial project initializes with enableStickers = false by default
       final tutorialController = EditorController(repository: repo, projectId: tutorialProjectId);
       await tutorialController.loadProjectData();
-      expect(tutorialController.enableStickers, isTrue);
-
-      // User explicitly toggles Sticker mode OFF in tutorial
-      tutorialController.enableStickers = false;
       expect(tutorialController.enableStickers, isFalse);
+
+      // User explicitly toggles Sticker mode ON in tutorial
+      tutorialController.enableStickers = true;
+      expect(tutorialController.enableStickers, isTrue);
       await tutorialController.saveProject();
 
-      // Reopening tutorial preserves the user's explicit OFF choice (does not auto-change back)
+      // Reopening tutorial preserves the user's explicit ON choice
       final reloadedTutorial = EditorController(repository: repo, projectId: tutorialProjectId);
       await reloadedTutorial.loadProjectData();
-      expect(reloadedTutorial.enableStickers, isFalse);
+      expect(reloadedTutorial.enableStickers, isTrue);
 
       // Cleanup
       await repo.deleteProject(newProjectId);

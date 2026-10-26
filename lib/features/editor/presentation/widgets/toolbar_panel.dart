@@ -81,7 +81,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
 
     if (activeSticker is ActiveTextSticker) {
       return _buildTextStickerToolbar(activeSticker, controller);
-    } else if (activeSticker is ActiveShapeSticker && (activeSticker.isLasso || controller.activeCategory == 'Select')) {
+    } else if (activeSticker is ActiveShapeSticker && activeSticker.isLasso) {
       return _buildLassoStickerToolbar(activeSticker, controller);
     } else if (controller.currentSubMenu == 'brush') {
       return _buildBrushSubMenu(controller);
