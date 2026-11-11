@@ -909,5 +909,65 @@ void main() {
       final int outsideIdx = (10 * width + 10) * 4;
       expect(pixels[outsideIdx + 3], 0);
     });
+
+    test('FloodFill on a single line does not throw clamp ArgumentError when near small region', () async {
+      const int width = 100;
+      const int height = 100;
+
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 100, 100));
+      final Paint strokePaint = Paint()
+        ..color = const Color(0xFFFF0000)
+        ..strokeWidth = 6.0
+        ..style = PaintingStyle.stroke;
+
+      // Draw a single line from (20, 50) to (80, 50)
+      canvas.drawLine(const Offset(20, 50), const Offset(80, 50), strokePaint);
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image snapshotImage = await picture.toImage(width, height);
+
+      // Tap directly on the line at (50, 50) to recolor it
+      const Color blueColor = Color(0xFF0000FF);
+      final FloodFillResult? result = await FloodFill.fillWithResult(
+        image: snapshotImage,
+        startPoint: const Offset(50, 50),
+        fillColor: blueColor,
+        tolerance: 0.15,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.isUnderneath, isFalse, reason: 'Line recoloring must have isUnderneath=false');
+    });
+
+    test('FloodFill on large canvas recolors open line quickly under 150ms', () async {
+      const int width = 800;
+      const int height = 800;
+
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 800, 800));
+      final Paint strokePaint = Paint()
+        ..color = const Color(0xFFFF0000)
+        ..strokeWidth = 8.0
+        ..style = PaintingStyle.stroke;
+
+      // Draw an open line in center of large canvas
+      canvas.drawLine(const Offset(200, 400), const Offset(600, 400), strokePaint);
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image snapshotImage = await picture.toImage(width, height);
+
+      final Stopwatch sw = Stopwatch()..start();
+      const Color greenColor = Color(0xFF00FF00);
+      final FloodFillResult? result = await FloodFill.fillWithResult(
+        image: snapshotImage,
+        startPoint: const Offset(400, 400),
+        fillColor: greenColor,
+        tolerance: 0.15,
+      );
+      sw.stop();
+
+      expect(result, isNotNull);
+      expect(result!.isUnderneath, isFalse);
+      expect(sw.elapsedMilliseconds, lessThan(350), reason: 'Line recoloring must be fast, took ${sw.elapsedMilliseconds}ms');
+    });
   });
 }

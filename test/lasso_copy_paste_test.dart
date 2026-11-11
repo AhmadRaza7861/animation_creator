@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/package_code/paint_contents.dart';
 import 'package:dummy/package_code/src/paint_contents/paint_content_decoder.dart';
+import 'package:dummy/package_code/src/paint_contents/quad_homography.dart';
 import 'package:dummy/package_code/src/drawing_controller.dart';
 import 'package:dummy/features/editor/presentation/widgets/sticker_widgets/shape_sticker_widget.dart';
 import 'package:dummy/features/editor/presentation/controllers/editor_controller.dart';
@@ -255,6 +256,49 @@ void main() {
       expect(pastedStroke.points.length, equals(3));
 
       controller.dispose();
+    });
+
+    test('pasteLassoSelection clamps out-of-bounds positions and prevents deformation', () async {
+      final repo = ProjectRepository();
+      final controller = EditorController(repository: repo);
+
+      // Create an active sticker placed far out of bounds (-500, -500) with extreme scale (50.0)
+      controller.activeSticker = ActiveShapeSticker(
+        id: 'out_of_bounds_stk',
+        content: Circle(),
+        offset: const Offset(-500, -500),
+        size: const Size(100, 100),
+        scale: 50.0,
+        isLassoSelection: true,
+      );
+
+      controller.copyActiveLassoSelection();
+      expect(controller.canPasteLassoSelection, isTrue);
+
+      controller.stampActiveSticker();
+      final pasted = await controller.pasteLassoSelection();
+      expect(pasted, isTrue);
+
+      final pastedActive = controller.activeSticker as ActiveShapeSticker;
+      expect(pastedActive.offset.dx, greaterThan(0));
+      expect(pastedActive.offset.dy, greaterThan(0));
+      expect(pastedActive.scale, lessThanOrEqualTo(5.0));
+
+      controller.dispose();
+    });
+
+    test('QuadHomography safely falls back without throwing on inverted/concave quads', () {
+      // Inverted self-intersecting quad (bowtie)
+      final matrix = QuadHomography.fromRectToQuad(
+        width: 100,
+        height: 100,
+        p0: const Offset(100, 100),
+        p1: const Offset(0, 100),
+        p2: const Offset(100, 0),
+        p3: const Offset(0, 0),
+      );
+
+      expect(matrix.storage.every((v) => v.isFinite), isTrue);
     });
   });
 }

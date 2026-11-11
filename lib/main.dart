@@ -33,6 +33,7 @@ void main() async {
       debugPrint('Firebase.initializeApp native fallback error: $e2');
     }
   }
+
   await LanguageService.loadSavedLocale();
   RuntimeFontService.instance.init();
   AnalyticsService.instance.syncDefaultUserProperties(

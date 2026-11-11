@@ -17,16 +17,16 @@ class SmudgePoint {
   final double pressure;
 
   Map<String, dynamic> toJson() => {
-        'point': point.toJson(),
-        'delta': delta.toJson(),
-        'pressure': pressure,
-      };
+    'point': point.toJson(),
+    'delta': delta.toJson(),
+    'pressure': pressure,
+  };
 
   factory SmudgePoint.fromJson(Map<String, dynamic> json) => SmudgePoint(
-        jsonToOffset(json['point']),
-        jsonToOffset(json['delta']),
-        (json['pressure'] as num?)?.toDouble() ?? 1.0,
-      );
+    jsonToOffset(json['point']),
+    jsonToOffset(json['delta']),
+    (json['pressure'] as num?)?.toDouble() ?? 1.0,
+  );
 }
 
 /// Professional Digital Painting Smudge Engine (Ibis Paint X / Procreate / Infinite Painter Architecture)
@@ -67,7 +67,8 @@ class SmudgeContent extends PaintContent {
 
   factory SmudgeContent.fromJson(Map<String, dynamic> data) {
     final content = SmudgeContent.data(
-      points: (data['points'] as List<dynamic>?)
+      points:
+          (data['points'] as List<dynamic>?)
               ?.map((e) => SmudgePoint.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -118,6 +119,7 @@ class SmudgeContent extends PaintContent {
 
   bool _isDecoding = false;
   bool _needsDecode = false;
+  ui.Image? _lastDecodedLive;
 
   @override
   String get contentType => 'SmudgeContent';
@@ -132,10 +134,15 @@ class SmudgeContent extends PaintContent {
       canvasSize = size;
     }
 
-    imageData.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
+    imageData.toByteData(format: ui.ImageByteFormat.rawRgba).then((
+      ByteData? data,
+    ) {
       if (data != null) {
         if (_pixels == null) {
-          final Uint32List u32 = data.buffer.asUint32List(data.offsetInBytes, data.lengthInBytes ~/ 4);
+          final Uint32List u32 = data.buffer.asUint32List(
+            data.offsetInBytes,
+            data.lengthInBytes ~/ 4,
+          );
           _pixels = Uint32List.fromList(u32);
           _width = imageData.width;
           _height = imageData.height;
@@ -154,7 +161,9 @@ class SmudgeContent extends PaintContent {
       canvasSize = size;
     }
     final ByteData bd = ByteData.sublistView(data);
-    _pixels = Uint32List.fromList(bd.buffer.asUint32List(bd.offsetInBytes, data.lengthInBytes ~/ 4));
+    _pixels = Uint32List.fromList(
+      bd.buffer.asUint32List(bd.offsetInBytes, data.lengthInBytes ~/ 4),
+    );
     _processPendingSegments();
     _scheduleLiveImageDecode();
   }
@@ -225,6 +234,14 @@ class SmudgeContent extends PaintContent {
     _reservoir = Uint32List(0);
     _reservoirDim = 0;
     _reservoirInitialized = false;
+    if (_lastDecodedLive != null) {
+      if (_lastDecodedLive != image) {
+        try {
+          _lastDecodedLive?.dispose();
+        } catch (_) {}
+      }
+      _lastDecodedLive = null;
+    }
     liveImage = null;
   }
 
@@ -240,11 +257,13 @@ class SmudgeContent extends PaintContent {
     _reservoirInitialized = false;
   }
 
-  double _getScaleX() => (_width > 0 && canvasSize != null && canvasSize!.width > 0)
+  double _getScaleX() =>
+      (_width > 0 && canvasSize != null && canvasSize!.width > 0)
       ? _width / canvasSize!.width
       : 1.0;
 
-  double _getScaleY() => (_height > 0 && canvasSize != null && canvasSize!.height > 0)
+  double _getScaleY() =>
+      (_height > 0 && canvasSize != null && canvasSize!.height > 0)
       ? _height / canvasSize!.height
       : 1.0;
 
@@ -257,7 +276,10 @@ class SmudgeContent extends PaintContent {
     final double py = pt.dy * scaleY;
 
     final double strokeWidth = paint.strokeWidth * scaleX;
-    final double radius = math.max(2.0, (strokeWidth * 0.5) * pressure.clamp(0.4, 1.5));
+    final double radius = math.max(
+      2.0,
+      (strokeWidth * 0.5) * pressure.clamp(0.4, 1.5),
+    );
     final int dim = math.max(3, (2 * radius + 1).ceil());
 
     if (_reservoir.length < dim * dim) {
@@ -274,7 +296,13 @@ class SmudgeContent extends PaintContent {
       final int rowIdx = v * dim;
       for (int u = 0; u < dim; u++) {
         final double sampleX = px + (u - radius);
-        _reservoir[rowIdx + u] = _sampleCrispFast(pixels, w, h, sampleX, sampleY);
+        _reservoir[rowIdx + u] = _sampleCrispFast(
+          pixels,
+          w,
+          h,
+          sampleX,
+          sampleY,
+        );
       }
     }
     _reservoirInitialized = true;
@@ -312,7 +340,17 @@ class SmudgeContent extends PaintContent {
       final Offset px2 = Offset(p2.dx * scaleX, p2.dy * scaleY);
       final Offset px3 = Offset(p3.dx * scaleX, p3.dy * scaleY);
 
-      _applyCatmullRomSmudgeSegment(px0, px1, px2, px3, pr0, pr1, pr2, pr3, scaleX);
+      _applyCatmullRomSmudgeSegment(
+        px0,
+        px1,
+        px2,
+        px3,
+        pr0,
+        pr1,
+        pr2,
+        pr3,
+        scaleX,
+      );
       _processedIndex++;
     }
   }
@@ -350,18 +388,18 @@ class SmudgeContent extends PaintContent {
 
       // Standard Catmull-Rom spline formula:
       // P(t) = 0.5 * ((2*P1) + (-P0 + P2)*t + (2*P0 - 5*P1 + 4*P2 - P3)*t^2 + (-P0 + 3*P1 - 3*P2 + P3)*t^3)
-      final double x = 0.5 * (
-        (2.0 * p1.dx) +
-        (-p0.dx + p2.dx) * t +
-        (2.0 * p0.dx - 5.0 * p1.dx + 4.0 * p2.dx - p3.dx) * t2 +
-        (-p0.dx + 3.0 * p1.dx - 3.0 * p2.dx + p3.dx) * t3
-      );
-      final double y = 0.5 * (
-        (2.0 * p1.dy) +
-        (-p0.dy + p2.dy) * t +
-        (2.0 * p0.dy - 5.0 * p1.dy + 4.0 * p2.dy - p3.dy) * t2 +
-        (-p0.dy + 3.0 * p1.dy - 3.0 * p2.dy + p3.dy) * t3
-      );
+      final double x =
+          0.5 *
+          ((2.0 * p1.dx) +
+              (-p0.dx + p2.dx) * t +
+              (2.0 * p0.dx - 5.0 * p1.dx + 4.0 * p2.dx - p3.dx) * t2 +
+              (-p0.dx + 3.0 * p1.dx - 3.0 * p2.dx + p3.dx) * t3);
+      final double y =
+          0.5 *
+          ((2.0 * p1.dy) +
+              (-p0.dy + p2.dy) * t +
+              (2.0 * p0.dy - 5.0 * p1.dy + 4.0 * p2.dy - p3.dy) * t2 +
+              (-p0.dy + 3.0 * p1.dy - 3.0 * p2.dy + p3.dy) * t3);
 
       final Offset currPt = Offset(x, y);
       final double currPr = (pr1 + (pr2 - pr1) * t).clamp(0.3, 1.8);
@@ -369,7 +407,13 @@ class SmudgeContent extends PaintContent {
       final Offset stepDelta = currPt - prevPt;
       final bool isLastStep = (s == numSteps);
 
-      _applySmudgeStamp(currPt, stepDelta, currPr, baseRadius, updateReservoir: isLastStep || (s % 2 == 0));
+      _applySmudgeStamp(
+        currPt,
+        stepDelta,
+        currPr,
+        baseRadius,
+        updateReservoir: isLastStep || (s % 2 == 0),
+      );
 
       prevPt = currPt;
     }
@@ -421,7 +465,8 @@ class SmudgeContent extends PaintContent {
     final double pullBase = 0.60 + 0.40 * effStrength;
     final double pullStepX = stepDelta.dx * pullBase;
     final double pullStepY = stepDelta.dy * pullBase;
-    final double depositMultiplier = (0.15 + 0.85 * effStrength) * pressure.clamp(0.6, 1.3);
+    final double depositMultiplier =
+        (0.15 + 0.85 * effStrength) * pressure.clamp(0.6, 1.3);
     final double carrierWeight = (0.35 + 0.55 * effStrength).clamp(0.20, 0.90);
     final double maxResIdx = (resDim - 1).toDouble();
 
@@ -461,7 +506,12 @@ class SmudgeContent extends PaintContent {
         if (resDim > 0 && _reservoirInitialized) {
           final double resU = (dx + resRadius).clamp(0.0, maxResIdx);
           final double resV = (dy + resRadius).clamp(0.0, maxResIdx);
-          final int carriedColor = _sampleReservoirCrispFast(_reservoir, resDim, resU, resV);
+          final int carriedColor = _sampleReservoirCrispFast(
+            _reservoir,
+            resDim,
+            resU,
+            resV,
+          );
 
           final int aCar = (carriedColor >> 24) & 0xFF;
           final int aAdv = (advectedColor >> 24) & 0xFF;
@@ -471,13 +521,24 @@ class SmudgeContent extends PaintContent {
           } else if (aAdv == 0) {
             dragColor = carriedColor;
           } else {
-            dragColor = _blendColorsFast(advectedColor, carriedColor, carrierWeight);
+            dragColor = _blendColorsFast(
+              advectedColor,
+              carriedColor,
+              carrierWeight,
+            );
           }
         }
 
         // Deposit onto canvas with straight-alpha interpolation to avoid dark color buildup
-        final double depositWeight = (falloff * depositMultiplier).clamp(0.0, 1.0);
-        final int finalColor = _blendColorsFast(currentDstColor, dragColor, depositWeight);
+        final double depositWeight = (falloff * depositMultiplier).clamp(
+          0.0,
+          1.0,
+        );
+        final int finalColor = _blendColorsFast(
+          currentDstColor,
+          dragColor,
+          depositWeight,
+        );
 
         _patchBuffer[localIdx] = finalColor;
       }
@@ -493,7 +554,10 @@ class SmudgeContent extends PaintContent {
     }
 
     // 3. Dynamic Pickup into Wet Reservoir
-    if (updateReservoir && resDim > 0 && _reservoirInitialized && stepDist > 0.05) {
+    if (updateReservoir &&
+        resDim > 0 &&
+        _reservoirInitialized &&
+        stepDist > 0.05) {
       final double pickupBase = (1.0 - effStrength * 0.82) * 0.28;
 
       for (int v = 0; v < resDim; v++) {
@@ -512,17 +576,30 @@ class SmudgeContent extends PaintContent {
             final double falloff = oneMinusUNormSq * oneMinusUNormSq;
 
             final double sampleX = cx + dx;
-            final int canvasColor = _sampleCrispFast(pixels, w, h, sampleX, sampleY);
+            final int canvasColor = _sampleCrispFast(
+              pixels,
+              w,
+              h,
+              sampleX,
+              sampleY,
+            );
             final int canvasA = (canvasColor >> 24) & 0xFF;
 
             final int oldRes = _reservoir[rowIdx + u];
             final double pickupRate = (falloff * pickupBase).clamp(0.0, 1.0);
 
             if (canvasA > 0) {
-              _reservoir[rowIdx + u] = _blendColorsFast(oldRes, canvasColor, pickupRate);
+              _reservoir[rowIdx + u] = _blendColorsFast(
+                oldRes,
+                canvasColor,
+                pickupRate,
+              );
             } else if (oldRes != 0) {
               final int oldA = (oldRes >> 24) & 0xFF;
-              final int newA = (oldA * (1.0 - pickupRate * 0.45)).round().clamp(0, 255);
+              final int newA = (oldA * (1.0 - pickupRate * 0.45)).round().clamp(
+                0,
+                255,
+              );
               _reservoir[rowIdx + u] = (newA << 24) | (oldRes & 0x00FFFFFF);
             }
           }
@@ -532,7 +609,13 @@ class SmudgeContent extends PaintContent {
   }
 
   /// Crisp subpixel Hermite interpolation that preserves stroke edges, shapes, and text details
-  static int _sampleCrispFast(Uint32List pixels, int width, int height, double x, double y) {
+  static int _sampleCrispFast(
+    Uint32List pixels,
+    int width,
+    int height,
+    double x,
+    double y,
+  ) {
     if (x < 0.0) x = 0.0;
     if (y < 0.0) y = 0.0;
     if (x > width - 1.0) x = width - 1.0;
@@ -573,15 +656,18 @@ class SmudgeContent extends PaintContent {
 
     // Fast path: fully opaque 4-tap neighborhood (common for canvas, drawings, imported images)
     if (a00 == 255 && a10 == 255 && a01 == 255 && a11 == 255) {
-      final double r = (c00 & 0xFF) * w00 +
+      final double r =
+          (c00 & 0xFF) * w00 +
           (c10 & 0xFF) * w10 +
           (c01 & 0xFF) * w01 +
           (c11 & 0xFF) * w11;
-      final double g = (((c00 >> 8) & 0xFF) * w00 +
+      final double g =
+          (((c00 >> 8) & 0xFF) * w00 +
           ((c10 >> 8) & 0xFF) * w10 +
           ((c01 >> 8) & 0xFF) * w01 +
           ((c11 >> 8) & 0xFF) * w11);
-      final double b = (((c00 >> 16) & 0xFF) * w00 +
+      final double b =
+          (((c00 >> 16) & 0xFF) * w00 +
           ((c10 >> 16) & 0xFF) * w10 +
           ((c01 >> 16) & 0xFF) * w01 +
           ((c11 >> 16) & 0xFF) * w11);
@@ -604,17 +690,20 @@ class SmudgeContent extends PaintContent {
     if (totalAw <= 0.0) return 0;
 
     final double invTotalAw = 1.0 / totalAw;
-    final double r = ((c00 & 0xFF) * aw00 +
+    final double r =
+        ((c00 & 0xFF) * aw00 +
             (c10 & 0xFF) * aw10 +
             (c01 & 0xFF) * aw01 +
             (c11 & 0xFF) * aw11) *
         invTotalAw;
-    final double g = (((c00 >> 8) & 0xFF) * aw00 +
+    final double g =
+        (((c00 >> 8) & 0xFF) * aw00 +
             ((c10 >> 8) & 0xFF) * aw10 +
             ((c01 >> 8) & 0xFF) * aw01 +
             ((c11 >> 8) & 0xFF) * aw11) *
         invTotalAw;
-    final double b = (((c00 >> 16) & 0xFF) * aw00 +
+    final double b =
+        (((c00 >> 16) & 0xFF) * aw00 +
             ((c10 >> 16) & 0xFF) * aw10 +
             ((c01 >> 16) & 0xFF) * aw01 +
             ((c11 >> 16) & 0xFF) * aw11) *
@@ -629,7 +718,12 @@ class SmudgeContent extends PaintContent {
   }
 
   /// Crisp subpixel Hermite interpolation from wet-paint reservoir
-  static int _sampleReservoirCrispFast(Uint32List res, int dim, double x, double y) {
+  static int _sampleReservoirCrispFast(
+    Uint32List res,
+    int dim,
+    double x,
+    double y,
+  ) {
     if (x < 0.0) x = 0.0;
     if (y < 0.0) y = 0.0;
     if (x > dim - 1.0) x = dim - 1.0;
@@ -668,15 +762,18 @@ class SmudgeContent extends PaintContent {
 
     // Fast path: fully opaque reservoir neighborhood
     if (a00 == 255 && a10 == 255 && a01 == 255 && a11 == 255) {
-      final double r = (c00 & 0xFF) * w00 +
+      final double r =
+          (c00 & 0xFF) * w00 +
           (c10 & 0xFF) * w10 +
           (c01 & 0xFF) * w01 +
           (c11 & 0xFF) * w11;
-      final double g = (((c00 >> 8) & 0xFF) * w00 +
+      final double g =
+          (((c00 >> 8) & 0xFF) * w00 +
           ((c10 >> 8) & 0xFF) * w10 +
           ((c01 >> 8) & 0xFF) * w01 +
           ((c11 >> 8) & 0xFF) * w11);
-      final double b = (((c00 >> 16) & 0xFF) * w00 +
+      final double b =
+          (((c00 >> 16) & 0xFF) * w00 +
           ((c10 >> 16) & 0xFF) * w10 +
           ((c01 >> 16) & 0xFF) * w01 +
           ((c11 >> 16) & 0xFF) * w11);
@@ -699,17 +796,20 @@ class SmudgeContent extends PaintContent {
     if (totalAw <= 0.0) return 0;
 
     final double invTotalAw = 1.0 / totalAw;
-    final double r = ((c00 & 0xFF) * aw00 +
+    final double r =
+        ((c00 & 0xFF) * aw00 +
             (c10 & 0xFF) * aw10 +
             (c01 & 0xFF) * aw01 +
             (c11 & 0xFF) * aw11) *
         invTotalAw;
-    final double g = (((c00 >> 8) & 0xFF) * aw00 +
+    final double g =
+        (((c00 >> 8) & 0xFF) * aw00 +
             ((c10 >> 8) & 0xFF) * aw10 +
             ((c01 >> 8) & 0xFF) * aw01 +
             ((c11 >> 8) & 0xFF) * aw11) *
         invTotalAw;
-    final double b = (((c00 >> 16) & 0xFF) * aw00 +
+    final double b =
+        (((c00 >> 16) & 0xFF) * aw00 +
             ((c10 >> 16) & 0xFF) * aw10 +
             ((c01 >> 16) & 0xFF) * aw01 +
             ((c11 >> 16) & 0xFF) * aw11) *
@@ -811,8 +911,15 @@ class SmudgeContent extends PaintContent {
       _height,
       ui.PixelFormat.rgba8888,
       (ui.Image decoded) {
+        final ui.Image? prevDecoded = _lastDecodedLive;
+        _lastDecodedLive = decoded;
         liveImage = decoded;
         image = decoded;
+        if (prevDecoded != null && prevDecoded != decoded) {
+          try {
+            prevDecoded.dispose();
+          } catch (_) {}
+        }
         _isDecoding = false;
         onRepaint?.call();
 
@@ -830,7 +937,12 @@ class SmudgeContent extends PaintContent {
     if (targetImage != null) {
       canvas.drawImageRect(
         targetImage,
-        Rect.fromLTWH(0, 0, targetImage.width.toDouble(), targetImage.height.toDouble()),
+        Rect.fromLTWH(
+          0,
+          0,
+          targetImage.width.toDouble(),
+          targetImage.height.toDouble(),
+        ),
         Offset.zero & size,
         Paint()..filterQuality = ui.FilterQuality.high,
       );
@@ -841,7 +953,9 @@ class SmudgeContent extends PaintContent {
   Path getPath() {
     final Path path = Path();
     if (points.isEmpty) {
-      if (canvasSize != null && canvasSize!.width > 0 && canvasSize!.height > 0) {
+      if (canvasSize != null &&
+          canvasSize!.width > 0 &&
+          canvasSize!.height > 0) {
         path.addRect(Offset.zero & canvasSize!);
       }
       return path;
@@ -854,14 +968,15 @@ class SmudgeContent extends PaintContent {
   }
 
   @override
-  SmudgeContent copy() => SmudgeContent.data(
-        points: List.from(points),
-        strength: strength,
-        paint: paint.copyWith(),
-        image: image ?? liveImage,
-        canvasSize: canvasSize,
-        onRepaint: onRepaint,
-      )
+  SmudgeContent copy() =>
+      SmudgeContent.data(
+          points: List.from(points),
+          strength: strength,
+          paint: paint.copyWith(),
+          image: image ?? liveImage,
+          canvasSize: canvasSize,
+          onRepaint: onRepaint,
+        )
         ..liveImage = liveImage ?? image
         .._pixels = _pixels
         .._width = _width
@@ -882,7 +997,9 @@ class SmudgeContent extends PaintContent {
   Future<void> prepareExport() async {
     final ui.Image? targetImg = image ?? liveImage;
     if (targetImg != null && cachedBase64Image == null) {
-      final ByteData? byteData = await targetImg.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? byteData = await targetImg.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       if (byteData != null) {
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         cachedBase64Image = base64Encode(pngBytes);
@@ -890,4 +1007,3 @@ class SmudgeContent extends PaintContent {
     }
   }
 }
-

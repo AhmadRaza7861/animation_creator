@@ -92,9 +92,12 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
 
   bool _isCanvasReady(DrawingController canvas) {
     for (final layer in canvas.layers) {
-      final int count = layer.currentIndex > 0 ? layer.currentIndex : layer.history.length;
-      for (int j = 0; j < count; j++) {
-        if (!_isContentReady(layer.history[j])) {
+      if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') {
+        continue;
+      }
+      final effectiveHistory = layer.getEffectiveHistory();
+      for (final item in effectiveHistory) {
+        if (!_isContentReady(item)) {
           return false;
         }
       }
@@ -104,11 +107,15 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
 
   bool _isContentReady(PaintContent content) {
     if (content is ImageContent) {
-      if (content.imageUrl != null && content.imageUrl!.isNotEmpty && content.image == null) {
+      if (content.imageUrl != null &&
+          content.imageUrl!.isNotEmpty &&
+          content.image == null) {
         return false;
       }
     } else if (content is FillContent) {
-      if (content.cachedBase64Image != null && content.cachedBase64Image!.isNotEmpty && content.image == null) {
+      if (content.cachedBase64Image != null &&
+          content.cachedBase64Image!.isNotEmpty &&
+          content.image == null) {
         return false;
       }
     } else if (content is GroupContent) {
@@ -131,28 +138,39 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
 
   Future<void> _prepareCanvasImages(DrawingController canvas) async {
     for (final layer in canvas.layers) {
-      final int count = layer.currentIndex > 0 ? layer.currentIndex : layer.history.length;
-      for (int j = 0; j < count; j++) {
-        await _prepareContentImages(layer.history[j]);
+      if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') {
+        continue;
+      }
+      final effectiveHistory = layer.getEffectiveHistory();
+      for (final item in effectiveHistory) {
+        await _prepareContentImages(item);
       }
     }
   }
 
   Future<void> _prepareContentImages(PaintContent content) async {
     if (content is ImageContent) {
-      if (content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty) {
+      if (content.image == null &&
+          content.imageUrl != null &&
+          content.imageUrl!.isNotEmpty) {
         try {
           if (content.imageUrl!.startsWith('assets/')) {
             final ByteData data = await rootBundle.load(content.imageUrl!);
             final Uint8List bytes = data.buffer.asUint8List();
-            final ui.Codec codec = await ui.instantiateImageCodec(bytes, targetWidth: 384);
+            final ui.Codec codec = await ui.instantiateImageCodec(
+              bytes,
+              targetWidth: 384,
+            );
             final ui.FrameInfo fi = await codec.getNextFrame();
             content.image = fi.image;
           } else {
             final File file = File(content.imageUrl!);
             if (await file.exists()) {
               final Uint8List bytes = await file.readAsBytes();
-              final ui.Codec codec = await ui.instantiateImageCodec(bytes, targetWidth: 384);
+              final ui.Codec codec = await ui.instantiateImageCodec(
+                bytes,
+                targetWidth: 384,
+              );
               final ui.FrameInfo fi = await codec.getNextFrame();
               content.image = fi.image;
             }
@@ -162,10 +180,15 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
         }
       }
     } else if (content is FillContent) {
-      if (content.image == null && content.cachedBase64Image != null && content.cachedBase64Image!.isNotEmpty) {
+      if (content.image == null &&
+          content.cachedBase64Image != null &&
+          content.cachedBase64Image!.isNotEmpty) {
         try {
           final Uint8List bytes = base64Decode(content.cachedBase64Image!);
-          final ui.Codec codec = await ui.instantiateImageCodec(bytes, targetWidth: 384);
+          final ui.Codec codec = await ui.instantiateImageCodec(
+            bytes,
+            targetWidth: 384,
+          );
           final ui.FrameInfo fi = await codec.getNextFrame();
           content.image = fi.image;
         } catch (e) {
@@ -198,7 +221,19 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
   }
 
   void _evictContentImages(PaintContent content) {
-    if (content is ImageContent && content.imageUrl != null && content.image != null) {
+    if (content is ImageContent &&
+        content.imageUrl != null &&
+        content.image != null) {
+      final imgToDispose = content.image;
+      content.image = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          imgToDispose?.dispose();
+        } catch (_) {}
+      });
+    } else if (content is FillContent &&
+        content.cachedBase64Image != null &&
+        content.image != null) {
       final imgToDispose = content.image;
       content.image = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -231,7 +266,9 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
       final List<int> toEvict = [];
       for (final idx in _activeLoadedIndices) {
         if (idx <= 2) continue; // Keep initial editor frames in memory
-        final int dist = (idx - centerIndex + widget.canvases.length) % widget.canvases.length;
+        final int dist =
+            (idx - centerIndex + widget.canvases.length) %
+            widget.canvases.length;
         if (dist > 22 && dist < widget.canvases.length - 6) {
           toEvict.add(idx);
         }
@@ -253,19 +290,21 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
       if (_loadingIndices.length >= 4) break; // Maximum 4 parallel decodes
 
       _loadingIndices.add(idx);
-      _prepareCanvasImages(widget.canvases[idx]).then((_) {
-        _loadingIndices.remove(idx);
-        _activeLoadedIndices.add(idx);
-        if (mounted) {
-          if (_currentFrameIndex == idx) {
-            setState(() {});
-          }
-          // Continue feeding the preloading pipeline
-          _requestFramePreload(_currentFrameIndex);
-        }
-      }).catchError((_) {
-        _loadingIndices.remove(idx);
-      });
+      _prepareCanvasImages(widget.canvases[idx])
+          .then((_) {
+            _loadingIndices.remove(idx);
+            _activeLoadedIndices.add(idx);
+            if (mounted) {
+              if (_currentFrameIndex == idx) {
+                setState(() {});
+              }
+              // Continue feeding the preloading pipeline
+              _requestFramePreload(_currentFrameIndex);
+            }
+          })
+          .catchError((_) {
+            _loadingIndices.remove(idx);
+          });
     }
   }
 
@@ -274,7 +313,9 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
     if (widget.canvases.isEmpty) return;
 
     final int intervalMs = (1000 / _fps).round();
-    _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
+    _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (
+      timer,
+    ) {
       if (!mounted) return;
 
       final nextIndex = (_currentFrameIndex + 1) % widget.canvases.length;
@@ -299,9 +340,7 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        leading: AppBackButton(
-          onPressed: _stopAndGoBack,
-        ),
+        leading: AppBackButton(onPressed: _stopAndGoBack),
         title: Text(
           context.tr('previewAnimation'),
           style: const TextStyle(
@@ -349,11 +388,17 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
                       },
                       child: Center(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 8,
+                          ),
                           decoration: isSelected
                               ? const BoxDecoration(
                                   border: Border(
-                                    bottom: BorderSide(color: ColorConstants.darkText, width: 2),
+                                    bottom: BorderSide(
+                                      color: ColorConstants.darkText,
+                                      width: 2,
+                                    ),
                                   ),
                                 )
                               : null,
@@ -361,8 +406,12 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
                             '$value fps',
                             style: TextStyle(
                               fontSize: isSelected ? 18 : 14,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? ColorConstants.darkText : Colors.black38,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? ColorConstants.darkText
+                                  : Colors.black38,
                             ),
                           ),
                         ),
@@ -417,9 +466,7 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.black12),
         ),
-        child: Center(
-          child: Text(context.tr('noFramesToAnimate')),
-        ),
+        child: Center(child: Text(context.tr('noFramesToAnimate'))),
       );
     }
 
@@ -437,7 +484,7 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
               color: Colors.black12,
               blurRadius: 8,
               offset: Offset(0, 4),
-            )
+            ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -446,7 +493,10 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
           children: [
             // Shared Global Background
             Container(
-              color: PatternBackgroundHelper.getBaseColor(widget.globalBackground.pattern, widget.globalBackground.color),
+              color: PatternBackgroundHelper.getBaseColor(
+                widget.globalBackground.pattern,
+                widget.globalBackground.color,
+              ),
             ),
             if (widget.globalBackground.image != null)
               Positioned.fill(
@@ -458,18 +508,19 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
                   ),
                 ),
               ),
-            if (widget.globalBackground.pattern != null && widget.globalBackground.pattern != 'none')
+            if (widget.globalBackground.pattern != null &&
+                widget.globalBackground.pattern != 'none')
               Positioned.fill(
                 child: CustomPaint(
-                  painter: PreviewPatternPainter(widget.globalBackground.pattern!),
+                  painter: PreviewPatternPainter(
+                    widget.globalBackground.pattern!,
+                  ),
                 ),
               ),
 
             // Canvas Vector & Image Paint Content
             Positioned.fill(
-              child: CustomPaint(
-                painter: FramePainter(activeController),
-              ),
+              child: CustomPaint(painter: FramePainter(activeController)),
             ),
 
             // Frame Indicator Badge
@@ -477,7 +528,10 @@ class _AnimationPreviewScreenState extends State<AnimationPreviewScreen> {
               bottom: 12,
               left: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(12),
@@ -508,7 +562,9 @@ class FramePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Size originalSize = (controller.drawConfig.value.size != null && !controller.drawConfig.value.size!.isEmpty)
+    final Size originalSize =
+        (controller.drawConfig.value.size != null &&
+            !controller.drawConfig.value.size!.isEmpty)
         ? controller.drawConfig.value.size!
         : size;
 
@@ -523,19 +579,19 @@ class FramePainter extends CustomPainter {
     canvas.saveLayer(Offset.zero & originalSize, Paint());
     for (int i = controller.layers.length - 1; i >= 0; i--) {
       final layer = controller.layers[i];
-      if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') continue;
+      if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide')
+        continue;
 
       canvas.saveLayer(
         Offset.zero & originalSize,
         Paint()
           ..blendMode = layer.blendMode
-          ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
+          ..color = Colors.white.withValues(
+            alpha: layer.opacity.clamp(0.0, 1.0),
+          ),
       );
 
-      final int count = layer.currentIndex > 0 ? layer.currentIndex : layer.history.length;
-      for (int j = 0; j < count; j++) {
-        layer.history[j].draw(canvas, originalSize, true);
-      }
+      layer.drawHistory(canvas, originalSize, true);
 
       canvas.restore();
     }

@@ -17,14 +17,14 @@ class BlurPoint {
   final double pressure;
 
   Map<String, dynamic> toJson() => {
-        'point': point.toJson(),
-        'pressure': pressure,
-      };
+    'point': point.toJson(),
+    'pressure': pressure,
+  };
 
   factory BlurPoint.fromJson(Map<String, dynamic> json) => BlurPoint(
-        jsonToOffset(json['point']),
-        (json['pressure'] as num?)?.toDouble() ?? 1.0,
-      );
+    jsonToOffset(json['point']),
+    (json['pressure'] as num?)?.toDouble() ?? 1.0,
+  );
 }
 
 /// Ultra-Fast 120 FPS Real-Time Direct-Pixel Blur Engine
@@ -65,7 +65,8 @@ class BlurContent extends PaintContent {
 
   factory BlurContent.fromJson(Map<String, dynamic> data) {
     final content = BlurContent.data(
-      points: (data['points'] as List<dynamic>?)
+      points:
+          (data['points'] as List<dynamic>?)
               ?.map((e) => BlurPoint.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -89,6 +90,7 @@ class BlurContent extends PaintContent {
 
   /// Live hardware-accelerated texture for real-time display
   ui.Image? liveImage;
+  ui.Image? _lastDecodedLive;
 
   /// Working 32-bit RGBA pixel buffer (1:1 image coordinates)
   Uint32List? _pixels;
@@ -126,10 +128,15 @@ class BlurContent extends PaintContent {
       canvasSize = size;
     }
 
-    imageData.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
+    imageData.toByteData(format: ui.ImageByteFormat.rawRgba).then((
+      ByteData? data,
+    ) {
       if (data != null) {
         if (_pixels == null) {
-          final Uint32List u32 = data.buffer.asUint32List(data.offsetInBytes, data.lengthInBytes ~/ 4);
+          final Uint32List u32 = data.buffer.asUint32List(
+            data.offsetInBytes,
+            data.lengthInBytes ~/ 4,
+          );
           _pixels = Uint32List.fromList(u32);
           _width = imageData.width;
           _height = imageData.height;
@@ -148,7 +155,9 @@ class BlurContent extends PaintContent {
       canvasSize = size;
     }
     final ByteData bd = ByteData.sublistView(data);
-    _pixels = Uint32List.fromList(bd.buffer.asUint32List(bd.offsetInBytes, data.lengthInBytes ~/ 4));
+    _pixels = Uint32List.fromList(
+      bd.buffer.asUint32List(bd.offsetInBytes, data.lengthInBytes ~/ 4),
+    );
     _processPendingSegments();
     _scheduleLiveImageDecode();
   }
@@ -261,11 +270,15 @@ class BlurContent extends PaintContent {
 
     final double cx = pt.dx * scaleX;
     final double cy = pt.dy * scaleY;
-    final double brushRadius = (paint.strokeWidth / 2.0) * scaleX * pressure.clamp(0.4, 1.6);
+    final double brushRadius =
+        (paint.strokeWidth / 2.0) * scaleX * pressure.clamp(0.4, 1.6);
     if (brushRadius <= 0.5) return;
 
     // Blur kernel radius scaled proportionally to brush size and strength (0% to 100%)
-    final int r = (math.max(1.0, brushRadius * 0.38) * (0.25 + effStrength * 1.25)).round().clamp(1, 48);
+    final int r =
+        (math.max(1.0, brushRadius * 0.38) * (0.25 + effStrength * 1.25))
+            .round()
+            .clamp(1, 48);
     final int windowSize = 2 * r + 1;
 
     final int x0 = (cx - brushRadius - r).floor().clamp(0, _width - 1);
@@ -322,7 +335,8 @@ class BlurContent extends PaintContent {
           final int rVal = (sumPremulR ~/ sumA).clamp(0, 255);
           final int gVal = (sumPremulG ~/ sumA).clamp(0, 255);
           final int bVal = (sumPremulB ~/ sumA).clamp(0, 255);
-          _patchHoriz[rowOffset + x] = (outA << 24) | (bVal << 16) | (gVal << 8) | rVal;
+          _patchHoriz[rowOffset + x] =
+              (outA << 24) | (bVal << 16) | (gVal << 8) | rVal;
         } else {
           _patchHoriz[rowOffset + x] = 0;
         }
@@ -381,7 +395,8 @@ class BlurContent extends PaintContent {
           final int rVal = (sumPremulR ~/ sumA).clamp(0, 255);
           final int gVal = (sumPremulG ~/ sumA).clamp(0, 255);
           final int bVal = (sumPremulB ~/ sumA).clamp(0, 255);
-          _patchBlurred[y * patchW + x] = (outA << 24) | (bVal << 16) | (gVal << 8) | rVal;
+          _patchBlurred[y * patchW + x] =
+              (outA << 24) | (bVal << 16) | (gVal << 8) | rVal;
         } else {
           _patchBlurred[y * patchW + x] = 0;
         }
@@ -416,7 +431,8 @@ class BlurContent extends PaintContent {
 
     // 4. Smooth cubic Hermite brush feathering & progressive blend
     final double radiusSq = brushRadius * brushRadius;
-    final double stampIntensity = (effStrength * (0.42 + effStrength * 0.58)) * pressure.clamp(0.5, 1.5);
+    final double stampIntensity =
+        (effStrength * (0.42 + effStrength * 0.58)) * pressure.clamp(0.5, 1.5);
 
     for (int y = 0; y < patchH; y++) {
       final int globalY = y0 + y;
@@ -456,11 +472,23 @@ class BlurContent extends PaintContent {
           final int blurG = (blur >> 8) & 0xFF;
           final int blurB = (blur >> 16) & 0xFF;
 
-          final int outR = (origR + (blurR - origR) * mixFactor).round().clamp(0, 255);
-          final int outG = (origG + (blurG - origG) * mixFactor).round().clamp(0, 255);
-          final int outB = (origB + (blurB - origB) * mixFactor).round().clamp(0, 255);
+          final int outR = (origR + (blurR - origR) * mixFactor).round().clamp(
+            0,
+            255,
+          );
+          final int outG = (origG + (blurG - origG) * mixFactor).round().clamp(
+            0,
+            255,
+          );
+          final int outB = (origB + (blurB - origB) * mixFactor).round().clamp(
+            0,
+            255,
+          );
 
-          final int outA = (origA + (blurA - origA) * mixFactor).round().clamp(0, 255);
+          final int outA = (origA + (blurA - origA) * mixFactor).round().clamp(
+            0,
+            255,
+          );
 
           pixels[globalIdx] = (outA << 24) | (outB << 16) | (outG << 8) | outR;
         }
@@ -483,27 +511,38 @@ class BlurContent extends PaintContent {
     final int w = _width;
     final int h = _height;
 
-    ui.decodeImageFromPixels(
-      rgbaBytes,
-      w,
-      h,
-      ui.PixelFormat.rgba8888,
-      (ui.Image result) {
-        liveImage = result;
-        image = result;
-        _isDecoding = false;
-        onRepaint?.call();
+    ui.decodeImageFromPixels(rgbaBytes, w, h, ui.PixelFormat.rgba8888, (
+      ui.Image result,
+    ) {
+      final ui.Image? prevDecoded = _lastDecodedLive;
+      _lastDecodedLive = result;
+      liveImage = result;
+      image = result;
+      if (prevDecoded != null && prevDecoded != result) {
+        try {
+          prevDecoded.dispose();
+        } catch (_) {}
+      }
+      _isDecoding = false;
+      onRepaint?.call();
 
-        if (_needsDecode) {
-          _scheduleLiveImageDecode();
-        }
-      },
-    );
+      if (_needsDecode) {
+        _scheduleLiveImageDecode();
+      }
+    });
   }
 
   /// Releases unmanaged 32-bit pixel buffers and live textures once superseded in history
   void releaseWorkingBuffers() {
     _pixels = null;
+    if (_lastDecodedLive != null) {
+      if (_lastDecodedLive != image) {
+        try {
+          _lastDecodedLive?.dispose();
+        } catch (_) {}
+      }
+      _lastDecodedLive = null;
+    }
     liveImage = null;
   }
 
@@ -554,7 +593,9 @@ class BlurContent extends PaintContent {
   Path getPath() {
     final Path path = Path();
     if (points.isEmpty) {
-      if (canvasSize != null && canvasSize!.width > 0 && canvasSize!.height > 0) {
+      if (canvasSize != null &&
+          canvasSize!.width > 0 &&
+          canvasSize!.height > 0) {
         path.addRect(Offset.zero & canvasSize!);
       }
       return path;
@@ -568,16 +609,16 @@ class BlurContent extends PaintContent {
 
   @override
   BlurContent copy() => BlurContent.data(
-        points: points.map((p) => BlurPoint(p.point, p.pressure)).toList(),
-        strength: strength,
-        paint: paint.copyWith(),
-        image: image ?? liveImage,
-        canvasSize: canvasSize,
-        onRepaint: onRepaint,
-        pixelBuffer: _pixels,
-        rgbaWidth: _width,
-        rgbaHeight: _height,
-      )..cachedBase64Image = cachedBase64Image;
+    points: points.map((p) => BlurPoint(p.point, p.pressure)).toList(),
+    strength: strength,
+    paint: paint.copyWith(),
+    image: image ?? liveImage,
+    canvasSize: canvasSize,
+    onRepaint: onRepaint,
+    pixelBuffer: _pixels,
+    rgbaWidth: _width,
+    rgbaHeight: _height,
+  )..cachedBase64Image = cachedBase64Image;
 
   @override
   Map<String, dynamic> toContentJson() {
@@ -593,7 +634,9 @@ class BlurContent extends PaintContent {
   Future<void> prepareExport() async {
     final ui.Image? targetImg = image ?? liveImage;
     if (targetImg != null && cachedBase64Image == null) {
-      final ByteData? byteData = await targetImg.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? byteData = await targetImg.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       if (byteData != null) {
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         cachedBase64Image = base64Encode(pngBytes);

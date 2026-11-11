@@ -554,6 +554,42 @@ void main() {
       tempDir.deleteSync(recursive: true);
       controller.dispose();
     });
+
+    test('EditorController manual save with force: true and stampStickers: true persists cleanly', () async {
+      final controller = EditorController(
+        repository: repository,
+      );
+
+      // Add a frame and mark dirty
+      controller.addFrame();
+      controller.markDirty();
+      expect(controller.isDirty, isTrue);
+
+      // Manual save with force: true and stampStickers: true
+      final success = await controller.saveProject(
+        immediate: true,
+        stampStickers: true,
+        force: true,
+      );
+
+      expect(success, isTrue);
+      expect(controller.isDirty, isFalse);
+      expect(controller.projectId, isNotNull);
+
+      // Verify second manual save with force: true still succeeds even when not dirty
+      final secondSuccess = await controller.saveProject(
+        immediate: true,
+        stampStickers: true,
+        force: true,
+      );
+      expect(secondSuccess, isTrue);
+
+      final loaded = await repository.loadProject(controller.projectId!);
+      expect(loaded, isNotNull);
+
+      await repository.deleteProject(controller.projectId!);
+      controller.dispose();
+    });
   });
 }
 

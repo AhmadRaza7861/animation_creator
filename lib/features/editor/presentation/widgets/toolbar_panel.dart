@@ -324,7 +324,7 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
 
                   _bottomToolbarCategoryItem(
                     label: context.tr('select'),
-                    icon: Icons.touch_app_rounded,
+                    svgAsset: AssetConstants.select_icon,
                     isSelected: controller.activeCategory == 'Select',
                     onTap: () {
                       if (controller.activeSticker != null) {
@@ -795,6 +795,8 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
           GestureDetector(
             onTap: () {
               controller.stampActiveSticker();
+              controller.isTextToolSelected = false;
+              controller.activeCategory = 'Brush';
             },
             child: Container(
               width: 38,

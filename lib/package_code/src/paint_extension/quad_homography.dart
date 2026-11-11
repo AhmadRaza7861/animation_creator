@@ -53,8 +53,17 @@ class QuadHomography {
     } else {
       // General Projective mapping (Paul Heckbert homography)
       final double det = dx1 * dy2 - dx2 * dy1;
-      if (det.abs() < 1e-9) {
-        // Degenerate/collinear points fallback: use affine fallback
+      
+      // Verify convexity: cross products of consecutive edges must have the same sign
+      final double cp0 = (x1 - x0) * (y2 - y1) - (y1 - y0) * (x2 - x1);
+      final double cp1 = (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2);
+      final double cp2 = (x3 - x2) * (y0 - y3) - (y3 - y2) * (x0 - x3);
+      final double cp3 = (x0 - x3) * (y1 - y0) - (y0 - y3) * (x1 - x0);
+      final bool isConvex = (cp0 > 0 && cp1 > 0 && cp2 > 0 && cp3 > 0) ||
+          (cp0 < 0 && cp1 < 0 && cp2 < 0 && cp3 < 0);
+
+      if (det.abs() < 1e-9 || !isConvex) {
+        // Degenerate/collinear or folded non-convex quad fallback: use safe affine fallback
         a = x1 - x0;
         b = x3 - x0;
         c = x0;
@@ -73,7 +82,15 @@ class QuadHomography {
         e = y3 - y0 + h * y3;
         f = y0;
 
-        if (!a.isFinite || !b.isFinite || !c.isFinite || !d.isFinite ||
+        // Ensure all four corners have positive projective depth (w > 0.1)
+        // Corner (0, 0): w = 1.0
+        // Corner (w, 0): w = 1.0 + g
+        // Corner (w, h): w = 1.0 + g + h
+        // Corner (0, h): w = 1.0 + h
+        final bool isWarpSafe = (1.0 + g > 0.1) && (1.0 + h > 0.1) && (1.0 + g + h > 0.1);
+
+        if (!isWarpSafe ||
+            !a.isFinite || !b.isFinite || !c.isFinite || !d.isFinite ||
             !e.isFinite || !f.isFinite || !g.isFinite || !h.isFinite) {
           a = x1 - x0;
           b = x3 - x0;

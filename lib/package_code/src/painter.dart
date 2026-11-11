@@ -95,7 +95,8 @@ class _PainterState extends State<Painter> {
   void _onPointerDown(PointerDownEvent pde) {
     _activePointers.add(pde.pointer);
 
-    if (_activePointers.length >= 2 || !widget.drawingController.couldStartDraw) {
+    if (_activePointers.length >= 2 ||
+        !widget.drawingController.couldStartDraw) {
       if (widget.drawingController.hasPaintingContent) {
         widget.drawingController.cancelDraw();
       }
@@ -127,7 +128,7 @@ class _PainterState extends State<Painter> {
 
       widget.drawingController.startDraw(pde.localPosition, pde.pressure);
     }
-    
+
     widget.onPointerDown?.call(pde);
   }
 
@@ -155,12 +156,15 @@ class _PainterState extends State<Painter> {
     _activePointers.remove(pue.pointer);
 
     if (widget.drawingController.hasPaintingContent) {
-      if (!widget.drawingController.couldDrawing || _activePointers.isNotEmpty) {
+      if (widget.drawingController.isNavigating ||
+          widget.drawingController.isZooming ||
+          widget.drawingController.isPanning) {
         widget.drawingController.cancelDraw();
         return;
       }
 
-      if (!widget.drawingController.isDrawingValidContent || widget.drawingController.startPoint == pue.localPosition) {
+      if (!widget.drawingController.isDrawingValidContent ||
+          widget.drawingController.startPoint == pue.localPosition) {
         widget.drawingController.drawing(pue.localPosition, pue.pressure);
       }
 
@@ -239,7 +243,8 @@ class _UpPainter extends CustomPainter {
     final bool isSmudgeActive = activeDrawing is SmudgeContent;
     final bool isBlurActive = activeDrawing is BlurContent;
     final bool isRasterModifierActive = isSmudgeActive || isBlurActive;
-    final bool isModifierActive = controller.eraserContent != null || isRasterModifierActive;
+    final bool isModifierActive =
+        controller.eraserContent != null || isRasterModifierActive;
 
     if (isRasterModifierActive) {
       // 涂抹/模糊模式：SmudgeContent / BlurContent 已持有完整的修改后图层像素，直接渲染无需叠加未修改历史
@@ -296,7 +301,8 @@ class _UpPainter extends CustomPainter {
     } else {
       final activeLayer = controller.activeLayer.value;
       if (activeLayer != null &&
-          (activeLayer.opacity < 1.0 || activeLayer.blendMode != BlendMode.srcOver)) {
+          (activeLayer.opacity < 1.0 ||
+              activeLayer.blendMode != BlendMode.srcOver)) {
         canvas.saveLayer(
           Offset.zero & size,
           Paint()
@@ -378,14 +384,23 @@ class _DeepPainter extends CustomPainter {
     }
   }
 
-  void _drawFrameSkin(Canvas canvas, Size size, int index, double opacity, {required bool isPrevious}) {
+  void _drawFrameSkin(
+    Canvas canvas,
+    Size size,
+    int index,
+    double opacity, {
+    required bool isPrevious,
+  }) {
     final frameController = allControllers![index];
-    
+
     Paint? layerPaint;
     if (onionColorMode) {
       final Color tintColor = isPrevious ? Colors.red : Colors.green;
       layerPaint = Paint()
-        ..colorFilter = ColorFilter.mode(tintColor.withOpacity(opacity), BlendMode.srcIn);
+        ..colorFilter = ColorFilter.mode(
+          tintColor.withOpacity(opacity),
+          BlendMode.srcIn,
+        );
     } else {
       layerPaint = Paint()..color = Colors.white.withOpacity(opacity);
     }
@@ -395,8 +410,9 @@ class _DeepPainter extends CustomPainter {
     for (int i = frameController.layers.length - 1; i >= 0; i--) {
       final layer = frameController.layers[i];
       if (!layer.isVisible) continue;
-      if (layer.name == 'Video Layer' || layer.id.startsWith('video_layer_')) continue;
-      
+      if (layer.name == 'Video Layer' || layer.id.startsWith('video_layer_'))
+        continue;
+
       canvas.saveLayer(
         Offset.zero & size,
         Paint()
@@ -412,22 +428,22 @@ class _DeepPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    debugPrint('_DeepPainter.paint start! Size: $size, History: ${controller.currentIndex}');
-
     // 1. Draw Onion Skins if enabled
     if (isOnionEnabled && allControllers != null) {
       _drawOnionSkins(canvas, size);
     }
 
     final PaintContent? activeDrawing = controller.drawingContent;
-    final bool isModifierActive = controller.eraserContent != null ||
+    final bool isModifierActive =
+        controller.eraserContent != null ||
         (activeDrawing is BlurContent || activeDrawing is SmudgeContent);
 
     final activeLayer = controller.activeLayer.value;
 
     int totalContents = controller.layers.fold(0, (sum, layer) {
       if (!layer.isVisible) return sum;
-      if (isModifierActive && layer == activeLayer) return sum; // Skipped, rendered by _UpPainter
+      if (isModifierActive && layer == activeLayer)
+        return sum; // Skipped, rendered by _UpPainter
       return sum + layer.currentIndex;
     });
 
@@ -438,9 +454,10 @@ class _DeepPainter extends CustomPainter {
     final bool hasPendingImages = _hasPendingImages(controller);
 
     // 检查缓存是否有效：尺寸相同、历史索引相同且不为空（修改器激活或有未水合图片时跳过缓存）
-    final bool cacheValid = !isModifierActive &&
+    final bool cacheValid =
+        !isModifierActive &&
         !hasPendingImages &&
-        controller.lastRenderedSize == size && 
+        controller.lastRenderedSize == size &&
         controller.lastTotalIndex == controller.totalCurrentIndex &&
         controller.cachedPicture != null;
 
@@ -461,16 +478,16 @@ class _DeepPainter extends CustomPainter {
       if (!layer.isVisible) continue;
       // 如果当前是修改器激活状态，活跃图层由 _UpPainter 独立渲染，避免与底层重复或造成透明镂空穿透
       if (isModifierActive && layer == activeLayer) continue;
-      
+
       recCanvas.saveLayer(
-        Offset.zero & size, 
+        Offset.zero & size,
         Paint()
           ..blendMode = layer.blendMode
-          ..color = Colors.white.withValues(alpha: layer.opacity)
+          ..color = Colors.white.withValues(alpha: layer.opacity),
       );
-      
+
       layer.drawHistory(recCanvas, size, true);
-      
+
       recCanvas.restore();
     }
 
@@ -478,15 +495,26 @@ class _DeepPainter extends CustomPainter {
 
     final ui.Picture picture = recorder.endRecording();
 
+    final ui.Picture? oldPicture = controller.cachedPicture;
     if (!isModifierActive && !hasPendingImages) {
       // 更新缓存版本信息
       controller.lastRenderedSize = size;
       controller.lastTotalIndex = controller.totalCurrentIndex;
       controller.cachedPicture = picture;
+      if (oldPicture != null && oldPicture != picture) {
+        try {
+          oldPicture.dispose();
+        } catch (_) {}
+      }
     } else {
       controller.lastRenderedSize = null;
       controller.lastTotalIndex = -1;
       controller.cachedPicture = null;
+      if (oldPicture != null) {
+        try {
+          oldPicture.dispose();
+        } catch (_) {}
+      }
     }
 
     canvas.drawPicture(picture);
@@ -504,9 +532,13 @@ class _DeepPainter extends CustomPainter {
 
   bool _isContentPendingImage(PaintContent content) {
     if (content is ImageContent) {
-      return content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty;
+      return content.image == null &&
+          content.imageUrl != null &&
+          content.imageUrl!.isNotEmpty;
     } else if (content is FillContent) {
-      return content.image == null && content.cachedBase64Image != null && content.cachedBase64Image!.isNotEmpty;
+      return content.image == null &&
+          content.cachedBase64Image != null &&
+          content.cachedBase64Image!.isNotEmpty;
     } else if (content is ShapeStickerContent) {
       return _isContentPendingImage(content.child);
     } else if (content is OffsetContent) {

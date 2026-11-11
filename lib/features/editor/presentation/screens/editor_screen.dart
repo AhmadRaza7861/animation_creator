@@ -83,7 +83,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       try {
         ref
             .read(editorControllerProvider(widget.projectId))
-            .saveProject(immediate: true, stampStickers: false);
+            .saveProject(immediate: true, stampStickers: true);
       } catch (_) {}
     }
   }
@@ -2230,6 +2230,38 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                           ),
                         ],
                       );
+                    },
+                  ),
+                  IconButton(
+                    icon: SvgPicture.asset(
+                      AssetConstants.save_icon,
+                      width: 20,
+                      height: 20,
+                    ),
+                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: context.tr('saveProject'),
+                    onPressed: () async {
+                      if (controller.isSaving) return;
+                      final success = await controller.saveProject(
+                        immediate: true,
+                        stampStickers: true,
+                        force: true,
+                      );
+                      if (context.mounted) {
+                        Fluttertoast.showToast(
+                          msg: success
+                              ? context.tr('projectSaved')
+                              : context.tr('projectSaveFailed'),
+                          backgroundColor: const Color(0xFF283039),
+                          textColor: Colors.white,
+                          toastLength: Toast.LENGTH_SHORT,
+                        );
+                      }
                     },
                   ),
                   IconButton(

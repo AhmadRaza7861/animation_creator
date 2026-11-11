@@ -221,6 +221,12 @@ bool hitTestPaintContent(PaintContent c, Offset tapPos, {double touchTolerance =
     return bounds.inflate(touchTolerance).contains(tapPos);
   }
 
+  // 2. Text content
+  if (c is TextContent) {
+    final Path path = c.getPath();
+    return path.contains(tapPos) || bounds.inflate(touchTolerance).contains(tapPos);
+  }
+
   // 2. Freehand strokes (standard pen, brush line, or smooth lines)
   final List<Offset>? points = c is FreehandLine
       ? c.points

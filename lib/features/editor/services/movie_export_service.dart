@@ -295,9 +295,10 @@ class MovieExportService {
 
     try {
       for (final layer in controller.layers) {
-        final int count = layer.currentIndex.clamp(0, layer.history.length);
-        for (int j = 0; j < count; j++) {
-          await prepareContentImages(layer.history[j]);
+        if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') continue;
+        final effective = layer.getEffectiveHistory();
+        for (final item in effective) {
+          await prepareContentImages(item);
         }
       }
 
@@ -346,10 +347,7 @@ class MovieExportService {
             ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
         );
 
-        final int count = layer.currentIndex.clamp(0, layer.history.length);
-        for (int j = 0; j < count; j++) {
-          layer.history[j].draw(canvas, sourceSize, false);
-        }
+        layer.drawHistory(canvas, sourceSize, false);
 
         canvas.restore();
       }

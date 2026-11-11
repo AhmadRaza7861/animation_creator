@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -62,8 +63,15 @@ class FloodFill {
       int bestSeedY = -1;
       int minArea = 1 << 30;
 
-      // Search expanding rings up to radius 16 for an enclosed interior seed
-      for (int r = 1; r <= 16; r++) {
+      const int kMaxNarrowLoopArea = 6000;
+      final int totalPixels = width * height;
+      // Tag buffer: 0 = unvisited, >0 = candidate flood id, -1 = confirmed open/large canvas
+      final Int32List candidateTags = Int32List(totalPixels);
+      final Int32List queue = Int32List(kMaxNarrowLoopArea * 2 + 100);
+      int currentTag = 0;
+
+      // Search expanding rings up to radius 10 for an enclosed interior seed
+      for (int r = 1; r <= 10; r++) {
         for (int dy = -r; dy <= r; dy++) {
           for (int dx = -r; dx <= r; dx++) {
             if (dx * dx + dy * dy > r * r || dx * dx + dy * dy <= (r - 1) * (r - 1)) continue;
@@ -71,21 +79,26 @@ class FloodFill {
             final int ny = startY + dy;
             if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
 
-            if (!isStrokeBoundary(nx, ny)) {
-              final int area = _getEnclosedArea(
-                pixels: pixels,
-                width: width,
-                height: height,
-                seedX: nx,
-                seedY: ny,
-                boundaryAlphaThreshold: boundaryAlphaThreshold,
-                maxArea: minArea,
-              );
-              if (area > 0 && area < minArea) {
-                minArea = area;
-                bestSeedX = nx;
-                bestSeedY = ny;
-              }
+            final int pIdx = ny * width + nx;
+            if (candidateTags[pIdx] != 0 || isStrokeBoundary(nx, ny)) continue;
+
+            currentTag++;
+            final int area = _getEnclosedAreaFast(
+              pixels: pixels,
+              width: width,
+              height: height,
+              seedX: nx,
+              seedY: ny,
+              boundaryAlphaThreshold: boundaryAlphaThreshold,
+              maxArea: math.min(minArea, kMaxNarrowLoopArea),
+              tagBuffer: candidateTags,
+              currentTag: currentTag,
+              queue: queue,
+            );
+            if (area > 0 && area < minArea) {
+              minArea = area;
+              bestSeedX = nx;
+              bestSeedY = ny;
             }
           }
         }
@@ -177,9 +190,18 @@ class FloodFill {
     queue[tail++] = effectiveStartX;
     queue[tail++] = effectiveStartY;
 
+    int minX = effectiveStartX;
+    int maxX = effectiveStartX;
+    int minY = effectiveStartY;
+    int maxY = effectiveStartY;
+
     while (head < tail) {
       final int x = queue[head++];
       final int y = queue[head++];
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
 
       // Right (x + 1, y)
       if (x + 1 < width) {
@@ -228,10 +250,15 @@ class FloodFill {
     // For re-coloring: Traverses stroke pixels and recolors them smoothly with original anti-aliased alpha.
     final Uint8List filledPixels = Uint8List(width * height * 4);
     final int dilationRadius = isTargetTransparent ? expandRadius.ceil().clamp(1, 4) : 0;
+    final int pad = isTargetTransparent ? (dilationRadius + 2) : 5;
+    final int scanMinY = math.max(0, minY - pad);
+    final int scanMaxY = math.min(height - 1, maxY + pad);
+    final int scanMinX = math.max(0, minX - pad);
+    final int scanMaxX = math.min(width - 1, maxX + pad);
 
-    for (int y = 0; y < height; y++) {
+    for (int y = scanMinY; y <= scanMaxY; y++) {
       final int rowOffset = y * width;
-      for (int x = 0; x < width; x++) {
+      for (int x = scanMinX; x <= scanMaxX; x++) {
         final int pos = rowOffset + x;
         final int pixelIndex = pos * 4;
 
@@ -362,52 +389,60 @@ class FloodFill {
   /// Calculates the area of an enclosed region starting at (seedX, seedY).
   /// Returns the pixel count if strictly enclosed, or -1 if the region touches canvas edges
   /// or exceeds maximum allowable area.
-  static int _getEnclosedArea({
+  static int _getEnclosedAreaFast({
     required Uint8List pixels,
     required int width,
     required int height,
     required int seedX,
     required int seedY,
     required int boundaryAlphaThreshold,
-    int maxArea = 1000000,
+    required int maxArea,
+    required Int32List tagBuffer,
+    required int currentTag,
+    required Int32List queue,
   }) {
-    final int totalPixels = width * height;
-    final int maxAllowableArea = (totalPixels * 0.45).toInt().clamp(500, maxArea);
+    if (maxArea <= 0) return -1;
 
-    final Uint8List visited = Uint8List(totalPixels);
-    final Int32List queue = Int32List(maxAllowableArea * 2 + 100);
     int head = 0;
     int tail = 0;
 
-    visited[seedY * width + seedX] = 1;
+    tagBuffer[seedY * width + seedX] = currentTag;
     queue[tail++] = seedX;
     queue[tail++] = seedY;
     int count = 0;
+    bool isOpen = false;
 
     while (head < tail) {
       final int x = queue[head++];
       final int y = queue[head++];
       count++;
 
-      if (count > maxAllowableArea) {
-        return -1;
+      if (count > maxArea) {
+        isOpen = true;
+        break;
       }
 
       // If it touches the outer canvas borders, it's not strictly enclosed
       if (x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1) {
-        return -1;
+        isOpen = true;
+        break;
       }
 
       // Right (x + 1, y)
       if (x + 1 < width) {
         final int rPos = y * width + (x + 1);
-        if (visited[rPos] == 0 && pixels[rPos * 4 + 3] < boundaryAlphaThreshold) {
-          visited[rPos] = 1;
+        final int tag = tagBuffer[rPos];
+        if (tag == -1) {
+          isOpen = true;
+          break;
+        } else if (tag != currentTag && pixels[rPos * 4 + 3] < boundaryAlphaThreshold) {
+          tagBuffer[rPos] = currentTag;
           if (tail < queue.length - 2) {
             queue[tail++] = x + 1;
             queue[tail++] = y;
           } else {
-            return -1;
+            isOpen = true;
+            break;
           }
         }
       }
@@ -415,13 +450,18 @@ class FloodFill {
       // Left (x - 1, y)
       if (x - 1 >= 0) {
         final int lPos = y * width + (x - 1);
-        if (visited[lPos] == 0 && pixels[lPos * 4 + 3] < boundaryAlphaThreshold) {
-          visited[lPos] = 1;
+        final int tag = tagBuffer[lPos];
+        if (tag == -1) {
+          isOpen = true;
+          break;
+        } else if (tag != currentTag && pixels[lPos * 4 + 3] < boundaryAlphaThreshold) {
+          tagBuffer[lPos] = currentTag;
           if (tail < queue.length - 2) {
             queue[tail++] = x - 1;
             queue[tail++] = y;
           } else {
-            return -1;
+            isOpen = true;
+            break;
           }
         }
       }
@@ -429,13 +469,18 @@ class FloodFill {
       // Down (x, y + 1)
       if (y + 1 < height) {
         final int dPos = (y + 1) * width + x;
-        if (visited[dPos] == 0 && pixels[dPos * 4 + 3] < boundaryAlphaThreshold) {
-          visited[dPos] = 1;
+        final int tag = tagBuffer[dPos];
+        if (tag == -1) {
+          isOpen = true;
+          break;
+        } else if (tag != currentTag && pixels[dPos * 4 + 3] < boundaryAlphaThreshold) {
+          tagBuffer[dPos] = currentTag;
           if (tail < queue.length - 2) {
             queue[tail++] = x;
             queue[tail++] = y + 1;
           } else {
-            return -1;
+            isOpen = true;
+            break;
           }
         }
       }
@@ -443,16 +488,31 @@ class FloodFill {
       // Up (x, y - 1)
       if (y - 1 >= 0) {
         final int uPos = (y - 1) * width + x;
-        if (visited[uPos] == 0 && pixels[uPos * 4 + 3] < boundaryAlphaThreshold) {
-          visited[uPos] = 1;
+        final int tag = tagBuffer[uPos];
+        if (tag == -1) {
+          isOpen = true;
+          break;
+        } else if (tag != currentTag && pixels[uPos * 4 + 3] < boundaryAlphaThreshold) {
+          tagBuffer[uPos] = currentTag;
           if (tail < queue.length - 2) {
             queue[tail++] = x;
             queue[tail++] = y - 1;
           } else {
-            return -1;
+            isOpen = true;
+            break;
           }
         }
       }
+    }
+
+    if (isOpen) {
+      // Mark all pixels reached in this search as known open space
+      for (int i = 0; i < tail; i += 2) {
+        final int qx = queue[i];
+        final int qy = queue[i + 1];
+        tagBuffer[qy * width + qx] = -1;
+      }
+      return -1;
     }
 
     return count;

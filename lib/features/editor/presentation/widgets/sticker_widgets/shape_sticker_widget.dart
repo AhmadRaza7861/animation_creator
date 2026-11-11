@@ -664,7 +664,17 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                     },
                     onScaleUpdate: (details) {
                       setState(() {
-                        _offset = _startOffset + (details.focalPoint - _focalPoint);
+                        Offset newOffset = _startOffset + (details.focalPoint - _focalPoint);
+                        if (widget.canvasSize != null &&
+                            widget.canvasSize!.width > 0 &&
+                            widget.canvasSize!.height > 0) {
+                          final cs = widget.canvasSize!;
+                          newOffset = Offset(
+                            newOffset.dx.clamp(-w * 0.5, cs.width + w * 0.5),
+                            newOffset.dy.clamp(-h * 0.5, cs.height + h * 0.5),
+                          );
+                        }
+                        _offset = newOffset;
                         if (!isPerspective) {
                           _scale = (_startScale * details.scale).clamp(0.1, 10.0);
                           _rotation = _startRotation + details.rotation;
@@ -739,7 +749,11 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                       onPanUpdate: (details) {
                         final localDelta = _screenDeltaToLocal(details.delta);
                         setState(() {
-                          _topLeftOffset += localDelta;
+                          final newOffset = _topLeftOffset + localDelta;
+                          _topLeftOffset = Offset(
+                            newOffset.dx.clamp(-w * 0.8, w * 0.6),
+                            newOffset.dy.clamp(-h * 0.8, h * 0.6),
+                          );
                           widget.data.topLeftOffset = _topLeftOffset;
                         });
                         widget.onUpdate(_offset, _scale, _rotation);
@@ -757,7 +771,11 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                       onPanUpdate: (details) {
                         final localDelta = _screenDeltaToLocal(details.delta);
                         setState(() {
-                          _topRightOffset += localDelta;
+                          final newOffset = _topRightOffset + localDelta;
+                          _topRightOffset = Offset(
+                            newOffset.dx.clamp(-w * 0.6, w * 0.8),
+                            newOffset.dy.clamp(-h * 0.8, h * 0.6),
+                          );
                           widget.data.topRightOffset = _topRightOffset;
                         });
                         widget.onUpdate(_offset, _scale, _rotation);
@@ -775,7 +793,11 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                       onPanUpdate: (details) {
                         final localDelta = _screenDeltaToLocal(details.delta);
                         setState(() {
-                          _bottomRightOffset += localDelta;
+                          final newOffset = _bottomRightOffset + localDelta;
+                          _bottomRightOffset = Offset(
+                            newOffset.dx.clamp(-w * 0.6, w * 0.8),
+                            newOffset.dy.clamp(-h * 0.6, h * 0.8),
+                          );
                           widget.data.bottomRightOffset = _bottomRightOffset;
                         });
                         widget.onUpdate(_offset, _scale, _rotation);
@@ -793,7 +815,11 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                       onPanUpdate: (details) {
                         final localDelta = _screenDeltaToLocal(details.delta);
                         setState(() {
-                          _bottomLeftOffset += localDelta;
+                          final newOffset = _bottomLeftOffset + localDelta;
+                          _bottomLeftOffset = Offset(
+                            newOffset.dx.clamp(-w * 0.8, w * 0.6),
+                            newOffset.dy.clamp(-h * 0.6, h * 0.8),
+                          );
                           widget.data.bottomLeftOffset = _bottomLeftOffset;
                         });
                         widget.onUpdate(_offset, _scale, _rotation);

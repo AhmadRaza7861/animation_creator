@@ -10,6 +10,8 @@ import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_assets.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
@@ -38,6 +40,9 @@ class CanvasArea extends ConsumerWidget {
     final text = await AppDialogs.showTextStickerDialog(context);
     if (text != null && text.trim().isNotEmpty) {
       controller.addTextSticker(text.trim(), position);
+    } else {
+      controller.isTextToolSelected = false;
+      controller.activeCategory = 'Brush';
     }
   }
 
@@ -74,6 +79,7 @@ class CanvasArea extends ConsumerWidget {
           fit: StackFit.expand,
           children: [
             DrawingBoard(
+              enablePalmRejection: true,
               transformationController: transformationController,
               alignment: Alignment.center,
               controller: controller.drawingController,
@@ -413,7 +419,12 @@ class CanvasArea extends ConsumerWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.touch_app_rounded, color: Colors.white70, size: 14),
+                          SvgPicture.asset(
+                            AssetConstants.select_icon,
+                            width: 14,
+                            height: 14,
+                            colorFilter: const ColorFilter.mode(Colors.white70, BlendMode.srcIn),
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             context.tr('selectToolHint'),

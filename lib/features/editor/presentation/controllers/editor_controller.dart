@@ -64,20 +64,15 @@ class EditorController extends ChangeNotifier {
   String? _projectId;
   String? get projectId => _projectId;
 
-  EditorController({
-    required this.repository,
-    String? projectId,
-  }) : _projectId = projectId {
+  EditorController({required this.repository, String? projectId})
+    : _projectId = projectId {
     _globalStrokeWidth = 10.0;
     _colorOpacity = 1.0;
     _activeCategory = 'Brush';
     _currentSubMenu = 'none';
     _isTextToolSelected = false;
     GlobalToolState.instance.resetToDefaultBrush();
-    GlobalToolState.instance.setStyle(
-      strokeWidth: 10.0,
-      color: Colors.black,
-    );
+    GlobalToolState.instance.setStyle(strokeWidth: 10.0, color: Colors.black);
     _addNewCanvas(initial: true);
     _loadGlobalPreferences();
     _loadStickerHintPersistence();
@@ -92,9 +87,13 @@ class EditorController extends ChangeNotifier {
   CanvasBackground _globalBackground = CanvasBackground();
   int _currentIndex = 0;
   bool _isLoadingProject = false;
-  final ValueNotifier<double> _loadingProgressNotifier = ValueNotifier<double>(0.0);
+  final ValueNotifier<double> _loadingProgressNotifier = ValueNotifier<double>(
+    0.0,
+  );
   ValueNotifier<double> get loadingProgressNotifier => _loadingProgressNotifier;
-  final ValueNotifier<String> _loadingStatusNotifier = ValueNotifier<String>('Restoring drawing layers...');
+  final ValueNotifier<String> _loadingStatusNotifier = ValueNotifier<String>(
+    'Restoring drawing layers...',
+  );
   ValueNotifier<String> get loadingStatusNotifier => _loadingStatusNotifier;
 
   @override
@@ -102,7 +101,7 @@ class EditorController extends ChangeNotifier {
     if (_isDisposed) return;
     super.notifyListeners();
   }
-  
+
   double _aspectRatio = 1.0;
   String? _templateFolder;
   String? _templateExtension;
@@ -135,7 +134,7 @@ class EditorController extends ChangeNotifier {
   void _scheduleAutoSave() {
     _autoSaveTimer?.cancel();
     if (_activeSticker != null) return;
-    _autoSaveTimer = Timer(const Duration(milliseconds: 1500), () {
+    _autoSaveTimer = Timer(const Duration(milliseconds: 3000), () {
       saveProject();
     });
   }
@@ -189,11 +188,13 @@ class EditorController extends ChangeNotifier {
   /// Checks if a canvas has any drawings, text, stickers, or custom background.
   bool isCanvasEmpty(DrawingController canvas, {int? canvasIndex}) {
     if (canvas.backgroundImage != null) return false;
-    if (_activeSticker != null && canvasIndex != null && canvasIndex == _currentIndex) return false;
+    if (_activeSticker != null &&
+        canvasIndex != null &&
+        canvasIndex == _currentIndex)
+      return false;
     for (final layer in canvas.layers) {
-      final int validCount = layer.currentIndex.clamp(0, layer.history.length);
-      for (int i = 0; i < validCount; i++) {
-        final content = layer.history[i];
+      final effectiveHistory = layer.getEffectiveHistory();
+      for (final content in effectiveHistory) {
         if (content is! EmptyContent) {
           return false;
         }
@@ -218,7 +219,9 @@ class EditorController extends ChangeNotifier {
   }) {
     final int maxMs = _audioState.maxDurationMs;
     final int effectiveFps = _fps > 0 ? _fps : 9;
-    final int requiredFrames = maxMs > 0 ? ((maxMs / 1000.0) * effectiveFps).ceil() : 0;
+    final int requiredFrames = maxMs > 0
+        ? ((maxMs / 1000.0) * effectiveFps).ceil()
+        : 0;
     final int currentFrames = _canvases.length;
 
     // 1. Audio requires more frames -> Add frames
@@ -243,10 +246,13 @@ class EditorController extends ChangeNotifier {
 
     // 2. Audio duration was reduced or audio was deleted -> Remove trailing empty frames
     if (autoRemoveFrames && currentFrames > 1) {
-      final int minFrames = (_templateFrameCount != null && _templateFrameCount! > 0)
+      final int minFrames =
+          (_templateFrameCount != null && _templateFrameCount! > 0)
           ? _templateFrameCount!
           : 1;
-      final int targetMinFrames = requiredFrames > minFrames ? requiredFrames : minFrames;
+      final int targetMinFrames = requiredFrames > minFrames
+          ? requiredFrames
+          : minFrames;
 
       int removedFrames = 0;
       // Trim empty frames from the end backwards
@@ -258,7 +264,10 @@ class EditorController extends ChangeNotifier {
           removed.drawConfig.removeListener(_onDrawConfigChanged);
           removed.dispose();
           if (_thumbnails.isNotEmpty) {
-            _thumbnails.removeLast();
+            final t = _thumbnails.removeLast();
+            try {
+              t?.dispose();
+            } catch (_) {}
           }
           removedFrames++;
         } else {
@@ -286,7 +295,11 @@ class EditorController extends ChangeNotifier {
   /// of all active audio tracks and clips.
   /// Returns the number of frames added.
   int ensureFramesForAudio({bool notify = true}) {
-    return syncFramesWithAudio(autoAddFrames: true, autoRemoveFrames: false, notify: notify);
+    return syncFramesWithAudio(
+      autoAddFrames: true,
+      autoRemoveFrames: false,
+      notify: notify,
+    );
   }
 
   int updateAudioState(
@@ -339,7 +352,9 @@ class EditorController extends ChangeNotifier {
   String? _extractImagePath(DrawingController canvas) {
     for (final layer in canvas.layers) {
       for (final content in layer.history) {
-        if (content is ImageContent && content.imageUrl != null && content.imageUrl!.isNotEmpty) {
+        if (content is ImageContent &&
+            content.imageUrl != null &&
+            content.imageUrl!.isNotEmpty) {
           return content.imageUrl;
         }
       }
@@ -369,6 +384,7 @@ class EditorController extends ChangeNotifier {
     final int safeIndex = _currentIndex.clamp(0, _canvases.length - 1);
     return _canvases[safeIndex];
   }
+
   bool get isLoadingProject => _isLoadingProject;
 
   double get aspectRatio {
@@ -381,6 +397,7 @@ class EditorController extends ChangeNotifier {
     }
     return 1.0;
   }
+
   String? get templateFolder => _templateFolder;
   String? get templateExtension => _templateExtension;
   String? get templateMode => _templateMode;
@@ -468,10 +485,12 @@ class EditorController extends ChangeNotifier {
           _lastGlobalGridOpacity = (data['gridOpacity'] as num).toDouble();
         }
         if (data.containsKey('gridVerticalSpacing')) {
-          _lastGlobalGridVerticalSpacing = (data['gridVerticalSpacing'] as num).toDouble();
+          _lastGlobalGridVerticalSpacing = (data['gridVerticalSpacing'] as num)
+              .toDouble();
         }
         if (data.containsKey('gridHorizontalSpacing')) {
-          _lastGlobalGridHorizontalSpacing = (data['gridHorizontalSpacing'] as num).toDouble();
+          _lastGlobalGridHorizontalSpacing =
+              (data['gridHorizontalSpacing'] as num).toDouble();
         }
       }
       _globalPreferencesLoaded = true;
@@ -566,7 +585,8 @@ class EditorController extends ChangeNotifier {
       c.setStyle(strength: _blurStrength);
     }
     if (drawingController.drawingContent is BlurContent) {
-      (drawingController.drawingContent as BlurContent).strength = _blurStrength;
+      (drawingController.drawingContent as BlurContent).strength =
+          _blurStrength;
     }
     markDirty();
     notifyListeners();
@@ -578,7 +598,8 @@ class EditorController extends ChangeNotifier {
       c.setStyle(strength: _smudgeStrength);
     }
     if (drawingController.drawingContent is SmudgeContent) {
-      (drawingController.drawingContent as SmudgeContent).strength = _smudgeStrength;
+      (drawingController.drawingContent as SmudgeContent).strength =
+          _smudgeStrength;
     }
     markDirty();
     notifyListeners();
@@ -614,8 +635,8 @@ class EditorController extends ChangeNotifier {
     if (_activeSticker != null) {
       stampActiveSticker();
     }
-    drawingController.rulerConfig.value =
-        drawingController.rulerConfig.value.copyWith(type: RulerType.none);
+    drawingController.rulerConfig.value = drawingController.rulerConfig.value
+        .copyWith(type: RulerType.none);
     _selectedShape = shape;
     switch (shape) {
       case 'line':
@@ -676,8 +697,8 @@ class EditorController extends ChangeNotifier {
       stampActiveSticker();
     }
     if (_activeCategory != value && value != 'Brush') {
-      drawingController.rulerConfig.value =
-          drawingController.rulerConfig.value.copyWith(type: RulerType.none);
+      drawingController.rulerConfig.value = drawingController.rulerConfig.value
+          .copyWith(type: RulerType.none);
     }
     if (_activeCategory != value) {
       AnalyticsService.instance.logToolSelected(toolName: value);
@@ -717,13 +738,22 @@ class EditorController extends ChangeNotifier {
   set fps(int value) {
     _fps = value;
     if (_audioState.isNotEmpty) {
-      syncFramesWithAudio(autoAddFrames: true, autoRemoveFrames: true, notify: false);
+      syncFramesWithAudio(
+        autoAddFrames: true,
+        autoRemoveFrames: true,
+        notify: false,
+      );
     }
     markDirty();
     notifyListeners();
   }
 
-  void updateGrid({bool? enabled, double? opacity, double? vertical, double? horizontal}) {
+  void updateGrid({
+    bool? enabled,
+    double? opacity,
+    double? vertical,
+    double? horizontal,
+  }) {
     if (enabled != null) _isGridEnabled = enabled;
     if (opacity != null) _gridOpacity = opacity;
     if (vertical != null) _gridVerticalSpacing = vertical;
@@ -733,7 +763,13 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateOnion({bool? enabled, bool? colorMode, bool? loop, int? before, int? after}) {
+  void updateOnion({
+    bool? enabled,
+    bool? colorMode,
+    bool? loop,
+    int? before,
+    int? after,
+  }) {
     if (enabled != null) _isOnionEnabled = enabled;
     if (colorMode != null) _onionColorMode = colorMode;
     if (loop != null) _onionLoop = loop;
@@ -748,16 +784,19 @@ class EditorController extends ChangeNotifier {
   Future<ui.Image> _getImage(String path) async {
     final Completer<ImageInfo> completer = Completer<ImageInfo>();
     final NetworkImage img = NetworkImage(path);
-    img.resolve(ImageConfiguration.empty).addListener(
-      ImageStreamListener(
-        (ImageInfo info, _) {
-          if (!completer.isCompleted) completer.complete(info);
-        },
-        onError: (dynamic error, StackTrace? stackTrace) {
-          if (!completer.isCompleted) completer.completeError(error, stackTrace);
-        },
-      ),
-    );
+    img
+        .resolve(ImageConfiguration.empty)
+        .addListener(
+          ImageStreamListener(
+            (ImageInfo info, _) {
+              if (!completer.isCompleted) completer.complete(info);
+            },
+            onError: (dynamic error, StackTrace? stackTrace) {
+              if (!completer.isCompleted)
+                completer.completeError(error, stackTrace);
+            },
+          ),
+        );
     final ImageInfo imageInfo = await completer.future;
     return imageInfo.image;
   }
@@ -788,7 +827,9 @@ class EditorController extends ChangeNotifier {
       for (var controller in _canvases) {
         if (controller.drawConfig.value.size != activeSize) {
           controller.drawConfig.removeListener(_onDrawConfigChanged);
-          controller.drawConfig.value = controller.drawConfig.value.copyWith(size: activeSize);
+          controller.drawConfig.value = controller.drawConfig.value.copyWith(
+            size: activeSize,
+          );
           controller.drawConfig.addListener(_onDrawConfigChanged);
           propagated = true;
         }
@@ -808,7 +849,11 @@ class EditorController extends ChangeNotifier {
   /// Detects whether this project was authored in the legacy 360x202.5 mobile tutorial
   /// coordinate space and scales vector content to seamlessly fill tablet canvases.
   void checkAndScaleLegacyCanvasSize(Size targetSize) {
-    if (_hasCheckedLegacyScale || _canvases.isEmpty || targetSize.width <= 0 || targetSize.height <= 0) return;
+    if (_hasCheckedLegacyScale ||
+        _canvases.isEmpty ||
+        targetSize.width <= 0 ||
+        targetSize.height <= 0)
+      return;
 
     final firstSize = _canvases.first.drawConfig.value.size;
     if (firstSize != null &&
@@ -820,7 +865,9 @@ class EditorController extends ChangeNotifier {
       final double scaleY = targetSize.height / 202.5;
       for (final canvas in _canvases) {
         canvas.scaleContent(scaleX, scaleY);
-        canvas.drawConfig.value = canvas.drawConfig.value.copyWith(size: targetSize);
+        canvas.drawConfig.value = canvas.drawConfig.value.copyWith(
+          size: targetSize,
+        );
         canvas.updateSnapshot(includeBackground: false);
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -856,7 +903,8 @@ class EditorController extends ChangeNotifier {
       if (data.state.containsKey('exportType')) {
         _exportType = data.state['exportType'] as String? ?? 'Mp4';
       }
-      if (data.state.containsKey('aspectRatio') && data.state['aspectRatio'] != null) {
+      if (data.state.containsKey('aspectRatio') &&
+          data.state['aspectRatio'] != null) {
         final rawRatio = data.state['aspectRatio'];
         if (rawRatio is num) {
           _aspectRatio = rawRatio.toDouble();
@@ -886,16 +934,20 @@ class EditorController extends ChangeNotifier {
       _templateMode = data.state['templateMode'] as String?;
       _templateFrameCount = data.state['templateFrameCount'] as int?;
       if (data.state.containsKey('templateFrameAssets')) {
-        _templateFrameAssets = List<String>.from(data.state['templateFrameAssets'] as List);
+        _templateFrameAssets = List<String>.from(
+          data.state['templateFrameAssets'] as List,
+        );
       } else {
         _templateFrameAssets = [];
       }
       if (data.state.containsKey('userToggledStickers')) {
-        _userToggledStickers = data.state['userToggledStickers'] as bool? ?? false;
+        _userToggledStickers =
+            data.state['userToggledStickers'] as bool? ?? false;
       }
       if (data.state.containsKey('enableStickers')) {
         _enableStickers = data.state['enableStickers'] as bool;
-        if ((_templateFolder != null || _templateMode != null) && !_userToggledStickers) {
+        if ((_templateFolder != null || _templateMode != null) &&
+            !_userToggledStickers) {
           _enableStickers = false;
         }
       }
@@ -925,14 +977,18 @@ class EditorController extends ChangeNotifier {
         _gridOpacity = (data.state['gridOpacity'] as num).toDouble();
       }
       if (data.state.containsKey('gridVerticalSpacing')) {
-        _gridVerticalSpacing = (data.state['gridVerticalSpacing'] as num).toDouble();
+        _gridVerticalSpacing = (data.state['gridVerticalSpacing'] as num)
+            .toDouble();
       }
       if (data.state.containsKey('gridHorizontalSpacing')) {
-        _gridHorizontalSpacing = (data.state['gridHorizontalSpacing'] as num).toDouble();
+        _gridHorizontalSpacing = (data.state['gridHorizontalSpacing'] as num)
+            .toDouble();
       }
       if (data.state.containsKey('audio')) {
         try {
-          _audioState = AudioProjectState.fromJson(data.state['audio'] as Map<String, dynamic>);
+          _audioState = AudioProjectState.fromJson(
+            data.state['audio'] as Map<String, dynamic>,
+          );
         } catch (e) {
           debugPrint('Failed to parse audio state: $e');
         }
@@ -956,9 +1012,13 @@ class EditorController extends ChangeNotifier {
               final bytes = await file.readAsBytes();
               final codec = await ui.instantiateImageCodec(bytes);
               final frame = await codec.getNextFrame();
-              _globalBackground = _globalBackground.copyWith(image: frame.image);
+              _globalBackground = _globalBackground.copyWith(
+                image: frame.image,
+              );
             } else {
-              debugPrint('Background image file not found: ${_globalBackground.imagePath}');
+              debugPrint(
+                'Background image file not found: ${_globalBackground.imagePath}',
+              );
               _globalBackground = _globalBackground.copyWith(clearImage: true);
             }
           } catch (e) {
@@ -976,10 +1036,15 @@ class EditorController extends ChangeNotifier {
         _colorOpacity = (data.state['colorOpacity'] as num).toDouble();
       }
       if (data.state.containsKey('blurStrength')) {
-        _blurStrength = (data.state['blurStrength'] as num).toDouble().clamp(0.0, 1.0);
+        _blurStrength = (data.state['blurStrength'] as num).toDouble().clamp(
+          0.0,
+          1.0,
+        );
       }
       if (data.state.containsKey('smudgeStrength')) {
-        _smudgeStrength = (data.state['smudgeStrength'] as num).toDouble().clamp(0.0, 1.0);
+        _smudgeStrength = (data.state['smudgeStrength'] as num)
+            .toDouble()
+            .clamp(0.0, 1.0);
       }
       Color restoredColor = Colors.black;
       if (data.state.containsKey('strokeColor')) {
@@ -995,9 +1060,15 @@ class EditorController extends ChangeNotifier {
       );
 
       // Rehydrate canvases
+      for (final canvas in _canvases) {
+        canvas.drawConfig.removeListener(_onDrawConfigChanged);
+        canvas.dispose();
+      }
       _canvases.clear();
       for (final t in _thumbnails) {
-        t?.dispose();
+        try {
+          t?.dispose();
+        } catch (_) {}
       }
       _thumbnails.clear();
       _frameImagePaths.clear();
@@ -1013,7 +1084,9 @@ class EditorController extends ChangeNotifier {
 
       // Yielding interval: for large frame counts, yield to the event loop every 6 frames
       // so Flutter and Android Choreographer maintain a buttery 60/120 FPS render loop without skipping frames
-      final int yieldInterval = totalFrames > 60 ? 6 : (totalFrames > 15 ? 4 : 2);
+      final int yieldInterval = totalFrames > 60
+          ? 6
+          : (totalFrames > 15 ? 4 : 2);
 
       _loadingProgressNotifier.value = 0.0;
       _loadingStatusNotifier.value = 'Preparing $totalFrames frames...';
@@ -1041,7 +1114,8 @@ class EditorController extends ChangeNotifier {
         if (i % yieldInterval == 0 || i == totalFrames - 1) {
           final double progress = (i + 1) / totalFrames;
           _loadingProgressNotifier.value = progress;
-          _loadingStatusNotifier.value = 'Restoring frame ${i + 1} of $totalFrames...';
+          _loadingStatusNotifier.value =
+              'Restoring frame ${i + 1} of $totalFrames...';
           // Yield execution to allow Android Choreographer to draw frames
           await Future<void>.delayed(const Duration(milliseconds: 1));
         }
@@ -1062,7 +1136,11 @@ class EditorController extends ChangeNotifier {
         if (p != null && p.isNotEmpty) {
           final int? preWarmW = _aspectRatio > 1.0 ? 120 : null;
           final int? preWarmH = _aspectRatio > 1.0 ? null : 120;
-          final provider = ResizeImage(FileImage(File(p)), width: preWarmW, height: preWarmH);
+          final provider = ResizeImage(
+            FileImage(File(p)),
+            width: preWarmW,
+            height: preWarmH,
+          );
           provider.resolve(ImageConfiguration.empty);
         }
       }
@@ -1118,14 +1196,15 @@ class EditorController extends ChangeNotifier {
     if (_templateFolder != null && _templateFolder!.isNotEmpty) return true;
     if (_templateFrameAssets.isNotEmpty) return true;
     if (_activeSticker != null) return true;
-    if (_globalBackground.imagePath != null && _globalBackground.imagePath!.isNotEmpty) return true;
+    if (_globalBackground.imagePath != null &&
+        _globalBackground.imagePath!.isNotEmpty)
+      return true;
     if (_canvases.length > 1) return true;
 
     for (final canvas in _canvases) {
       for (final layer in canvas.layers) {
-        final int validCount = layer.currentIndex.clamp(0, layer.history.length);
-        for (int i = 0; i < validCount; i++) {
-          final content = layer.history[i];
+        final effectiveHistory = layer.getEffectiveHistory();
+        for (final content in effectiveHistory) {
           if (content is! EmptyContent) {
             return true;
           }
@@ -1138,7 +1217,11 @@ class EditorController extends ChangeNotifier {
   Completer<void>? _saveCompleter;
   bool _hasPendingStampSave = false;
 
-  Future<void> saveProject({bool immediate = false, bool stampStickers = false}) async {
+  Future<bool> saveProject({
+    bool immediate = false,
+    bool stampStickers = false,
+    bool force = false,
+  }) async {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = null;
 
@@ -1148,12 +1231,19 @@ class EditorController extends ChangeNotifier {
 
     // Do not auto-save or dismiss active sticker while user is manipulating it
     if (_activeSticker != null && !stampStickers && !_hasPendingStampSave) {
-      return;
+      return false;
     }
 
-    final bool willStamp = (stampStickers && _activeSticker != null) || (_hasPendingStampSave && _activeSticker != null);
-    if (!_isDirty && !willStamp && !_hasPendingSave && !_isSaving && _projectId != null) {
-      return;
+    final bool willStamp =
+        (stampStickers && _activeSticker != null) ||
+        (_hasPendingStampSave && _activeSticker != null);
+    if (!force &&
+        !_isDirty &&
+        !willStamp &&
+        !_hasPendingSave &&
+        !_isSaving &&
+        _projectId != null) {
+      return true;
     }
 
     if (_isSaving) {
@@ -1167,8 +1257,10 @@ class EditorController extends ChangeNotifier {
           await Future<void>.delayed(const Duration(milliseconds: 50));
         }
       }
-      return;
+      return true;
     }
+
+    final bool isManualOrImmediate = immediate || force;
     _isSaving = true;
     _saveCompleter = Completer<void>();
 
@@ -1177,10 +1269,15 @@ class EditorController extends ChangeNotifier {
         final bool stamp = stampStickers || _hasPendingStampSave;
         _hasPendingSave = false;
         _hasPendingStampSave = false;
-        await _performSave(stampStickers: stamp);
+        await _performSave(
+          stampStickers: stamp,
+          generateThumbnail: isManualOrImmediate || _projectId == null,
+        );
       } while (_hasPendingSave);
+      return true;
     } catch (e) {
       debugPrint('Error in saveProject: $e');
+      return false;
     } finally {
       _isSaving = false;
       final completer = _saveCompleter;
@@ -1191,7 +1288,10 @@ class EditorController extends ChangeNotifier {
     }
   }
 
-  Future<void> _performSave({bool stampStickers = false}) async {
+  Future<void> _performSave({
+    bool stampStickers = false,
+    bool generateThumbnail = true,
+  }) async {
     if (stampStickers && _activeSticker != null) {
       stampActiveSticker();
     }
@@ -1248,13 +1348,18 @@ class EditorController extends ChangeNotifier {
     );
     state['canvases'] = canvasesData;
 
-    List<int>? thumbBytes = await _generateSolidThumbnailBytes();
-    if (thumbBytes == null && _canvases.isNotEmpty) {
-      final snapshotImg = _canvases.first.realTimeSnapshot.value;
-      if (snapshotImg != null) {
-        final byteData = await snapshotImg.toByteData(format: ui.ImageByteFormat.png);
-        if (byteData != null) {
-          thumbBytes = byteData.buffer.asUint8List();
+    List<int>? thumbBytes;
+    if (generateThumbnail) {
+      thumbBytes = await _generateSolidThumbnailBytes();
+      if (thumbBytes == null && _canvases.isNotEmpty) {
+        final snapshotImg = _canvases.first.realTimeSnapshot.value;
+        if (snapshotImg != null) {
+          final byteData = await snapshotImg.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
+          if (byteData != null) {
+            thumbBytes = byteData.buffer.asUint8List();
+          }
         }
       }
     }
@@ -1274,11 +1379,14 @@ class EditorController extends ChangeNotifier {
     if (_canvases.isEmpty) return null;
     try {
       final controller = _canvases.first;
-      final Size canvasSize = controller.drawConfig.value.size ?? const Size(1920, 1080);
+      final Size canvasSize =
+          controller.drawConfig.value.size ?? const Size(1920, 1080);
       if (canvasSize.width <= 0 || canvasSize.height <= 0) return null;
 
       const double maxThumbDim = 512.0;
-      final double scale = maxThumbDim / (canvasSize.longestSide > 0 ? canvasSize.longestSide : 512.0);
+      final double scale =
+          maxThumbDim /
+          (canvasSize.longestSide > 0 ? canvasSize.longestSide : 512.0);
       final Size renderSize = Size(
         (canvasSize.width * scale).roundToDouble().clamp(1.0, 2048.0),
         (canvasSize.height * scale).roundToDouble().clamp(1.0, 2048.0),
@@ -1289,7 +1397,10 @@ class EditorController extends ChangeNotifier {
       canvas.scale(scale);
 
       // 1. Solid background (Guaranteed non-transparent)
-      final Color bgColor = PatternBackgroundHelper.getBaseColor(_globalBackground.pattern, _globalBackground.color);
+      final Color bgColor = PatternBackgroundHelper.getBaseColor(
+        _globalBackground.pattern,
+        _globalBackground.color,
+      );
 
       canvas.drawRect(Offset.zero & canvasSize, Paint()..color = bgColor);
 
@@ -1305,7 +1416,8 @@ class EditorController extends ChangeNotifier {
       }
 
       // Background pattern if any
-      if (_globalBackground.pattern != null && _globalBackground.pattern != 'none') {
+      if (_globalBackground.pattern != null &&
+          _globalBackground.pattern != 'none') {
         final painter = PreviewPatternPainter(_globalBackground.pattern!);
         painter.paint(canvas, canvasSize);
       }
@@ -1314,13 +1426,16 @@ class EditorController extends ChangeNotifier {
       canvas.saveLayer(Offset.zero & canvasSize, Paint());
       for (int i = controller.layers.length - 1; i >= 0; i--) {
         final layer = controller.layers[i];
-        if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide') continue;
+        if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide')
+          continue;
 
         canvas.saveLayer(
           Offset.zero & canvasSize,
           Paint()
             ..blendMode = layer.blendMode
-            ..color = Colors.white.withValues(alpha: layer.opacity.clamp(0.0, 1.0)),
+            ..color = Colors.white.withValues(
+              alpha: layer.opacity.clamp(0.0, 1.0),
+            ),
         );
 
         layer.drawHistory(canvas, canvasSize, false);
@@ -1336,12 +1451,24 @@ class EditorController extends ChangeNotifier {
       canvas.restore();
 
       final ui.Picture picture = recorder.endRecording();
-      final ui.Image img = await picture.toImage(
-        renderSize.width.toInt(),
-        renderSize.height.toInt(),
-      );
-      final ByteData? byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-      return byteData?.buffer.asUint8List();
+      ui.Image? img;
+      try {
+        img = await picture.toImage(
+          renderSize.width.toInt(),
+          renderSize.height.toInt(),
+        );
+        final ByteData? byteData = await img.toByteData(
+          format: ui.ImageByteFormat.png,
+        );
+        return byteData?.buffer.asUint8List();
+      } finally {
+        try {
+          picture.dispose();
+        } catch (_) {}
+        try {
+          img?.dispose();
+        } catch (_) {}
+      }
     } catch (e) {
       debugPrint('Error generating solid thumbnail bytes: $e');
       return null;
@@ -1406,7 +1533,8 @@ class EditorController extends ChangeNotifier {
         if (content != null) {
           // Only rehydrate image if requested (for active/nearby frames)
           // and if it is the latest raster state or non-raster content
-          final bool shouldRehydrateImage = loadImages &&
+          final bool shouldRehydrateImage =
+              loadImages &&
               ((i == latestRasterDataIndex) ||
                   (content is! SmudgeContent && content is! BlurContent));
           if (shouldRehydrateImage) {
@@ -1416,14 +1544,18 @@ class EditorController extends ChangeNotifier {
         }
       }
 
-      final int validIndex = (lMap['currentIndex'] as int? ?? history.length).clamp(0, history.length);
+      final int validIndex = (lMap['currentIndex'] as int? ?? history.length)
+          .clamp(0, history.length);
       controller.layers.add(
         LayerData(
           id: lMap['id'] as String,
           name: lMap['name'] as String,
           isVisible: lMap['isVisible'] as bool,
           isLocked: lMap['isLocked'] as bool,
-          isGuide: (lMap['isGuide'] as bool?) ?? (lMap['name'] == 'Stencil Guide' || (lMap['name'] as String? ?? '').contains('Guide')),
+          isGuide:
+              (lMap['isGuide'] as bool?) ??
+              (lMap['name'] == 'Stencil Guide' ||
+                  (lMap['name'] as String? ?? '').contains('Guide')),
           opacity: (lMap['opacity'] as num).toDouble(),
           blendMode: BlendMode.values[lMap['blendMode'] as int],
           history: history,
@@ -1435,7 +1567,9 @@ class EditorController extends ChangeNotifier {
 
     final activeLayerId = cMap['activeLayerId'] as String?;
     if (activeLayerId != null && controller.layers.isNotEmpty) {
-      final matchedLayer = controller.layers.where((l) => l.id == activeLayerId).firstOrNull;
+      final matchedLayer = controller.layers
+          .where((l) => l.id == activeLayerId)
+          .firstOrNull;
       if (matchedLayer != null) {
         controller.activeLayer.value = matchedLayer;
       } else {
@@ -1456,8 +1590,13 @@ class EditorController extends ChangeNotifier {
     return controller;
   }
 
-  Future<void> _rehydrateContent(PaintContent content, Map<String, dynamic> data) async {
-    if (content is BlurContent || content is SmudgeContent || content is FillContent) {
+  Future<void> _rehydrateContent(
+    PaintContent content,
+    Map<String, dynamic> data,
+  ) async {
+    if (content is BlurContent ||
+        content is SmudgeContent ||
+        content is FillContent) {
       final String? base64Data = data['imageDataBase64'] as String?;
       if (base64Data != null && base64Data.isNotEmpty) {
         try {
@@ -1497,27 +1636,45 @@ class EditorController extends ChangeNotifier {
         }
       }
     } else if (content is GroupContent) {
-      final List<dynamic> childrenData = data['children'] as List<dynamic>? ?? [];
-      for (int i = 0; i < content.children.length && i < childrenData.length; i++) {
-        await _rehydrateContent(content.children[i], childrenData[i] as Map<String, dynamic>);
+      final List<dynamic> childrenData =
+          data['children'] as List<dynamic>? ?? [];
+      for (
+        int i = 0;
+        i < content.children.length && i < childrenData.length;
+        i++
+      ) {
+        await _rehydrateContent(
+          content.children[i],
+          childrenData[i] as Map<String, dynamic>,
+        );
       }
     } else if (content is ClippedHistoryContent) {
       final List<dynamic> historyData = data['history'] as List<dynamic>? ?? [];
-      for (int i = 0; i < content.history.length && i < historyData.length; i++) {
-        await _rehydrateContent(content.history[i], historyData[i] as Map<String, dynamic>);
+      for (
+        int i = 0;
+        i < content.history.length && i < historyData.length;
+        i++
+      ) {
+        await _rehydrateContent(
+          content.history[i],
+          historyData[i] as Map<String, dynamic>,
+        );
       }
     } else if (content is ShapeStickerContent) {
-      final Map<String, dynamic>? childData = data['child'] as Map<String, dynamic>?;
+      final Map<String, dynamic>? childData =
+          data['child'] as Map<String, dynamic>?;
       if (childData != null) {
         await _rehydrateContent(content.child, childData);
       }
     } else if (content is OffsetContent) {
-      final Map<String, dynamic>? childData = data['child'] as Map<String, dynamic>?;
+      final Map<String, dynamic>? childData =
+          data['child'] as Map<String, dynamic>?;
       if (childData != null) {
         await _rehydrateContent(content.child, childData);
       }
     } else if (content is ClippedContent) {
-      final Map<String, dynamic>? childData = data['child'] as Map<String, dynamic>?;
+      final Map<String, dynamic>? childData =
+          data['child'] as Map<String, dynamic>?;
       if (childData != null) {
         await _rehydrateContent(content.child, childData);
       }
@@ -1529,12 +1686,14 @@ class EditorController extends ChangeNotifier {
     controller.drawConfig.addListener(_onDrawConfigChanged);
     controller.interceptDraw = _createInterceptDraw(controller);
     controller.activeOverlayPainter = (canvas, size) {
-      if (_activeSticker != null && _canvases.indexOf(controller) == _currentIndex) {
+      if (_activeSticker != null &&
+          _canvases.indexOf(controller) == _currentIndex) {
         _drawActiveSticker(canvas, size, _activeSticker!);
       }
     };
     controller.activeLayer.addListener(() {
-      if (_activeSticker != null && _canvases.indexOf(controller) == _currentIndex) {
+      if (_activeSticker != null &&
+          _canvases.indexOf(controller) == _currentIndex) {
         stampActiveSticker();
       }
     });
@@ -1550,9 +1709,17 @@ class EditorController extends ChangeNotifier {
         }
         final snapshot = controller.realTimeSnapshot.value;
         if (snapshot != null) {
-          _recordThumbnailUsage(idx, snapshot);
+          try {
+            _recordThumbnailUsage(idx, snapshot.clone());
+          } catch (_) {
+            _recordThumbnailUsage(idx, snapshot);
+          }
         } else {
+          final old = _thumbnails[idx];
           _thumbnails[idx] = null;
+          try {
+            old?.dispose();
+          } catch (_) {}
           _thumbnailLru.remove(idx);
         }
         _scheduleThumbnailNotification();
@@ -1573,7 +1740,9 @@ class EditorController extends ChangeNotifier {
 
   bool _contentNeedsImageHydration(PaintContent content) {
     if (content is ImageContent) {
-      return content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty;
+      return content.image == null &&
+          content.imageUrl != null &&
+          content.imageUrl!.isNotEmpty;
     } else if (content is ShapeStickerContent) {
       return _contentNeedsImageHydration(content.child);
     } else if (content is OffsetContent) {
@@ -1680,9 +1849,23 @@ class EditorController extends ChangeNotifier {
   static const int _maxConcurrentThumbnailJobs = 2;
   Timer? _thumbnailNotifyDebounce;
 
+  @visibleForTesting
+  void recordThumbnailUsageForTesting(int index, ui.Image image) =>
+      _recordThumbnailUsage(index, image);
+
   void _recordThumbnailUsage(int index, ui.Image image) {
     if (_isDisposed || index < 0 || index >= _thumbnails.length) {
+      try {
+        image.dispose();
+      } catch (_) {}
       return;
+    }
+
+    final oldThumb = _thumbnails[index];
+    if (oldThumb != null && oldThumb != image) {
+      try {
+        oldThumb.dispose();
+      } catch (_) {}
     }
 
     _thumbnails[index] = image;
@@ -1691,12 +1874,20 @@ class EditorController extends ChangeNotifier {
 
     // Evict least-recently-used thumbnails if capacity exceeded (keeping active and neighbor frames)
     while (_thumbnailLru.length > _maxCachedThumbnails) {
-      final evictCandidates = _thumbnailLru.where((idx) => idx != _currentIndex && (idx - _currentIndex).abs() > 3).toList();
+      final evictCandidates = _thumbnailLru
+          .where(
+            (idx) => idx != _currentIndex && (idx - _currentIndex).abs() > 3,
+          )
+          .toList();
       if (evictCandidates.isEmpty) break;
       final evictIdx = evictCandidates.first;
       _thumbnailLru.remove(evictIdx);
       if (evictIdx >= 0 && evictIdx < _thumbnails.length) {
+        final evictedImage = _thumbnails[evictIdx];
         _thumbnails[evictIdx] = null;
+        try {
+          evictedImage?.dispose();
+        } catch (_) {}
       }
     }
   }
@@ -1713,7 +1904,8 @@ class EditorController extends ChangeNotifier {
 
   void _processThumbnailQueue() {
     if (_isDisposed) return;
-    while (_activeThumbnailJobs < _maxConcurrentThumbnailJobs && _thumbnailQueue.isNotEmpty) {
+    while (_activeThumbnailJobs < _maxConcurrentThumbnailJobs &&
+        _thumbnailQueue.isNotEmpty) {
       final nextIndex = _thumbnailQueue.removeAt(0);
       _activeThumbnailJobs++;
       _loadThumbnailAsync(nextIndex).whenComplete(() {
@@ -1724,7 +1916,8 @@ class EditorController extends ChangeNotifier {
   }
 
   void requestThumbnail(int index) {
-    if (index < 0 || index >= _canvases.length || _thumbnails[index] != null) return;
+    if (index < 0 || index >= _canvases.length || _thumbnails[index] != null)
+      return;
     if (_pendingThumbnailLoads.contains(index)) return;
     _pendingThumbnailLoads.add(index);
 
@@ -1740,7 +1933,10 @@ class EditorController extends ChangeNotifier {
     _processThumbnailQueue();
   }
 
-  static (int?, int?) _calculateThumbnailTargetDimensions(Uint8List bytes, double fallbackAspectRatio) {
+  static (int?, int?) _calculateThumbnailTargetDimensions(
+    Uint8List bytes,
+    double fallbackAspectRatio,
+  ) {
     int? imgWidth;
     int? imgHeight;
 
@@ -1749,8 +1945,10 @@ class EditorController extends ChangeNotifier {
         bytes[1] == 0x50 &&
         bytes[2] == 0x4E &&
         bytes[3] == 0x47) {
-      imgWidth = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
-      imgHeight = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+      imgWidth =
+          (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+      imgHeight =
+          (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
     } else if (bytes.length >= 4 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
       int offset = 2;
       while (offset + 9 < bytes.length) {
@@ -1770,7 +1968,10 @@ class EditorController extends ChangeNotifier {
     }
 
     const int maxThumbSide = 80;
-    if (imgWidth != null && imgHeight != null && imgWidth > 0 && imgHeight > 0) {
+    if (imgWidth != null &&
+        imgHeight != null &&
+        imgWidth > 0 &&
+        imgHeight > 0) {
       if (imgWidth >= imgHeight) {
         return (maxThumbSide, null);
       } else {
@@ -1787,7 +1988,10 @@ class EditorController extends ChangeNotifier {
 
   Future<void> _loadThumbnailAsync(int index) async {
     try {
-      if (_isDisposed || index >= _canvases.length || _thumbnails[index] != null) return;
+      if (_isDisposed ||
+          index >= _canvases.length ||
+          _thumbnails[index] != null)
+        return;
       final canvas = _canvases[index];
 
       // 1. Check if canvas has a video/image layer with imageUrl
@@ -1806,12 +2010,20 @@ class EditorController extends ChangeNotifier {
         final file = File(targetImagePath);
         if (await file.exists()) {
           final bytes = await file.readAsBytes();
-          final (targetW, targetH) = _calculateThumbnailTargetDimensions(bytes, _aspectRatio);
-          final codec = await ui.instantiateImageCodec(bytes, targetWidth: targetW, targetHeight: targetH);
+          final (targetW, targetH) = _calculateThumbnailTargetDimensions(
+            bytes,
+            _aspectRatio,
+          );
+          final codec = await ui.instantiateImageCodec(
+            bytes,
+            targetWidth: targetW,
+            targetHeight: targetH,
+          );
           final fi = await codec.getNextFrame();
 
           try {
-            final Size canvasSize = canvas.drawConfig.value.size ??
+            final Size canvasSize =
+                canvas.drawConfig.value.size ??
                 drawingControllerSize ??
                 (aspectRatio >= 1.0
                     ? Size(1080 * aspectRatio, 1080)
@@ -1858,6 +2070,10 @@ class EditorController extends ChangeNotifier {
             if (!_isDisposed && index < _thumbnails.length) {
               _recordThumbnailUsage(index, compositedImage);
               _scheduleThumbnailNotification();
+            } else {
+              try {
+                compositedImage.dispose();
+              } catch (_) {}
             }
             return;
           } catch (e) {
@@ -1872,9 +2088,15 @@ class EditorController extends ChangeNotifier {
       // 2. Pure vector drawing canvas: generate a lightweight snapshot asynchronously
       if (!_canvasNeedsImageHydration(canvas)) {
         final img = await _generateCanvasThumbnailImage(canvas);
-        if (img != null && !_isDisposed && index < _thumbnails.length) {
-          _recordThumbnailUsage(index, img);
-          _scheduleThumbnailNotification();
+        if (img != null) {
+          if (!_isDisposed && index < _thumbnails.length) {
+            _recordThumbnailUsage(index, img);
+            _scheduleThumbnailNotification();
+          } else {
+            try {
+              img.dispose();
+            } catch (_) {}
+          }
         }
       }
     } catch (e) {
@@ -1884,7 +2106,9 @@ class EditorController extends ChangeNotifier {
     }
   }
 
-  Future<ui.Image?> _generateCanvasThumbnailImage(DrawingController canvas) async {
+  Future<ui.Image?> _generateCanvasThumbnailImage(
+    DrawingController canvas,
+  ) async {
     final Size? size = canvas.drawConfig.value.size ?? drawingControllerSize;
     if (size == null || size.isEmpty) return null;
 
@@ -1940,8 +2164,8 @@ class EditorController extends ChangeNotifier {
     _activeHydrations[canvas] = completer;
 
     try {
-      for (final layer in canvas.layers) {
-        for (final content in layer.history) {
+      for (final layer in List<LayerData>.from(canvas.layers)) {
+        for (final content in List<PaintContent>.from(layer.history)) {
           await _ensureContentImageLoaded(content);
         }
       }
@@ -1956,9 +2180,12 @@ class EditorController extends ChangeNotifier {
 
   Future<void> _ensureContentImageLoaded(PaintContent content) async {
     if (content is ImageContent) {
-      if (content.image == null && content.imageUrl != null && content.imageUrl!.isNotEmpty) {
+      if (content.image == null &&
+          content.imageUrl != null &&
+          content.imageUrl!.isNotEmpty) {
         try {
-          if (content.imageUrl!.startsWith('http') || content.imageUrl!.startsWith('https')) {
+          if (content.imageUrl!.startsWith('http') ||
+              content.imageUrl!.startsWith('https')) {
             content.image = await _getImage(content.imageUrl!);
           } else if (content.imageUrl!.startsWith('assets/')) {
             content.image = await _getAssetImage(content.imageUrl!);
@@ -1970,7 +2197,9 @@ class EditorController extends ChangeNotifier {
         }
       }
     } else if (content is FillContent) {
-      if (content.image == null && content.cachedBase64Image != null && content.cachedBase64Image!.isNotEmpty) {
+      if (content.image == null &&
+          content.cachedBase64Image != null &&
+          content.cachedBase64Image!.isNotEmpty) {
         try {
           final Uint8List bytes = base64Decode(content.cachedBase64Image!);
           final ui.Codec codec = await ui.instantiateImageCodec(bytes);
@@ -1999,7 +2228,10 @@ class EditorController extends ChangeNotifier {
 
   void _preloadAdjacentCanvases(int centerIndex) {
     final int before = math.max(0, centerIndex - math.max(_onionBefore, 3));
-    final int after = math.min(_canvases.length - 1, centerIndex + math.max(_onionAfter, 5));
+    final int after = math.min(
+      _canvases.length - 1,
+      centerIndex + math.max(_onionAfter, 5),
+    );
     for (int i = before; i <= after; i++) {
       if (i != centerIndex) {
         _ensureCanvasImagesLoaded(_canvases[i]);
@@ -2014,7 +2246,19 @@ class EditorController extends ChangeNotifier {
   }
 
   void _evictContentImages(PaintContent content) {
-    if (content is ImageContent && content.imageUrl != null && content.image != null) {
+    if (content is ImageContent &&
+        content.imageUrl != null &&
+        content.image != null) {
+      final imgToDispose = content.image;
+      content.image = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          imgToDispose?.dispose();
+        } catch (_) {}
+      });
+    } else if (content is FillContent &&
+        content.cachedBase64Image != null &&
+        content.image != null) {
       final imgToDispose = content.image;
       content.image = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2051,9 +2295,9 @@ class EditorController extends ChangeNotifier {
   }
 
   void _evictDistantCanvasImages(int centerIndex) {
-    if (_canvases.length < 25) return;
+    if (_canvases.length < 10) return;
     for (int i = 0; i < _canvases.length; i++) {
-      if ((i - centerIndex).abs() > 15 && i != centerIndex) {
+      if ((i - centerIndex).abs() > 6 && i != centerIndex) {
         final canvas = _canvases[i];
         for (final layer in canvas.layers) {
           for (final content in layer.history) {
@@ -2101,8 +2345,11 @@ class EditorController extends ChangeNotifier {
       }
 
       final sourceDir = File(framePaths.first).parent;
-      if (!sourceDir.path.startsWith(projDir.path) && await sourceDir.exists()) {
-        final folderName = sourceDir.uri.pathSegments.where((s) => s.isNotEmpty).last;
+      if (!sourceDir.path.startsWith(projDir.path) &&
+          await sourceDir.exists()) {
+        final folderName = sourceDir.uri.pathSegments
+            .where((s) => s.isNotEmpty)
+            .last;
         final Directory destDir = Directory('${assetsDir.path}/$folderName');
         if (await destDir.exists()) {
           try {
@@ -2112,7 +2359,9 @@ class EditorController extends ChangeNotifier {
         try {
           // Fast atomic directory move (1ms) across directory tree without copying individual files
           await sourceDir.rename(destDir.path);
-          effectivePaths = framePaths.map((p) => p.replaceFirst(sourceDir.path, destDir.path)).toList();
+          effectivePaths = framePaths
+              .map((p) => p.replaceFirst(sourceDir.path, destDir.path))
+              .toList();
         } catch (_) {
           effectivePaths = framePaths;
         }
@@ -2121,7 +2370,10 @@ class EditorController extends ChangeNotifier {
       debugPrint('Error relocating video frame directory: $e');
     }
 
-    final int targetStartIndex = _currentIndex.clamp(0, _canvases.isNotEmpty ? _canvases.length - 1 : 0);
+    final int targetStartIndex = _currentIndex.clamp(
+      0,
+      _canvases.isNotEmpty ? _canvases.length - 1 : 0,
+    );
 
     for (int i = 0; i < effectivePaths.length; i++) {
       final path = effectivePaths[i];
@@ -2139,8 +2391,15 @@ class EditorController extends ChangeNotifier {
             fullImage = fullFi.image;
           }
 
-          final (targetW, targetH) = _calculateThumbnailTargetDimensions(bytes, _aspectRatio);
-          final thumbCodec = await ui.instantiateImageCodec(bytes, targetWidth: targetW, targetHeight: targetH);
+          final (targetW, targetH) = _calculateThumbnailTargetDimensions(
+            bytes,
+            _aspectRatio,
+          );
+          final thumbCodec = await ui.instantiateImageCodec(
+            bytes,
+            targetWidth: targetW,
+            targetHeight: targetH,
+          );
           final thumbFi = await thumbCodec.getNextFrame();
           compactThumb = thumbFi.image;
         }
@@ -2154,8 +2413,18 @@ class EditorController extends ChangeNotifier {
         if (frameIndex < _canvases.length) {
           // Existing frame: assign video frame to dedicated Video Layer without triggering GPU snapshot flood
           final existingCanvas = _canvases[frameIndex];
-          existingCanvas.setVideoLayer(imageContent, updateCanvasSnapshot: false, notify: false);
+          existingCanvas.setVideoLayer(
+            imageContent,
+            updateCanvasSnapshot: false,
+            notify: false,
+          );
           if (frameIndex < _thumbnails.length) {
+            final oldThumb = _thumbnails[frameIndex];
+            if (oldThumb != null && oldThumb != compactThumb) {
+              try {
+                oldThumb.dispose();
+              } catch (_) {}
+            }
             _thumbnails[frameIndex] = compactThumb;
             if (compactThumb != null) {
               _thumbnailLru.add(frameIndex);
@@ -2180,7 +2449,11 @@ class EditorController extends ChangeNotifier {
           );
           _setupCanvasController(newCanvas);
 
-          newCanvas.setVideoLayer(imageContent, updateCanvasSnapshot: false, notify: false);
+          newCanvas.setVideoLayer(
+            imageContent,
+            updateCanvasSnapshot: false,
+            notify: false,
+          );
           _canvases.add(newCanvas);
           _thumbnails.add(compactThumb);
           if (compactThumb != null) {
@@ -2214,7 +2487,10 @@ class EditorController extends ChangeNotifier {
     final controller = _canvases.removeAt(index);
     controller.drawConfig.removeListener(_onDrawConfigChanged);
     controller.dispose();
-    _thumbnails.removeAt(index);
+    final oldThumb = _thumbnails.removeAt(index);
+    try {
+      oldThumb?.dispose();
+    } catch (_) {}
     if (index < _frameImagePaths.length) {
       _frameImagePaths.removeAt(index);
     }
@@ -2281,7 +2557,9 @@ class EditorController extends ChangeNotifier {
     for (final idx in order) {
       newCanvases.add(_canvases[idx]);
       newThumbs.add(_thumbnails[idx]);
-      newPaths.add(idx < _frameImagePaths.length ? _frameImagePaths[idx] : null);
+      newPaths.add(
+        idx < _frameImagePaths.length ? _frameImagePaths[idx] : null,
+      );
     }
     _canvases.clear();
     _canvases.addAll(newCanvases);
@@ -2333,10 +2611,13 @@ class EditorController extends ChangeNotifier {
         ),
       );
     }
-    
+
     final activeId = source.activeLayer.value?.id;
     if (activeId != null && duplicated.layers.isNotEmpty) {
-      duplicated.activeLayer.value = duplicated.layers.firstWhere((l) => l.name == source.activeLayer.value?.name, orElse: () => duplicated.layers.first);
+      duplicated.activeLayer.value = duplicated.layers.firstWhere(
+        (l) => l.name == source.activeLayer.value?.name,
+        orElse: () => duplicated.layers.first,
+      );
     } else if (duplicated.layers.isNotEmpty) {
       duplicated.activeLayer.value = duplicated.layers.first;
     }
@@ -2346,7 +2627,9 @@ class EditorController extends ChangeNotifier {
 
     _canvases.insert(index + 1, duplicated);
     _thumbnails.insert(index + 1, null);
-    final p = (index < _frameImagePaths.length) ? _frameImagePaths[index] : null;
+    final p = (index < _frameImagePaths.length)
+        ? _frameImagePaths[index]
+        : null;
     _frameImagePaths.insert(index + 1, p);
     _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
     _thumbnailLru.clear();
@@ -2420,7 +2703,9 @@ class EditorController extends ChangeNotifier {
     }
     targetController.activeLayer.value ??= targetController.layers.first;
 
-    final bool isTargetEmpty = targetController.layers.every((l) => l.history.isEmpty || l.currentIndex == 0);
+    final bool isTargetEmpty = targetController.layers.every(
+      (l) => l.history.isEmpty || l.currentIndex == 0,
+    );
 
     if (isTargetEmpty) {
       targetController.layers.clear();
@@ -2465,7 +2750,8 @@ class EditorController extends ChangeNotifier {
 
   void _drawActiveSticker(Canvas canvas, Size size, Object sticker) {
     if (sticker is ActiveTextSticker) {
-      final Paint paint = drawingController.drawConfig.value.paint.copyWith()..color = sticker.color;
+      final Paint paint = drawingController.drawConfig.value.paint.copyWith()
+        ..color = sticker.color;
       final textContent = TextContent.data(
         offset: sticker.offset,
         text: sticker.text,
@@ -2682,15 +2968,20 @@ class EditorController extends ChangeNotifier {
   void _undoActiveSticker() {
     if (_activeStickerHistoryIndex > 0) {
       _activeStickerHistoryIndex--;
-      _activeSticker = cloneActiveSticker(_activeStickerHistory[_activeStickerHistoryIndex]);
+      _activeSticker = cloneActiveSticker(
+        _activeStickerHistory[_activeStickerHistoryIndex],
+      );
       updateSnapshot();
       drawingController.refresh();
       notifyListeners();
     } else if (_activeStickerHistoryIndex == 0) {
       if (_selectionSourceTargetId != null && _selectionSourceLayer != null) {
-        if (_selectionSourceLayer!.currentIndex > _selectionSourceLayer!.sessionStartIndex) {
-          final lastItem = _selectionSourceLayer!.history[_selectionSourceLayer!.currentIndex - 1];
-          if (lastItem is DeleteContent && lastItem.targetId == _selectionSourceTargetId) {
+        if (_selectionSourceLayer!.currentIndex >
+            _selectionSourceLayer!.sessionStartIndex) {
+          final lastItem = _selectionSourceLayer!
+              .history[_selectionSourceLayer!.currentIndex - 1];
+          if (lastItem is DeleteContent &&
+              lastItem.targetId == _selectionSourceTargetId) {
             _selectionSourceLayer!.currentIndex--;
           }
         }
@@ -2713,7 +3004,9 @@ class EditorController extends ChangeNotifier {
   void _redoActiveSticker() {
     if (_activeStickerHistoryIndex < _activeStickerHistory.length - 1) {
       _activeStickerHistoryIndex++;
-      _activeSticker = cloneActiveSticker(_activeStickerHistory[_activeStickerHistoryIndex]);
+      _activeSticker = cloneActiveSticker(
+        _activeStickerHistory[_activeStickerHistoryIndex],
+      );
       updateSnapshot();
       drawingController.refresh();
       notifyListeners();
@@ -2721,7 +3014,8 @@ class EditorController extends ChangeNotifier {
   }
 
   bool _canUndoActiveSticker() => true;
-  bool _canRedoActiveSticker() => _activeStickerHistoryIndex < _activeStickerHistory.length - 1;
+  bool _canRedoActiveSticker() =>
+      _activeStickerHistoryIndex < _activeStickerHistory.length - 1;
 
   void _undoFallback() {
     drawingController.onUndo = null;
@@ -2774,7 +3068,9 @@ class EditorController extends ChangeNotifier {
 
     final active = controller.activeLayer.value;
     if (active == null || active.isLocked || !active.isVisible) {
-      final unlocked = controller.layers.where((l) => !l.isLocked && l.isVisible).firstOrNull;
+      final unlocked = controller.layers
+          .where((l) => !l.isLocked && l.isVisible)
+          .firstOrNull;
       if (unlocked != null) {
         controller.activeLayer.value = unlocked;
       } else {
@@ -2808,7 +3104,8 @@ class EditorController extends ChangeNotifier {
 
     if (_activeSticker is ActiveTextSticker) {
       final sticker = _activeSticker as ActiveTextSticker;
-      final Paint paint = drawingController.drawConfig.value.paint.copyWith()..color = sticker.color;
+      final Paint paint = drawingController.drawConfig.value.paint.copyWith()
+        ..color = sticker.color;
       final textContent = TextContent.data(
         offset: sticker.offset,
         text: sticker.text,
@@ -2827,6 +3124,8 @@ class EditorController extends ChangeNotifier {
       _activeSticker = null;
       _clearActiveStickerHistory();
       drawingController.addContent(textContent);
+      _isTextToolSelected = false;
+      _activeCategory = 'Brush';
     } else if (_activeSticker is ActiveShapeSticker) {
       final sticker = _activeSticker as ActiveShapeSticker;
       final shapeContent = ShapeStickerContent.data(
@@ -2946,7 +3245,8 @@ class EditorController extends ChangeNotifier {
   void centerActiveShapeSticker() {
     if (_activeSticker is ActiveShapeSticker) {
       final sticker = _activeSticker as ActiveShapeSticker;
-      final Size canvasSize = drawingController.drawConfig.value.size ??
+      final Size canvasSize =
+          drawingController.drawConfig.value.size ??
           drawingControllerSize ??
           const Size(500, 500);
       sticker.offset = Offset(canvasSize.width / 2, canvasSize.height / 2);
@@ -2969,7 +3269,8 @@ class EditorController extends ChangeNotifier {
   void duplicateActiveTextSticker() {
     if (_activeSticker is ActiveTextSticker) {
       final sticker = _activeSticker as ActiveTextSticker;
-      final Paint paint = drawingController.drawConfig.value.paint.copyWith()..color = sticker.color;
+      final Paint paint = drawingController.drawConfig.value.paint.copyWith()
+        ..color = sticker.color;
       final textContent = TextContent.data(
         offset: sticker.offset,
         text: sticker.text,
@@ -3029,26 +3330,83 @@ class EditorController extends ChangeNotifier {
 
     await _rehydrateContent(content, clipboardData.contentJson);
 
-    final Size canvasSize = drawingController.drawConfig.value.size ??
-        drawingControllerSize ??
-        const Size(500, 500);
+    final Size? activeSize =
+        drawingController.drawConfig.value.size ?? drawingControllerSize;
+    final Size canvasSize = (activeSize != null &&
+            activeSize.width > 0 &&
+            activeSize.height > 0)
+        ? activeSize
+        : const Size(1920, 1080);
 
-    // Place in center of current canvas
-    final Offset pasteCenter = Offset(canvasSize.width / 2, canvasSize.height / 2);
+    final double stickerW = clipboardData.size.width;
+    final double stickerH = clipboardData.size.height;
+    double safeScale = clipboardData.scale.clamp(0.1, 5.0);
+
+    // If the sticker is larger than the canvas, scale down proportionally so it fits nicely
+    final double effW = stickerW * safeScale;
+    final double effH = stickerH * safeScale;
+    if (effW > canvasSize.width * 0.95 && effW > 0) {
+      safeScale = (canvasSize.width * 0.95) / stickerW;
+    }
+    if (effH > canvasSize.height * 0.95 && effH > 0) {
+      safeScale = math.min(safeScale, (canvasSize.height * 0.95) / stickerH);
+    }
+
+    final double halfW = (stickerW * safeScale) / 2;
+    final double halfH = (stickerH * safeScale) / 2;
+
+    double targetX = clipboardData.offset.dx;
+    double targetY = clipboardData.offset.dy;
+
+    // If target offset is outside current canvas or zero, center it
+    if (targetX <= 0 ||
+        targetX >= canvasSize.width ||
+        targetY <= 0 ||
+        targetY >= canvasSize.height) {
+      targetX = canvasSize.width / 2;
+      targetY = canvasSize.height / 2;
+    }
+
+    // Keep center strictly within canvas boundaries so it never pastes out-of-bounds
+    final double minX = math.min(halfW, canvasSize.width / 2);
+    final double maxX = math.max(canvasSize.width - halfW, canvasSize.width / 2);
+    final double minY = math.min(halfH, canvasSize.height / 2);
+    final double maxY = math.max(canvasSize.height - halfH, canvasSize.height / 2);
+
+    targetX = targetX.clamp(minX, maxX);
+    targetY = targetY.clamp(minY, maxY);
+
+    // Clamp corner perspective offsets relative to sticker dimensions to prevent quad inversions
+    final safeTopLeft = Offset(
+      clipboardData.topLeftOffset.dx.clamp(-stickerW * 0.6, stickerW * 0.6),
+      clipboardData.topLeftOffset.dy.clamp(-stickerH * 0.6, stickerH * 0.6),
+    );
+    final safeTopRight = Offset(
+      clipboardData.topRightOffset.dx.clamp(-stickerW * 0.6, stickerW * 0.6),
+      clipboardData.topRightOffset.dy.clamp(-stickerH * 0.6, stickerH * 0.6),
+    );
+    final safeBottomRight = Offset(
+      clipboardData.bottomRightOffset.dx.clamp(-stickerW * 0.6, stickerW * 0.6),
+      clipboardData.bottomRightOffset.dy.clamp(-stickerH * 0.6, stickerH * 0.6),
+    );
+    final safeBottomLeft = Offset(
+      clipboardData.bottomLeftOffset.dx.clamp(-stickerW * 0.6, stickerW * 0.6),
+      clipboardData.bottomLeftOffset.dy.clamp(-stickerH * 0.6, stickerH * 0.6),
+    );
 
     final pastedSticker = ActiveShapeSticker(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: content,
       size: clipboardData.size,
-      offset: pasteCenter,
-      scale: clipboardData.scale,
+      offset: Offset(targetX, targetY),
+      scale: safeScale,
       rotation: clipboardData.rotation,
       flipX: clipboardData.flipX,
       flipY: clipboardData.flipY,
-      topLeftOffset: clipboardData.topLeftOffset,
-      topRightOffset: clipboardData.topRightOffset,
-      bottomRightOffset: clipboardData.bottomRightOffset,
-      bottomLeftOffset: clipboardData.bottomLeftOffset,
+      topLeftOffset: safeTopLeft,
+      topRightOffset: safeTopRight,
+      bottomRightOffset: safeBottomRight,
+      bottomLeftOffset: safeBottomLeft,
       transformMode: clipboardData.transformMode,
       isLassoSelection: true,
     );
@@ -3087,6 +3445,10 @@ class EditorController extends ChangeNotifier {
 
   void deleteActiveSticker() {
     if (_activeSticker != null) {
+      if (_activeSticker is ActiveTextSticker) {
+        _isTextToolSelected = false;
+        _activeCategory = 'Brush';
+      }
       _activeSticker = null;
       _clearActiveStickerHistory();
       updateSnapshot();
@@ -3170,7 +3532,13 @@ class EditorController extends ChangeNotifier {
     final history = activeLayer.getEffectiveHistory();
     for (int i = history.length - 1; i >= 0; i--) {
       final item = history[i];
-      if (item is Eraser || item is EraserHole || item is EmptyContent || item is StrokeRecolorContent || item is ShapeFillContent || item is DeleteContent) continue;
+      if (item is Eraser ||
+          item is EraserHole ||
+          item is EmptyContent ||
+          item is StrokeRecolorContent ||
+          item is ShapeFillContent ||
+          item is DeleteContent)
+        continue;
       if (hitTestPaintContent(item, tapPos)) {
         _liftElementToSticker(activeLayer, item);
         return true;
@@ -3180,17 +3548,30 @@ class EditorController extends ChangeNotifier {
     // 3. Not hit on active layer: check other visible layers (topmost first) to inform the user
     final reversedLayers = drawingController.layers.reversed.toList();
     for (final layer in reversedLayers) {
-      if (layer == activeLayer || !layer.isVisible || layer.isGuide || layer.name == 'Video Layer' || layer.id.startsWith('video_layer_')) continue;
+      if (layer == activeLayer ||
+          !layer.isVisible ||
+          layer.isGuide ||
+          layer.name == 'Video Layer' ||
+          layer.id.startsWith('video_layer_'))
+        continue;
       final otherHistory = layer.getEffectiveHistory();
       for (int i = otherHistory.length - 1; i >= 0; i--) {
         final item = otherHistory[i];
-        if (item is Eraser || item is EraserHole || item is EmptyContent || item is StrokeRecolorContent || item is ShapeFillContent || item is DeleteContent) continue;
+        if (item is Eraser ||
+            item is EraserHole ||
+            item is EmptyContent ||
+            item is StrokeRecolorContent ||
+            item is ShapeFillContent ||
+            item is DeleteContent)
+          continue;
         if (hitTestPaintContent(item, tapPos)) {
           final layerName = getLocalizedLayerName(context, layer.name);
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(context.tr('elementOnOtherLayer', {'layer': layerName})),
+              content: Text(
+                context.tr('elementOnOtherLayer', {'layer': layerName}),
+              ),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -3225,7 +3606,13 @@ class EditorController extends ChangeNotifier {
     final history = activeLayer.getEffectiveHistory();
     final List<PaintContent> hitItems = [];
     for (final item in history) {
-      if (item is Eraser || item is EraserHole || item is EmptyContent || item is StrokeRecolorContent || item is ShapeFillContent || item is DeleteContent) continue;
+      if (item is Eraser ||
+          item is EraserHole ||
+          item is EmptyContent ||
+          item is StrokeRecolorContent ||
+          item is ShapeFillContent ||
+          item is DeleteContent)
+        continue;
       if (isContentInOrIntersectsRect(item, marqueeRect)) {
         hitItems.add(item);
       }
@@ -3235,16 +3622,29 @@ class EditorController extends ChangeNotifier {
       // Check other visible layers to notify user if items on another layer were enclosed
       final reversedLayers = drawingController.layers.reversed.toList();
       for (final layer in reversedLayers) {
-        if (layer == activeLayer || !layer.isVisible || layer.isGuide || layer.name == 'Video Layer' || layer.id.startsWith('video_layer_')) continue;
+        if (layer == activeLayer ||
+            !layer.isVisible ||
+            layer.isGuide ||
+            layer.name == 'Video Layer' ||
+            layer.id.startsWith('video_layer_'))
+          continue;
         final otherHistory = layer.getEffectiveHistory();
         for (final item in otherHistory) {
-          if (item is Eraser || item is EraserHole || item is EmptyContent || item is StrokeRecolorContent || item is ShapeFillContent || item is DeleteContent) continue;
+          if (item is Eraser ||
+              item is EraserHole ||
+              item is EmptyContent ||
+              item is StrokeRecolorContent ||
+              item is ShapeFillContent ||
+              item is DeleteContent)
+            continue;
           if (isContentInOrIntersectsRect(item, marqueeRect)) {
             final layerName = getLocalizedLayerName(context, layer.name);
             ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(context.tr('elementOnOtherLayer', {'layer': layerName})),
+                content: Text(
+                  context.tr('elementOnOtherLayer', {'layer': layerName}),
+                ),
                 duration: const Duration(seconds: 2),
               ),
             );
@@ -3264,7 +3664,9 @@ class EditorController extends ChangeNotifier {
     Rect? combinedBounds;
     for (final item in hitItems) {
       final b = getShapeBounds(item);
-      combinedBounds = combinedBounds == null ? b : combinedBounds.expandToInclude(b);
+      combinedBounds = combinedBounds == null
+          ? b
+          : combinedBounds.expandToInclude(b);
     }
     if (combinedBounds == null || combinedBounds.isEmpty) return false;
 
@@ -3280,7 +3682,10 @@ class EditorController extends ChangeNotifier {
     _activeSticker = ActiveShapeSticker(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: group,
-      size: Size(math.max(combinedBounds.width, 10.0), math.max(combinedBounds.height, 10.0)),
+      size: Size(
+        math.max(combinedBounds.width, 10.0),
+        math.max(combinedBounds.height, 10.0),
+      ),
       offset: combinedBounds.center,
       scale: 1.0,
       rotation: 0.0,
@@ -3391,8 +3796,8 @@ class EditorController extends ChangeNotifier {
     if (_activeSticker != null) {
       stampActiveSticker();
     }
-    drawingController.rulerConfig.value =
-        drawingController.rulerConfig.value.copyWith(type: RulerType.none);
+    drawingController.rulerConfig.value = drawingController.rulerConfig.value
+        .copyWith(type: RulerType.none);
     final newSticker = ActiveTextSticker(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: text,
@@ -3407,19 +3812,27 @@ class EditorController extends ChangeNotifier {
   }
 
   /// Import an image / photo directly as an interactive movable/scalable sticker
-  void addImageSticker(ui.Image image, {String imageUrl = '', Offset? position}) {
+  void addImageSticker(
+    ui.Image image, {
+    String imageUrl = '',
+    Offset? position,
+  }) {
     if (drawingController.isCurrentLayerLocked) return;
     if (_activeSticker != null) {
       stampActiveSticker();
     }
-    drawingController.rulerConfig.value =
-        drawingController.rulerConfig.value.copyWith(type: RulerType.none);
+    drawingController.rulerConfig.value = drawingController.rulerConfig.value
+        .copyWith(type: RulerType.none);
 
     final double imgW = image.width.toDouble();
     final double imgH = image.height.toDouble();
     final Size? canvasSize = drawingController.drawConfig.value.size;
-    final double maxW = (canvasSize != null && canvasSize.width > 0) ? canvasSize.width * 0.6 : 260.0;
-    final double maxH = (canvasSize != null && canvasSize.height > 0) ? canvasSize.height * 0.6 : 260.0;
+    final double maxW = (canvasSize != null && canvasSize.width > 0)
+        ? canvasSize.width * 0.6
+        : 260.0;
+    final double maxH = (canvasSize != null && canvasSize.height > 0)
+        ? canvasSize.height * 0.6
+        : 260.0;
 
     double targetW = imgW > 0 ? imgW : 200.0;
     double targetH = imgH > 0 ? imgH : 200.0;
@@ -3438,7 +3851,8 @@ class EditorController extends ChangeNotifier {
     }
 
     final Size stickerSize = Size(targetW, targetH);
-    final Offset centerPos = position ??
+    final Offset centerPos =
+        position ??
         ((canvasSize != null && canvasSize.width > 0 && canvasSize.height > 0)
             ? Offset(canvasSize.width / 2, canvasSize.height / 2)
             : const Offset(180, 240));
@@ -3464,7 +3878,9 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool Function(PaintContent) _createInterceptDraw(DrawingController controller) {
+  bool Function(PaintContent) _createInterceptDraw(
+    DrawingController controller,
+  ) {
     return (content) {
       if (controller.isCurrentLayerLocked) return false;
       if (_activeCategory == 'Select') return true;
@@ -3473,13 +3889,21 @@ class EditorController extends ChangeNotifier {
       }
       if (content is Circle && content.radius > 0) {
         final double inflation = content.paint.strokeWidth / 2;
-        final actualCenter = content.startFromCenter ? content.startPoint : content.center;
+        final actualCenter = content.startFromCenter
+            ? content.startPoint
+            : content.center;
 
         Rect bounds;
         if (content.isEllipse) {
-          bounds = Rect.fromPoints(content.startPoint, content.endPoint).inflate(inflation);
+          bounds = Rect.fromPoints(
+            content.startPoint,
+            content.endPoint,
+          ).inflate(inflation);
         } else {
-          bounds = Rect.fromCircle(center: actualCenter, radius: content.radius).inflate(inflation);
+          bounds = Rect.fromCircle(
+            center: actualCenter,
+            radius: content.radius,
+          ).inflate(inflation);
         }
 
         final localContent = Circle.data(
@@ -3501,9 +3925,14 @@ class EditorController extends ChangeNotifier {
         updateSnapshot();
         notifyListeners();
         return true;
-      } else if (content is Rectangle && content.startPoint != null && content.endPoint != null) {
+      } else if (content is Rectangle &&
+          content.startPoint != null &&
+          content.endPoint != null) {
         final double inflation = content.paint.strokeWidth / 2;
-        final bounds = Rect.fromPoints(content.startPoint!, content.endPoint!).inflate(inflation);
+        final bounds = Rect.fromPoints(
+          content.startPoint!,
+          content.endPoint!,
+        ).inflate(inflation);
 
         final localContent = Rectangle.data(
           startPoint: content.startPoint! - bounds.topLeft,
@@ -3576,7 +4005,9 @@ class EditorController extends ChangeNotifier {
         updateSnapshot();
         notifyListeners();
         return true;
-      } else if (content is Heart && content.startPoint != null && content.endPoint != null) {
+      } else if (content is Heart &&
+          content.startPoint != null &&
+          content.endPoint != null) {
         final path = content.getPath();
         final bounds = path.getBounds().inflate(content.paint.strokeWidth / 2);
 
@@ -3601,9 +4032,13 @@ class EditorController extends ChangeNotifier {
         final ImageContent image = content;
         final Offset start = image.startPoint;
         final Offset end = image.startPoint + image.size;
-        final bounds = Rect.fromPoints(start, end).inflate(image.paint.strokeWidth / 2);
+        final bounds = Rect.fromPoints(
+          start,
+          end,
+        ).inflate(image.paint.strokeWidth / 2);
 
-        if (bounds.isEmpty || bounds.width <= 0 || bounds.height <= 0) return false;
+        if (bounds.isEmpty || bounds.width <= 0 || bounds.height <= 0)
+          return false;
 
         final localContent = ImageContent.data(
           startPoint: Offset.zero,
@@ -3622,7 +4057,9 @@ class EditorController extends ChangeNotifier {
         updateSnapshot();
         notifyListeners();
         return true;
-      } else if (content is StraightLine && content.startPoint != null && content.endPoint != null) {
+      } else if (content is StraightLine &&
+          content.startPoint != null &&
+          content.endPoint != null) {
         _activeSticker = ActiveStraightLineSticker(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           startPoint: content.startPoint!,
@@ -3650,12 +4087,15 @@ class EditorController extends ChangeNotifier {
         }
 
         final List<PaintContent> historyCopy = [];
-        final historySlice = controller.getHistory.take(controller.currentIndex).toList();
+        final historySlice = controller.getHistory
+            .take(controller.currentIndex)
+            .toList();
 
         // 1. Identify the latest active raster state in history
         int latestRasterIndex = -1;
         for (int j = historySlice.length - 1; j >= 0; j--) {
-          if (historySlice[j] is SmudgeContent || historySlice[j] is BlurContent) {
+          if (historySlice[j] is SmudgeContent ||
+              historySlice[j] is BlurContent) {
             latestRasterIndex = j;
             break;
           }
@@ -3669,7 +4109,8 @@ class EditorController extends ChangeNotifier {
           try {
             final Path p = item.getPath();
             final Rect b = p.getBounds();
-            if (!b.isEmpty && !bounds.overlaps(b.inflate(item.paint.strokeWidth / 2))) {
+            if (!b.isEmpty &&
+                !bounds.overlaps(b.inflate(item.paint.strokeWidth / 2))) {
               overlaps = false;
             }
           } catch (_) {
@@ -3763,6 +4204,7 @@ class EditorController extends ChangeNotifier {
           isUnderline: content.isUnderline,
           textAlign: content.textAlign,
           opacity: content.opacity,
+          flipX: content.flipX,
         );
         updateSnapshot();
         notifyListeners();
@@ -3785,6 +4227,11 @@ class EditorController extends ChangeNotifier {
     }
     _thumbnailNotifyDebounce?.cancel();
     _thumbnailNotifyDebounce = null;
+    for (final thumb in _thumbnails) {
+      try {
+        thumb?.dispose();
+      } catch (_) {}
+    }
     _thumbnails.clear();
     _loadingProgressNotifier.dispose();
     _loadingStatusNotifier.dispose();

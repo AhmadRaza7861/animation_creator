@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/widgets/font_presets.dart';
 import '../paint_extension/ex_offset.dart';
@@ -130,7 +131,7 @@ class TextContent extends PaintContent {
       textAlign: textAlign,
       textDirection: TextDirection.ltr,
     );
-    textPainter.layout(minWidth: 0, maxWidth: size.width);
+    textPainter.layout(minWidth: 0, maxWidth: double.infinity);
 
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
@@ -145,10 +146,43 @@ class TextContent extends PaintContent {
     canvas.restore();
   }
 
+  Size measureSize() {
+    if (text.isEmpty) return const Size(20, 20);
+    final TextPainter tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: getFontPresetByName(fontFamily).getTextStyle(
+          color: paint.color,
+          fontSize: fontSize,
+          opacity: opacity,
+          forceBold: isBold,
+          forceItalic: isItalic,
+          forceUnderline: isUnderline,
+        ),
+      ),
+      textAlign: textAlign,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return Size(math.max(tp.width, 24.0), math.max(tp.height, 24.0));
+  }
+
   @override
   Path getPath() {
-    final Rect rect = Rect.fromCenter(center: offset, width: 100 * scale, height: 50 * scale);
-    return Path()..addRect(rect);
+    final Size measured = measureSize();
+    final Rect rect = Rect.fromCenter(
+      center: offset,
+      width: measured.width * scale,
+      height: measured.height * scale,
+    );
+    final Path path = Path()..addRect(rect);
+    if (rotation != 0.0) {
+      final Matrix4 m = Matrix4.identity()
+        ..translateByDouble(offset.dx, offset.dy, 0.0, 1.0)
+        ..rotateZ(rotation)
+        ..translateByDouble(-offset.dx, -offset.dy, 0.0, 1.0);
+      return path.transform(m.storage);
+    }
+    return path;
   }
 
   @override

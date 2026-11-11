@@ -742,6 +742,9 @@ class _InputDialogContainerState extends State<_InputDialogContainer> {
                     child: TextField(
                       controller: widget.controller,
                       autofocus: true,
+                      minLines: 1,
+                      maxLines: 4,
+                      keyboardType: TextInputType.multiline,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,

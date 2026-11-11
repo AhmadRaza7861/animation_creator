@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'helper/safe_value_notifier.dart';
 import 'paint_contents/eraser.dart';
 import 'paint_contents/paint_content.dart';
+import 'paint_contents/empty_content.dart';
 import 'paint_contents/simple_line.dart';
 import 'paint_contents/smooth_line.dart';
 import 'paint_contents/fill.dart';
@@ -21,6 +22,8 @@ import 'paint_contents/stroke_recolor.dart';
 import 'paint_contents/shape_fill.dart';
 import 'paint_contents/shape_sticker.dart';
 import 'paint_contents/image.dart';
+import 'paint_contents/clipped.dart';
+import 'paint_contents/group.dart';
 import 'ruler/ruler_config.dart';
 import 'ruler/mirror_content.dart';
 import 'paint_contents/circle.dart';
@@ -243,7 +246,7 @@ class DrawConfig {
 /// Global Tool State Management
 class GlobalToolState extends ChangeNotifier {
   static final GlobalToolState instance = GlobalToolState._();
-  
+
   GlobalToolState._() {
     toolConfig = SafeValueNotifier<DrawConfig>(
       DrawConfig.def(contentType: FreehandLine),
@@ -307,13 +310,13 @@ class GlobalToolState extends ChangeNotifier {
   void setPaintContent(PaintContent content) {
     Type newType = content.runtimeType;
 
-    if (content is! FreehandLine && content is! SmoothLine && content is! SimpleLine) {
+    if (content is! FreehandLine &&
+        content is! SmoothLine &&
+        content is! SimpleLine) {
       rulerConfig.value = rulerConfig.value.copyWith(type: RulerType.none);
     }
 
-    toolConfig.value = toolConfig.value.copyWith(
-      contentType: newType,
-    );
+    toolConfig.value = toolConfig.value.copyWith(contentType: newType);
     content.paint = toolConfig.value.paint;
     paintContent = content;
   }
@@ -349,15 +352,19 @@ class DrawingController extends ChangeNotifier {
     realPainter = RePaintNotifier();
     painter = RePaintNotifier();
     drawConfig = SafeValueNotifier<DrawConfig>(
-      config ?? DrawConfig.def(contentType: GlobalToolState.instance.toolConfig.value.contentType),
+      config ??
+          DrawConfig.def(
+            contentType: GlobalToolState.instance.toolConfig.value.contentType,
+          ),
     );
     _syncFromGlobal();
     rulerConfig = GlobalToolState.instance.rulerConfig;
-    
+
     GlobalToolState.instance.toolConfig.addListener(_onGlobalToolChange);
   }
 
-  String? get activeBrushPresetId => GlobalToolState.instance.activeBrushPresetId;
+  String? get activeBrushPresetId =>
+      GlobalToolState.instance.activeBrushPresetId;
   set activeBrushPresetId(String? value) {
     if (GlobalToolState.instance.activeBrushPresetId != value) {
       GlobalToolState.instance.activeBrushPresetId = value;
@@ -506,8 +513,10 @@ class DrawingController extends ChangeNotifier {
   /// 同步生成当前活跃图层的快照图片（用于涂抹/模糊工具）
   ui.Image? generateActiveLayerSnapshotSync([Size? customSize]) {
     final Size? size = customSize ?? drawConfig.value.size;
-    if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0) return null;
-    final double pixelRatio = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+    if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0)
+      return null;
+    final double pixelRatio =
+        ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
     final int targetWidth = (size.width * pixelRatio).round();
     final int targetHeight = (size.height * pixelRatio).round();
     if (targetWidth <= 0 || targetHeight <= 0) return null;
@@ -516,7 +525,8 @@ class DrawingController extends ChangeNotifier {
     if (active == null || !active.isVisible) return null;
 
     final int count = active.currentIndex.clamp(0, active.history.length);
-    final ui.Image? bgImg = backgroundSnapshotProvider?.call() ?? backgroundImage;
+    final ui.Image? bgImg =
+        backgroundSnapshotProvider?.call() ?? backgroundImage;
     if (count == 0 && bgImg == null) {
       return null;
     }
@@ -556,8 +566,10 @@ class DrawingController extends ChangeNotifier {
   /// 同步生成当前画板的快照图片（0ms延迟，用于模糊和涂抹工具）
   ui.Image? generateSnapshotSync([Size? customSize]) {
     final Size? size = customSize ?? drawConfig.value.size;
-    if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0) return null;
-    final double pixelRatio = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+    if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0)
+      return null;
+    final double pixelRatio =
+        ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
     final int targetWidth = (size.width * pixelRatio).round();
     final int targetHeight = (size.height * pixelRatio).round();
     if (targetWidth <= 0 || targetHeight <= 0) return null;
@@ -601,8 +613,15 @@ class DrawingController extends ChangeNotifier {
     if (drawConfig.value.size != null) {
       final ui.Image? snapshot = generateSnapshotSync(drawConfig.value.size);
       if (snapshot != null) {
+        if (cachedImage != null && cachedImage != snapshot) {
+          try {
+            cachedImage?.dispose();
+          } catch (_) {}
+        }
         cachedImage = snapshot;
-        snapshot.toByteData(format: ui.ImageByteFormat.rawRgba).then((ByteData? data) {
+        snapshot.toByteData(format: ui.ImageByteFormat.rawRgba).then((
+          ByteData? data,
+        ) {
           if (data != null) {
             cachedRgbaData = data.buffer.asUint8List();
             cachedRgbaWidth = snapshot.width;
@@ -626,7 +645,8 @@ class DrawingController extends ChangeNotifier {
   /// 实时快照图片，反映由于绘制或贴纸操作引起的即时变化
   ///
   /// Real-time snapshot image, reflecting immediate changes from drawing or stickers
-  final SafeValueNotifier<ui.Image?> realTimeSnapshot = SafeValueNotifier<ui.Image?>(null);
+  final SafeValueNotifier<ui.Image?> realTimeSnapshot =
+      SafeValueNotifier<ui.Image?>(null);
 
   /// 当前controller是否已挂载
   ///
@@ -669,7 +689,8 @@ class DrawingController extends ChangeNotifier {
   int get currentIndex => activeLayer.value?.currentIndex ?? 0;
 
   /// 获取所有图层的总历史索引，用于缓存验证
-  int get totalCurrentIndex => layers.fold(0, (sum, layer) => sum + layer.currentIndex);
+  int get totalCurrentIndex =>
+      layers.fold(0, (sum, layer) => sum + layer.currentIndex);
 
   /// 获取当前画笔颜色
   ///
@@ -789,7 +810,9 @@ class DrawingController extends ChangeNotifier {
   void setBoardSize(Size? size) {
     final Size? oldSize = drawConfig.value.size;
     drawConfig.value = drawConfig.value.copyWith(size: size);
-    if (size != null && !size.isEmpty && (oldSize != size || realTimeSnapshot.value == null)) {
+    if (size != null &&
+        !size.isEmpty &&
+        (oldSize != size || realTimeSnapshot.value == null)) {
       updateSnapshot();
     }
   }
@@ -836,24 +859,41 @@ class DrawingController extends ChangeNotifier {
   ) {
     if (content is StraightLine) {
       if (content.startPoint != null) {
-        content.startPoint = Offset(content.startPoint!.dx * scaleX, content.startPoint!.dy * scaleY);
+        content.startPoint = Offset(
+          content.startPoint!.dx * scaleX,
+          content.startPoint!.dy * scaleY,
+        );
       }
       if (content.endPoint != null) {
-        content.endPoint = Offset(content.endPoint!.dx * scaleX, content.endPoint!.dy * scaleY);
+        content.endPoint = Offset(
+          content.endPoint!.dx * scaleX,
+          content.endPoint!.dy * scaleY,
+        );
       }
       content.paint = content.paint.copyWith(
         strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
       );
     } else if (content is Circle) {
-      content.center = Offset(content.center.dx * scaleX, content.center.dy * scaleY);
+      content.center = Offset(
+        content.center.dx * scaleX,
+        content.center.dy * scaleY,
+      );
       content.radius = content.radius * scaleX;
-      content.startPoint = Offset(content.startPoint.dx * scaleX, content.startPoint.dy * scaleY);
-      content.endPoint = Offset(content.endPoint.dx * scaleX, content.endPoint.dy * scaleY);
+      content.startPoint = Offset(
+        content.startPoint.dx * scaleX,
+        content.startPoint.dy * scaleY,
+      );
+      content.endPoint = Offset(
+        content.endPoint.dx * scaleX,
+        content.endPoint.dy * scaleY,
+      );
       content.paint = content.paint.copyWith(
         strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
       );
     } else if (content is SmoothLine) {
-      content.points = content.points.map((p) => Offset(p.dx * scaleX, p.dy * scaleY)).toList();
+      content.points = content.points
+          .map((p) => Offset(p.dx * scaleX, p.dy * scaleY))
+          .toList();
       content.strokeWidthList = content.strokeWidthList
           .map((sw) => (sw * strokeScale).clamp(1.0, 50.0))
           .toList();
@@ -862,27 +902,41 @@ class DrawingController extends ChangeNotifier {
       );
     } else if (content is Rectangle) {
       if (content.startPoint != null) {
-        content.startPoint = Offset(content.startPoint!.dx * scaleX, content.startPoint!.dy * scaleY);
+        content.startPoint = Offset(
+          content.startPoint!.dx * scaleX,
+          content.startPoint!.dy * scaleY,
+        );
       }
       if (content.endPoint != null) {
-        content.endPoint = Offset(content.endPoint!.dx * scaleX, content.endPoint!.dy * scaleY);
+        content.endPoint = Offset(
+          content.endPoint!.dx * scaleX,
+          content.endPoint!.dy * scaleY,
+        );
       }
       content.paint = content.paint.copyWith(
         strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
       );
     } else if (content is SimpleLine) {
       if (content.startPoint != null) {
-        content.startPoint = Offset(content.startPoint!.dx * scaleX, content.startPoint!.dy * scaleY);
+        content.startPoint = Offset(
+          content.startPoint!.dx * scaleX,
+          content.startPoint!.dy * scaleY,
+        );
       }
       if (content.endPoint != null) {
-        content.endPoint = Offset(content.endPoint!.dx * scaleX, content.endPoint!.dy * scaleY);
+        content.endPoint = Offset(
+          content.endPoint!.dx * scaleX,
+          content.endPoint!.dy * scaleY,
+        );
       }
       content.paint = content.paint.copyWith(
         strokeWidth: (content.paint.strokeWidth * strokeScale).clamp(1.0, 50.0),
       );
     } else if (content is FreehandLine) {
       if (content.points != null) {
-        content.points = content.points!.map((p) => Offset(p.dx * scaleX, p.dy * scaleY)).toList();
+        content.points = content.points!
+            .map((p) => Offset(p.dx * scaleX, p.dy * scaleY))
+            .toList();
         final newPath = DrawPath();
         for (int i = 0; i < content.points!.length; i++) {
           final pt = content.points![i];
@@ -923,9 +977,7 @@ class DrawingController extends ChangeNotifier {
   void addFingerCount(Offset offset) {
     final int newCount = drawConfig.value.fingerCount + 1;
     _pointerCount = newCount;
-    drawConfig.value = drawConfig.value.copyWith(
-      fingerCount: newCount,
-    );
+    drawConfig.value = drawConfig.value.copyWith(fingerCount: newCount);
     if (newCount >= 2) {
       _isNavigating = true;
       if (hasPaintingContent) {
@@ -949,9 +1001,7 @@ class DrawingController extends ChangeNotifier {
 
     final int newCount = drawConfig.value.fingerCount - 1;
     _pointerCount = newCount;
-    drawConfig.value = drawConfig.value.copyWith(
-      fingerCount: newCount,
-    );
+    drawConfig.value = drawConfig.value.copyWith(fingerCount: newCount);
     if (newCount <= 1) {
       _isNavigating = false;
       _isZooming = false;
@@ -1024,16 +1074,74 @@ class DrawingController extends ChangeNotifier {
     }
   }
 
+  /// Safely releases native GPU image textures associated with a PaintContent
+  static void disposeContentResources(PaintContent content) {
+    if (content is FillContent) {
+      final img = content.image;
+      content.image = null;
+      try {
+        img?.dispose();
+      } catch (_) {}
+    } else if (content is SmudgeContent) {
+      content.releaseWorkingBuffers();
+      final img = content.image;
+      content.image = null;
+      try {
+        img?.dispose();
+      } catch (_) {}
+    } else if (content is BlurContent) {
+      content.releaseWorkingBuffers();
+      final img = content.image;
+      content.image = null;
+      try {
+        img?.dispose();
+      } catch (_) {}
+    } else if (content is ImageContent) {
+      final img = content.image;
+      content.image = null;
+      try {
+        img?.dispose();
+      } catch (_) {}
+    } else if (content is ShapeStickerContent) {
+      disposeContentResources(content.child);
+    } else if (content is OffsetContent) {
+      disposeContentResources(content.child);
+    } else if (content is ClippedContent) {
+      disposeContentResources(content.child);
+    } else if (content is GroupContent) {
+      for (final child in content.children) {
+        disposeContentResources(child);
+      }
+    } else if (content is ClippedHistoryContent) {
+      for (final child in content.history) {
+        disposeContentResources(child);
+      }
+    }
+  }
+
+  void _discardHistoryRange(LayerData layer, int start, int end) {
+    if (end > start && start >= 0 && end <= layer.history.length) {
+      final discarded = layer.history.sublist(start, end);
+      layer.history.removeRange(start, end);
+      for (final c in discarded) {
+        disposeContentResources(c);
+      }
+    }
+  }
+
   /// 添加一条绘制内容到历史记录
   ///
   /// Add a drawing content to history
   void addContent(PaintContent content) {
-    if (activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
+    if (activeLayer.value == null ||
+        !activeLayer.value!.isVisible ||
+        activeLayer.value!.isLocked)
+      return;
     final LayerData layer = activeLayer.value!;
-    
+
     final int hisLen = layer.history.length;
     if (hisLen > layer.currentIndex) {
-      layer.history.removeRange(layer.currentIndex, hisLen);
+      _discardHistoryRange(layer, layer.currentIndex, hisLen);
       if (layer.sessionStartIndex > layer.currentIndex) {
         layer.sessionStartIndex = layer.currentIndex;
       }
@@ -1050,12 +1158,15 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Insert fill content underneath stroke outlines on the active layer
   void insertFillContent(FillContent content) {
-    if (activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
+    if (activeLayer.value == null ||
+        !activeLayer.value!.isVisible ||
+        activeLayer.value!.isLocked)
+      return;
     final LayerData layer = activeLayer.value!;
 
     final int hisLen = layer.history.length;
     if (hisLen > layer.currentIndex) {
-      layer.history.removeRange(layer.currentIndex, hisLen);
+      _discardHistoryRange(layer, layer.currentIndex, hisLen);
       if (layer.sessionStartIndex > layer.currentIndex) {
         layer.sessionStartIndex = layer.currentIndex;
       }
@@ -1079,7 +1190,10 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Insert content at the base of history (underneath existing drawings)
   void insertContentAsBase(PaintContent content) {
-    if (activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
+    if (activeLayer.value == null ||
+        !activeLayer.value!.isVisible ||
+        activeLayer.value!.isLocked)
+      return;
     final LayerData layer = activeLayer.value!;
 
     layer.history.insert(0, content);
@@ -1096,7 +1210,11 @@ class DrawingController extends ChangeNotifier {
   /// and locked by default to protect the video reference from accidental brush/eraser modifications.
   /// An active, unlocked 'Drawing' layer is positioned above it, enabling rotoscoping, tracing,
   /// and drawing directly over the video frames.
-  void setVideoLayer(PaintContent content, {bool updateCanvasSnapshot = true, bool notify = true}) {
+  void setVideoLayer(
+    PaintContent content, {
+    bool updateCanvasSnapshot = true,
+    bool notify = true,
+  }) {
     // 1. Check if a video layer already exists
     LayerData? videoLayer;
     for (final l in layers) {
@@ -1107,7 +1225,13 @@ class DrawingController extends ChangeNotifier {
     }
 
     if (videoLayer != null) {
+      final oldContents = List<PaintContent>.from(videoLayer.history);
       videoLayer.history = [content];
+      for (final c in oldContents) {
+        if (c != content) {
+          disposeContentResources(c);
+        }
+      }
       videoLayer.currentIndex = 1;
       videoLayer.isLocked = true;
       videoLayer.isVisible = true;
@@ -1163,11 +1287,13 @@ class DrawingController extends ChangeNotifier {
   /// Check if canvas contains user drawing strokes beyond video/background/guide layers
   bool get hasUserDrawings {
     for (final layer in layers) {
-      if (layer.isGuide || layer.name == 'Video Layer' || layer.id.startsWith('video_layer_')) {
+      if (layer.isGuide ||
+          layer.name == 'Video Layer' ||
+          layer.id.startsWith('video_layer_')) {
         continue;
       }
-      final int count = layer.currentIndex > 0 ? layer.currentIndex : layer.history.length;
-      if (count > 0) return true;
+      final effectiveHistory = layer.getEffectiveHistory();
+      if (effectiveHistory.any((c) => c is! EmptyContent)) return true;
     }
     return false;
   }
@@ -1176,12 +1302,15 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Add multiple drawing contents in batch
   void addContents(List<PaintContent> contents) {
-    if (activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
+    if (activeLayer.value == null ||
+        !activeLayer.value!.isVisible ||
+        activeLayer.value!.isLocked)
+      return;
     final LayerData layer = activeLayer.value!;
 
     final int hisLen = layer.history.length;
     if (hisLen > layer.currentIndex) {
-      layer.history.removeRange(layer.currentIndex, hisLen);
+      _discardHistoryRange(layer, layer.currentIndex, hisLen);
       if (layer.sessionStartIndex > layer.currentIndex) {
         layer.sessionStartIndex = layer.currentIndex;
       }
@@ -1195,21 +1324,25 @@ class DrawingController extends ChangeNotifier {
   }
 
   /// 批量移除绘制内容（例如提取到选择工具中）
-  /// 
+  ///
   /// Remove items from history (e.g. for extracting to a selection)
   void removeContents(Iterable<PaintContent> contents) {
-    if (contents.isEmpty || activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
+    if (contents.isEmpty ||
+        activeLayer.value == null ||
+        !activeLayer.value!.isVisible ||
+        activeLayer.value!.isLocked)
+      return;
     final LayerData layer = activeLayer.value!;
 
     final int hisLen = layer.history.length;
     if (hisLen > layer.currentIndex) {
-      layer.history.removeRange(layer.currentIndex, hisLen);
+      _discardHistoryRange(layer, layer.currentIndex, hisLen);
     }
-    
+
     // 移除指定的内容
     // Remove specified contents
     layer.history.removeWhere((content) => contents.contains(content));
-    
+
     layer.currentIndex = layer.history.length;
     if (layer.sessionStartIndex > layer.currentIndex) {
       layer.sessionStartIndex = layer.currentIndex;
@@ -1233,7 +1366,10 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Start drawing
   void startDraw(Offset startPointRaw, [double? pressure]) {
-    if (activeLayer.value == null || !activeLayer.value!.isVisible || activeLayer.value!.isLocked) return;
+    if (activeLayer.value == null ||
+        !activeLayer.value!.isVisible ||
+        activeLayer.value!.isLocked)
+      return;
 
     if (activeLayer.value!.currentIndex == 0 && _paintContent is Eraser) {
       return;
@@ -1241,7 +1377,10 @@ class DrawingController extends ChangeNotifier {
 
     _startPointRaw = startPointRaw;
     _lastPointRaw = startPointRaw;
-    final Offset startPoint = rulerConfig.value.projectPoint(startPointRaw, null);
+    final Offset startPoint = rulerConfig.value.projectPoint(
+      startPointRaw,
+      null,
+    );
     _startPoint = startPoint;
 
     PaintContent? newContent;
@@ -1251,6 +1390,9 @@ class DrawingController extends ChangeNotifier {
       newContent.paint = drawConfig.value.paint.copyWith();
       newContent.startDraw(startPoint);
       eraserContent = newContent;
+      try {
+        cachedImage?.dispose();
+      } catch (_) {}
       cachedImage = null;
       _refresh();
       _refreshDeep();
@@ -1274,13 +1416,23 @@ class DrawingController extends ChangeNotifier {
         final ui.Image? snapshot = generateSnapshotSync(canvasSize);
         if (snapshot != null) {
           blur.setImageData(snapshot, canvasSize);
-          if (cachedRgbaData != null && cachedRgbaWidth == snapshot.width && cachedRgbaHeight == snapshot.height) {
-            blur.setRgbaData(cachedRgbaData!, cachedRgbaWidth!, cachedRgbaHeight!, canvasSize);
+          if (cachedRgbaData != null &&
+              cachedRgbaWidth == snapshot.width &&
+              cachedRgbaHeight == snapshot.height) {
+            blur.setRgbaData(
+              cachedRgbaData!,
+              cachedRgbaWidth!,
+              cachedRgbaHeight!,
+              canvasSize,
+            );
           }
         }
       }
       blur.startDrawWithPressure(startPoint, pressure ?? 1.0);
       drawingContent = blur;
+      try {
+        cachedImage?.dispose();
+      } catch (_) {}
       cachedImage = null;
       _refresh();
       _refreshDeep();
@@ -1298,13 +1450,23 @@ class DrawingController extends ChangeNotifier {
         final ui.Image? snapshot = generateSnapshotSync(canvasSize);
         if (snapshot != null) {
           smudge.setImageData(snapshot, canvasSize);
-          if (cachedRgbaData != null && cachedRgbaWidth == snapshot.width && cachedRgbaHeight == snapshot.height) {
-            smudge.setRgbaData(cachedRgbaData!, cachedRgbaWidth!, cachedRgbaHeight!, canvasSize);
+          if (cachedRgbaData != null &&
+              cachedRgbaWidth == snapshot.width &&
+              cachedRgbaHeight == snapshot.height) {
+            smudge.setRgbaData(
+              cachedRgbaData!,
+              cachedRgbaWidth!,
+              cachedRgbaHeight!,
+              canvasSize,
+            );
           }
         }
       }
       smudge.startDrawWithPressure(startPoint, pressure ?? 1.0);
       drawingContent = smudge;
+      try {
+        cachedImage?.dispose();
+      } catch (_) {}
       cachedImage = null;
       _refresh();
       _refreshDeep();
@@ -1322,123 +1484,177 @@ class DrawingController extends ChangeNotifier {
     }
 
     // Wrap in MirrorContent if mirroring
-    if (rulerConfig.value.type == RulerType.mirror && newContent is! Eyedropper) {
+    if (rulerConfig.value.type == RulerType.mirror &&
+        newContent is! Eyedropper) {
       if (newContent == eraserContent) {
-        eraserContent = MirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
+        eraserContent = MirrorContent(
+          newContent,
+          rulerConfig.value.center,
+          rulerConfig.value.angle,
+        );
       } else {
-        drawingContent = MirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
+        drawingContent = MirrorContent(
+          newContent,
+          rulerConfig.value.center,
+          rulerConfig.value.angle,
+        );
       }
-    } else if (rulerConfig.value.type == RulerType.quadMirror && newContent is! Eyedropper) {
+    } else if (rulerConfig.value.type == RulerType.quadMirror &&
+        newContent is! Eyedropper) {
       if (newContent == eraserContent) {
-        eraserContent = QuadMirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
+        eraserContent = QuadMirrorContent(
+          newContent,
+          rulerConfig.value.center,
+          rulerConfig.value.angle,
+        );
       } else {
-        drawingContent = QuadMirrorContent(newContent, rulerConfig.value.center, rulerConfig.value.angle);
+        drawingContent = QuadMirrorContent(
+          newContent,
+          rulerConfig.value.center,
+          rulerConfig.value.angle,
+        );
       }
     }
   }
 
   /// 执行填充操作
   Future<void> _drawFill(Offset startPoint) async {
-    final Size? size = drawConfig.value.size;
-    if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0) {
-      return;
-    }
-
-    // 1. Priority 1: Check if user tapped inside any closed shape on the active layer
-    if (activeLayer.value != null && activeLayer.value!.isVisible && !activeLayer.value!.isLocked) {
-      final LayerData layer = activeLayer.value!;
-      final PaintContent? hitShape = _findHitClosedShape(layer, startPoint);
-      if (hitShape != null) {
-        final Color newColor = drawConfig.value.color;
-        final Color? oldColor = hitShape.fillColor ?? (hitShape is ShapeStickerContent ? hitShape.child.fillColor : null);
-
-        hitShape.fillColor = newColor;
-        if (hitShape is ShapeStickerContent) {
-          hitShape.child.fillColor = newColor;
-        }
-
-        final int hitIdx = layer.history.indexOf(hitShape);
-        final ShapeFillContent shapeFillContent = ShapeFillContent(
-          targetShape: hitShape,
-          oldFillColor: oldColor,
-          newFillColor: newColor,
-          targetIndex: hitIdx,
-        );
-        addContent(shapeFillContent);
+    try {
+      final Size? size = drawConfig.value.size;
+      if (size == null || size.isEmpty || size.width <= 0 || size.height <= 0) {
         return;
       }
-    }
 
-    final int width = size.width.round();
-    final int height = size.height.round();
-    if (width <= 0 || height <= 0) return;
+      // 1. Priority 1: Check if user tapped inside any closed shape on the active layer
+      if (activeLayer.value != null &&
+          activeLayer.value!.isVisible &&
+          !activeLayer.value!.isLocked) {
+        final LayerData layer = activeLayer.value!;
+        final PaintContent? hitShape = _findHitClosedShape(layer, startPoint);
+        if (hitShape != null) {
+          final Color newColor = drawConfig.value.color;
+          final Color? oldColor =
+              hitShape.fillColor ??
+              (hitShape is ShapeStickerContent
+                  ? hitShape.child.fillColor
+                  : null);
 
-    // 2. Perform high-precision flood fill (handles enclosed fills, narrow/small loops, and raster/stroke recoloring)
-    final ui.PictureRecorder recorder = ui.PictureRecorder();
-    final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
-
-    canvas.saveLayer(Offset.zero & size, Paint());
-
-    for (int i = layers.length - 1; i >= 0; i--) {
-      final layer = layers[i];
-      if (!layer.isVisible) continue;
-
-      canvas.saveLayer(
-        Offset.zero & size,
-        Paint()
-          ..blendMode = layer.blendMode
-          ..color = Colors.white.withValues(alpha: layer.opacity),
-      );
-
-      layer.drawHistory(canvas, size, true);
-      canvas.restore();
-    }
-
-    canvas.restore();
-
-    final ui.Picture picture = recorder.endRecording();
-    final ui.Image snapshotImage = await picture.toImage(width, height);
-
-    final FloodFillResult? fillResult = await FloodFill.fillWithResult(
-      image: snapshotImage,
-      startPoint: startPoint,
-      fillColor: drawConfig.value.color,
-      tolerance: drawConfig.value.tolerance,
-    );
-
-    if (fillResult != null) {
-      if (!fillResult.isUnderneath) {
-        // This is a stroke re-color operation (e.g. open stroke tapped). If it's a vector stroke on the active layer,
-        // re-color the vector stroke directly so vector undo/redo and clean rendering are preserved.
-        if (activeLayer.value != null && activeLayer.value!.isVisible && !activeLayer.value!.isLocked) {
-          final LayerData layer = activeLayer.value!;
-          final PaintContent? hitStroke = _findHitContent(layer, startPoint);
-          if (hitStroke != null) {
-            final Color newColor = drawConfig.value.color;
-            if (hitStroke.paint.color != newColor) {
-              final Color oldColor = hitStroke.paint.color;
-              hitStroke.paint.color = newColor;
-              final int hitIdx = layer.history.indexOf(hitStroke);
-              final StrokeRecolorContent recolorContent = StrokeRecolorContent(
-                targetItem: hitStroke,
-                oldColor: oldColor,
-                newColor: newColor,
-                targetIndex: hitIdx,
-              );
-              addContent(recolorContent);
-              return;
-            }
-            return;
+          hitShape.fillColor = newColor;
+          if (hitShape is ShapeStickerContent) {
+            hitShape.child.fillColor = newColor;
           }
+
+          final int hitIdx = layer.history.indexOf(hitShape);
+          final ShapeFillContent shapeFillContent = ShapeFillContent(
+            targetShape: hitShape,
+            oldFillColor: oldColor,
+            newFillColor: newColor,
+            targetIndex: hitIdx,
+          );
+          addContent(shapeFillContent);
+          return;
+        }
+
+        // Priority 1.5: If user tapped directly on a SimpleLine (straight vector line),
+        // recolor it immediately in O(1) without requiring rasterization.
+        final PaintContent? hitStroke = _findHitContent(layer, startPoint);
+        if (hitStroke is SimpleLine) {
+          final Color newColor = drawConfig.value.color;
+          if (hitStroke.paint.color != newColor) {
+            final Color oldColor = hitStroke.paint.color;
+            hitStroke.paint.color = newColor;
+            final int hitIdx = layer.history.indexOf(hitStroke);
+            final StrokeRecolorContent recolorContent = StrokeRecolorContent(
+              targetItem: hitStroke,
+              oldColor: oldColor,
+              newColor: newColor,
+              targetIndex: hitIdx,
+            );
+            addContent(recolorContent);
+          }
+          return;
         }
       }
 
-      final FillContent content = FillContent.data(
-        image: fillResult.image,
-        paint: drawConfig.value.paint.copyWith(),
-        isUnderneath: fillResult.isUnderneath,
+      final int width = size.width.round();
+      final int height = size.height.round();
+      if (width <= 0 || height <= 0) return;
+
+      // 2. Perform high-precision flood fill (handles enclosed fills, narrow/small loops, and raster/stroke recoloring)
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(
+        recorder,
+        Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
       );
-      addContent(content);
+
+      canvas.saveLayer(Offset.zero & size, Paint());
+
+      for (int i = layers.length - 1; i >= 0; i--) {
+        final layer = layers[i];
+        if (!layer.isVisible) continue;
+
+        canvas.saveLayer(
+          Offset.zero & size,
+          Paint()
+            ..blendMode = layer.blendMode
+            ..color = Colors.white.withValues(alpha: layer.opacity),
+        );
+
+        layer.drawHistory(canvas, size, true);
+        canvas.restore();
+      }
+
+      canvas.restore();
+
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image snapshotImage = await picture.toImage(width, height);
+
+      final FloodFillResult? fillResult = await FloodFill.fillWithResult(
+        image: snapshotImage,
+        startPoint: startPoint,
+        fillColor: drawConfig.value.color,
+        tolerance: drawConfig.value.tolerance,
+      );
+
+      if (fillResult != null) {
+        if (!fillResult.isUnderneath) {
+          // This is a stroke re-color operation (e.g. open stroke tapped). If it's a vector stroke on the active layer,
+          // re-color the vector stroke directly so vector undo/redo and clean rendering are preserved.
+          if (activeLayer.value != null &&
+              activeLayer.value!.isVisible &&
+              !activeLayer.value!.isLocked) {
+            final LayerData layer = activeLayer.value!;
+            final PaintContent? hitStroke = _findHitContent(layer, startPoint);
+            if (hitStroke != null) {
+              final Color newColor = drawConfig.value.color;
+              if (hitStroke.paint.color != newColor) {
+                final Color oldColor = hitStroke.paint.color;
+                hitStroke.paint.color = newColor;
+                final int hitIdx = layer.history.indexOf(hitStroke);
+                final StrokeRecolorContent recolorContent =
+                    StrokeRecolorContent(
+                      targetItem: hitStroke,
+                      oldColor: oldColor,
+                      newColor: newColor,
+                      targetIndex: hitIdx,
+                    );
+                addContent(recolorContent);
+                return;
+              }
+              return;
+            }
+          }
+        }
+
+        final FillContent content = FillContent.data(
+          image: fillResult.image,
+          paint: drawConfig.value.paint.copyWith(),
+          isUnderneath: fillResult.isUnderneath,
+        );
+        addContent(content);
+      }
+    } catch (e, stack) {
+      debugPrint('Error in _drawFill: $e\n$stack');
     }
   }
 
@@ -1446,7 +1662,10 @@ class DrawingController extends ChangeNotifier {
     final int count = layer.currentIndex.clamp(0, layer.history.length);
     for (int i = count - 1; i >= 0; i--) {
       final item = layer.history[i];
-      if (item is FillContent || item is Eyedropper || item is StrokeRecolorContent || item is ShapeFillContent) {
+      if (item is FillContent ||
+          item is Eyedropper ||
+          item is StrokeRecolorContent ||
+          item is ShapeFillContent) {
         continue;
       }
       if (item.containsPoint(pt)) {
@@ -1460,7 +1679,11 @@ class DrawingController extends ChangeNotifier {
     final int count = layer.currentIndex.clamp(0, layer.history.length);
     for (int i = count - 1; i >= 0; i--) {
       final item = layer.history[i];
-      if (item is FillContent || item is Eyedropper || item is StrokeRecolorContent || item is ShapeFillContent) continue;
+      if (item is FillContent ||
+          item is Eyedropper ||
+          item is StrokeRecolorContent ||
+          item is ShapeFillContent)
+        continue;
       if (_isPointOnContent(item, pt)) {
         return item;
       }
@@ -1469,7 +1692,9 @@ class DrawingController extends ChangeNotifier {
   }
 
   bool _isPointOnContent(PaintContent item, Offset pt) {
-    final double baseWidth = item.paint.strokeWidth > 0 ? item.paint.strokeWidth : 4.0;
+    final double baseWidth = item.paint.strokeWidth > 0
+        ? item.paint.strokeWidth
+        : 4.0;
     final double hitR = (baseWidth * 0.5 + 8.0);
     final double hitRSq = hitR * hitR;
 
@@ -1483,7 +1708,9 @@ class DrawingController extends ChangeNotifier {
         return d <= hitRSq;
       }
       for (int i = 0; i < item.points.length - 1; i++) {
-        final double w = i < item.strokeWidthList.length ? item.strokeWidthList[i] : baseWidth;
+        final double w = i < item.strokeWidthList.length
+            ? item.strokeWidthList[i]
+            : baseWidth;
         final double r = (w * 0.5 + 8.0);
         if (_distToSegmentSq(pt, item.points[i], item.points[i + 1]) <= r * r) {
           return true;
@@ -1546,7 +1773,10 @@ class DrawingController extends ChangeNotifier {
       final double py = p.dy - a.dy;
       return px * px + py * py;
     }
-    final double t = (((p.dx - a.dx) * dx + (p.dy - a.dy) * dy) / l2).clamp(0.0, 1.0);
+    final double t = (((p.dx - a.dx) * dx + (p.dy - a.dy) * dy) / l2).clamp(
+      0.0,
+      1.0,
+    );
     final double projX = a.dx + t * dx;
     final double projY = a.dy + t * dy;
     final double diffX = p.dx - projX;
@@ -1557,21 +1787,25 @@ class DrawingController extends ChangeNotifier {
   /// 准备画板快照并提取颜色
   ///
   /// Prepare UI snapshot for Eyedropper, Blur, and Smudge
-  Future<void> _takeSnapshot(Offset startPoint, {bool forEyedropper = false}) async {
+  Future<void> _takeSnapshot(
+    Offset startPoint, {
+    bool forEyedropper = false,
+  }) async {
     try {
-      final BuildContext? context = forEyedropper 
-          ? painterKey.currentContext 
+      final BuildContext? context = forEyedropper
+          ? painterKey.currentContext
           : drawingLayerKey.currentContext;
       if (context == null) return;
-      
+
       final RenderObject? renderObject = context.findRenderObject();
       if (renderObject is! RenderRepaintBoundary) return;
 
       final ui.Image image = await renderObject.toImage(pixelRatio: 1.0);
 
       if (forEyedropper) {
-        final ByteData? data =
-            await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        final ByteData? data = await image.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        );
         if (data == null) return;
 
         // 验证当前工具仍然是吸管
@@ -1652,10 +1886,7 @@ class DrawingController extends ChangeNotifier {
 
     // Draw template image if provided
     if (templateImage != null) {
-      canvas.saveLayer(
-        Offset.zero & size,
-        Paint(),
-      );
+      canvas.saveLayer(Offset.zero & size, Paint());
       paintImage(
         canvas: canvas,
         rect: Offset.zero & size,
@@ -1757,14 +1988,14 @@ class DrawingController extends ChangeNotifier {
     for (int i = layers.length - 1; i >= 0; i--) {
       final layer = layers[i];
       if (!layer.isVisible) continue;
-      
+
       canvas.saveLayer(
-        Offset.zero & size, 
+        Offset.zero & size,
         Paint()
           ..blendMode = layer.blendMode
-          ..color = Colors.white.withValues(alpha: layer.opacity)
+          ..color = Colors.white.withValues(alpha: layer.opacity),
       );
-      
+
       layer.drawHistory(canvas, size, false);
 
       // If this is the active layer, apply any active drawing or eraser
@@ -1776,7 +2007,7 @@ class DrawingController extends ChangeNotifier {
           eraserContent?.draw(canvas, size, false);
         }
       }
-      
+
       canvas.restore();
     }
 
@@ -1788,32 +2019,53 @@ class DrawingController extends ChangeNotifier {
     canvas.restore();
 
     final ui.Picture picture = recorder.endRecording();
-    picture.toImage(renderSize.width.toInt(), renderSize.height.toInt()).then((img) {
-      try {
-        picture.dispose();
-      } catch (_) {}
-      realTimeSnapshot.value = img;
-      _isUpdatingSnapshot = false;
-      if (_hasPendingSnapshotUpdate) {
-        _hasPendingSnapshotUpdate = false;
-        final pendingDraw = _pendingAdditionalDraw;
-        final pendingBg = _pendingIncludeBackground;
-        _pendingAdditionalDraw = null;
-        updateSnapshot(additionalDraw: pendingDraw, includeBackground: pendingBg);
-      }
-    }).catchError((e) {
-      try {
-        picture.dispose();
-      } catch (_) {}
-      _isUpdatingSnapshot = false;
-      if (_hasPendingSnapshotUpdate) {
-        _hasPendingSnapshotUpdate = false;
-        final pendingDraw = _pendingAdditionalDraw;
-        final pendingBg = _pendingIncludeBackground;
-        _pendingAdditionalDraw = null;
-        updateSnapshot(additionalDraw: pendingDraw, includeBackground: pendingBg);
-      }
-    });
+    picture
+        .toImage(renderSize.width.toInt(), renderSize.height.toInt())
+        .then((img) {
+          try {
+            picture.dispose();
+          } catch (_) {}
+          if (!_mounted) {
+            try {
+              img.dispose();
+            } catch (_) {}
+            return;
+          }
+          final oldSnapshot = realTimeSnapshot.value;
+          realTimeSnapshot.value = img;
+          if (oldSnapshot != null && oldSnapshot != img) {
+            try {
+              oldSnapshot.dispose();
+            } catch (_) {}
+          }
+          _isUpdatingSnapshot = false;
+          if (_hasPendingSnapshotUpdate) {
+            _hasPendingSnapshotUpdate = false;
+            final pendingDraw = _pendingAdditionalDraw;
+            final pendingBg = _pendingIncludeBackground;
+            _pendingAdditionalDraw = null;
+            updateSnapshot(
+              additionalDraw: pendingDraw,
+              includeBackground: pendingBg,
+            );
+          }
+        })
+        .catchError((e) {
+          try {
+            picture.dispose();
+          } catch (_) {}
+          _isUpdatingSnapshot = false;
+          if (_hasPendingSnapshotUpdate) {
+            _hasPendingSnapshotUpdate = false;
+            final pendingDraw = _pendingAdditionalDraw;
+            final pendingBg = _pendingIncludeBackground;
+            _pendingAdditionalDraw = null;
+            updateSnapshot(
+              additionalDraw: pendingDraw,
+              includeBackground: pendingBg,
+            );
+          }
+        });
   }
 
   /// 取消绘制（不保存当前绘制内容）
@@ -1845,7 +2097,11 @@ class DrawingController extends ChangeNotifier {
       }
     }
 
-    final List<Offset> route = rulerConfig.value.projectRoute(nowPaintRaw, _startPointRaw, _lastPointRaw);
+    final List<Offset> route = rulerConfig.value.projectRoute(
+      nowPaintRaw,
+      _startPointRaw,
+      _lastPointRaw,
+    );
     _lastPointRaw = nowPaintRaw;
 
     _isDrawingValidContent = true;
@@ -1854,9 +2110,15 @@ class DrawingController extends ChangeNotifier {
       if (eraserContent != null) {
         eraserContent?.drawing(pt);
       } else if (drawingContent is SmudgeContent) {
-        (drawingContent as SmudgeContent).drawingWithPressure(pt, pressure ?? 1.0);
+        (drawingContent as SmudgeContent).drawingWithPressure(
+          pt,
+          pressure ?? 1.0,
+        );
       } else if (drawingContent is BlurContent) {
-        (drawingContent as BlurContent).drawingWithPressure(pt, pressure ?? 1.0);
+        (drawingContent as BlurContent).drawingWithPressure(
+          pt,
+          pressure ?? 1.0,
+        );
       } else {
         drawingContent?.drawing(pt);
       }
@@ -1865,7 +2127,8 @@ class DrawingController extends ChangeNotifier {
     if (eraserContent != null) {
       _refresh();
       _refreshDeep();
-    } else if (drawingContent is! SmudgeContent && drawingContent is! BlurContent) {
+    } else if (drawingContent is! SmudgeContent &&
+        drawingContent is! BlurContent) {
       _refresh();
     }
   }
@@ -1892,13 +2155,15 @@ class DrawingController extends ChangeNotifier {
     final Offset? fillPt = _startPoint;
     _startPoint = null;
     _lastPointRaw = null;
-    
-    if (activeLayer.value != null && activeLayer.value!.isVisible && !activeLayer.value!.isLocked) {
+
+    if (activeLayer.value != null &&
+        activeLayer.value!.isVisible &&
+        !activeLayer.value!.isLocked) {
       final LayerData currentLayer = activeLayer.value!;
       final int hisLen = currentLayer.history.length;
 
       if (hisLen > currentLayer.currentIndex) {
-        currentLayer.history.removeRange(currentLayer.currentIndex, hisLen);
+        _discardHistoryRange(currentLayer, currentLayer.currentIndex, hisLen);
         if (currentLayer.sessionStartIndex > currentLayer.currentIndex) {
           currentLayer.sessionStartIndex = currentLayer.currentIndex;
         }
@@ -1912,18 +2177,27 @@ class DrawingController extends ChangeNotifier {
 
       if (drawingContent != null) {
         bool intercepted = false;
-        
+
         if (drawingContent is FillContent) {
           intercepted = true;
           drawingContent = null;
-          if (fillPt != null && !_isNavigating && !_isZooming && !_isPanning && _pointerCount <= 1 && !isCurrentLayerLocked) {
+          if (fillPt != null &&
+              !_isNavigating &&
+              !_isZooming &&
+              !_isPanning &&
+              _pointerCount <= 1 &&
+              !isCurrentLayerLocked) {
             _drawFill(fillPt);
           }
         } else if (drawingContent is Eyedropper) {
           intercepted = true;
           final Color? color = (drawingContent as Eyedropper).pickedColor;
           drawingContent = null;
-          if (color != null && !_isNavigating && !_isZooming && !_isPanning && _pointerCount <= 1) {
+          if (color != null &&
+              !_isNavigating &&
+              !_isZooming &&
+              !_isPanning &&
+              _pointerCount <= 1) {
             setStyle(color: color);
           }
         } else if (drawingContent is Lasso) {
@@ -1939,7 +2213,9 @@ class DrawingController extends ChangeNotifier {
           if (drawingContent is SmudgeContent) {
             final smudge = drawingContent as SmudgeContent;
             smudge.finalizeStroke();
-            if (smudge.rgbaData != null && smudge.rgbaWidth != null && smudge.rgbaHeight != null) {
+            if (smudge.rgbaData != null &&
+                smudge.rgbaWidth != null &&
+                smudge.rgbaHeight != null) {
               cachedRgbaData = Uint8List.fromList(smudge.rgbaData!);
               cachedRgbaWidth = smudge.rgbaWidth;
               cachedRgbaHeight = smudge.rgbaHeight;
@@ -1947,7 +2223,9 @@ class DrawingController extends ChangeNotifier {
           } else if (drawingContent is BlurContent) {
             final blur = drawingContent as BlurContent;
             blur.commitSnapshot();
-            if (blur.rgbaData != null && blur.rgbaWidth != null && blur.rgbaHeight != null) {
+            if (blur.rgbaData != null &&
+                blur.rgbaWidth != null &&
+                blur.rgbaHeight != null) {
               cachedRgbaData = Uint8List.fromList(blur.rgbaData!);
               cachedRgbaWidth = blur.rgbaWidth;
               cachedRgbaHeight = blur.rgbaHeight;
@@ -1975,6 +2253,9 @@ class DrawingController extends ChangeNotifier {
         if (!isSmudge && !isBlur) {
           _invalidateRasterCache();
         } else {
+          try {
+            cachedImage?.dispose();
+          } catch (_) {}
           cachedImage = null;
         }
       }
@@ -1995,7 +2276,7 @@ class DrawingController extends ChangeNotifier {
   void _trimHistoryIfNeeded(LayerData layer) {
     if (layer.history.length > maxHistorySteps) {
       final int removeCount = layer.history.length - maxHistorySteps;
-      layer.history.removeRange(0, removeCount);
+      _discardHistoryRange(layer, 0, removeCount);
       layer.currentIndex = layer.history.length;
       _invalidateRasterCache();
     }
@@ -2011,7 +2292,7 @@ class DrawingController extends ChangeNotifier {
     }
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return;
-    
+
     _invalidateRasterCache();
     if (layer.currentIndex > layer.sessionStartIndex) {
       final int lastIndex = layer.currentIndex - 1;
@@ -2051,7 +2332,7 @@ class DrawingController extends ChangeNotifier {
     }
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return;
-    
+
     _invalidateRasterCache();
     if (layer.currentIndex < layer.history.length) {
       final item = layer.history[layer.currentIndex];
@@ -2086,9 +2367,13 @@ class DrawingController extends ChangeNotifier {
   void clear() {
     final LayerData? layer = activeLayer.value;
     if (layer == null || layer.isLocked) return;
-    
-    cachedImage = null;
+
+    _invalidateRasterCache();
+    final oldContents = List<PaintContent>.from(layer.history);
     layer.history.clear();
+    for (final c in oldContents) {
+      disposeContentResources(c);
+    }
     layer.currentIndex = 0;
     layer.sessionStartIndex = 0;
     _refreshDeep();
@@ -2196,7 +2481,7 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Get JSON list of board content
   Future<List<Map<String, dynamic>>> getJsonList() async {
-    // Collect JSON for all layers. 
+    // Collect JSON for all layers.
     // To remain partly compatible, we'll serialize ALL contents from all layers if we want.
     // However, for a true save system, we need to save the layers themselves.
     // For now we just return all contents from all layers inside a single list.
@@ -2204,14 +2489,17 @@ class DrawingController extends ChangeNotifier {
     for (final layer in layers) {
       int latestRasterIndex = -1;
       for (int j = layer.history.length - 1; j >= 0; j--) {
-        if (layer.history[j] is SmudgeContent || layer.history[j] is BlurContent) {
+        if (layer.history[j] is SmudgeContent ||
+            layer.history[j] is BlurContent) {
           latestRasterIndex = j;
           break;
         }
       }
       for (int j = 0; j < layer.history.length; j++) {
         final content = layer.history[j];
-        if (content is! ImageContent && (j == latestRasterIndex || (content is! SmudgeContent && content is! BlurContent))) {
+        if (content is! ImageContent &&
+            (j == latestRasterIndex ||
+                (content is! SmudgeContent && content is! BlurContent))) {
           await content.prepareExport();
         }
         out.add(content.toJson());
@@ -2227,12 +2515,16 @@ class DrawingController extends ChangeNotifier {
     final List<Map<String, dynamic>> out = [];
     for (final layer in layers) {
       final List<Map<String, dynamic>> historyJson = [];
-      final activeHistory = layer.history.sublist(0, layer.currentIndex.clamp(0, layer.history.length));
-      
+      final activeHistory = layer.history.sublist(
+        0,
+        layer.currentIndex.clamp(0, layer.history.length),
+      );
+
       // Find latest raster content index (SmudgeContent or BlurContent)
       int latestRasterIndex = -1;
       for (int j = activeHistory.length - 1; j >= 0; j--) {
-        if (activeHistory[j] is SmudgeContent || activeHistory[j] is BlurContent) {
+        if (activeHistory[j] is SmudgeContent ||
+            activeHistory[j] is BlurContent) {
           latestRasterIndex = j;
           break;
         }
@@ -2243,7 +2535,9 @@ class DrawingController extends ChangeNotifier {
         // Only the latest raster snapshot needs base64 export!
         // Shadowed intermediate raster states do not need to bloat the JSON file.
         // ImageContent has its file path and does not need to decode images for export!
-        if (content is! ImageContent && (j == latestRasterIndex || (content is! SmudgeContent && content is! BlurContent))) {
+        if (content is! ImageContent &&
+            (j == latestRasterIndex ||
+                (content is! SmudgeContent && content is! BlurContent))) {
           await content.prepareExport();
         }
         historyJson.add(content.toJson());
@@ -2305,6 +2599,13 @@ class DrawingController extends ChangeNotifier {
     cachedImage = null;
     cachedPicture?.dispose();
     cachedPicture = null;
+
+    for (final layer in layers) {
+      for (final content in layer.history) {
+        disposeContentResources(content);
+      }
+      layer.history.clear();
+    }
 
     realTimeSnapshot.dispose();
     drawConfig.dispose();

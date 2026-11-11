@@ -40,6 +40,12 @@ class FontPreset {
       color: effectiveColor,
       fontSize: fontSize,
       fontFamily: effectiveFamily,
+      fontFamilyFallback: const [
+        'Roboto',
+        'Noto Sans',
+        'Arial',
+        'sans-serif',
+      ],
       fontWeight: forceBold
           ? FontWeight.bold
           : (fontWeight != FontWeight.normal ? fontWeight : FontWeight.normal),

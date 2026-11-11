@@ -14,6 +14,7 @@ class AssetConstants {
   static const String bg_picker = 'assets/icons/bg_picker.svg';
   static const String image_picker = 'assets/icons/image_picker.svg';
   static const String expander_icon = 'assets/icons/expander_icon.svg';
+  static const String save_icon = 'assets/icons/save_icon.svg';
   static const String setting_icon = 'assets/icons/setting_icon.svg';
   static const String brush_icon = 'assets/icons/brush_icon.svg';
   static const String paint_icon = 'assets/icons/paint_icon.svg';
@@ -21,6 +22,7 @@ class AssetConstants {
   static const String assets_icon = 'assets/icons/assets_icon.svg';
   static const String erase_icon = 'assets/icons/erase_icon.svg';
   static const String lesso_icon = 'assets/icons/lesso_icon.svg';
+  static const String select_icon = 'assets/icons/select_icon.svg';
   static const String text_icon = 'assets/icons/text_icon.svg';
   static const String ruler_icon = 'assets/icons/ruler_icon.svg';
   static const String brush_tips = 'assets/icons/brush_tips.svg';
@@ -54,4 +56,5 @@ class AssetConstants {
   static const String onboardStep2Drawing = onboard_step2_drawing;
   static const String onboardStep3Timeline = onboard_step3_timeline;
   static const String onboardStep4Export = onboard_step4_export;
+  static const String selectIcon = select_icon;
 }

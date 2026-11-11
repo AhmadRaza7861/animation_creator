@@ -35,6 +35,16 @@
 -keep class io.flutter.plugins.videoplayer.** { *; }
 -keep class io.github.ponnamkarthik.toast.fluttertoast.** { *; }
 
+# AndroidX Media3 & ExoPlayer
+-keep class androidx.media3.** { *; }
+-dontwarn androidx.media3.**
+
+# Android WebKit & Chromium
+-keep class android.webkit.** { *; }
+-keep class androidx.webkit.** { *; }
+-dontwarn android.webkit.**
+-dontwarn androidx.webkit.**
+
 # Keep native methods and classes with @Keep
 -keep class * extends java.lang.annotation.Annotation { *; }
 -keep @androidx.annotation.Keep class * { *; }
