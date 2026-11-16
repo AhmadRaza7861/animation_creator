@@ -97,9 +97,6 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
   late Offset _bottomLeftOffset;
   late StickerTransformMode _transformMode;
 
-  Offset _startOffset = Offset.zero;
-  double _startScale = 1.0;
-  double _startRotation = 0.0;
   Offset _focalPoint = Offset.zero;
 
   double _previousAngle = 0.0;
@@ -358,7 +355,9 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
   }
 
   // Top rotate handle (Pro styling with hairline stem & circular rotation badge)
-  Widget _buildRotateHandle({required double invS}) {
+  Widget _buildRotateHandle({required double invS, bool tuckedInside = false}) {
+    final Alignment handleAlignment =
+        tuckedInside ? Alignment.topCenter : Alignment.bottomCenter;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onPanStart: _onRotateStart,
@@ -366,23 +365,30 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
       onPanEnd: (details) => widget.onUpdateEnd?.call(),
       child: Container(
         color: Colors.transparent,
-        alignment: Alignment.bottomCenter,
+        alignment: handleAlignment,
         child: OverflowBox(
-          alignment: Alignment.bottomCenter,
+          alignment: handleAlignment,
           minWidth: 0,
           maxWidth: double.infinity,
           minHeight: 0,
           maxHeight: double.infinity,
           child: Transform.scale(
             scale: invS,
-            alignment: Alignment.bottomCenter,
+            alignment: handleAlignment,
             child: SizedBox(
               width: 44,
               height: 44,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment:
+                    tuckedInside ? MainAxisAlignment.start : MainAxisAlignment.end,
                 children: [
+                  if (tuckedInside)
+                    Container(
+                      width: 1.5,
+                      height: 14,
+                      color: ColorConstants.primary,
+                    ),
                   Container(
                     width: 26,
                     height: 26,
@@ -404,11 +410,12 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                       color: ColorConstants.primary,
                     ),
                   ),
-                  Container(
-                    width: 1.5,
-                    height: 14,
-                    color: ColorConstants.primary,
-                  ),
+                  if (!tuckedInside)
+                    Container(
+                      width: 1.5,
+                      height: 14,
+                      color: ColorConstants.primary,
+                    ),
                 ],
               ),
             ),
@@ -418,7 +425,7 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     );
   }
 
-  // Ultra-Clean Minimalist Floating Micro-Pill (Flip + Delete for regular shapes)
+  // Ultra-Clean Minimalist Floating Micro-Pill (Flip + Rotate 90° + Delete for regular shapes)
   Widget _buildFloatingActionPill() {
     return Container(
       height: 32,
@@ -449,6 +456,19 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
               setState(() {
                 _flipX = !_flipX;
                 widget.data.flipX = _flipX;
+              });
+              widget.onUpdate(_offset, _scale, _rotation);
+              widget.onUpdateEnd?.call();
+            },
+          ),
+          _buildDivider(),
+          // Rotate 90° clockwise button
+          _buildPillButton(
+            icon: Icons.rotate_right_rounded,
+            tooltip: 'Rotate 90°',
+            onTap: () {
+              setState(() {
+                _rotation += math.pi / 2;
               });
               widget.onUpdate(_offset, _scale, _rotation);
               widget.onUpdateEnd?.call();
@@ -628,9 +648,26 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
     final double halfPin = pinTouchSize / 2;
     final double rotateTouchW = 44.0 * invS;
     final double rotateTouchH = 44.0 * invS;
-    final double pillTouchW = 120.0 * invS;
+    final double pillTouchW = 156.0 * invS;
     final double pillTouchH = 32.0 * invS;
     final double pillTop = math.max(p2.dy, p3.dy) + (16.0 * invS);
+
+    final double normalHandleDist = (h * scaleSafe) / 2.0 + 22.0;
+    final Offset upDir = Offset(math.sin(_rotation), -math.cos(_rotation));
+    final Offset normalHandleCanvasPos = _offset + upDir * normalHandleDist;
+    bool tuckRotateHandleInside = false;
+    if (widget.canvasSize != null &&
+        widget.canvasSize!.width > 0 &&
+        widget.canvasSize!.height > 0) {
+      final cs = widget.canvasSize!;
+      const double edgeMargin = 14.0;
+      if (normalHandleCanvasPos.dx < edgeMargin ||
+          normalHandleCanvasPos.dx > cs.width - edgeMargin ||
+          normalHandleCanvasPos.dy < edgeMargin ||
+          normalHandleCanvasPos.dy > cs.height - edgeMargin) {
+        tuckRotateHandleInside = true;
+      }
+    }
 
     return Positioned(
       left: _offset.dx,
@@ -657,14 +694,16 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onScaleStart: (details) {
-                      _startOffset = _offset;
-                      _startScale = _scale;
-                      _startRotation = _rotation;
                       _focalPoint = details.focalPoint;
                     },
                     onScaleUpdate: (details) {
+                      final Offset delta = details.focalPoint - _focalPoint;
+                      _focalPoint = details.focalPoint;
+                      if (details.pointerCount >= 2) {
+                        return;
+                      }
                       setState(() {
-                        Offset newOffset = _startOffset + (details.focalPoint - _focalPoint);
+                        Offset newOffset = _offset + delta;
                         if (widget.canvasSize != null &&
                             widget.canvasSize!.width > 0 &&
                             widget.canvasSize!.height > 0) {
@@ -675,10 +714,6 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                           );
                         }
                         _offset = newOffset;
-                        if (!isPerspective) {
-                          _scale = (_startScale * details.scale).clamp(0.1, 10.0);
-                          _rotation = _startRotation + details.rotation;
-                        }
                       });
                       widget.onUpdate(_offset, _scale, _rotation);
                     },
@@ -936,13 +971,16 @@ class _ShapeStickerWidgetState extends State<ShapeStickerWidget> {
                     ),
                   ),
 
-                  // Top Rotate Handle (Always positioned cleanly above the top edge)
+                  // Top Rotate Handle (Tucks inside top border when near/beyond canvas boundary)
                   Positioned(
                     left: contentLeft + (w - rotateTouchW) / 2,
-                    top: contentTop - rotateTouchH,
+                    top: tuckRotateHandleInside ? contentTop : contentTop - rotateTouchH,
                     width: rotateTouchW,
                     height: rotateTouchH,
-                    child: _buildRotateHandle(invS: invS),
+                    child: _buildRotateHandle(
+                      invS: invS,
+                      tuckedInside: tuckRotateHandleInside,
+                    ),
                   ),
                 ],
 

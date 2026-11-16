@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../package_code/src/drawing_board.dart';
@@ -116,9 +117,12 @@ class CanvasArea extends ConsumerWidget {
                   controller.onSelectPointerUp(e.localPosition, context);
                 }
               },
-              boardPanEnabled: true,
-              boardScaleEnabled: true,
-              boardRotateEnabled: true,
+              boardPanEnabled: activeSticker is! ActiveShapeSticker &&
+                  activeSticker is! ActiveTextSticker,
+              boardScaleEnabled: activeSticker is! ActiveShapeSticker &&
+                  activeSticker is! ActiveTextSticker,
+              boardRotateEnabled: activeSticker is! ActiveShapeSticker &&
+                  activeSticker is! ActiveTextSticker,
               isDrawingEnabled: activeSticker == null &&
                   !controller.isTextToolSelected &&
                   controller.activeCategory != 'Select' &&
@@ -202,120 +206,134 @@ class CanvasArea extends ConsumerWidget {
                       : AnimatedBuilder(
                       animation: controller.drawingController,
                       builder: (context, child) {
-                        final isNavigating = controller.drawingController.isNavigating ||
-                            controller.drawingController.pointerCount >= 2 ||
-                            controller.drawingController.isZooming ||
-                            controller.drawingController.isPanning;
+                        final isTransformableSticker =
+                            activeSticker is ActiveShapeSticker ||
+                            activeSticker is ActiveTextSticker;
+                        final isNavigating = !isTransformableSticker &&
+                            (controller.drawingController.isNavigating ||
+                                controller.drawingController.pointerCount >= 2 ||
+                                controller.drawingController.isZooming ||
+                                controller.drawingController.isPanning);
                         return IgnorePointer(
                           ignoring: isNavigating,
                           child: child,
                         );
                       },
-                      child: Stack(
-                        fit: StackFit.expand,
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned.fill(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () {
-                                final createdAt = controller.activeStickerCreatedAt;
-                                if (createdAt != null &&
-                                    DateTime.now().difference(createdAt).inMilliseconds < 450) {
-                                  return;
-                                }
-                                controller.stampActiveSticker();
-                              },
+                      child: _StickerMultiTouchRegion(
+                        controller: controller,
+                        canvasSize: controller.drawingController.drawConfig.value.size ?? canvasSize,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  final createdAt = controller.activeStickerCreatedAt;
+                                  if (createdAt != null &&
+                                      DateTime.now().difference(createdAt).inMilliseconds < 450) {
+                                    return;
+                                  }
+                                  if (_StickerMultiTouchRegion.wasRecentlyMultiTouch) {
+                                    return;
+                                  }
+                                  controller.stampActiveSticker();
+                                },
+                              ),
                             ),
-                          ),
-                          if (activeSticker is ActiveTextSticker)
-                            TextStickerWidget(
-                              key: ValueKey((activeSticker).id),
-                              data: activeSticker,
-                              onUpdate: (offset, scale, rotation) {
-                                (activeSticker).offset = offset;
-                                (activeSticker).scale = scale;
-                                (activeSticker).rotation = rotation;
-                                controller.updateSnapshot();
-                              },
-                              onUpdateEnd: () => controller.recordActiveStickerState(),
-                              onDelete: () {
-                                controller.activeSticker = null;
-                                controller.updateSnapshot();
-                              },
-                              onConfirm: () {
-                                controller.stampActiveSticker();
-                              },
-                            ),
-                          if (activeSticker is ActiveFreehandLineSticker)
-                            FreehandLineStickerWidget(
-                              key: ValueKey((activeSticker).id),
-                              data: activeSticker,
-                              onSnap: (raw, anchor) {
-                                if (controller.showRulerMenu &&
-                                    controller.drawingController.rulerConfig.value.type != RulerType.none) {
-                                  return controller.drawingController.rulerConfig.value.projectPoint(raw, anchor);
-                                }
-                                return raw;
-                              },
-                              onUpdate: () {
-                                controller.updateSnapshot();
-                              },
-                              onUpdateEnd: () => controller.recordActiveStickerState(),
-                              onDelete: () {
-                                controller.activeSticker = null;
-                                controller.updateSnapshot();
-                              },
-                              onConfirm: () {
-                                controller.stampActiveSticker();
-                              },
-                            ),
-                          if (activeSticker is ActiveShapeSticker)
-                            ShapeStickerWidget(
-                              key: ValueKey((activeSticker).id),
-                              data: activeSticker,
-                              canvasSize: controller.drawingController.drawConfig.value.size,
-                              onUpdate: (offset, scale, rotation) {
-                                (activeSticker).offset = offset;
-                                (activeSticker).scale = scale;
-                                (activeSticker).rotation = rotation;
-                                controller.updateSnapshot();
-                              },
-                              onUpdateEnd: () => controller.recordActiveStickerState(),
-                              onDelete: () {
-                                controller.activeSticker = null;
-                                controller.updateSnapshot();
-                              },
-                              onConfirm: () {
-                                controller.stampActiveSticker();
-                              },
-                            ),
-                          if (activeSticker is ActiveStraightLineSticker)
-                            StraightLineStickerWidget(
-                              key: ValueKey((activeSticker).id),
-                              data: activeSticker,
-                              onSnap: (raw, anchor) {
-                                if (controller.showRulerMenu &&
-                                    controller.drawingController.rulerConfig.value.type != RulerType.none) {
-                                  return controller.drawingController.rulerConfig.value.projectPoint(raw, anchor);
-                                }
-                                return raw;
-                              },
-                              onUpdate: (start, end) {
-                                (activeSticker).startPoint = start;
-                                (activeSticker).endPoint = end;
-                                controller.updateSnapshot();
-                              },
-                              onUpdateEnd: () => controller.recordActiveStickerState(),
-                              onDelete: () {
-                                controller.activeSticker = null;
-                                controller.updateSnapshot();
-                              },
-                              onConfirm: () {
-                                controller.stampActiveSticker();
-                              },
-                            ),
-                        ],
+                            if (activeSticker is ActiveTextSticker)
+                              TextStickerWidget(
+                                key: ValueKey((activeSticker).id),
+                                data: activeSticker,
+                                canvasSize: controller.drawingController.drawConfig.value.size,
+                                onUpdate: (offset, scale, rotation) {
+                                  if (controller.drawingController.pointerCount >= 2) return;
+                                  (activeSticker).offset = offset;
+                                  (activeSticker).scale = scale;
+                                  (activeSticker).rotation = rotation;
+                                  controller.updateSnapshot();
+                                },
+                                onUpdateEnd: () => controller.recordActiveStickerState(),
+                                onDelete: () {
+                                  controller.activeSticker = null;
+                                  controller.updateSnapshot();
+                                },
+                                onConfirm: () {
+                                  controller.stampActiveSticker();
+                                },
+                              ),
+                            if (activeSticker is ActiveFreehandLineSticker)
+                              FreehandLineStickerWidget(
+                                key: ValueKey((activeSticker).id),
+                                data: activeSticker,
+                                onSnap: (raw, anchor) {
+                                  if (controller.showRulerMenu &&
+                                      controller.drawingController.rulerConfig.value.type != RulerType.none) {
+                                    return controller.drawingController.rulerConfig.value.projectPoint(raw, anchor);
+                                  }
+                                  return raw;
+                                },
+                                onUpdate: () {
+                                  controller.updateSnapshot();
+                                },
+                                onUpdateEnd: () => controller.recordActiveStickerState(),
+                                onDelete: () {
+                                  controller.activeSticker = null;
+                                  controller.updateSnapshot();
+                                },
+                                onConfirm: () {
+                                  controller.stampActiveSticker();
+                                },
+                              ),
+                            if (activeSticker is ActiveShapeSticker)
+                              ShapeStickerWidget(
+                                key: ValueKey((activeSticker).id),
+                                data: activeSticker,
+                                canvasSize: controller.drawingController.drawConfig.value.size,
+                                onUpdate: (offset, scale, rotation) {
+                                  if (controller.drawingController.pointerCount >= 2) return;
+                                  (activeSticker).offset = offset;
+                                  (activeSticker).scale = scale;
+                                  (activeSticker).rotation = rotation;
+                                  controller.updateSnapshot();
+                                },
+                                onUpdateEnd: () => controller.recordActiveStickerState(),
+                                onDelete: () {
+                                  controller.activeSticker = null;
+                                  controller.updateSnapshot();
+                                },
+                                onConfirm: () {
+                                  controller.stampActiveSticker();
+                                },
+                              ),
+                            if (activeSticker is ActiveStraightLineSticker)
+                              StraightLineStickerWidget(
+                                key: ValueKey((activeSticker).id),
+                                data: activeSticker,
+                                onSnap: (raw, anchor) {
+                                  if (controller.showRulerMenu &&
+                                      controller.drawingController.rulerConfig.value.type != RulerType.none) {
+                                    return controller.drawingController.rulerConfig.value.projectPoint(raw, anchor);
+                                  }
+                                  return raw;
+                                },
+                                onUpdate: (start, end) {
+                                  (activeSticker).startPoint = start;
+                                  (activeSticker).endPoint = end;
+                                  controller.updateSnapshot();
+                                },
+                                onUpdateEnd: () => controller.recordActiveStickerState(),
+                                onDelete: () {
+                                  controller.activeSticker = null;
+                                  controller.updateSnapshot();
+                                },
+                                onConfirm: () {
+                                  controller.stampActiveSticker();
+                                },
+                              ),
+                          ],
+                        ),
                       ),
                     ),
             ),
@@ -518,5 +536,142 @@ class _SelectMarqueePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SelectMarqueePainter oldDelegate) {
     return oldDelegate.rect != rect;
+  }
+}
+
+class _StickerMultiTouchRegion extends StatefulWidget {
+  final EditorController controller;
+  final Size canvasSize;
+  final Widget child;
+
+  const _StickerMultiTouchRegion({
+    required this.controller,
+    required this.canvasSize,
+    required this.child,
+  });
+
+  static DateTime? _lastMultiTouchAt;
+
+  static bool get wasRecentlyMultiTouch {
+    final last = _lastMultiTouchAt;
+    if (last == null) return false;
+    return DateTime.now().difference(last).inMilliseconds < 350;
+  }
+
+  @override
+  State<_StickerMultiTouchRegion> createState() => _StickerMultiTouchRegionState();
+}
+
+class _StickerMultiTouchRegionState extends State<_StickerMultiTouchRegion> {
+  final Map<int, Offset> _activePointers = <int, Offset>{};
+  Map<int, Offset> _lastPointers = <int, Offset>{};
+  bool _hadMultiTouch = false;
+
+  void _onPointerDown(PointerDownEvent event) {
+    _activePointers[event.pointer] = event.localPosition;
+    if (_activePointers.length >= 2) {
+      _hadMultiTouch = true;
+      _StickerMultiTouchRegion._lastMultiTouchAt = DateTime.now();
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+    }
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    _activePointers[event.pointer] = event.localPosition;
+    if (_activePointers.length < 2) {
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+      return;
+    }
+
+    _hadMultiTouch = true;
+    _StickerMultiTouchRegion._lastMultiTouchAt = DateTime.now();
+
+    if (_lastPointers.length < 2) {
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+      return;
+    }
+
+    final sticker = widget.controller.activeSticker;
+    if (sticker is! ActiveShapeSticker && sticker is! ActiveTextSticker) {
+      _lastPointers = Map<int, Offset>.from(_activePointers);
+      return;
+    }
+
+    final List<int> keys = _activePointers.keys.toList();
+    final Offset p1Curr = _activePointers[keys[0]]!;
+    final Offset p2Curr = _activePointers[keys[1]]!;
+    final Offset p1Prev = _lastPointers[keys[0]] ?? p1Curr;
+    final Offset p2Prev = _lastPointers[keys[1]] ?? p2Curr;
+
+    final Offset centerCurr = (p1Curr + p2Curr) / 2.0;
+    final Offset centerPrev = (p1Prev + p2Prev) / 2.0;
+    final Offset panDelta = centerCurr - centerPrev;
+
+    final double distCurr = (p2Curr - p1Curr).distance;
+    final double distPrev = (p2Prev - p1Prev).distance;
+    double scaleDelta = 1.0;
+    if (distPrev > 4.0 && distCurr > 4.0) {
+      scaleDelta = distCurr / distPrev;
+    }
+
+    final double angleCurr = math.atan2(p2Curr.dy - p1Curr.dy, p2Curr.dx - p1Curr.dx);
+    final double anglePrev = math.atan2(p2Prev.dy - p1Prev.dy, p2Prev.dx - p1Prev.dx);
+    double rotDelta = angleCurr - anglePrev;
+    while (rotDelta > math.pi) {
+      rotDelta -= 2 * math.pi;
+    }
+    while (rotDelta < -math.pi) {
+      rotDelta += 2 * math.pi;
+    }
+
+    if (sticker is ActiveShapeSticker) {
+      Offset newOffset = sticker.offset + panDelta;
+      final cs = widget.canvasSize;
+      if (cs.width > 0 && cs.height > 0) {
+        final double w = sticker.size.width;
+        final double h = sticker.size.height;
+        newOffset = Offset(
+          newOffset.dx.clamp(-w * 0.5, cs.width + w * 0.5),
+          newOffset.dy.clamp(-h * 0.5, cs.height + h * 0.5),
+        );
+      }
+      sticker.offset = newOffset;
+      if (sticker.transformMode != StickerTransformMode.perspective) {
+        sticker.scale = (sticker.scale * scaleDelta).clamp(0.1, 10.0);
+        sticker.rotation += rotDelta;
+      }
+      widget.controller.updateSnapshot();
+    } else if (sticker is ActiveTextSticker) {
+      sticker.offset += panDelta;
+      sticker.scale = (sticker.scale * scaleDelta).clamp(0.1, 10.0);
+      sticker.rotation += rotDelta;
+      widget.controller.updateSnapshot();
+    }
+
+    _lastPointers = Map<int, Offset>.from(_activePointers);
+  }
+
+  void _onPointerUpOrCancel(int pointer) {
+    _activePointers.remove(pointer);
+    _lastPointers = Map<int, Offset>.from(_activePointers);
+    if (_hadMultiTouch) {
+      _StickerMultiTouchRegion._lastMultiTouchAt = DateTime.now();
+      if (_activePointers.length < 2) {
+        _hadMultiTouch = false;
+        widget.controller.recordActiveStickerState();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: _onPointerDown,
+      onPointerMove: _onPointerMove,
+      onPointerUp: (e) => _onPointerUpOrCancel(e.pointer),
+      onPointerCancel: (e) => _onPointerUpOrCancel(e.pointer),
+      child: widget.child,
+    );
   }
 }

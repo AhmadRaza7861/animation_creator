@@ -3266,6 +3266,16 @@ class EditorController extends ChangeNotifier {
     }
   }
 
+  void rotateActiveTextSticker90() {
+    if (_activeSticker is ActiveTextSticker) {
+      final sticker = _activeSticker as ActiveTextSticker;
+      sticker.rotation += 1.5707963267948966; // 90 degrees in radians
+      recordActiveStickerState();
+      updateSnapshot();
+      notifyListeners();
+    }
+  }
+
   void duplicateActiveTextSticker() {
     if (_activeSticker is ActiveTextSticker) {
       final sticker = _activeSticker as ActiveTextSticker;

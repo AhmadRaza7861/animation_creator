@@ -172,6 +172,13 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                         ),
                         if (!isTablet) const SizedBox(width: 4),
                         _bottomSubToolItem(
+                          label: context.tr('rotateRight'),
+                          icon: Icons.rotate_right_rounded,
+                          isActive: false,
+                          onTap: () => controller.rotateActiveShapeSticker90(),
+                        ),
+                        if (!isTablet) const SizedBox(width: 4),
+                        _bottomSubToolItem(
                           label: context.tr('copy'),
                           icon: Icons.copy_rounded,
                           isActive: false,
@@ -852,6 +859,13 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                           icon: Icons.flip_rounded,
                           isActive: sticker.flipX,
                           onTap: () => controller.flipActiveTextStickerH(),
+                        ),
+                        if (!isTablet) const SizedBox(width: 2),
+                        _bottomSubToolItem(
+                          label: context.tr('rotateRight'),
+                          icon: Icons.rotate_right_rounded,
+                          isActive: false,
+                          onTap: () => controller.rotateActiveTextSticker90(),
                         ),
                         if (!isTablet) const SizedBox(width: 2),
                         _bottomSubToolItem(

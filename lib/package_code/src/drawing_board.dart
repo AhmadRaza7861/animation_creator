@@ -239,8 +239,10 @@ class _DrawingBoardState extends State<DrawingBoard> {
   void _onPointerDown(PointerDownEvent event) {
     _activePointers[event.pointer] = event.localPosition;
     final int count = _activePointers.length;
+    final bool canNavigateBoard =
+        widget.boardPanEnabled || widget.boardScaleEnabled || widget.boardRotateEnabled;
 
-    if (count >= 2) {
+    if (count >= 2 && canNavigateBoard) {
       _isNavigating = true;
       widget.controller.setNavigationState(
         isNavigating: true,
@@ -299,7 +301,7 @@ class _DrawingBoardState extends State<DrawingBoard> {
       widget.onInteractionEnd?.call(ScaleEndDetails(pointerCount: 1));
     } else {
       widget.controller.setNavigationState(
-        isNavigating: true,
+        isNavigating: _isNavigating,
         pointerCount: count,
       );
       _lastPointers = Map<int, Offset>.from(_activePointers);
@@ -332,7 +334,7 @@ class _DrawingBoardState extends State<DrawingBoard> {
       widget.onInteractionEnd?.call(ScaleEndDetails(pointerCount: 1));
     } else {
       widget.controller.setNavigationState(
-        isNavigating: true,
+        isNavigating: _isNavigating,
         pointerCount: count,
       );
       _lastPointers = Map<int, Offset>.from(_activePointers);
@@ -466,12 +468,14 @@ class _DrawingBoardState extends State<DrawingBoard> {
           key: widget.controller.painterKey,
           child: Stack(
             alignment: Alignment.center,
+            clipBehavior: Clip.none,
             children: <Widget>[
               _buildImage,
               RepaintBoundary(
                 key: widget.controller.drawingLayerKey,
                 child: Stack(
                   alignment: Alignment.center,
+                  clipBehavior: Clip.none,
                   children: <Widget>[
                     _buildPainter,
                     if (widget.foreground != null) _buildForeground,
