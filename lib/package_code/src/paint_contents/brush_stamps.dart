@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import 'brush_cache.dart';
+
 /// 图像笔尖描述 / Image brush stamp descriptor
 class BrushStamp {
   const BrushStamp(this.key, this.label, this.defaultSize);
@@ -76,13 +78,16 @@ class BrushStampLibrary {
 
   static final BrushStampLibrary instance = BrushStampLibrary._();
 
-  final Map<String, ui.Image> _cache = <String, ui.Image>{};
+  final BoundedImageCache<String> _cache =
+      BoundedImageCache<String>(maxEntries: 28);
 
   /// 烘焙分辨率 / Bake resolution
   static const double _res = 128;
 
-  /// 直接用 Canvas 矢量绘制指定笔尖印章（0 纹理烘焙、0 GPU 阻塞、极速渲染）
-  /// Direct vector drawing of stamp tip without bitmap baking
+  static const Rect _srcRect = Rect.fromLTWH(0, 0, _res, _res);
+
+  /// Draws a single stamp dab using a cached GPU `ui.Image` texture when
+  /// available, falling back to vector draw only if texture baking fails.
   void paintDirect(
     Canvas canvas,
     String key,
@@ -96,6 +101,30 @@ class BrushStampLibrary {
   }) {
     final double s = radius * 2;
     if (s <= 0) return;
+
+    final double alpha = hardness < 0.99 ? (0.35 + hardness * 0.65) : 1.0;
+    final Color effectiveColor = color.withValues(alpha: color.a * alpha);
+    final ui.Image? cached = _tryGet(key);
+
+    if (cached != null) {
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      if (angle != 0.0) canvas.rotate(angle);
+      if (flipX || flipY) canvas.scale(flipX ? -1.0 : 1.0, flipY ? -1.0 : 1.0);
+      final Paint imgPaint = Paint()
+        ..isAntiAlias = true
+        ..filterQuality = FilterQuality.low
+        ..colorFilter = ColorFilter.mode(effectiveColor, BlendMode.modulate);
+      canvas.drawImageRect(
+        cached,
+        _srcRect,
+        Rect.fromCenter(center: Offset.zero, width: s, height: s),
+        imgPaint,
+      );
+      canvas.restore();
+      return;
+    }
+
     canvas.save();
     canvas.translate(center.dx, center.dy);
     if (angle != 0.0) canvas.rotate(angle);
@@ -104,17 +133,114 @@ class BrushStampLibrary {
     canvas.scale(scale, scale);
     canvas.translate(-_res / 2, -_res / 2);
 
-    final double alpha = hardness < 0.99 ? (0.35 + hardness * 0.65) : 1.0;
-    final Color effectiveColor = color.withValues(alpha: color.opacity * alpha);
     _paint(canvas, key, _res, effectiveColor);
     canvas.restore();
   }
 
-  /// 获取（并缓存）指定纹理 / Get (and cache) a texture
-  ui.Image get(String key) => _cache.putIfAbsent(key, () => _bake(key));
+  /// Batches all stamp dabs of a stroke into ONE `drawAtlas` GPU draw call
+  /// when non-mirrored (or clean `drawImageRect` loop when mirrored).
+  void paintBatch(
+    Canvas canvas,
+    String key,
+    List<double> xs,
+    List<double> ys,
+    List<double> angles,
+    double radius,
+    Color color, {
+    int start = 0,
+    int? end,
+    bool flipX = false,
+    bool flipY = false,
+    double hardness = 1.0,
+    double fixedAngle = 0.0,
+    bool addSampleAngle = false,
+  }) {
+    final int safeEnd = (end ?? xs.length).clamp(0, xs.length);
+    if (radius <= 0 || start >= safeEnd) return;
 
-  /// 异步预热全部笔尖纹理（已升级为直绘，保持空实现兼容）
+    final double alpha = hardness < 0.99 ? (0.35 + hardness * 0.65) : 1.0;
+    final Color effectiveColor = color.withValues(alpha: color.a * alpha);
+    final ui.Image? stamp = _tryGet(key);
+
+    if (stamp != null) {
+      final int sliceLen = safeEnd - start;
+      final List<double> effectiveAngles = addSampleAngle
+          ? List<double>.generate(
+              sliceLen,
+              (int k) => angles[start + k] + fixedAngle,
+              growable: false,
+            )
+          : List<double>.filled(sliceLen, fixedAngle, growable: false);
+      if (addSampleAngle) {
+        // AtlasStampDrawer indexes angles using `start + idx` when xs uses `[start..safeEnd)`.
+        final List<double> subXs = xs.sublist(start, safeEnd);
+        final List<double> subYs = ys.sublist(start, safeEnd);
+        AtlasStampDrawer.drawBatch(
+          canvas: canvas,
+          stamp: stamp,
+          srcSize: _res,
+          targetRadius: radius,
+          stampRefRadius: _res / 2,
+          xs: subXs,
+          ys: subYs,
+          angles: effectiveAngles,
+          tint: effectiveColor,
+          flipX: flipX,
+          flipY: flipY,
+        );
+      } else {
+        AtlasStampDrawer.drawBatch(
+          canvas: canvas,
+          stamp: stamp,
+          srcSize: _res,
+          targetRadius: radius,
+          stampRefRadius: _res / 2,
+          xs: xs,
+          ys: ys,
+          angles: List<double>.filled(xs.length, fixedAngle, growable: false),
+          start: start,
+          end: safeEnd,
+          tint: effectiveColor,
+          flipX: flipX,
+          flipY: flipY,
+        );
+      }
+      return;
+    }
+
+    // Fallback if raster baking unavailable
+    for (int i = start; i < safeEnd; i++) {
+      paintDirect(
+        canvas,
+        key,
+        Offset(xs[i], ys[i]),
+        radius,
+        color,
+        angle: (addSampleAngle ? angles[i] : 0.0) + fixedAngle,
+        flipX: flipX,
+        flipY: flipY,
+        hardness: hardness,
+      );
+    }
+  }
+
+  /// 获取（并缓存）指定纹理 / Get (and cache) a texture
+  ui.Image get(String key) => _cache.getOrBake(key, () => _bake(key))!;
+
+  ui.Image? _tryGet(String key) => _cache.getOrBake(key, () => _bakeSafe(key));
+
+  void clearCache() => _cache.clear();
+
+  /// 异步预热常用或全部笔尖纹理
   void prewarmAsync() {}
+
+  ui.Image? _bakeSafe(String key) {
+    try {
+      return _bake(key);
+    } catch (_) {
+      return null;
+    }
+  }
 
   ui.Image _bake(String key) {
     try {

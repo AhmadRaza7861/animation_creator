@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_bar/brush_presets.dart';
 import '../../../../package_code/src/drawing_bar/brush_preview_renderer.dart';
+import '../../../../package_code/src/paint_contents/brush_cache.dart';
 import 'brush_tip_studio_screen.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/helper/ex_value_builder.dart';
@@ -242,7 +243,11 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
               _buildFilterSection(accent),
 
               // Presets Grid
-              Expanded(child: _buildPresetsGrid(config, accent)),
+              Expanded(
+                child: RepaintBoundary(
+                  child: _buildPresetsGrid(config, accent),
+                ),
+              ),
 
               // Bottom Action & Apply Bar
               _buildBottomBar(config, accent),
@@ -439,12 +444,14 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
           const SizedBox(height: 10),
 
           // High performance isolated Interactive Drawing Pad
-          _InteractiveScratchpad(
-            key: _scratchpadKey,
-            preset: _selectedPreset ?? _allPresets.first,
-            color: config.color,
-            strokeWidth: _strokeWidth,
-            doodleHint: context.tr('doodleBrushTestHint'),
+          RepaintBoundary(
+            child: _InteractiveScratchpad(
+              key: _scratchpadKey,
+              preset: _selectedPreset ?? _allPresets.first,
+              color: config.color,
+              strokeWidth: _strokeWidth,
+              doodleHint: context.tr('doodleBrushTestHint'),
+            ),
           ),
 
           const SizedBox(height: 10),
@@ -1056,7 +1063,8 @@ class _StudioBrushCard extends StatelessWidget {
 
 /// Custom painter for the live stroke inside each brush card with authentic, crash-safe vector preview
 class _StudioPreviewPainter extends CustomPainter {
-  const _StudioPreviewPainter({required this.preset, required this.color});
+  _StudioPreviewPainter({required this.preset, required this.color})
+      : super(repaint: BrushPreviewRenderer.repaintNotifier);
 
   final BrushPreset preset;
   final Color color;
@@ -1074,8 +1082,10 @@ class _StudioPreviewPainter extends CustomPainter {
 /// Custom painter for the interactive scratchpad banner
 class _ScratchpadPainter extends CustomPainter {
   _ScratchpadPainter({
+    super.repaint,
     required this.strokes,
-    required this.currentStroke,
+    required this.getCurrentStroke,
+    required this.backing,
     required this.preset,
     required this.color,
     required this.strokeWidth,
@@ -1083,7 +1093,8 @@ class _ScratchpadPainter extends CustomPainter {
   });
 
   final List<PaintContent> strokes;
-  final PaintContent? currentStroke;
+  final PaintContent? Function() getCurrentStroke;
+  final AsyncScratchpadBacking backing;
   final BrushPreset? preset;
   final Color color;
   final double strokeWidth;
@@ -1091,6 +1102,7 @@ class _ScratchpadPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final PaintContent? currentStroke = getCurrentStroke();
     // If no user strokes drawn yet, render default sine stroke guide
     if (strokes.isEmpty && currentStroke == null && preset != null) {
       final List<Offset> sample = _sampleStroke(size);
@@ -1109,6 +1121,7 @@ class _ScratchpadPainter extends CustomPainter {
           demo.drawing(sample[i]);
         }
         demo.draw(canvas, size, false);
+        demo.clearRenderCache();
       }
 
       // Draw helper text overlay
@@ -1127,14 +1140,16 @@ class _ScratchpadPainter extends CustomPainter {
       return;
     }
 
-    // Draw all user-completed strokes
-    for (final s in strokes) {
-      s.draw(canvas, size, false);
+    // Draw cached GPU image of completed strokes in O(1)
+    if (strokes.isNotEmpty) {
+      backing.drawCommitted(canvas, size, strokes.length, (Canvas c, Size s, int i) {
+        strokes[i].draw(c, s, false);
+      });
     }
 
     // Draw current active stroke
     if (currentStroke != null) {
-      currentStroke!.draw(canvas, size, false);
+      currentStroke.draw(canvas, size, false);
     }
   }
 
@@ -1156,7 +1171,12 @@ class _ScratchpadPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ScratchpadPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _ScratchpadPainter oldDelegate) =>
+      oldDelegate.preset?.id != preset?.id ||
+      oldDelegate.color != color ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.doodleHint != doodleHint ||
+      oldDelegate.strokes.length != strokes.length;
 }
 
 /// Standalone, isolated interactive scratchpad widget that avoids rebuilding the parent screen during doodling
@@ -1181,21 +1201,48 @@ class _InteractiveScratchpad extends StatefulWidget {
 class _InteractiveScratchpadState extends State<_InteractiveScratchpad> {
   final List<PaintContent> _strokes = <PaintContent>[];
   PaintContent? _activeStroke;
+  final ValueNotifier<int> _paintTick = ValueNotifier<int>(0);
+  late final AsyncScratchpadBacking _backing = AsyncScratchpadBacking(
+    onImageBaked: () {
+      if (mounted) _paintTick.value++;
+    },
+  );
 
   void clear() {
-    setState(() {
-      _strokes.clear();
-      _activeStroke = null;
-    });
+    _backing.invalidate();
+    for (final s in _strokes) {
+      s.clearRenderCache();
+    }
+    _activeStroke?.clearRenderCache();
+    _strokes.clear();
+    _activeStroke = null;
+    _paintTick.value++;
   }
 
   @override
   void didUpdateWidget(covariant _InteractiveScratchpad oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.preset.id != widget.preset.id) {
+      _backing.invalidate();
+      for (final s in _strokes) {
+        s.clearRenderCache();
+      }
+      _activeStroke?.clearRenderCache();
       _strokes.clear();
       _activeStroke = null;
+      _paintTick.value++;
     }
+  }
+
+  @override
+  void dispose() {
+    _backing.dispose();
+    for (final s in _strokes) {
+      s.clearRenderCache();
+    }
+    _activeStroke?.clearRenderCache();
+    _paintTick.dispose();
+    super.dispose();
   }
 
   @override
@@ -1222,29 +1269,29 @@ class _InteractiveScratchpadState extends State<_InteractiveScratchpad> {
                 ..isAntiAlias = true);
 
             stroke.startDraw(details.localPosition);
-            setState(() {
-              _activeStroke = stroke;
-            });
+            _activeStroke = stroke;
+            _paintTick.value++;
           },
           onPanUpdate: (details) {
             if (_activeStroke != null) {
               _activeStroke!.drawing(details.localPosition);
-              setState(() {});
+              _paintTick.value++;
             }
           },
           onPanEnd: (_) {
             if (_activeStroke != null) {
-              setState(() {
-                _strokes.add(_activeStroke!);
-                _activeStroke = null;
-              });
+              _strokes.add(_activeStroke!);
+              _activeStroke = null;
+              _paintTick.value++;
             }
           },
           child: RepaintBoundary(
             child: CustomPaint(
               painter: _ScratchpadPainter(
+                repaint: _paintTick,
                 strokes: _strokes,
-                currentStroke: _activeStroke,
+                getCurrentStroke: () => _activeStroke,
+                backing: _backing,
                 preset: widget.preset,
                 color: widget.color,
                 strokeWidth: widget.strokeWidth,

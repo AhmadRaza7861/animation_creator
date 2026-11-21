@@ -1,21 +1,30 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../paint_contents.dart';
+import '../paint_contents/brush_cache.dart';
 import 'brush_presets.dart';
 
 /// Ultra high-performance, 100% authentic, crash-proof brush preview renderer.
 ///
-/// Features:
-/// - Executes the authentic brush engine ([preset.create]) so every card preview
-///   identically and faithfully reflects the true live stroke geometry, texture, and feel.
-/// - Renders directly to the target canvas without [saveLayer] GPU framebuffers,
-///   without [toImageSync] texture rasterization, and without [ui.Picture] leaks.
-/// - Delivers 120 FPS buttery-smooth scrolling with zero memory footprint.
+/// Renders first frame immediately via a bounded [ui.Picture] and asynchronously
+/// bakes each visible preview into a bounded GPU [ui.Image] so Impeller draws
+/// a single textured quad during live scratchpad doodling and scrolling.
 class BrushPreviewRenderer {
   const BrushPreviewRenderer._();
 
+  static const int _maxEntries = 64;
   static final Map<String, ui.Picture> _pictureCache = <String, ui.Picture>{};
+  static final BoundedImageCache<String> _imageCache = BoundedImageCache<String>(maxEntries: _maxEntries);
+  static final Set<String> _pendingBakes = <String>{};
+  static final ValueNotifier<int> repaintNotifier = ValueNotifier<int>(0);
+  static int _cacheEpoch = 0;
+  static bool _notifyScheduled = false;
+
+  static final Paint _imagePaint = Paint()
+    ..isAntiAlias = true
+    ..filterQuality = FilterQuality.low;
 
   static void paintPreview(
     Canvas canvas,
@@ -32,12 +41,38 @@ class BrushPreviewRenderer {
     final String cacheKey =
         '${preset.id}_${size.width.toInt()}x${size.height.toInt()}_${effectiveColor.toARGB32()}';
 
-    final ui.Picture? cached = _pictureCache[cacheKey];
-    if (cached != null) {
-      canvas.drawPicture(cached);
+    final ui.Image? cachedImage = _imageCache.get(cacheKey);
+    if (cachedImage != null) {
+      canvas.drawImageRect(
+        cachedImage,
+        Rect.fromLTWH(0, 0, cachedImage.width.toDouble(), cachedImage.height.toDouble()),
+        Offset.zero & size,
+        _imagePaint,
+      );
       return;
     }
 
+    ui.Picture? picture = _pictureCache.remove(cacheKey);
+    if (picture == null) {
+      picture = _recordPreviewPicture(size, preset, effectiveColor);
+      if (_pictureCache.length >= _maxEntries) {
+        final String oldestKey = _pictureCache.keys.first;
+        final ui.Picture? evicted = _pictureCache.remove(oldestKey);
+        try {
+          evicted?.dispose();
+        } catch (_) {}
+      }
+    }
+    _pictureCache[cacheKey] = picture;
+    canvas.drawPicture(picture);
+    _scheduleBitmapBake(cacheKey, picture, size);
+  }
+
+  static ui.Picture _recordPreviewPicture(
+    Size size,
+    BrushPreset preset,
+    Color effectiveColor,
+  ) {
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas recCanvas = Canvas(recorder, Rect.fromLTWH(0, 0, size.width, size.height));
 
@@ -72,6 +107,7 @@ class BrushPreviewRenderer {
         content.drawing(points[i]);
       }
       content.draw(recCanvas, size, false);
+      content.clearRenderCache();
     } catch (_) {
       final fallbackPaint = Paint()
         ..color = effectiveColor
@@ -86,9 +122,56 @@ class BrushPreviewRenderer {
       recCanvas.drawPath(path, fallbackPaint);
     }
 
-    final ui.Picture picture = recorder.endRecording();
-    _pictureCache[cacheKey] = picture;
-    canvas.drawPicture(picture);
+    return recorder.endRecording();
+  }
+
+  static void _scheduleBitmapBake(String cacheKey, ui.Picture sourcePic, Size size) {
+    if (_pendingBakes.contains(cacheKey)) return;
+    _pendingBakes.add(cacheKey);
+
+    final int epoch = _cacheEpoch;
+    final double dpr = ui.PlatformDispatcher.instance.views.isNotEmpty
+        ? ui.PlatformDispatcher.instance.views.first.devicePixelRatio.clamp(1.0, 2.0)
+        : 1.5;
+    final int targetW = (size.width * dpr).round().clamp(1, 640);
+    final int targetH = (size.height * dpr).round().clamp(1, 200);
+
+    final ui.PictureRecorder scaledRec = ui.PictureRecorder();
+    final Canvas scaledCanvas = Canvas(
+      scaledRec,
+      Rect.fromLTWH(0, 0, targetW.toDouble(), targetH.toDouble()),
+    );
+    scaledCanvas.scale(targetW / size.width, targetH / size.height);
+    scaledCanvas.drawPicture(sourcePic);
+    final ui.Picture scaledPic = scaledRec.endRecording();
+
+    scaledPic.toImage(targetW, targetH).then((ui.Image img) {
+      try {
+        scaledPic.dispose();
+      } catch (_) {}
+      _pendingBakes.remove(cacheKey);
+      if (epoch != _cacheEpoch) {
+        try {
+          img.dispose();
+        } catch (_) {}
+        return;
+      }
+      _imageCache.put(cacheKey, img);
+      if (!_notifyScheduled) {
+        _notifyScheduled = true;
+        scheduleMicrotask(() {
+          _notifyScheduled = false;
+          if (epoch == _cacheEpoch) {
+            repaintNotifier.value++;
+          }
+        });
+      }
+    }).catchError((_) {
+      _pendingBakes.remove(cacheKey);
+      try {
+        scaledPic.dispose();
+      } catch (_) {}
+    });
   }
 
   static double _resolvePreviewWidth(String presetId, Size size) {
@@ -233,8 +316,11 @@ class BrushPreviewRenderer {
     return width;
   }
 
-  /// Clears and safely disposes all cached preview pictures
+  /// Clears and safely disposes all cached preview pictures and bitmaps
   static void clearCache() {
+    _cacheEpoch++;
+    _pendingBakes.clear();
+    _imageCache.clear();
     for (final pic in _pictureCache.values) {
       try {
         pic.dispose();

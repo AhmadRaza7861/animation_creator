@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
+import 'brush_cache.dart';
 import 'freehand_line.dart';
 
 /// 稳定伪随机 [-1,1] / Stable zero-allocation pseudo-random in [-1, 1]
@@ -52,25 +53,102 @@ abstract class PresetStroke extends FreehandLine {
         0x7fffffff;
   }
 
-  /// 沿路径行走 / Walk along the smoothed path
+  /// 沿路径行走 / Walk along the smoothed path (O(1) incremental sampling).
   void walk(double step, void Function(ui.Tangent t, double d, double total, int i) fn) {
     final double s = step.clamp(2.0, double.infinity);
-    final List<ui.PathMetric> ms = buildSmoothPath().computeMetrics().toList();
-    final double total = ms.fold<double>(0, (double a, ui.PathMetric m) => a + m.length);
-    int i = 0;
-    double acc = 0;
-    for (final ui.PathMetric m in ms) {
-      double d = 0;
-      while (d <= m.length) {
-        final ui.Tangent? t = m.getTangentForOffset(d);
-        if (t != null) {
-          fn(t, acc + d, total, i);
-        }
-        i++;
-        d += s;
-      }
-      acc += m.length;
+    final ChunkedStrokeCache cache = sampleSmooth(s);
+    final double total = cache.totalLength;
+    int idx = 0;
+
+    final int frozen = cache.frozenCount;
+    for (int j = 0; j < frozen; j++) {
+      final Offset pos = Offset(cache.xs[j], cache.ys[j]);
+      final double ang = cache.angles[j];
+      fn(ui.Tangent.fromAngle(pos, ang), cache.distances[j], total, idx++);
     }
+    final int tail = cache.tailCount;
+    for (int j = 0; j < tail; j++) {
+      final Offset pos = Offset(cache.tailXs[j], cache.tailYs[j]);
+      final double ang = cache.tailAngles[j];
+      fn(ui.Tangent.fromAngle(pos, ang), cache.tailDistances[j], total, idx++);
+    }
+  }
+
+  /// Same as [walkChunked] but renders an explicit slice `[startSample..endSample)`.
+  void walkChunkedRange(
+    ui.Canvas canvas,
+    ui.Size size,
+    double step,
+    int extraSig,
+    int startSample,
+    int? endSample,
+    bool includeTail,
+    void Function(
+      ui.Canvas target,
+      double x,
+      double y,
+      double angle,
+      double d,
+      int i,
+    ) fn,
+  ) {
+    final double s = step.clamp(2.0, double.infinity);
+    final int sig = Object.hash(baseStyleSignature, s, seed, extraSig);
+    sampleSmooth(s);
+    drawSampleSlice(canvas, size, startSample, endSample, includeTail, sig, (
+      ui.Canvas target,
+      int startIdx,
+      int endIdx,
+      bool isTail,
+    ) {
+      for (int i = startIdx; i < endIdx; i++) {
+        fn(
+          target,
+          strokeCache.getX(i, isTail),
+          strokeCache.getY(i, isTail),
+          strokeCache.getAngle(i, isTail),
+          strokeCache.getDist(i, isTail),
+          strokeCache.globalIndex(i, isTail),
+        );
+      }
+    });
+  }
+
+  /// Chunked incremental walk for presets whose per-dab visuals depend only on
+  /// `(tangent, d, i)` and not global `total` length.
+  void walkChunked(
+    ui.Canvas canvas,
+    ui.Size size,
+    double step,
+    int extraSig,
+    void Function(
+      ui.Canvas target,
+      double x,
+      double y,
+      double angle,
+      double d,
+      int i,
+    ) fn,
+  ) {
+    final double s = step.clamp(2.0, double.infinity);
+    final int sig = Object.hash(baseStyleSignature, s, seed, extraSig);
+    drawChunkedSamples(canvas, size, s, sig, (
+      ui.Canvas target,
+      int startIdx,
+      int endIdx,
+      bool isTail,
+    ) {
+      for (int i = startIdx; i < endIdx; i++) {
+        fn(
+          target,
+          strokeCache.getX(i, isTail),
+          strokeCache.getY(i, isTail),
+          strokeCache.getAngle(i, isTail),
+          strokeCache.getDist(i, isTail),
+          strokeCache.globalIndex(i, isTail),
+        );
+      }
+    });
   }
 
   /// 路径法线方向 / Normal direction of the path at a tangent
@@ -301,26 +379,86 @@ class PencilLine extends PresetStroke {
   String get contentType => 'PencilLine';
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(ui.Canvas canvas, ui.Size size, int startSample, int endSample) {
+    _drawPencilRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(ui.Canvas canvas, ui.Size size, int startSample) {
+    _drawPencilRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
     if (points.isEmpty) {
       return;
     }
+    if (points.length < 2) {
+      _drawPencilRange(canvas, size, 0, 0, includeTail: true);
+      return;
+    }
+    _drawPencilRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawPencilRange(
+    ui.Canvas canvas,
+    ui.Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
+    if (points.isEmpty) return;
     final double w = paint.strokeWidth;
     final double baseAlpha = paint.color.a * opacity;
     final Paint speckPaint = paint.copyWith(style: PaintingStyle.fill);
     final double speckRadius = (w * speck).clamp(0.35, double.infinity);
     final int safeDensity = density.clamp(1, 15);
+    final int curSeed = seed;
+    final Color baseCol = paint.color;
 
-    walk(w * 0.3, (ui.Tangent t, double d, double total, int i) {
-      final Offset n = normalOf(t);
-      final Offset dir = dirOf(t);
+    if (points.length < 2) {
+      if (!includeTail) return;
+      final Offset p0 = points.first;
       for (int k = 0; k < safeDensity; k++) {
-        final double off = _rand(seed, i, k * 2) * w * spread * 0.5;
-        final double along = _rand(seed, i, k * 2 + 1) * w * 0.25;
-        final Offset p = t.position + n * off + dir * along;
-        final double a = (baseAlpha * (0.25 + _rand01(seed, i, 200 + k) * 0.75)).clamp(0.0, 1.0);
-        speckPaint.color = paint.color.withValues(alpha: a);
-        canvas.drawCircle(p, speckRadius, speckPaint);
+        final double off = _rand(curSeed, 0, k * 2) * w * spread * 0.5;
+        final double along = _rand(curSeed, 0, k * 2 + 1) * w * 0.25;
+        final double a =
+            (baseAlpha * (0.25 + _rand01(curSeed, 0, 200 + k) * 0.75))
+                .clamp(0.0, 1.0);
+        speckPaint.color = baseCol.withValues(alpha: a);
+        canvas.drawCircle(p0 + Offset(along, off), speckRadius, speckPaint);
+      }
+      return;
+    }
+
+    final int sig = Object.hash(density, opacity, spread, speck);
+    walkChunkedRange(canvas, size, w * 0.3, sig, startSample, endSample, includeTail, (
+      ui.Canvas target,
+      double x,
+      double y,
+      double angle,
+      double d,
+      int i,
+    ) {
+      final double dx = cos(angle);
+      final double dy = sin(angle);
+      final double nx = -dy;
+      final double ny = dx;
+      for (int k = 0; k < safeDensity; k++) {
+        final double off = _rand(curSeed, i, k * 2) * w * spread * 0.5;
+        final double along = _rand(curSeed, i, k * 2 + 1) * w * 0.25;
+        final double a =
+            (baseAlpha * (0.25 + _rand01(curSeed, i, 200 + k) * 0.75))
+                .clamp(0.0, 1.0);
+        speckPaint.color = baseCol.withValues(alpha: a);
+        target.drawCircle(
+          Offset(x + nx * off + dx * along, y + ny * off + dy * along),
+          speckRadius,
+          speckPaint,
+        );
       }
     });
   }
@@ -568,19 +706,104 @@ class TubeLine extends PresetStroke {
   }
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(ui.Canvas canvas, ui.Size size, int startSample, int endSample) {
+    _drawRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(ui.Canvas canvas, ui.Size size, int startSample) {
+    _drawRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
     if (points.isEmpty) {
       return;
     }
-    final double w = paint.strokeWidth;
-    final double r = w / 2;
     if (points.length == 1) {
-      canvas.drawCircle(points.first, r, shadedDab(points.first, r, paint.color));
+      final double w = paint.strokeWidth;
+      final double r = w / 2;
+      if (r <= 0) return;
+      final ui.Image? sphere = ProceduralStampCaches.getShadedSphereStamp(paint.color);
+      if (sphere == null) {
+        canvas.drawCircle(points.first, r, shadedDab(points.first, r, paint.color));
+        return;
+      }
+      const double tileS = ProceduralStampCaches.sphereTileSize;
+      AtlasStampDrawer.drawBatch(
+        canvas: canvas,
+        stamp: sphere,
+        srcSize: tileS,
+        targetRadius: r,
+        stampRefRadius: (tileS * 0.5) - 1.0,
+        xs: <double>[points.first.dx],
+        ys: <double>[points.first.dy],
+        angles: const <double>[0.0],
+      );
       return;
     }
-    walk(w * 0.12, (ui.Tangent t, double d, double total, int i) {
-      canvas.drawCircle(t.position, r, shadedDab(t.position, r, paint.color));
-    });
+    _drawRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawRange(
+    ui.Canvas canvas,
+    ui.Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      if (includeTail) draw(canvas, size, false);
+      return;
+    }
+    final double w = paint.strokeWidth;
+    final double r = w / 2;
+    if (r <= 0) return;
+    final ui.Image? sphere = ProceduralStampCaches.getShadedSphereStamp(paint.color);
+    if (sphere == null) {
+      walk(w * 0.12, (ui.Tangent t, double d, double total, int i) {
+        canvas.drawCircle(t.position, r, shadedDab(t.position, r, paint.color));
+      });
+      return;
+    }
+
+    const double tileS = ProceduralStampCaches.sphereTileSize;
+    final double refR = (tileS * 0.5) - 1.0;
+    final double step = (w * 0.12).clamp(2.0, double.infinity);
+    final ChunkedStrokeCache cache = sampleSmooth(step);
+
+    final int safeStart = startSample.clamp(0, cache.frozenCount);
+    final int safeEnd = (endSample ?? cache.frozenCount).clamp(safeStart, cache.frozenCount);
+    if (safeStart < safeEnd) {
+      AtlasStampDrawer.drawBatch(
+        canvas: canvas,
+        stamp: sphere,
+        srcSize: tileS,
+        targetRadius: r,
+        stampRefRadius: refR,
+        xs: cache.xs,
+        ys: cache.ys,
+        angles: List<double>.filled(cache.frozenCount, 0.0, growable: false),
+        start: safeStart,
+        end: safeEnd,
+      );
+    }
+    if (includeTail && cache.tailCount > 0) {
+      AtlasStampDrawer.drawBatch(
+        canvas: canvas,
+        stamp: sphere,
+        srcSize: tileS,
+        targetRadius: r,
+        stampRefRadius: refR,
+        xs: cache.tailXs,
+        ys: cache.tailYs,
+        angles: List<double>.filled(cache.tailCount, 0.0, growable: false),
+      );
+    }
   }
 
   @override
@@ -614,22 +837,119 @@ class CandyCaneLine extends TubeLine {
   String get contentType => 'CandyCaneLine';
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(ui.Canvas canvas, ui.Size size, int startSample, int endSample) {
+    _drawCandyRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(ui.Canvas canvas, ui.Size size, int startSample) {
+    _drawCandyRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
     if (points.isEmpty) {
       return;
     }
-    final double w = paint.strokeWidth;
-    final double r = w / 2;
-    final double stripe = (w * 0.85).clamp(2.0, double.infinity);
-
     if (points.length == 1) {
-      canvas.drawCircle(points.first, r, shadedDab(points.first, r, paint.color));
+      final double w = paint.strokeWidth;
+      final double r = w / 2;
+      if (r <= 0) return;
+      final ui.Image? primarySphere =
+          ProceduralStampCaches.getShadedSphereStamp(paint.color);
+      if (primarySphere == null) {
+        canvas.drawCircle(points.first, r, shadedDab(points.first, r, paint.color));
+        return;
+      }
+      const double tileS = ProceduralStampCaches.sphereTileSize;
+      AtlasStampDrawer.drawBatch(
+        canvas: canvas,
+        stamp: primarySphere,
+        srcSize: tileS,
+        targetRadius: r,
+        stampRefRadius: (tileS * 0.5) - 1.0,
+        xs: <double>[points.first.dx],
+        ys: <double>[points.first.dy],
+        angles: const <double>[0.0],
+      );
       return;
     }
-    walk(w * 0.1, (ui.Tangent t, double d, double total, int i) {
-      final bool white = (d / stripe).floor().isOdd;
-      final Color base = white ? const Color(0xFFFFFFFF) : paint.color;
-      canvas.drawCircle(t.position, r, shadedDab(t.position, r, base));
+    _drawCandyRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawCandyRange(
+    ui.Canvas canvas,
+    ui.Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      if (includeTail) draw(canvas, size, false);
+      return;
+    }
+    final double w = paint.strokeWidth;
+    final double r = w / 2;
+    if (r <= 0) return;
+    final double stripe = (w * 0.85).clamp(2.0, double.infinity);
+    final double step = (w * 0.1).clamp(2.0, double.infinity);
+
+    final ui.Image? primarySphere =
+        ProceduralStampCaches.getShadedSphereStamp(paint.color);
+    final ui.Image? whiteSphere =
+        ProceduralStampCaches.getShadedSphereStamp(const Color(0xFFFFFFFF));
+
+    if (primarySphere == null || whiteSphere == null) {
+      walkChunkedRange(canvas, size, step, 0, startSample, endSample, includeTail, (
+        ui.Canvas target,
+        double x,
+        double y,
+        double angle,
+        double d,
+        int i,
+      ) {
+        final bool white = (d / stripe).floor().isOdd;
+        final Color base = white ? const Color(0xFFFFFFFF) : paint.color;
+        final Offset pos = Offset(x, y);
+        target.drawCircle(pos, r, shadedDab(pos, r, base));
+      });
+      return;
+    }
+
+    const double tileS = ProceduralStampCaches.sphereTileSize;
+    final double refR = (tileS * 0.5) - 1.0;
+    final int sig = Object.hash(baseStyleSignature, stripe);
+    sampleSmooth(step);
+    drawSampleSlice(canvas, size, startSample, endSample, includeTail, sig, (
+      ui.Canvas target,
+      int startIdx,
+      int endIdx,
+      bool isTail,
+    ) {
+      final Paint imgPaint = Paint()
+        ..isAntiAlias = true
+        ..filterQuality = FilterQuality.low;
+      const Rect srcRect = Rect.fromLTWH(0, 0, tileS, tileS);
+      final double drawDiameter = (tileS * r) / refR;
+      for (int i = startIdx; i < endIdx; i++) {
+        final double d = strokeCache.getDist(i, isTail);
+        final bool white = (d / stripe).floor().isOdd;
+        final ui.Image img = white ? whiteSphere : primarySphere;
+        target.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromCenter(
+            center: Offset(strokeCache.getX(i, isTail), strokeCache.getY(i, isTail)),
+            width: drawDiameter,
+            height: drawDiameter,
+          ),
+          imgPaint,
+        );
+      }
     });
   }
 
@@ -723,31 +1043,60 @@ class SprinklesLine extends PresetStroke {
   String get contentType => 'SprinklesLine';
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(ui.Canvas canvas, ui.Size size, int startSample, int endSample) {
+    _drawSprinklesRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(ui.Canvas canvas, ui.Size size, int startSample) {
+    _drawSprinklesRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    _drawSprinklesRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawSprinklesRange(
+    ui.Canvas canvas,
+    ui.Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
     if (points.length < 2) {
       return;
     }
     final double w = paint.strokeWidth;
+    final int curSeed = seed;
+    final Paint workPaint = Paint()..isAntiAlias = true;
+    final RRect pill = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset.zero, width: w * 0.5, height: w * 0.17),
+      Radius.circular(w * 0.09),
+    );
 
-    walk(w * 0.6, (ui.Tangent t, double d, double total, int i) {
+    walkChunkedRange(canvas, size, w * 0.6, 0, startSample, endSample, includeTail, (
+      ui.Canvas target,
+      double x,
+      double y,
+      double angle,
+      double d,
+      int i,
+    ) {
       for (int k = 0; k < 2; k++) {
-        final Offset off =
-            Offset(_rand(seed, i, k * 2) * w * 1.1, _rand(seed, i, k * 2 + 1) * w * 1.1);
-        final Color col =
-            HSVColor.fromAHSV(1, _rand01(seed, i, 60 + k) * 360, 0.85, 1).toColor();
-        canvas.save();
-        canvas.translate(t.position.dx + off.dx, t.position.dy + off.dy);
-        canvas.rotate(_rand(seed, i, 120 + k) * pi);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset.zero, width: w * 0.5, height: w * 0.17),
-            Radius.circular(w * 0.09),
-          ),
-          Paint()
-            ..color = col
-            ..isAntiAlias = true,
-        );
-        canvas.restore();
+        final double ox = _rand(curSeed, i, k * 2) * w * 1.1;
+        final double oy = _rand(curSeed, i, k * 2 + 1) * w * 1.1;
+        workPaint.color =
+            HSVColor.fromAHSV(1, _rand01(curSeed, i, 60 + k) * 360, 0.85, 1)
+                .toColor();
+        target.save();
+        target.translate(x + ox, y + oy);
+        target.rotate(_rand(curSeed, i, 120 + k) * pi);
+        target.drawRRect(pill, workPaint);
+        target.restore();
       }
     });
   }
@@ -782,27 +1131,59 @@ class StaticLine extends PresetStroke {
   String get contentType => 'StaticLine';
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(ui.Canvas canvas, ui.Size size, int startSample, int endSample) {
+    _drawStaticRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(ui.Canvas canvas, ui.Size size, int startSample) {
+    _drawStaticRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    _drawStaticRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawStaticRange(
+    ui.Canvas canvas,
+    ui.Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
     if (points.length < 2) {
       return;
     }
     final double w = paint.strokeWidth;
+    final int curSeed = seed;
+    final Paint workPaint = Paint();
 
-    walk(w * 0.5, (ui.Tangent t, double d, double total, int i) {
+    walkChunkedRange(canvas, size, w * 0.5, 0, startSample, endSample, includeTail, (
+      ui.Canvas target,
+      double x,
+      double y,
+      double angle,
+      double d,
+      int i,
+    ) {
       for (int k = 0; k < 2; k++) {
         final Offset off =
-            Offset(_rand(seed, i, k * 2) * w * 1.1, _rand(seed, i, k * 2 + 1) * w * 0.9);
-        final double pick = _rand01(seed, i, 40 + k);
-        final Color col = pick < 0.4
+            Offset(_rand(curSeed, i, k * 2) * w * 1.1, _rand(curSeed, i, k * 2 + 1) * w * 0.9);
+        final double pick = _rand01(curSeed, i, 40 + k);
+        workPaint.color = pick < 0.4
             ? const Color(0xFF000000)
-            : HSVColor.fromAHSV(1, _rand01(seed, i, 80 + k) * 360, 0.9, 1).toColor();
-        canvas.drawRect(
+            : HSVColor.fromAHSV(1, _rand01(curSeed, i, 80 + k) * 360, 0.9, 1).toColor();
+        target.drawRect(
           Rect.fromCenter(
-            center: t.position + off,
-            width: w * (0.45 + _rand01(seed, i, 140 + k) * 0.8),
+            center: Offset(x + off.dx, y + off.dy),
+            width: w * (0.45 + _rand01(curSeed, i, 140 + k) * 0.8),
             height: w * 0.32,
           ),
-          Paint()..color = col,
+          workPaint,
         );
       }
     });
@@ -929,24 +1310,19 @@ class RainbowLine extends PresetStroke {
     if (points.length < 2) return;
     final double w = paint.strokeWidth;
     final double step = (w * 0.2).clamp(1.0, 6.0);
+    final Paint segPaint = Paint()
+      ..strokeWidth = w
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
     Offset? prev;
 
     walk(step, (ui.Tangent t, double d, double total, int i) {
-      final double progress = total > 0 ? (d / total) : 0;
-      final double hue = (progress * 360 * 1.5) % 360;
-      final Color col = HSVColor.fromAHSV(1.0, hue, 0.9, 1.0).toColor();
-
       if (prev != null) {
-        canvas.drawLine(
-          prev!,
-          t.position,
-          Paint()
-            ..color = col
-            ..strokeWidth = w
-            ..style = PaintingStyle.stroke
-            ..strokeCap = StrokeCap.round
-            ..isAntiAlias = true,
-        );
+        final double progress = total > 0 ? (d / total) : 0;
+        final double hue = (progress * 360 * 1.5) % 360;
+        segPaint.color = HSVColor.fromAHSV(1.0, hue, 0.9, 1.0).toColor();
+        canvas.drawLine(prev!, t.position, segPaint);
       }
       prev = t.position;
     });
@@ -1364,25 +1740,55 @@ class AudioSpectrumLine extends PresetStroke {
   String get contentType => 'AudioSpectrumLine';
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(ui.Canvas canvas, ui.Size size, int startSample, int endSample) {
+    _drawAudioRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(ui.Canvas canvas, ui.Size size, int startSample) {
+    _drawAudioRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(ui.Canvas canvas, ui.Size size, bool deeper) {
+    _drawAudioRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawAudioRange(
+    ui.Canvas canvas,
+    ui.Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
     if (points.length < 2) return;
     final double w = paint.strokeWidth;
     final double barWidth = (w * 0.2).clamp(1.5, 6.0);
+    final int curSeed = seed;
+    final Paint barPaint = Paint()
+      ..color = paint.color
+      ..strokeWidth = barWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
 
-    walk(barWidth * 2.2, (ui.Tangent t, double d, double total, int i) {
-      final double h = w * (0.3 + sin(i * 0.7).abs() * 0.9 + _rand01(seed, i, 5) * 0.4);
-      final Offset norm = normalOf(t);
-      final Offset p1 = t.position + norm * (h / 2);
-      final Offset p2 = t.position - norm * (h / 2);
-
-      canvas.drawLine(
-        p1,
-        p2,
-        Paint()
-          ..color = paint.color
-          ..strokeWidth = barWidth
-          ..strokeCap = StrokeCap.round
-          ..isAntiAlias = true,
+    walkChunkedRange(canvas, size, barWidth * 2.2, 0, startSample, endSample, includeTail, (
+      ui.Canvas target,
+      double x,
+      double y,
+      double angle,
+      double d,
+      int i,
+    ) {
+      final double h = w * (0.3 + sin(i * 0.7).abs() * 0.9 + _rand01(curSeed, i, 5) * 0.4);
+      final double nx = -sin(angle) * (h * 0.5);
+      final double ny = cos(angle) * (h * 0.5);
+      target.drawLine(
+        Offset(x + nx, y + ny),
+        Offset(x - nx, y - ny),
+        barPaint,
       );
     });
   }

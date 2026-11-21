@@ -10,6 +10,7 @@ import '../screens/gallery_screen.dart';
 import '../screens/animation_preview_screen.dart';
 import '../../services/video_import_helper.dart';
 import '../../../../core/widgets/app_dialogs.dart';
+import 'auto_between_sheet.dart';
 
 class TimelinePanel extends ConsumerWidget {
   final String? projectId;
@@ -131,6 +132,12 @@ class TimelinePanel extends ConsumerWidget {
         controller.addFrameAt(index, isRight: false);
       } else if (action == 'right') {
         controller.addFrameAt(index, isRight: true);
+      } else if (action == 'autoBetween') {
+        AutoBetweenSheet.show(
+          context,
+          controller,
+          initialFrameIndex: index,
+        );
       } else if (action == 'delete') {
         if (controller.canvases.length > 1) {
           AppDialogs.showDeleteFrameDialog(

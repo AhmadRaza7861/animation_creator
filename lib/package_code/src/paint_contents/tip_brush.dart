@@ -1,10 +1,12 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'dart:ui';
 
 import 'package:flutter/painting.dart' as painting;
 
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
+import 'brush_cache.dart';
 import 'freehand_line.dart';
 
 /// 笔尖形状类型 / Brush tip shape kinds
@@ -194,6 +196,89 @@ class TipBrush extends FreehandLine {
         0x7fffffff;
   }
 
+  static final BoundedImageCache<String> _stampCache =
+      BoundedImageCache<String>(maxEntries: 36);
+
+  static const double _tileSize = 160.0;
+
+  static void clearStampCache() => _stampCache.clear();
+
+  static bool _isRandomizedKind(BrushTipKind kind) => switch (kind) {
+        BrushTipKind.grassClump ||
+        BrushTipKind.leafScatter ||
+        BrushTipKind.bristle ||
+        BrushTipKind.dryBrush ||
+        BrushTipKind.stipple ||
+        BrushTipKind.charcoal ||
+        BrushTipKind.sponge ||
+        BrushTipKind.splash ||
+        BrushTipKind.spatter ||
+        BrushTipKind.chalk ||
+        BrushTipKind.scatter => true,
+        _ => false,
+      };
+
+  static bool _isHeavyStaticKind(BrushTipKind kind) =>
+      !_isRandomizedKind(kind) &&
+      kind != BrushTipKind.round &&
+      kind != BrushTipKind.square &&
+      kind != BrushTipKind.diamond;
+
+  static ui.Image? _getBakedTipStamp({
+    required BrushTipKind kind,
+    required double roundness,
+    required double hardness,
+    int variant = 0,
+  }) {
+    final int rq = (roundness.clamp(0.02, 1.0) * 20).round();
+    final int hq = (hardness.clamp(0.0, 1.0) * 20).round();
+    final String key = '${kind.index}_${rq}_${hq}_$variant';
+    final double qRound = (rq / 20.0).clamp(0.02, 1.0);
+    final double qHard = (hq / 20.0).clamp(0.0, 1.0);
+    // Keep extra margin inside 160x160 for blur halos & scatter radius.
+    final double refR = qHard < 0.99
+        ? (_isRandomizedKind(kind) ? 22.0 : 28.0)
+        : 60.0;
+
+    return _stampCache.getOrBake(key, () {
+      try {
+        final ui.PictureRecorder rec = ui.PictureRecorder();
+        final Canvas c = Canvas(rec, const Rect.fromLTWH(0, 0, _tileSize, _tileSize));
+        c.translate(_tileSize * 0.5, _tileSize * 0.5);
+        if (qRound < 0.99) {
+          c.scale(1.0, qRound);
+        }
+        final double sigma = qHard < 0.99 ? refR * (1.0 - qHard) * 0.9 : 0.0;
+        final Paint p = Paint()
+          ..color = const Color(0xFFFFFFFF)
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true
+          ..maskFilter =
+              sigma > 0 ? MaskFilter.blur(BlurStyle.normal, sigma) : null;
+        _drawShape(c, kind, refR, p, 42 + variant * 97, variant);
+        final ui.Picture pic = rec.endRecording();
+        final ui.Image img = pic.toImageSync(_tileSize.toInt(), _tileSize.toInt());
+        pic.dispose();
+        return img;
+      } catch (_) {
+        return null;
+      }
+    });
+  }
+
+  @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(Canvas canvas, Size size, int startSample, int endSample) {
+    _drawTipRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(Canvas canvas, Size size, int startSample) {
+    _drawTipRange(canvas, size, startSample, null, includeTail: true);
+  }
+
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (points.isEmpty) {
@@ -202,10 +287,40 @@ class TipBrush extends FreehandLine {
 
     final double width = paint.strokeWidth;
     final double radius = width / 2;
-    final Paint tipPaint = _tipPaint(paint, radius);
-    final double angleRad = angle * pi / 180;
+    if (radius <= 0) return;
 
     if (points.length == 1) {
+      final double angleRad = angle * pi / 180;
+      final bool isSoft = hardness < 0.99;
+      final bool isRandomized = _isRandomizedKind(kind);
+      final bool useStamp = isSoft || _isHeavyStaticKind(kind);
+      if (useStamp) {
+        final ui.Image? stamp = _getBakedTipStamp(
+          kind: kind,
+          roundness: roundness,
+          hardness: hardness,
+          variant: 0,
+        );
+        if (stamp != null) {
+          final double refR =
+              isSoft ? (isRandomized ? 22.0 : 28.0) : 60.0;
+          AtlasStampDrawer.drawBatch(
+            canvas: canvas,
+            stamp: stamp,
+            srcSize: _tileSize,
+            targetRadius: radius,
+            stampRefRadius: refR,
+            xs: <double>[points.first.dx],
+            ys: <double>[points.first.dy],
+            angles: <double>[angleRad],
+            tint: paint.color,
+            flipX: flipX,
+            flipY: flipY,
+          );
+          return;
+        }
+      }
+      final Paint tipPaint = _tipPaint(paint, radius);
       paintDab(
         canvas,
         points.first,
@@ -222,34 +337,187 @@ class TipBrush extends FreehandLine {
       return;
     }
 
+    _drawTipRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawTipRange(
+    Canvas canvas,
+    Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      if (includeTail) draw(canvas, size, false);
+      return;
+    }
+
+    final double width = paint.strokeWidth;
+    final double radius = width / 2;
+    if (radius <= 0) return;
+    final double angleRad = angle * pi / 180;
+    final bool isSoft = hardness < 0.99;
+    final bool isRandomized = _isRandomizedKind(kind);
     final double frac = spacing > 0 ? spacing : 0.08;
     final double step = (width * frac).clamp(2.5, double.infinity);
-    final Path path = buildSmoothPath();
+    final ChunkedStrokeCache cache = sampleSmooth(step);
+    final int safeStart = startSample.clamp(0, cache.frozenCount);
+    final int safeEnd = (endSample ?? cache.frozenCount).clamp(safeStart, cache.frozenCount);
 
-    int index = 0;
-    for (final PathMetric metric in path.computeMetrics()) {
-      double distance = 0.0;
-      while (distance <= metric.length) {
-        final Tangent? tangent = metric.getTangentForOffset(distance);
-        if (tangent != null) {
-          paintDab(
-            canvas,
-            tangent.position,
-            radius,
-            kind: kind,
-            paint: tipPaint,
-            angle: (followPath ? tangent.angle : 0) + angleRad,
-            roundness: roundness,
+    // Fast GPU atlas path for all soft tips (0 runtime MaskFilter.blur!) and
+    // complex static tips (0 runtime TextPainter/Path.combine/trig loops!).
+    if ((isSoft && !isRandomized) || (!isRandomized && _isHeavyStaticKind(kind))) {
+      final ui.Image? stamp = _getBakedTipStamp(
+        kind: kind,
+        roundness: roundness,
+        hardness: hardness,
+      );
+      if (stamp != null) {
+        final double refR = isSoft ? 28.0 : 60.0;
+        if (safeStart < safeEnd) {
+          final int len = safeEnd - safeStart;
+          final List<double> effectiveAngles = followPath
+              ? List<double>.generate(
+                  len,
+                  (int k) => cache.angles[safeStart + k] + angleRad,
+                  growable: false,
+                )
+              : List<double>.filled(len, angleRad, growable: false);
+          AtlasStampDrawer.drawBatch(
+            canvas: canvas,
+            stamp: stamp,
+            srcSize: _tileSize,
+            targetRadius: radius,
+            stampRefRadius: refR,
+            xs: safeStart == 0 && safeEnd == cache.frozenCount
+                ? cache.xs
+                : cache.xs.sublist(safeStart, safeEnd),
+            ys: safeStart == 0 && safeEnd == cache.frozenCount
+                ? cache.ys
+                : cache.ys.sublist(safeStart, safeEnd),
+            angles: effectiveAngles,
+            tint: paint.color,
             flipX: flipX,
             flipY: flipY,
-            seed: _seed,
-            index: index,
           );
         }
-        index++;
-        distance += step;
+        if (includeTail && cache.tailCount > 0) {
+          final List<double> tailAng = followPath
+              ? List<double>.generate(
+                  cache.tailCount,
+                  (int k) => cache.tailAngles[k] + angleRad,
+                  growable: false,
+                )
+              : List<double>.filled(cache.tailCount, angleRad, growable: false);
+          AtlasStampDrawer.drawBatch(
+            canvas: canvas,
+            stamp: stamp,
+            srcSize: _tileSize,
+            targetRadius: radius,
+            stampRefRadius: refR,
+            xs: cache.tailXs,
+            ys: cache.tailYs,
+            angles: tailAng,
+            tint: paint.color,
+            flipX: flipX,
+            flipY: flipY,
+          );
+        }
+        return;
       }
     }
+
+    // Soft randomized tips (`hardness < 0.99`): bucket into 4 pre-blurred
+    // deterministic variant stamps instead of running 20 Gaussian blurs/dab.
+    if (isSoft && isRandomized) {
+      const int variants = 4;
+      final List<ui.Image?> stamps = List<ui.Image?>.generate(
+        variants,
+        (int v) => _getBakedTipStamp(
+          kind: kind,
+          roundness: roundness,
+          hardness: hardness,
+          variant: v,
+        ),
+      );
+      if (!stamps.contains(null)) {
+        final List<List<double>> bucketX = List.generate(variants, (_) => <double>[]);
+        final List<List<double>> bucketY = List.generate(variants, (_) => <double>[]);
+        final List<List<double>> bucketA = List.generate(variants, (_) => <double>[]);
+        for (int i = safeStart; i < safeEnd; i++) {
+          final int v = i & 3;
+          bucketX[v].add(cache.xs[i]);
+          bucketY[v].add(cache.ys[i]);
+          bucketA[v].add((followPath ? cache.angles[i] : 0.0) + angleRad);
+        }
+        if (includeTail) {
+          final int frozenOffset = cache.frozenCount;
+          for (int i = 0; i < cache.tailCount; i++) {
+            final int v = (frozenOffset + i) & 3;
+            bucketX[v].add(cache.tailXs[i]);
+            bucketY[v].add(cache.tailYs[i]);
+            bucketA[v].add((followPath ? cache.tailAngles[i] : 0.0) + angleRad);
+          }
+        }
+        for (int v = 0; v < variants; v++) {
+          if (bucketX[v].isEmpty) continue;
+          AtlasStampDrawer.drawBatch(
+            canvas: canvas,
+            stamp: stamps[v]!,
+            srcSize: _tileSize,
+            targetRadius: radius,
+            stampRefRadius: 22.0,
+            xs: bucketX[v],
+            ys: bucketY[v],
+            angles: bucketA[v],
+            tint: paint.color,
+            flipX: flipX,
+            flipY: flipY,
+          );
+        }
+        return;
+      }
+    }
+
+    // Crisp vector tips: incremental sampling + chunked `ui.Picture` baking.
+    final Paint tipPaint = _tipPaint(paint, radius);
+    final int seedVal = _seed;
+    final int sig = Object.hash(
+      baseStyleSignature,
+      kind.index,
+      angle,
+      roundness,
+      hardness,
+      spacing,
+      flipX,
+      flipY,
+      followPath,
+      seedVal,
+    );
+
+    drawSampleSlice(canvas, size, safeStart, safeEnd, includeTail, sig,
+        (Canvas target, int startIdx, int endIdx, bool isTail) {
+      for (int i = startIdx; i < endIdx; i++) {
+        final double x = strokeCache.getX(i, isTail);
+        final double y = strokeCache.getY(i, isTail);
+        final double ang = followPath ? strokeCache.getAngle(i, isTail) : 0.0;
+        final int globalIdx = strokeCache.globalIndex(i, isTail);
+        paintDab(
+          target,
+          Offset(x, y),
+          radius,
+          kind: kind,
+          paint: tipPaint,
+          angle: ang + angleRad,
+          roundness: roundness,
+          flipX: flipX,
+          flipY: flipY,
+          seed: seedVal,
+          index: globalIdx,
+        );
+      }
+    });
   }
 
   /// 根据硬度生成笔尖画笔（硬度越低模糊越强）
@@ -1193,19 +1461,21 @@ class TipBrush extends FreehandLine {
     tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
   }
 
+  static final Paint _reusableStrokePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round
+    ..isAntiAlias = true;
+
   /// 由填充画笔派生一支描边画笔（雪花、螺旋等线状笔尖用）
   ///
   /// Derive a stroke paint from the fill paint (for line-based tips like
   /// snowflake and spiral)
   static Paint _strokePaint(Paint fill, double width) {
-    return Paint()
+    return _reusableStrokePaint
       ..color = fill.color
-      ..style = PaintingStyle.stroke
       ..strokeWidth = width
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..maskFilter = fill.maskFilter
-      ..isAntiAlias = true;
+      ..maskFilter = fill.maskFilter;
   }
 
   /// 以原点为中心的心形

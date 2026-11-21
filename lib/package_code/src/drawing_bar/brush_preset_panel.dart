@@ -270,7 +270,8 @@ class _BrushCell extends StatelessWidget {
 ///
 /// Paints a live S-shaped sample stroke of the given brush inside the cell with authentic, crash-safe vector preview
 class _BrushPreviewPainter extends CustomPainter {
-  const _BrushPreviewPainter({required this.preset, required this.color});
+  _BrushPreviewPainter({required this.preset, required this.color})
+      : super(repaint: BrushPreviewRenderer.repaintNotifier);
 
   final BrushPreset preset;
   final Color color;

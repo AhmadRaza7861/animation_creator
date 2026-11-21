@@ -88,6 +88,24 @@ abstract class PaintContent {
   /// Subclasses can override this for recursive processing
   Future<void> prepareExport() async {}
 
+  /// Releases any transient render caches (e.g. baked stroke pictures/samples)
+  /// without mutating vector geometry or persisted state.
+  void clearRenderCache() {}
+
+  /// Whether this brush supports incremental offscreen backing of frozen
+  /// committed samples `[0..startSample)` during an active continuous stroke.
+  bool get supportsActiveRangeBaking => false;
+
+  /// Number of frozen immutable sample units accumulated so far in the stroke.
+  int get committedSampleCount => 0;
+
+  /// Renders only frozen samples `[startSample, endSample)` (`endSample <= committedSampleCount`).
+  void drawCommittedRange(Canvas canvas, Size size, int startSample, int endSample) {}
+
+  /// Renders frozen samples `[startSample .. committedSampleCount)` plus live tail.
+  void drawLiveFromSample(Canvas canvas, Size size, int startSample) =>
+      draw(canvas, size, false);
+
   /// 获取路径数据（用于套索切割等操作）
   ///
   /// Get path data (for lasso cutting, etc.)

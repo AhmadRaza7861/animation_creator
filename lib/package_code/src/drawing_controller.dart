@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -6,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'helper/safe_value_notifier.dart';
 import 'paint_contents/eraser.dart';
+import 'paint_contents/eraser_hole.dart';
+import 'paint_contents/delete_content.dart';
 import 'paint_contents/paint_content.dart';
 import 'paint_contents/empty_content.dart';
 import 'paint_contents/simple_line.dart';
@@ -26,6 +29,7 @@ import 'paint_contents/clipped.dart';
 import 'paint_contents/group.dart';
 import 'ruler/ruler_config.dart';
 import 'ruler/mirror_content.dart';
+import 'ruler/radial_content.dart';
 import 'paint_contents/circle.dart';
 import 'paint_contents/rectangle.dart';
 import 'paint_contents/straight_line.dart';
@@ -476,6 +480,219 @@ class DrawingController extends ChangeNotifier {
   /// Cached compiled vector picture data for high-speed, crisp display list rendering
   ui.Picture? cachedPicture;
 
+  /// Per-layer incremental raster backing images so Impeller Vulkan draws 1 quad
+  /// for committed layer history instead of re-executing all strokes O(N^2).
+  final Map<String, _LayerRasterEntry> _layerRasterCache =
+      <String, _LayerRasterEntry>{};
+  int _rasterBakeEpoch = 0;
+  Timer? _snapshotDebounceTimer;
+
+  // Incremental offscreen backing for long continuous active strokes (`_UpPainter`).
+  ui.Image? _activeBakedImage;
+  int _activeBakedUpToSample = 0;
+  PaintContent? _activeBakedContentRef;
+  Size? _activeBakedSize;
+  double _activeBakedWidth = 0;
+  int _activeBakedColor = 0;
+  int _activeBakeEpoch = 0;
+  bool _isBakingActive = false;
+
+  void _clearActiveStrokeBacking() {
+    _activeBakeEpoch++;
+    try {
+      _activeBakedImage?.dispose();
+    } catch (_) {}
+    _activeBakedImage = null;
+    _activeBakedUpToSample = 0;
+    _activeBakedContentRef = null;
+    _activeBakedSize = null;
+    _activeBakedWidth = 0;
+    _activeBakedColor = 0;
+    _isBakingActive = false;
+  }
+
+  /// Renders the active [drawingContent], compositing progressively baked
+  /// offscreen prefix dabs `[0.._activeBakedUpToSample)` as 1 GPU quad so
+  /// long non-stop strokes maintain O(1) GPU raster cost on mobile GPUs.
+  void drawActiveContentCached(
+    Canvas canvas,
+    Size size,
+    PaintContent active,
+  ) {
+    if (!active.supportsActiveRangeBaking ||
+        active.paint.blendMode != BlendMode.srcOver ||
+        size.isEmpty) {
+      active.draw(canvas, size, false);
+      return;
+    }
+
+    final int curColor = active.paint.color.toARGB32();
+    final double curWidth = active.paint.strokeWidth;
+    final bool validBase =
+        _activeBakedImage != null &&
+        _activeBakedContentRef == active &&
+        _activeBakedSize == size &&
+        _activeBakedWidth == curWidth &&
+        _activeBakedColor == curColor &&
+        _activeBakedUpToSample > 0 &&
+        _activeBakedUpToSample <= active.committedSampleCount;
+
+    if (!validBase &&
+        _activeBakedImage != null &&
+        (_activeBakedContentRef != active ||
+            _activeBakedSize != size ||
+            _activeBakedWidth != curWidth ||
+            _activeBakedColor != curColor)) {
+      _clearActiveStrokeBacking();
+    }
+
+    if (validBase) {
+      final ui.Image img = _activeBakedImage!;
+      canvas.drawImageRect(
+        img,
+        Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+        Offset.zero & size,
+        _cachedLayerImagePaint,
+      );
+      active.drawLiveFromSample(canvas, size, _activeBakedUpToSample);
+    } else {
+      active.draw(canvas, size, false);
+    }
+
+    final int frozen = active.committedSampleCount;
+    final int nextTarget = (frozen ~/ 48) * 48;
+    final int startSample = validBase ? _activeBakedUpToSample : 0;
+    if (nextTarget > startSample && !_isBakingActive) {
+      _scheduleActiveStrokeBake(active, size, startSample, nextTarget);
+    }
+  }
+
+  void _scheduleActiveStrokeBake(
+    PaintContent active,
+    Size size,
+    int startSample,
+    int targetSample,
+  ) {
+    if (!_mounted || size.isEmpty || targetSample <= startSample) return;
+    _isBakingActive = true;
+
+    final double dpr = ui.PlatformDispatcher.instance.views.isNotEmpty
+        ? ui.PlatformDispatcher.instance.views.first.devicePixelRatio
+        : 1.5;
+    final double maxDim = max(size.width, size.height);
+    double bakeRatio = dpr.clamp(1.0, 2.0);
+    if (maxDim * bakeRatio > 1280.0) {
+      bakeRatio = (1280.0 / maxDim).clamp(0.5, 2.0);
+    }
+    final int targetW = (size.width * bakeRatio).round().clamp(1, 1280);
+    final int targetH = (size.height * bakeRatio).round().clamp(1, 1280);
+    final int epoch = _activeBakeEpoch;
+    final int curColor = active.paint.color.toARGB32();
+    final double curWidth = active.paint.strokeWidth;
+
+    final ui.PictureRecorder rec = ui.PictureRecorder();
+    final Canvas recCanvas = Canvas(
+      rec,
+      Rect.fromLTWH(0, 0, targetW.toDouble(), targetH.toDouble()),
+    );
+    recCanvas.scale(targetW / size.width, targetH / size.height);
+
+    if (startSample > 0 &&
+        _activeBakedImage != null &&
+        _activeBakedContentRef == active &&
+        _activeBakedSize == size) {
+      final ui.Image prev = _activeBakedImage!;
+      recCanvas.drawImageRect(
+        prev,
+        Rect.fromLTWH(0, 0, prev.width.toDouble(), prev.height.toDouble()),
+        Offset.zero & size,
+        _cachedLayerImagePaint,
+      );
+    }
+    active.drawCommittedRange(recCanvas, size, startSample, targetSample);
+
+    final ui.Picture pic = rec.endRecording();
+    pic.toImage(targetW, targetH).then((ui.Image img) {
+      try {
+        pic.dispose();
+      } catch (_) {}
+
+      final bool stillValid =
+          _mounted &&
+          epoch == _activeBakeEpoch &&
+          drawingContent == active &&
+          active.paint.strokeWidth == curWidth &&
+          active.paint.color.toARGB32() == curColor &&
+          targetSample <= active.committedSampleCount;
+
+      if (!stillValid) {
+        try {
+          img.dispose();
+        } catch (_) {}
+        _isBakingActive = false;
+        return;
+      }
+
+      final ui.Image? oldImg = _activeBakedImage;
+      _activeBakedImage = img;
+      _activeBakedUpToSample = targetSample;
+      _activeBakedContentRef = active;
+      _activeBakedSize = size;
+      _activeBakedWidth = curWidth;
+      _activeBakedColor = curColor;
+      _isBakingActive = false;
+
+      if (oldImg != null && oldImg != img) {
+        try {
+          oldImg.dispose();
+        } catch (_) {}
+      }
+      if (drawingContent == active) {
+        _refresh();
+      }
+
+      // Immediately schedule next chunk if user kept scribbling fast during bake.
+      final int frozen = active.committedSampleCount;
+      final int nextTarget = (frozen ~/ 48) * 48;
+      if (nextTarget > targetSample) {
+        _scheduleActiveStrokeBake(active, size, targetSample, nextTarget);
+      }
+    }).catchError((_) {
+      try {
+        pic.dispose();
+      } catch (_) {}
+      _isBakingActive = false;
+    });
+  }
+
+  /// True when [layer] has a valid baked image matching [size] covering `[0..upTo)`
+  /// and no unbaked Eraser/clear items in `[upTo..currentIndex)`.
+  bool canDrawLayerWithoutSaveLayer(LayerData layer, Size size) {
+    final int count = layer.currentIndex.clamp(0, layer.history.length);
+    if (count == 0) return true;
+    final _LayerRasterEntry? entry = _layerRasterCache[layer.id];
+    final int startIdx =
+        (entry != null &&
+                entry.image != null &&
+                entry.size == size &&
+                entry.upToIndex > 0 &&
+                entry.upToIndex <= count &&
+                layer.canAppendRangeCleanly(entry.upToIndex, count))
+            ? entry.upToIndex
+            : 0;
+    for (int i = startIdx; i < count; i++) {
+      final item = layer.history[i];
+      if (item is Eraser || item is EraserHole) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static final Paint _cachedLayerImagePaint = Paint()
+    ..isAntiAlias = true
+    ..filterQuality = FilterQuality.low;
+
   /// 缓存的图片数据，用于优化橡皮擦性能
   ///
   /// Cached image data for optimizing eraser performance
@@ -484,8 +701,9 @@ class DrawingController extends ChangeNotifier {
   int? cachedRgbaWidth;
   int? cachedRgbaHeight;
 
-  /// 清除栅格与图层快照缓存
-  void _invalidateRasterCache() {
+  /// Disposes only the top-level composite picture & smudge cache while preserving
+  /// valid per-layer raster images for O(1) incremental appends.
+  void _invalidateCompositePictureOnly() {
     try {
       cachedPicture?.dispose();
     } catch (_) {}
@@ -499,6 +717,278 @@ class DrawingController extends ChangeNotifier {
     cachedRgbaHeight = null;
     lastRenderedSize = null;
     lastTotalIndex = -1;
+
+    final Map<String, LayerData> byId = <String, LayerData>{
+      for (final l in layers) l.id: l,
+    };
+    final List<String> toRemove = <String>[];
+    _layerRasterCache.forEach((String id, _LayerRasterEntry entry) {
+      final LayerData? layer = byId[id];
+      if (layer == null ||
+          entry.upToIndex > layer.currentIndex ||
+          (entry.upToIndex > 0 &&
+              !layer.canAppendRangeCleanly(entry.upToIndex, layer.currentIndex))) {
+        try {
+          entry.image?.dispose();
+        } catch (_) {}
+        entry.image = null;
+        entry.upToIndex = 0;
+        toRemove.add(id);
+      }
+    });
+    for (final String id in toRemove) {
+      _layerRasterCache.remove(id);
+    }
+  }
+
+  /// 清除栅格与图层快照缓存
+  void _invalidateRasterCache() {
+    _rasterBakeEpoch++;
+    _clearActiveStrokeBacking();
+    try {
+      cachedPicture?.dispose();
+    } catch (_) {}
+    cachedPicture = null;
+    try {
+      cachedImage?.dispose();
+    } catch (_) {}
+    cachedImage = null;
+    cachedRgbaData = null;
+    cachedRgbaWidth = null;
+    cachedRgbaHeight = null;
+    lastRenderedSize = null;
+    lastTotalIndex = -1;
+
+    for (final _LayerRasterEntry entry in _layerRasterCache.values) {
+      try {
+        entry.image?.dispose();
+      } catch (_) {}
+      entry.image = null;
+      entry.upToIndex = 0;
+      entry.baking = false;
+    }
+    _layerRasterCache.clear();
+  }
+
+  bool _layerHasPendingImages(LayerData layer) {
+    final int count = layer.currentIndex.clamp(0, layer.history.length);
+    for (int i = 0; i < count; i++) {
+      if (_isContentPendingImage(layer.history[i])) return true;
+    }
+    return false;
+  }
+
+  bool _isContentPendingImage(PaintContent content) {
+    if (content is ImageContent) {
+      return content.image == null &&
+          content.imageUrl != null &&
+          content.imageUrl!.isNotEmpty;
+    } else if (content is FillContent) {
+      return content.image == null &&
+          content.cachedBase64Image != null &&
+          content.cachedBase64Image!.isNotEmpty;
+    } else if (content is GroupContent) {
+      return content.children.any(_isContentPendingImage);
+    } else if (content is ClippedContent) {
+      return _isContentPendingImage(content.child);
+    } else if (content is OffsetContent) {
+      return _isContentPendingImage(content.child);
+    } else if (content is MirrorContent) {
+      return _isContentPendingImage(content.child);
+    } else if (content is QuadMirrorContent) {
+      return _isContentPendingImage(content.child);
+    } else if (content is RadialContent) {
+      return _isContentPendingImage(content.child);
+    }
+    return false;
+  }
+
+  /// Renders [layer] using its cached incremental `ui.Image` when available,
+  /// only drawing trailing unbaked strokes [upToIndex..currentIndex).
+  void drawLayerCached(
+    Canvas canvas,
+    Size size,
+    LayerData layer,
+    bool deeper,
+  ) {
+    final int count = layer.currentIndex.clamp(0, layer.history.length);
+    if (count == 0) return;
+
+    if (size.isEmpty || _layerHasPendingImages(layer)) {
+      layer.drawHistory(canvas, size, deeper);
+      return;
+    }
+
+    final _LayerRasterEntry? entry = _layerRasterCache[layer.id];
+    final bool canUseCachedBase =
+        entry != null &&
+        entry.image != null &&
+        entry.size == size &&
+        entry.upToIndex > 0 &&
+        entry.upToIndex <= count &&
+        layer.canAppendRangeCleanly(entry.upToIndex, count);
+
+    if (canUseCachedBase) {
+      final ui.Image img = entry.image!;
+      canvas.drawImageRect(
+        img,
+        Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+        Offset.zero & size,
+        _cachedLayerImagePaint,
+      );
+      if (count > entry.upToIndex) {
+        layer.drawRawRange(canvas, size, deeper, entry.upToIndex, count);
+        if (!entry.baking) {
+          _scheduleLayerBake(layer, size);
+        }
+      }
+      return;
+    }
+
+    layer.drawHistory(canvas, size, deeper);
+    if (entry == null || !entry.baking) {
+      _scheduleLayerBake(layer, size);
+    }
+  }
+
+  void _scheduleLayerBake(LayerData layer, Size size) {
+    if (!_mounted || size.isEmpty) return;
+    final int count = layer.currentIndex.clamp(0, layer.history.length);
+    if (count == 0) return;
+
+    final _LayerRasterEntry entry =
+        _layerRasterCache.putIfAbsent(layer.id, _LayerRasterEntry.new);
+    if (entry.baking) return;
+
+    final double dpr = ui.PlatformDispatcher.instance.views.isNotEmpty
+        ? ui.PlatformDispatcher.instance.views.first.devicePixelRatio
+        : 1.5;
+    final double maxDim = max(size.width, size.height);
+    double bakeRatio = dpr.clamp(1.0, 2.0);
+    if (maxDim * bakeRatio > 1280.0) {
+      bakeRatio = (1280.0 / maxDim).clamp(0.5, 2.0);
+    }
+    final int targetW = (size.width * bakeRatio).round().clamp(1, 1280);
+    final int targetH = (size.height * bakeRatio).round().clamp(1, 1280);
+
+    final int epoch = _rasterBakeEpoch;
+    final int targetCount = count;
+    final bool incremental =
+        entry.image != null &&
+        entry.size == size &&
+        entry.upToIndex > 0 &&
+        entry.upToIndex < targetCount &&
+        layer.canAppendRangeCleanly(entry.upToIndex, targetCount);
+    final int bakedStart = incremental ? entry.upToIndex : 0;
+
+    bool hasEraser = false;
+    for (int i = bakedStart; i < targetCount; i++) {
+      final item = layer.history[i];
+      if (item is Eraser || item is EraserHole) {
+        hasEraser = true;
+        break;
+      }
+    }
+
+    entry.baking = true;
+
+    final ui.PictureRecorder rec = ui.PictureRecorder();
+    final Canvas recCanvas = Canvas(
+      rec,
+      Rect.fromLTWH(0, 0, targetW.toDouble(), targetH.toDouble()),
+    );
+    recCanvas.scale(targetW / size.width, targetH / size.height);
+
+    if (hasEraser) {
+      recCanvas.saveLayer(Offset.zero & size, Paint());
+    }
+
+    if (incremental) {
+      final ui.Image baseImg = entry.image!;
+      recCanvas.drawImageRect(
+        baseImg,
+        Rect.fromLTWH(
+          0,
+          0,
+          baseImg.width.toDouble(),
+          baseImg.height.toDouble(),
+        ),
+        Offset.zero & size,
+        _cachedLayerImagePaint,
+      );
+      layer.drawRawRange(recCanvas, size, true, bakedStart, targetCount);
+    } else {
+      layer.drawHistory(recCanvas, size, true);
+    }
+
+    if (hasEraser) {
+      recCanvas.restore();
+    }
+
+    final ui.Picture pic = rec.endRecording();
+    pic.toImage(targetW, targetH).then((ui.Image img) {
+      try {
+        pic.dispose();
+      } catch (_) {}
+
+      final _LayerRasterEntry? curEntry = _layerRasterCache[layer.id];
+      final bool stillValid =
+          _mounted &&
+          epoch == _rasterBakeEpoch &&
+          layers.contains(layer) &&
+          targetCount <= layer.currentIndex &&
+          curEntry != null &&
+          (!incremental ||
+              (curEntry.upToIndex == bakedStart && curEntry.size == size));
+
+      if (!stillValid) {
+        try {
+          img.dispose();
+        } catch (_) {}
+        if (curEntry != null) {
+          curEntry.baking = false;
+        }
+        return;
+      }
+
+      final ui.Image? oldImg = curEntry.image;
+      curEntry.image = img;
+      curEntry.upToIndex = targetCount;
+      curEntry.size = size;
+      curEntry.baking = false;
+
+      if (oldImg != null && oldImg != img) {
+        try {
+          oldImg.dispose();
+        } catch (_) {}
+      }
+
+      // Release per-stroke Picture chunks now safely baked into the layer texture.
+      for (int i = bakedStart; i < targetCount && i < layer.history.length; i++) {
+        layer.history[i].clearRenderCache();
+      }
+
+      // Replace any heavy unbaked composite Picture with the newly baked 1-quad texture!
+      try {
+        cachedPicture?.dispose();
+      } catch (_) {}
+      cachedPicture = null;
+      lastRenderedSize = null;
+      lastTotalIndex = -1;
+      _refreshDeep();
+
+      if (layer.currentIndex > targetCount) {
+        _scheduleLayerBake(layer, size);
+      }
+    }).catchError((_) {
+      try {
+        pic.dispose();
+      } catch (_) {}
+      final _LayerRasterEntry? curEntry = _layerRasterCache[layer.id];
+      if (curEntry != null) {
+        curEntry.baking = false;
+      }
+    });
   }
 
   /// Callback to obtain the canvas background image/template if present
@@ -1074,8 +1564,9 @@ class DrawingController extends ChangeNotifier {
     }
   }
 
-  /// Safely releases native GPU image textures associated with a PaintContent
+  /// Safely releases native GPU image textures and render caches associated with a PaintContent
   static void disposeContentResources(PaintContent content) {
+    content.clearRenderCache();
     if (content is FillContent) {
       final img = content.image;
       content.image = null;
@@ -1107,6 +1598,12 @@ class DrawingController extends ChangeNotifier {
     } else if (content is OffsetContent) {
       disposeContentResources(content.child);
     } else if (content is ClippedContent) {
+      disposeContentResources(content.child);
+    } else if (content is MirrorContent) {
+      disposeContentResources(content.child);
+    } else if (content is QuadMirrorContent) {
+      disposeContentResources(content.child);
+    } else if (content is RadialContent) {
       disposeContentResources(content.child);
     } else if (content is GroupContent) {
       for (final child in content.children) {
@@ -1375,6 +1872,7 @@ class DrawingController extends ChangeNotifier {
       return;
     }
 
+    _clearActiveStrokeBacking();
     _startPointRaw = startPointRaw;
     _lastPointRaw = startPointRaw;
     final Offset startPoint = rulerConfig.value.projectPoint(
@@ -1945,10 +2443,23 @@ class DrawingController extends ChangeNotifier {
   void Function(Canvas, Size)? _pendingAdditionalDraw;
   bool _pendingIncludeBackground = false;
 
+  void _scheduleSnapshotUpdate() {
+    if (!_mounted) return;
+    _snapshotDebounceTimer?.cancel();
+    _snapshotDebounceTimer = Timer(const Duration(milliseconds: 90), () {
+      _snapshotDebounceTimer = null;
+      if (_mounted) {
+        updateSnapshot();
+      }
+    });
+  }
+
   void updateSnapshot({
     void Function(Canvas canvas, Size size)? additionalDraw,
     bool includeBackground = false,
   }) {
+    _snapshotDebounceTimer?.cancel();
+    _snapshotDebounceTimer = null;
     final drawOverlay = additionalDraw ?? activeOverlayPainter;
 
     if (_isUpdatingSnapshot) {
@@ -1996,7 +2507,7 @@ class DrawingController extends ChangeNotifier {
           ..color = Colors.white.withValues(alpha: layer.opacity),
       );
 
-      layer.drawHistory(canvas, size, false);
+      drawLayerCached(canvas, size, layer, false);
 
       // If this is the active layer, apply any active drawing or eraser
       if (layer == activeLayer) {
@@ -2072,6 +2583,7 @@ class DrawingController extends ChangeNotifier {
   ///
   /// Cancel drawing (do not save current drawing content)
   void cancelDraw() {
+    _clearActiveStrokeBacking();
     _startPoint = null;
     _startPointRaw = null;
     _lastPointRaw = null;
@@ -2143,6 +2655,7 @@ class DrawingController extends ChangeNotifier {
 
     if (!_isDrawingValidContent) {
       // 清理绘制内容
+      _clearActiveStrokeBacking();
       _startPoint = null;
       _lastPointRaw = null;
       drawingContent = null;
@@ -2162,7 +2675,8 @@ class DrawingController extends ChangeNotifier {
       final LayerData currentLayer = activeLayer.value!;
       final int hisLen = currentLayer.history.length;
 
-      if (hisLen > currentLayer.currentIndex) {
+      final bool hadFutureTrim = hisLen > currentLayer.currentIndex;
+      if (hadFutureTrim) {
         _discardHistoryRange(currentLayer, currentLayer.currentIndex, hisLen);
         if (currentLayer.sessionStartIndex > currentLayer.currentIndex) {
           currentLayer.sessionStartIndex = currentLayer.currentIndex;
@@ -2173,6 +2687,12 @@ class DrawingController extends ChangeNotifier {
         currentLayer.history.add(eraserContent!);
         currentLayer.currentIndex = currentLayer.history.length;
         eraserContent = null;
+        _trimHistoryIfNeeded(currentLayer);
+        if (hadFutureTrim) {
+          _invalidateRasterCache();
+        } else {
+          _invalidateCompositePictureOnly();
+        }
       }
 
       if (drawingContent != null) {
@@ -2207,31 +2727,30 @@ class DrawingController extends ChangeNotifier {
           intercepted = interceptDraw!(drawingContent!);
         }
 
-        final bool isSmudge = drawingContent is SmudgeContent;
-        final bool isBlur = drawingContent is BlurContent;
+        final PaintContent? committedItem = drawingContent;
+        final bool isSmudge = committedItem is SmudgeContent;
+        final bool isBlur = committedItem is BlurContent;
         if (!intercepted) {
-          if (drawingContent is SmudgeContent) {
-            final smudge = drawingContent as SmudgeContent;
-            smudge.finalizeStroke();
-            if (smudge.rgbaData != null &&
-                smudge.rgbaWidth != null &&
-                smudge.rgbaHeight != null) {
-              cachedRgbaData = Uint8List.fromList(smudge.rgbaData!);
-              cachedRgbaWidth = smudge.rgbaWidth;
-              cachedRgbaHeight = smudge.rgbaHeight;
+          if (committedItem is SmudgeContent) {
+            committedItem.finalizeStroke();
+            if (committedItem.rgbaData != null &&
+                committedItem.rgbaWidth != null &&
+                committedItem.rgbaHeight != null) {
+              cachedRgbaData = Uint8List.fromList(committedItem.rgbaData!);
+              cachedRgbaWidth = committedItem.rgbaWidth;
+              cachedRgbaHeight = committedItem.rgbaHeight;
             }
-          } else if (drawingContent is BlurContent) {
-            final blur = drawingContent as BlurContent;
-            blur.commitSnapshot();
-            if (blur.rgbaData != null &&
-                blur.rgbaWidth != null &&
-                blur.rgbaHeight != null) {
-              cachedRgbaData = Uint8List.fromList(blur.rgbaData!);
-              cachedRgbaWidth = blur.rgbaWidth;
-              cachedRgbaHeight = blur.rgbaHeight;
+          } else if (committedItem is BlurContent) {
+            committedItem.commitSnapshot();
+            if (committedItem.rgbaData != null &&
+                committedItem.rgbaWidth != null &&
+                committedItem.rgbaHeight != null) {
+              cachedRgbaData = Uint8List.fromList(committedItem.rgbaData!);
+              cachedRgbaWidth = committedItem.rgbaWidth;
+              cachedRgbaHeight = committedItem.rgbaHeight;
             }
           }
-          currentLayer.history.add(drawingContent!);
+          currentLayer.history.add(committedItem!);
           currentLayer.currentIndex = currentLayer.history.length;
 
           // Release heavy working pixel buffers from all earlier raster states in layer history
@@ -2247,26 +2766,33 @@ class DrawingController extends ChangeNotifier {
           }
         }
         drawingContent = null;
+        _clearActiveStrokeBacking();
 
         // 修剪历史记录，防止内存无限增长
         _trimHistoryIfNeeded(currentLayer);
-        if (!isSmudge && !isBlur) {
+        if (isSmudge || isBlur) {
           _invalidateRasterCache();
-        } else {
-          try {
-            cachedImage?.dispose();
-          } catch (_) {}
-          cachedImage = null;
+        } else if (!intercepted) {
+          if (hadFutureTrim ||
+              committedItem is FillContent ||
+              committedItem is DeleteContent ||
+              committedItem is StrokeRecolorContent ||
+              committedItem is ShapeFillContent) {
+            _invalidateRasterCache();
+          } else {
+            _invalidateCompositePictureOnly();
+          }
         }
       }
     } else {
       eraserContent = null;
       drawingContent = null;
+      _clearActiveStrokeBacking();
     }
 
     _refresh();
     _refreshDeep();
-    updateSnapshot();
+    _scheduleSnapshotUpdate();
     notifyListeners();
   }
 
@@ -2589,6 +3115,11 @@ class DrawingController extends ChangeNotifier {
       return;
     }
 
+    _snapshotDebounceTimer?.cancel();
+    _snapshotDebounceTimer = null;
+    _rasterBakeEpoch++;
+    _clearActiveStrokeBacking();
+
     GlobalToolState.instance.toolConfig.removeListener(_onGlobalToolChange);
 
     final oldSnapshot = realTimeSnapshot.value;
@@ -2599,6 +3130,13 @@ class DrawingController extends ChangeNotifier {
     cachedImage = null;
     cachedPicture?.dispose();
     cachedPicture = null;
+    for (final _LayerRasterEntry entry in _layerRasterCache.values) {
+      try {
+        entry.image?.dispose();
+      } catch (_) {}
+      entry.image = null;
+    }
+    _layerRasterCache.clear();
 
     for (final layer in layers) {
       for (final content in layer.history) {
@@ -2667,4 +3205,11 @@ class DrawingControllerProvider extends InheritedWidget {
 
   @override
   bool updateShouldNotify(DrawingControllerProvider oldWidget) => false;
+}
+
+class _LayerRasterEntry {
+  ui.Image? image;
+  int upToIndex = 0;
+  Size? size;
+  bool baking = false;
 }

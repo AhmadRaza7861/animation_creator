@@ -5,6 +5,7 @@ import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/helper/ex_value_builder.dart';
+import '../../../../package_code/src/paint_contents/brush_cache.dart';
 import '../../../../package_code/src/paint_contents/brush_stamps.dart';
 import '../controllers/editor_controller.dart';
 
@@ -414,6 +415,22 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
   // Scratchpad interactive state
   final List<PaintContent> _scratchpadStrokes = <PaintContent>[];
   PaintContent? _currentDrawingStroke;
+  final ValueNotifier<int> _scratchpadTick = ValueNotifier<int>(0);
+  late final AsyncScratchpadBacking _scratchpadBacking = AsyncScratchpadBacking(
+    onImageBaked: () {
+      if (mounted) _scratchpadTick.value++;
+    },
+  );
+
+  void _clearScratchpadCacheAndStrokes() {
+    _scratchpadBacking.invalidate();
+    for (final s in _scratchpadStrokes) {
+      s.clearRenderCache();
+    }
+    _currentDrawingStroke?.clearRenderCache();
+    _scratchpadStrokes.clear();
+    _currentDrawingStroke = null;
+  }
 
   @override
   void initState() {
@@ -530,6 +547,9 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       _lastCategoryScrollOffset = _tipCategoryScrollController.offset;
     }
     _lastCategory = _category;
+    _clearScratchpadCacheAndStrokes();
+    _scratchpadBacking.dispose();
+    _scratchpadTick.dispose();
     _tipGridScrollController.dispose();
     _tipCategoryScrollController.dispose();
     super.dispose();
@@ -554,8 +574,8 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       _hardness = item.hardness;
       _roundness = item.roundness;
       _size = item.size.toDouble();
-      _scratchpadStrokes.clear();
-      _currentDrawingStroke = null;
+      _clearScratchpadCacheAndStrokes();
+      _scratchpadTick.value++;
     });
     if (_tipGridScrollController.hasClients) {
       _lastGridScrollOffset = _tipGridScrollController.offset;
@@ -632,7 +652,9 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
                   child: Column(
                     children: [
                       // Tip Shapes Grid
-                      _buildTipShapesGrid(config.color, accent),
+                      RepaintBoundary(
+                        child: _buildTipShapesGrid(config.color, accent),
+                      ),
 
                       // Parameter Sliders Card
                       _buildParameterControls(accent),
@@ -730,7 +752,8 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
                 _spacing = 0.25;
                 _flipX = false;
                 _flipY = false;
-                _scratchpadStrokes.clear();
+                _clearScratchpadCacheAndStrokes();
+                _scratchpadTick.value++;
               });
             },
           ),
@@ -811,8 +834,8 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
                 GestureDetector(
                   onTap: () {
                     setState(() {
-                      _scratchpadStrokes.clear();
-                      _currentDrawingStroke = null;
+                      _clearScratchpadCacheAndStrokes();
+                      _scratchpadTick.value++;
                     });
                   },
                   child: Container(
@@ -879,41 +902,47 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
                     ..isAntiAlias = true);
 
                   brush.startDraw(details.localPosition);
-                  setState(() {
-                    _currentDrawingStroke = brush;
-                  });
+                  _currentDrawingStroke = brush;
+                  _scratchpadTick.value++;
                 },
                 onPanUpdate: (details) {
                   if (_currentDrawingStroke != null) {
                     _currentDrawingStroke!.drawing(details.localPosition);
-                    setState(() {});
+                    _scratchpadTick.value++;
                   }
                 },
                 onPanEnd: (_) {
                   if (_currentDrawingStroke != null) {
-                    setState(() {
-                      _scratchpadStrokes.add(_currentDrawingStroke!);
-                      _currentDrawingStroke = null;
-                    });
+                    final bool wasEmpty = _scratchpadStrokes.isEmpty;
+                    _scratchpadStrokes.add(_currentDrawingStroke!);
+                    _currentDrawingStroke = null;
+                    _scratchpadTick.value++;
+                    if (wasEmpty) {
+                      setState(() {});
+                    }
                   }
                 },
-                child: CustomPaint(
-                  painter: _CustomTipScratchpadPainter(
-                    strokes: _scratchpadStrokes,
-                    currentStroke: _currentDrawingStroke,
-                    stampKey: _stampKey,
-                    kind: _kind,
-                    angle: _angle,
-                    roundness: _roundness,
-                    hardness: _hardness,
-                    spacing: _spacing,
-                    flipX: _flipX,
-                    flipY: _flipY,
-                    color: config.color,
-                    strokeWidth: _size,
-                    doodleHint: context.tr('doodleTipTestHint'),
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: _CustomTipScratchpadPainter(
+                      repaint: _scratchpadTick,
+                      strokes: _scratchpadStrokes,
+                      getCurrentStroke: () => _currentDrawingStroke,
+                      backing: _scratchpadBacking,
+                      stampKey: _stampKey,
+                      kind: _kind,
+                      angle: _angle,
+                      roundness: _roundness,
+                      hardness: _hardness,
+                      spacing: _spacing,
+                      flipX: _flipX,
+                      flipY: _flipY,
+                      color: config.color,
+                      strokeWidth: _size,
+                      doodleHint: context.tr('doodleTipTestHint'),
+                    ),
+                    size: Size.infinite,
                   ),
-                  size: Size.infinite,
                 ),
               ),
             ),
@@ -989,6 +1018,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
         borderRadius: BorderRadius.circular(18),
         child: GridView.builder(
           controller: _tipGridScrollController,
+          cacheExtent: 180.0,
           padding: const EdgeInsets.all(10),
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 68,
@@ -1306,44 +1336,54 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
 
 /// Custom painter for the single tip stamp/dab in a thumbnail
 class _TipDabPainter extends CustomPainter {
-  _TipDabPainter({required this.item, required this.color});
+  _TipDabPainter({required this.item, required this.color})
+      : super(repaint: _tileCache.repaintNotifier);
+
+  static final AsyncTileBitmapCache _tileCache = AsyncTileBitmapCache(maxEntries: 64);
 
   final TipItem item;
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Offset center = size.center(Offset.zero);
-    final double radius = size.shortestSide * 0.42;
+    final String key =
+        '${item.stampKey ?? item.kind.index}_${item.hardness}_${item.roundness}_${size.width.toInt()}x${size.height.toInt()}_${color.toARGB32()}';
+    _tileCache.draw(canvas, size, key, (Canvas recCanvas, Size canvasSize) {
+      final Offset center = canvasSize.center(Offset.zero);
+      final double maxSpan = canvasSize.shortestSide;
+      final double radius = item.hardness < 0.99
+          ? (maxSpan * 0.46) / (1.0 + (1.0 - item.hardness) * 1.4)
+          : maxSpan * 0.42;
 
-    if (item.isStamp && item.stampKey != null) {
-      BrushStampLibrary.instance.paintDirect(
-        canvas,
-        item.stampKey!,
+      if (item.isStamp && item.stampKey != null) {
+        BrushStampLibrary.instance.paintDirect(
+          recCanvas,
+          item.stampKey!,
+          center,
+          radius,
+          color,
+          hardness: item.hardness,
+        );
+        return;
+      }
+
+      final double sigma = radius * (1 - item.hardness) * 0.9;
+      final Paint paint = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true
+        ..maskFilter = sigma > 0 ? MaskFilter.blur(BlurStyle.normal, sigma) : null;
+
+      TipBrush.paintDab(
+        recCanvas,
         center,
         radius,
-        color,
-        hardness: item.hardness,
+        kind: item.kind,
+        paint: paint,
+        roundness: item.roundness,
+        seed: item.size + item.kind.index,
       );
-      return;
-    }
-
-    final double sigma = radius * (1 - item.hardness) * 0.9;
-    final Paint paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true
-      ..maskFilter = sigma > 0 ? MaskFilter.blur(BlurStyle.normal, sigma) : null;
-
-    TipBrush.paintDab(
-      canvas,
-      center,
-      radius,
-      kind: item.kind,
-      paint: paint,
-      roundness: item.roundness,
-      seed: item.size + item.kind.index,
-    );
+    });
   }
 
   @override
@@ -1354,8 +1394,10 @@ class _TipDabPainter extends CustomPainter {
 /// Custom painter for the interactive scratchpad banner in Tip Studio
 class _CustomTipScratchpadPainter extends CustomPainter {
   _CustomTipScratchpadPainter({
+    super.repaint,
     required this.strokes,
-    required this.currentStroke,
+    required this.getCurrentStroke,
+    required this.backing,
     required this.stampKey,
     required this.kind,
     required this.angle,
@@ -1370,7 +1412,8 @@ class _CustomTipScratchpadPainter extends CustomPainter {
   });
 
   final List<PaintContent> strokes;
-  final PaintContent? currentStroke;
+  final PaintContent? Function() getCurrentStroke;
+  final AsyncScratchpadBacking backing;
   final String? stampKey;
   final BrushTipKind kind;
   final double angle;
@@ -1385,6 +1428,7 @@ class _CustomTipScratchpadPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final PaintContent? currentStroke = getCurrentStroke();
     if (strokes.isEmpty && currentStroke == null) {
       final Paint strokePaint = Paint()
         ..color = color
@@ -1424,6 +1468,7 @@ class _CustomTipScratchpadPainter extends CustomPainter {
         brush.drawing(Offset(x, y));
       }
       brush.draw(canvas, size, false);
+      brush.clearRenderCache();
 
       final TextPainter tp = TextPainter(
         text: TextSpan(
@@ -1440,12 +1485,14 @@ class _CustomTipScratchpadPainter extends CustomPainter {
       return;
     }
 
-    for (final s in strokes) {
-      s.draw(canvas, size, false);
+    if (strokes.isNotEmpty) {
+      backing.drawCommitted(canvas, size, strokes.length, (Canvas c, Size s, int i) {
+        strokes[i].draw(c, s, false);
+      });
     }
 
     if (currentStroke != null) {
-      currentStroke!.draw(canvas, size, false);
+      currentStroke.draw(canvas, size, false);
     }
   }
 
@@ -1455,5 +1502,16 @@ class _CustomTipScratchpadPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CustomTipScratchpadPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _CustomTipScratchpadPainter oldDelegate) =>
+      oldDelegate.stampKey != stampKey ||
+      oldDelegate.kind != kind ||
+      oldDelegate.angle != angle ||
+      oldDelegate.roundness != roundness ||
+      oldDelegate.hardness != hardness ||
+      oldDelegate.spacing != spacing ||
+      oldDelegate.flipX != flipX ||
+      oldDelegate.flipY != flipY ||
+      oldDelegate.color != color ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.strokes.length != strokes.length;
 }

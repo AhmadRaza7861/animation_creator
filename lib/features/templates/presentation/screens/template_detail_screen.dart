@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../projects/data/project_repository.dart';
+import '../../../projects/data/project_thumbnail_helper.dart';
 import '../../data/tutorial_project_builder.dart';
 import '../../domain/template_model.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -173,10 +174,12 @@ class _TemplateDetailScreenState extends State<TemplateDetailScreen> {
 
       stateToSave['enableStickers'] = false;
 
-      // 2. Save project in local repository
+      // 2. Generate preview thumbnail & save project in local repository
+      final initialThumb = await ProjectThumbnailHelper.renderFromState(stateToSave);
       final newProjectId = await widget.repository.saveProject(
         title: widget.template.name,
         state: stateToSave,
+        thumbnailBytes: initialThumb,
       );
 
       if (mounted) {

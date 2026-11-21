@@ -3655,19 +3655,36 @@ class TutorialLivePreview extends StatefulWidget {
 class _TutorialLivePreviewState extends State<TutorialLivePreview> {
   int _currentFrame = 0;
   Timer? _timer;
+  bool _tickerActive = true;
 
   @override
   void initState() {
     super.initState();
-    _startTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bool enabled = TickerMode.valuesOf(context).enabled;
+    if (_tickerActive != enabled || (_tickerActive && _timer == null)) {
+      _tickerActive = enabled;
+      if (_tickerActive) {
+        _startTimer();
+      } else {
+        _timer?.cancel();
+        _timer = null;
+      }
+    }
   }
 
   void _startTimer() {
     _timer?.cancel();
+    _timer = null;
+    if (!_tickerActive) return;
     final count = widget.canvases?.length ?? 0;
     if (count > 1) {
       _timer = Timer.periodic(widget.frameInterval, (_) {
-        if (mounted) {
+        if (mounted && _tickerActive) {
           setState(() {
             _currentFrame = (_currentFrame + 1) % count;
           });

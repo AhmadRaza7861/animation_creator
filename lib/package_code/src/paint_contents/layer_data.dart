@@ -95,6 +95,56 @@ class LayerData {
     return result;
   }
 
+  /// Returns true when [startIndex..count) can be composited cleanly on top of a
+  /// baked raster image covering [0..startIndex), without pass-order conflicts.
+  bool canAppendRangeCleanly(int startIndex, int count) {
+    if (startIndex <= 0 || startIndex > count || count > history.length) {
+      return false;
+    }
+
+    // Any special item in the trailing range falls back to full vector pass.
+    for (int j = startIndex; j < count; j++) {
+      final item = history[j];
+      if (item is FillContent ||
+          item is DeleteContent ||
+          item is StrokeRecolorContent ||
+          item is ShapeFillContent ||
+          item is SmudgeContent ||
+          item is BlurContent) {
+        return false;
+      }
+    }
+
+    // If the active tail segment before `startIndex` already contains an overlay
+    // FillContent (`!isUnderneath`), subsequent strokes belong underneath Pass 3
+    // of that segment, unless an Eraser already terminated that segment.
+    for (int j = startIndex - 1; j >= 0; j--) {
+      final item = history[j];
+      if (item is Eraser ||
+          item is EraserHole ||
+          item is SmudgeContent ||
+          item is BlurContent) {
+        break;
+      }
+      if (item is FillContent && !item.isUnderneath) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /// Draws only items in [startIndex, endIndex) chronologically (used when
+  /// compositing unbaked strokes/erasers on top of a cached layer bitmap).
+  void drawRawRange(Canvas canvas, Size size, bool deeper, int startIndex, int endIndex) {
+    final int safeStart = startIndex.clamp(0, history.length);
+    final int safeEnd = endIndex.clamp(safeStart, history.length);
+    if (safeStart >= safeEnd) return;
+    for (int j = safeStart; j < safeEnd; j++) {
+      history[j].draw(canvas, size, deeper);
+    }
+  }
+
   /// Draws the layer history onto the canvas.
   /// If a SmudgeContent or BlurContent is present, it is rendered first as the base raster state.
   /// Then, drawing is rendered chronologically in segments partitioned by destructive/erasing operations

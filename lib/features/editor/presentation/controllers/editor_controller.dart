@@ -12,6 +12,7 @@ import '../../../../package_code/src/paint_contents/layer_data.dart';
 import '../../../../package_code/src/paint_contents/paint_content_decoder.dart';
 import '../../../../package_code/src/ruler/ruler_config.dart';
 import '../../../projects/data/project_repository.dart';
+import '../../../projects/data/project_thumbnail_helper.dart';
 import '../../../projects/presentation/widgets/preview_pattern_painter.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/utils/app_path_provider.dart';
@@ -22,6 +23,7 @@ import '../widgets/sticker_widgets/shape_sticker_widget.dart';
 import '../widgets/sticker_widgets/straight_line_sticker_widget.dart';
 import '../widgets/sticker_widgets/freehand_line_sticker_widget.dart';
 import '../../services/global_clipboard.dart';
+import '../../services/auto_between_service.dart';
 import '../widgets/fast_scroll_counter_overlay.dart';
 import '../widgets/layer_panel.dart';
 
@@ -122,12 +124,16 @@ class EditorController extends ChangeNotifier {
   bool _isSaving = false;
   bool _hasPendingSave = false;
   bool _isDirty = false;
+  bool _needsThumbnailUpdate = false;
+  bool _hasThumbnailOnDisk = false;
 
   bool get isDirty => _isDirty;
+  bool get needsThumbnailUpdate => _needsThumbnailUpdate;
   bool get isSaving => _isSaving;
 
   void markDirty() {
     _isDirty = true;
+    _needsThumbnailUpdate = true;
     _scheduleAutoSave();
   }
 
@@ -1163,6 +1169,13 @@ class EditorController extends ChangeNotifier {
       }
 
       _isDirty = false;
+      final String? existingThumb = data.meta.thumbnailPath;
+      final bool hasThumbFile =
+          existingThumb != null &&
+          existingThumb.isNotEmpty &&
+          File(existingThumb).existsSync();
+      _hasThumbnailOnDisk = hasThumbFile;
+      _needsThumbnailUpdate = !hasThumbFile && _hasVisualThumbnailContent;
       _autoSaveTimer?.cancel();
       _loadingProgressNotifier.value = 1.0;
       _loadingStatusNotifier.value = 'Ready!';
@@ -1239,6 +1252,7 @@ class EditorController extends ChangeNotifier {
         (_hasPendingStampSave && _activeSticker != null);
     if (!force &&
         !_isDirty &&
+        !(immediate && _needsThumbnailUpdate) &&
         !willStamp &&
         !_hasPendingSave &&
         !_isSaving &&
@@ -1271,7 +1285,8 @@ class EditorController extends ChangeNotifier {
         _hasPendingStampSave = false;
         await _performSave(
           stampStickers: stamp,
-          generateThumbnail: isManualOrImmediate || _projectId == null,
+          generateThumbnail:
+              isManualOrImmediate || _projectId == null || !_hasThumbnailOnDisk,
         );
       } while (_hasPendingSave);
       return true;
@@ -1373,102 +1388,103 @@ class EditorController extends ChangeNotifier {
     _projectId ??= savedId;
 
     _isDirty = false;
+    if (thumbBytes != null && thumbBytes.isNotEmpty) {
+      _hasThumbnailOnDisk = true;
+    }
+    if (generateThumbnail &&
+        ((thumbBytes != null && thumbBytes.isNotEmpty) ||
+            !_hasVisualThumbnailContent)) {
+      _needsThumbnailUpdate = false;
+    }
+  }
+
+  bool _hasCanvasVisualLayers(int canvasIndex, {required bool includeGuide}) {
+    for (final layer in _canvases[canvasIndex].layers) {
+      final bool isGuide =
+          layer.isGuide || layer.name == 'Stencil Guide' || layer.name.contains('Guide');
+      if (!layer.isVisible || isGuide != includeGuide) {
+        continue;
+      }
+      for (final item in layer.getEffectiveHistory()) {
+        if (item is! EmptyContent) return true;
+      }
+    }
+    return false;
+  }
+
+  bool get _hasVisualThumbnailContent {
+    if (_activeSticker != null) return true;
+    if (_globalBackground.imagePath != null &&
+        _globalBackground.imagePath!.isNotEmpty) {
+      return true;
+    }
+    if (_globalBackground.pattern != null &&
+        _globalBackground.pattern != 'none') {
+      return true;
+    }
+    if (_globalBackground.color != Colors.white) return true;
+    if (_templateFrameAssets.isNotEmpty) return true;
+
+    final int limit = math.min(_canvases.length, 50);
+    for (int f = 0; f < limit; f++) {
+      if (_hasCanvasVisualLayers(f, includeGuide: false) ||
+          _hasCanvasVisualLayers(f, includeGuide: true)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  ({int index, bool includeGuide}) _findThumbnailTarget() {
+    if (_canvases.isEmpty) return (index: 0, includeGuide: false);
+    final int limit = math.min(_canvases.length, 50);
+    for (int f = 0; f < limit; f++) {
+      if (_hasCanvasVisualLayers(f, includeGuide: false)) {
+        return (index: f, includeGuide: false);
+      }
+      if (_activeSticker != null && _currentIndex == f) {
+        return (index: f, includeGuide: false);
+      }
+    }
+    for (int f = 0; f < limit; f++) {
+      if (_hasCanvasVisualLayers(f, includeGuide: true)) {
+        return (index: f, includeGuide: true);
+      }
+    }
+    return (index: 0, includeGuide: false);
   }
 
   Future<Uint8List?> _generateSolidThumbnailBytes() async {
-    if (_canvases.isEmpty) return null;
+    if (_canvases.isEmpty || !_hasVisualThumbnailContent) return null;
     try {
-      final controller = _canvases.first;
+      final target = _findThumbnailTarget();
+      final int thumbIdx = target.index;
+      final controller = _canvases[thumbIdx];
+      final Size? rawSize =
+          controller.drawConfig.value.size ?? drawingControllerSize;
       final Size canvasSize =
-          controller.drawConfig.value.size ?? const Size(1920, 1080);
-      if (canvasSize.width <= 0 || canvasSize.height <= 0) return null;
+          (rawSize != null && rawSize.width > 0 && rawSize.height > 0)
+              ? rawSize
+              : const Size(1920, 1080);
 
-      const double maxThumbDim = 512.0;
-      final double scale =
-          maxThumbDim /
-          (canvasSize.longestSide > 0 ? canvasSize.longestSide : 512.0);
-      final Size renderSize = Size(
-        (canvasSize.width * scale).roundToDouble().clamp(1.0, 2048.0),
-        (canvasSize.height * scale).roundToDouble().clamp(1.0, 2048.0),
-      );
-
-      final ui.PictureRecorder recorder = ui.PictureRecorder();
-      final Canvas canvas = Canvas(recorder, Offset.zero & renderSize);
-      canvas.scale(scale);
-
-      // 1. Solid background (Guaranteed non-transparent)
       final Color bgColor = PatternBackgroundHelper.getBaseColor(
         _globalBackground.pattern,
         _globalBackground.color,
       );
 
-      canvas.drawRect(Offset.zero & canvasSize, Paint()..color = bgColor);
-
-      // Background image if any
-      if (_globalBackground.image != null) {
-        paintImage(
-          canvas: canvas,
-          rect: Offset.zero & canvasSize,
-          image: _globalBackground.image!,
-          fit: BoxFit.cover,
-          opacity: _globalBackground.imageOpacity.clamp(0.0, 1.0),
-        );
-      }
-
-      // Background pattern if any
-      if (_globalBackground.pattern != null &&
-          _globalBackground.pattern != 'none') {
-        final painter = PreviewPatternPainter(_globalBackground.pattern!);
-        painter.paint(canvas, canvasSize);
-      }
-
-      // 2. Draw canvas layer history
-      canvas.saveLayer(Offset.zero & canvasSize, Paint());
-      for (int i = controller.layers.length - 1; i >= 0; i--) {
-        final layer = controller.layers[i];
-        if (!layer.isVisible || layer.isGuide || layer.name == 'Stencil Guide')
-          continue;
-
-        canvas.saveLayer(
-          Offset.zero & canvasSize,
-          Paint()
-            ..blendMode = layer.blendMode
-            ..color = Colors.white.withValues(
-              alpha: layer.opacity.clamp(0.0, 1.0),
-            ),
-        );
-
-        layer.drawHistory(canvas, canvasSize, false);
-
-        canvas.restore();
-      }
-
-      // Draw active sticker if currently active on canvas 0
-      if (_activeSticker != null && _currentIndex == 0) {
-        _drawActiveSticker(canvas, canvasSize, _activeSticker!);
-      }
-
-      canvas.restore();
-
-      final ui.Picture picture = recorder.endRecording();
-      ui.Image? img;
-      try {
-        img = await picture.toImage(
-          renderSize.width.toInt(),
-          renderSize.height.toInt(),
-        );
-        final ByteData? byteData = await img.toByteData(
-          format: ui.ImageByteFormat.png,
-        );
-        return byteData?.buffer.asUint8List();
-      } finally {
-        try {
-          picture.dispose();
-        } catch (_) {}
-        try {
-          img?.dispose();
-        } catch (_) {}
-      }
+      return await ProjectThumbnailHelper.renderSnapshot(
+        canvasSize: canvasSize,
+        backgroundColor: bgColor,
+        backgroundPattern: _globalBackground.pattern,
+        backgroundImage: _globalBackground.image,
+        backgroundImageOpacity: _globalBackground.imageOpacity,
+        layers: controller.layers,
+        includeGuideLayers: target.includeGuide,
+        overlayPainter: (_activeSticker != null && _currentIndex == thumbIdx)
+            ? (canvas, size) =>
+                _drawActiveSticker(canvas, size, _activeSticker!)
+            : null,
+      );
     } catch (e) {
       debugPrint('Error generating solid thumbnail bytes: $e');
       return null;
@@ -2154,6 +2170,7 @@ class EditorController extends ChangeNotifier {
   final Map<DrawingController, Completer<void>> _activeHydrations = {};
 
   Future<void> _ensureCanvasImagesLoaded(DrawingController canvas) async {
+    if (_isDisposed || !_canvasNeedsImageHydration(canvas)) return;
     final existing = _activeHydrations[canvas];
     if (existing != null) {
       await existing.future;
@@ -2165,11 +2182,15 @@ class EditorController extends ChangeNotifier {
 
     try {
       for (final layer in List<LayerData>.from(canvas.layers)) {
+        if (_isDisposed) return;
         for (final content in List<PaintContent>.from(layer.history)) {
+          if (_isDisposed) return;
           await _ensureContentImageLoaded(content);
         }
       }
-      canvas.forceRefreshLayers();
+      if (!_isDisposed && _canvases.contains(canvas)) {
+        canvas.forceRefreshLayers();
+      }
     } finally {
       _activeHydrations.remove(canvas);
       if (!completer.isCompleted) {
@@ -2636,6 +2657,261 @@ class EditorController extends ChangeNotifier {
     _currentIndex = index + 1;
     markDirty();
     notifyListeners();
+  }
+
+  /// Generates [betweenCount] smooth in-between frames between [startIndex] and
+  /// [endIndex] using [AutoBetweenPlan] without blocking the UI or pre-allocating
+  /// eager thumbnails for every generated frame.
+  ///
+  /// Returns the number of frames generated (0 if indices are invalid).
+  Future<int> generateAutoBetweenFrames({
+    required int startIndex,
+    required int endIndex,
+    required int betweenCount,
+    TweenEasing easing = TweenEasing.easeInOut,
+    bool replaceExistingBetween = false,
+    bool fadeUnmatched = true,
+  }) async {
+    if (_isDisposed || _canvases.length < 2) return 0;
+    if (startIndex < 0 ||
+        endIndex >= _canvases.length ||
+        startIndex >= endIndex ||
+        betweenCount < 1) {
+      return 0;
+    }
+
+    if (_activeSticker != null) {
+      stampActiveSticker();
+    }
+
+    final DrawingController startCanvas = _canvases[startIndex];
+    final DrawingController endCanvas = _canvases[endIndex];
+
+    // Hydrate source keyframes if they carry unloaded images
+    if (_canvasNeedsImageHydration(startCanvas)) {
+      await _ensureCanvasImagesLoaded(startCanvas);
+    }
+    if (_canvasNeedsImageHydration(endCanvas)) {
+      await _ensureCanvasImagesLoaded(endCanvas);
+    }
+    if (_isDisposed) return 0;
+
+    final AutoBetweenPlan plan = AutoBetweenPlan.fromCanvases(
+      startCanvas,
+      endCanvas,
+      fadeUnmatched: fadeUnmatched,
+    );
+
+    final Size? targetSize =
+        startCanvas.drawConfig.value.size ??
+        endCanvas.drawConfig.value.size ??
+        drawingControllerSize;
+    final DrawConfig baseConfig = startCanvas.drawConfig.value;
+    final List<DrawingController> generated = [];
+
+    for (int step = 1; step <= betweenCount; step++) {
+      final double u = step / (betweenCount + 1);
+      final double t = easing.transform(u);
+
+      final DrawingController frame = DrawingController();
+      frame.backgroundColor =
+          Color.lerp(
+            startCanvas.backgroundColor,
+            endCanvas.backgroundColor,
+            t,
+          ) ??
+          startCanvas.backgroundColor;
+      frame.drawConfig.value = baseConfig.copyWith(
+        strokeWidth: _globalStrokeWidth,
+        size: targetSize,
+      );
+
+      final List<LayerData> layers = plan.buildLayersAt(
+        t,
+        cloneRasterImages: true,
+        frameSeed: step,
+      );
+      frame.layers
+        ..clear()
+        ..addAll(layers);
+
+      if (frame.layers.isNotEmpty) {
+        frame.activeLayer.value = frame.layers.firstWhere(
+          (l) =>
+              !l.isLocked &&
+              !l.isGuide &&
+              l.name != 'Video Layer' &&
+              !l.id.startsWith('video_layer_'),
+          orElse: () => frame.layers.first,
+        );
+      }
+
+      _setupCanvasController(frame);
+      generated.add(frame);
+
+      // Yield periodically for large batches so UI stays responsive at 60fps
+      if (betweenCount > 12 && step % 8 == 0) {
+        await Future<void>.delayed(Duration.zero);
+        if (_isDisposed) {
+          for (final c in generated) {
+            c.drawConfig.removeListener(_onDrawConfigChanged);
+            c.dispose();
+          }
+          return 0;
+        }
+      }
+    }
+
+    // Clear previous undo record and any queued lazy thumbnails whose indices will shift
+    _clearAutoBetweenUndo();
+    _thumbnailQueue.clear();
+    _pendingThumbnailLoads.clear();
+
+    final int insertAt = startIndex + 1;
+    final int previousIndex = _currentIndex;
+    final List<DrawingController> replacedControllers = [];
+    final List<String?> replacedPaths = [];
+
+    // Optionally remove existing intermediate frames strictly between start and end
+    if (replaceExistingBetween && endIndex > startIndex + 1) {
+      final int removeCount = endIndex - startIndex - 1;
+      for (int r = 0; r < removeCount; r++) {
+        final removed = _canvases.removeAt(insertAt);
+        replacedControllers.add(removed);
+        if (insertAt < _thumbnails.length) {
+          final oldThumb = _thumbnails.removeAt(insertAt);
+          try {
+            oldThumb?.dispose();
+          } catch (_) {}
+        }
+        if (insertAt < _frameImagePaths.length) {
+          replacedPaths.add(_frameImagePaths.removeAt(insertAt));
+        } else {
+          replacedPaths.add(null);
+        }
+      }
+    }
+
+    // Insert generated frames with null thumbnails (rendered lazily on scroll)
+    _canvases.insertAll(insertAt, generated);
+    _thumbnails.insertAll(
+      insertAt,
+      List<ui.Image?>.filled(generated.length, null),
+    );
+    while (_frameImagePaths.length < _canvases.length - generated.length) {
+      _frameImagePaths.add(null);
+    }
+    _frameImagePaths.insertAll(
+      insertAt,
+      List<String?>.filled(generated.length, null),
+    );
+
+    _lastAutoBetweenUndo = _AutoBetweenUndoRecord(
+      insertAt: insertAt,
+      insertedControllers: List<DrawingController>.from(generated),
+      replacedControllers: replacedControllers,
+      replacedPaths: replacedPaths,
+      previousIndex: previousIndex,
+    );
+
+    _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
+    _thumbnailLru.clear();
+    for (int i = 0; i < _thumbnails.length; i++) {
+      if (_thumbnails[i] != null) {
+        _thumbnailLru.add(i);
+      }
+    }
+
+    AnalyticsService.instance.logFrameAction(
+      action: 'auto_between',
+      frameIndex: startIndex,
+      totalFrames: _canvases.length,
+    );
+
+    markDirty();
+    selectCanvas(insertAt.clamp(0, _canvases.length - 1));
+    return generated.length;
+  }
+
+  _AutoBetweenUndoRecord? _lastAutoBetweenUndo;
+
+  bool get canUndoLastAutoBetween => _lastAutoBetweenUndo != null;
+
+  void _clearAutoBetweenUndo() {
+    final record = _lastAutoBetweenUndo;
+    _lastAutoBetweenUndo = null;
+    if (record != null) {
+      for (final c in record.replacedControllers) {
+        c.drawConfig.removeListener(_onDrawConfigChanged);
+        c.dispose();
+      }
+    }
+  }
+
+  /// Reverts the most recent [generateAutoBetweenFrames] operation if frames
+  /// have not since been structurally reordered or deleted.
+  bool undoLastAutoBetween() {
+    if (_isDisposed) return false;
+    final record = _lastAutoBetweenUndo;
+    if (record == null) return false;
+
+    final int insertAt = record.insertAt;
+    final int count = record.insertedControllers.length;
+    if (insertAt < 0 || insertAt + count > _canvases.length) {
+      _clearAutoBetweenUndo();
+      return false;
+    }
+    for (int i = 0; i < count; i++) {
+      if (!identical(_canvases[insertAt + i], record.insertedControllers[i])) {
+        _clearAutoBetweenUndo();
+        return false;
+      }
+    }
+
+    _lastAutoBetweenUndo = null;
+    _thumbnailQueue.clear();
+    _pendingThumbnailLoads.clear();
+
+    if (_activeSticker != null) {
+      _activeSticker = null;
+      _clearActiveStickerHistory();
+    }
+
+    for (int i = 0; i < count; i++) {
+      final removed = _canvases.removeAt(insertAt);
+      removed.drawConfig.removeListener(_onDrawConfigChanged);
+      removed.dispose();
+      if (insertAt < _thumbnails.length) {
+        final thumb = _thumbnails.removeAt(insertAt);
+        try {
+          thumb?.dispose();
+        } catch (_) {}
+      }
+      if (insertAt < _frameImagePaths.length) {
+        _frameImagePaths.removeAt(insertAt);
+      }
+    }
+
+    if (record.replacedControllers.isNotEmpty) {
+      _canvases.insertAll(insertAt, record.replacedControllers);
+      _thumbnails.insertAll(
+        insertAt,
+        List<ui.Image?>.filled(record.replacedControllers.length, null),
+      );
+      _frameImagePaths.insertAll(insertAt, record.replacedPaths);
+    }
+
+    _canvasKeys = _canvases.map((c) => ObjectKey(c)).toList();
+    _thumbnailLru.clear();
+    for (int i = 0; i < _thumbnails.length; i++) {
+      if (_thumbnails[i] != null) {
+        _thumbnailLru.add(i);
+      }
+    }
+
+    markDirty();
+    selectCanvas(record.previousIndex.clamp(0, _canvases.length - 1));
+    return true;
   }
 
   void copyFrame(int index) async {
@@ -4231,6 +4507,7 @@ class EditorController extends ChangeNotifier {
     _autoSaveTimer = null;
     _thumbnailNotifyDebounce?.cancel();
     _thumbnailNotifyDebounce = null;
+    _clearAutoBetweenUndo();
     for (var controller in _canvases) {
       controller.drawConfig.removeListener(_onDrawConfigChanged);
       controller.dispose();
@@ -4249,4 +4526,20 @@ class EditorController extends ChangeNotifier {
     GlobalToolState.instance.resetToDefaultBrush();
     super.dispose();
   }
+}
+
+class _AutoBetweenUndoRecord {
+  final int insertAt;
+  final List<DrawingController> insertedControllers;
+  final List<DrawingController> replacedControllers;
+  final List<String?> replacedPaths;
+  final int previousIndex;
+
+  const _AutoBetweenUndoRecord({
+    required this.insertAt,
+    required this.insertedControllers,
+    required this.replacedControllers,
+    required this.replacedPaths,
+    required this.previousIndex,
+  });
 }

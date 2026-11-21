@@ -75,27 +75,28 @@ abstract class PatternLine extends FreehandLine {
       strokeJoin: StrokeJoin.round,
     );
 
+    final cache = sampleSmooth(step);
     final Path out = Path();
     bool started = false;
-    int index = 0;
 
-    for (final PathMetric metric in buildSmoothPath().computeMetrics()) {
-      double d = 0;
-      while (d <= metric.length) {
-        final Tangent? t = metric.getTangentForOffset(d);
-        if (t != null) {
-          final double off = _wave(d / per) * amp;
-          final Offset p = t.position + Offset(-sin(t.angle) * off, cos(t.angle) * off);
-          if (!started) {
-            out.moveTo(p.dx, p.dy);
-            started = true;
-          } else {
-            out.lineTo(p.dx, p.dy);
-          }
-        }
-        index++;
-        d += step;
+    void appendSample(double x, double y, double ang, double d) {
+      final double off = _wave(d / per) * amp;
+      final double px = x - sin(ang) * off;
+      final double py = y + cos(ang) * off;
+      if (!started) {
+        out.moveTo(px, py);
+        started = true;
+      } else {
+        out.lineTo(px, py);
       }
+    }
+
+    for (int j = 0; j < cache.frozenCount; j++) {
+      appendSample(cache.xs[j], cache.ys[j], cache.angles[j], cache.distances[j]);
+    }
+    for (int j = 0; j < cache.tailCount; j++) {
+      appendSample(
+          cache.tailXs[j], cache.tailYs[j], cache.tailAngles[j], cache.tailDistances[j]);
     }
 
     canvas.drawPath(out, line);
@@ -337,34 +338,35 @@ class HairLine extends FreehandLine {
       strokeCap: StrokeCap.round,
     );
 
-    final List<PathMetric> metrics = buildSmoothPath().computeMetrics().toList();
     final double step = (width * 0.25).clamp(1.2, double.infinity);
+    final cache = sampleSmooth(step);
+    final int fCount = cache.frozenCount;
+    final int tCount = cache.tailCount;
 
     for (int s = 0; s < strands; s++) {
       final double base = strands == 1 ? 0 : (s / (strands - 1) - 0.5) * width;
       final Path strand = Path();
       bool started = false;
-      int index = 0;
 
-      for (final PathMetric metric in metrics) {
-        double d = 0;
-        while (d <= metric.length) {
-          final Tangent? t = metric.getTangentForOffset(d);
-          if (t != null) {
-            // 轻微起伏，让发丝不完全平行
-            final double waver = sin(d / (width * 2) + s) * width * 0.12;
-            final double off = base + waver + _rand(seed, s, (d ~/ 8)) * width * 0.05;
-            final Offset p = t.position + Offset(-sin(t.angle) * off, cos(t.angle) * off);
-            if (!started) {
-              strand.moveTo(p.dx, p.dy);
-              started = true;
-            } else {
-              strand.lineTo(p.dx, p.dy);
-            }
-          }
-          index++;
-          d += step;
+      void addPt(double x, double y, double ang, double d) {
+        final double waver = sin(d / (width * 2) + s) * width * 0.12;
+        final double off = base + waver + _rand(seed, s, (d ~/ 8)) * width * 0.05;
+        final double px = x - sin(ang) * off;
+        final double py = y + cos(ang) * off;
+        if (!started) {
+          strand.moveTo(px, py);
+          started = true;
+        } else {
+          strand.lineTo(px, py);
         }
+      }
+
+      for (int j = 0; j < fCount; j++) {
+        addPt(cache.xs[j], cache.ys[j], cache.angles[j], cache.distances[j]);
+      }
+      for (int j = 0; j < tCount; j++) {
+        addPt(cache.tailXs[j], cache.tailYs[j], cache.tailAngles[j],
+            cache.tailDistances[j]);
       }
       canvas.drawPath(strand, hair);
     }
@@ -413,33 +415,31 @@ class PixelLine extends FreehandLine {
     final double cell = paint.strokeWidth.clamp(2.0, double.infinity);
     final Paint fill = paint.copyWith(style: PaintingStyle.fill);
     final Set<int> seen = <int>{};
+    final Path cellsPath = Path();
 
-    void put(Offset p) {
-      final int cx = (p.dx / cell).floor();
-      final int cy = (p.dy / cell).floor();
+    void put(double x, double y) {
+      final int cx = (x / cell).floor();
+      final int cy = (y / cell).floor();
       if (seen.add((cx * 73856093) ^ (cy * 19349663))) {
-        canvas.drawRect(Rect.fromLTWH(cx * cell, cy * cell, cell, cell), fill);
+        cellsPath.addRect(Rect.fromLTWH(cx * cell, cy * cell, cell, cell));
       }
     }
 
     if (points.length == 1) {
-      put(points.first);
+      put(points.first.dx, points.first.dy);
+      canvas.drawPath(cellsPath, fill);
       return;
     }
 
     final double step = (cell / 2).clamp(1.2, double.infinity);
-    int index = 0;
-    for (final PathMetric metric in buildSmoothPath().computeMetrics()) {
-      double d = 0;
-      while (d <= metric.length) {
-        final Tangent? t = metric.getTangentForOffset(d);
-        if (t != null) {
-          put(t.position);
-        }
-        index++;
-        d += step;
-      }
+    final cache = sampleSmooth(step);
+    for (int i = 0; i < cache.frozenCount; i++) {
+      put(cache.xs[i], cache.ys[i]);
     }
+    for (int i = 0; i < cache.tailCount; i++) {
+      put(cache.tailXs[i], cache.tailYs[i]);
+    }
+    canvas.drawPath(cellsPath, fill);
   }
 
   @override
@@ -568,36 +568,37 @@ class SketchLine extends FreehandLine {
       color: paint.color.withValues(alpha: paint.color.a * 0.55),
     );
 
-    final List<PathMetric> metrics = buildSmoothPath().computeMetrics().toList();
     final double step = (width * 0.4).clamp(1.2, double.infinity);
+    final cache = sampleSmooth(step);
+    final int fCount = cache.frozenCount;
+    final int tCount = cache.tailCount;
 
     for (int pass = 0; pass < passes; pass++) {
       final Path scratch = Path();
       bool started = false;
       int i = 0;
-      int index = 0;
 
-      for (final PathMetric metric in metrics) {
-        double d = 0;
-        while (d <= metric.length) {
-          final Tangent? t = metric.getTangentForOffset(d);
-          if (t != null) {
-            final double off = _rand(seed, pass * 1000 + i, 3) * width * 0.45;
-            final double along = _rand(seed, pass * 1000 + i, 7) * width * 0.2;
-            final Offset p = t.position +
-                Offset(-sin(t.angle) * off + cos(t.angle) * along,
-                    cos(t.angle) * off + sin(t.angle) * along);
-            if (!started) {
-              scratch.moveTo(p.dx, p.dy);
-              started = true;
-            } else {
-              scratch.lineTo(p.dx, p.dy);
-            }
-          }
-          i++;
-          index++;
-          d += step;
+      void addPt(double x, double y, double ang) {
+        final double off = _rand(seed, pass * 1000 + i, 3) * width * 0.45;
+        final double along = _rand(seed, pass * 1000 + i, 7) * width * 0.2;
+        final double cAng = cos(ang);
+        final double sAng = sin(ang);
+        final double px = x - sAng * off + cAng * along;
+        final double py = y + cAng * off + sAng * along;
+        if (!started) {
+          scratch.moveTo(px, py);
+          started = true;
+        } else {
+          scratch.lineTo(px, py);
         }
+        i++;
+      }
+
+      for (int j = 0; j < fCount; j++) {
+        addPt(cache.xs[j], cache.ys[j], cache.angles[j]);
+      }
+      for (int j = 0; j < tCount; j++) {
+        addPt(cache.tailXs[j], cache.tailYs[j], cache.tailAngles[j]);
       }
       canvas.drawPath(scratch, pen);
     }
