@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../services/addHelper/ad_maniget.dart';
 import '../../../../package_code/paint_contents.dart';
 import '../../../../package_code/src/drawing_bar/brush_presets.dart';
 import '../../../../package_code/src/drawing_bar/brush_preview_renderer.dart';
@@ -203,22 +204,33 @@ class _BrushStudioScreenState extends State<BrushStudioScreen> {
     }
   }
 
-  void _applyAndClose() {
-    if (_gridScrollController.hasClients) {
-      _lastGridScrollOffset = _gridScrollController.offset;
+  bool _isApplying = false;
+
+  Future<void> _applyAndClose() async {
+    if (_isApplying) return;
+    _isApplying = true;
+    try {
+      if (_gridScrollController.hasClients) {
+        _lastGridScrollOffset = _gridScrollController.offset;
+      }
+      if (_categoryScrollController.hasClients) {
+        _lastCategoryScrollOffset = _categoryScrollController.offset;
+      }
+      _lastCategory = _selectedCategory;
+      if (_selectedPreset != null) {
+        widget.editorController.activeCategory = 'Brush';
+        widget.drawingController.activeBrushPresetId = _selectedPreset!.id;
+        widget.drawingController.setPaintContent(_selectedPreset!.create());
+        widget.editorController.globalStrokeWidth = _strokeWidth;
+        widget.drawingController.setStyle(strokeWidth: _strokeWidth);
+      }
+      await AdManager.showApplyBrushInterstitialIfEnabled();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      _isApplying = false;
     }
-    if (_categoryScrollController.hasClients) {
-      _lastCategoryScrollOffset = _categoryScrollController.offset;
-    }
-    _lastCategory = _selectedCategory;
-    if (_selectedPreset != null) {
-      widget.editorController.activeCategory = 'Brush';
-      widget.drawingController.activeBrushPresetId = _selectedPreset!.id;
-      widget.drawingController.setPaintContent(_selectedPreset!.create());
-      widget.editorController.globalStrokeWidth = _strokeWidth;
-      widget.drawingController.setStyle(strokeWidth: _strokeWidth);
-    }
-    Navigator.of(context).pop();
   }
 
   @override

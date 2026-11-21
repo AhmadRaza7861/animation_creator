@@ -12,7 +12,8 @@ import '../../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_assets.dart';
 import '../../../../../core/localization/app_localizations.dart';
-import '../../../../../core/widgets/app_dialogs.dart';
+import '../../../../core/widgets/app_dialogs.dart';
+import '../../../../services/addHelper/ad_maniget.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/editor_providers.dart';
 import '../screens/export/make_movie_screen.dart';
@@ -33,6 +34,7 @@ class ToolbarPanel extends ConsumerStatefulWidget {
 class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
   final ImagePicker _picker = ImagePicker();
   final ScrollController _toolbarScrollController = ScrollController();
+  bool _isOpeningExport = false;
 
   @override
   void dispose() {
@@ -53,25 +55,33 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     return completer.future;
   }
 
-  void _showExportBottomSheet(WidgetRef ref) {
-    final controller = ref.read(editorControllerProvider(widget.projectId));
-    if (controller.activeSticker != null) {
-      controller.stampActiveSticker();
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MakeMovieScreen(
-          canvases: controller.canvases,
-          globalBackground: controller.globalBackground,
-          initialMovieName: controller.projectName,
-          initialFormat: controller.exportType,
-          fps: controller.fps,
-          projectAspectRatio: controller.aspectRatio,
-          audioState: controller.audioState,
+  Future<void> _showExportBottomSheet(WidgetRef ref) async {
+    if (_isOpeningExport) return;
+    _isOpeningExport = true;
+    try {
+      final controller = ref.read(editorControllerProvider(widget.projectId));
+      if (controller.activeSticker != null) {
+        controller.stampActiveSticker();
+      }
+      await AdManager.showExportInterstitialIfEnabled();
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MakeMovieScreen(
+            canvases: controller.canvases,
+            globalBackground: controller.globalBackground,
+            initialMovieName: controller.projectName,
+            initialFormat: controller.exportType,
+            fps: controller.fps,
+            projectAspectRatio: controller.aspectRatio,
+            audioState: controller.audioState,
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      _isOpeningExport = false;
+    }
   }
 
   @override
@@ -1414,6 +1424,9 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
     );
 
     if (selectedOption == null || !mounted) return;
+
+    await AdManager.showImportInterstitialIfEnabled();
+    if (!mounted) return;
 
     if (selectedOption == 'video') {
       await VideoImportHelper.importVideo(

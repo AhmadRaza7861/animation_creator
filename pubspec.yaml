@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 
 # For ios version
-version: 1.0.4+29
+version: 1.0.5+30
 
 #version: 1.0.4+29
 
@@ -60,8 +60,9 @@ dependencies:
   cloud_firestore: ^6.10.2
   firebase_analytics: ^12.6.1
   clarity_flutter: ^1.10.1
-  # google_mobile_ads: ^9.2.0
-  # yandex_mobileads: ^8.6.0
+  google_mobile_ads: ^9.2.0
+  yandex_mobileads: ^8.6.0
+  firebase_remote_config: ^6.7.1
 
 
 dev_dependencies:

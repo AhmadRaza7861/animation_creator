@@ -52,5 +52,7 @@
 	<string>Used to take pictures for drawing canvas background or stickers</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Used to select pictures for drawing canvas background or stickers</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
 </dict>
 </plist>

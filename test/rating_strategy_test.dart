@@ -98,7 +98,7 @@ void main() {
       expect(find.text('Later'), findsNothing);
     });
 
-    testWidgets('Home visit on 2nd session triggers rating dialog', (tester) async {
+    testWidgets('Home visit and refresh do not trigger rating dialog', (tester) async {
       BuildContext? testContext;
       await tester.pumpWidget(
         MaterialApp(
@@ -129,18 +129,13 @@ void main() {
       // Simulate 2nd app launch by resetting in-memory session flag while retaining persisted state
       RatingStrategyService.resetSessionForTesting();
 
-      // Now 2nd visit:
+      // 2nd visit (or refresh): still does not show dialog on home screen
       await tester.runAsync(() async {
         RatingStrategyService.recordHomeVisit(testContext!);
         await Future.delayed(const Duration(milliseconds: 800));
       });
       await tester.pumpAndSettle();
       expect(RatingStrategyService.appOpenCount, equals(2));
-      expect(find.byType(RateUsDialog), findsOneWidget);
-
-      // Dismiss dialog
-      Navigator.of(testContext!, rootNavigator: true).pop();
-      await tester.pumpAndSettle();
       expect(find.byType(RateUsDialog), findsNothing);
     });
 

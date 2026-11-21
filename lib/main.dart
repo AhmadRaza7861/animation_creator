@@ -12,7 +12,9 @@ import 'core/localization/app_language.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/localization/locale_provider.dart';
 import 'core/services/analytics_service.dart';
+import 'core/services/remote_config_service.dart';
 import 'core/services/runtime_font_service.dart';
+import 'services/addHelper/ad_maniget.dart';
 import 'features/projects/data/project_repository.dart';
 import 'features/splash/presentation/screens/splash_screen.dart';
 import 'utils/theme/customThems/app_bar_theme.dart';
@@ -36,6 +38,12 @@ void main() async {
 
   await LanguageService.loadSavedLocale();
   RuntimeFontService.instance.init();
+  await RemoteConfigService.instance.ensureFetched(
+    timeout: const Duration(seconds: 4),
+  );
+  if (RemoteConfigService.instance.isShowAds) {
+    AdManager.initialize();
+  }
   AnalyticsService.instance.syncDefaultUserProperties(
     languageCode: LanguageService.currentLocale.languageCode,
     themeMode: 'light',

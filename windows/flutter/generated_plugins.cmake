@@ -8,6 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   ffmpeg_kit_flutter_new
   file_selector_windows
   firebase_core
+  firebase_remote_config
   gal
   record_windows
   share_plus

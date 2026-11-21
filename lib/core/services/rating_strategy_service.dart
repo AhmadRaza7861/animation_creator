@@ -123,18 +123,14 @@ class RatingStrategyService {
     await _save();
   }
 
-  /// Trigger 4: Called when user visits the home page (projects screen)
+  /// Trigger 4: Called when user visits or refreshes the home page (projects screen).
+  /// Tracks home visits only; does not display the rating prompt here.
   static Future<void> recordHomeVisit(BuildContext context) async {
     if (!_isLoaded) await load();
     if (!_sessionRecordedThisLaunch) {
       _sessionRecordedThisLaunch = true;
       _appOpenCount++;
       await _save();
-    }
-
-    // Show rating dialog on home page when user visits 2nd time (or subsequent times before rating)
-    if (_appOpenCount >= 2 && await shouldShowPrompt() && context.mounted) {
-      await _showDialogWithDelay(context);
     }
   }
 

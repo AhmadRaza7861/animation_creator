@@ -14,6 +14,7 @@ import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../services/addHelper/ad_maniget.dart';
 import '../../data/project_repository.dart';
 import '../../../templates/domain/template_model.dart';
 import '../widgets/preview_pattern_painter.dart';
@@ -56,6 +57,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   int _fps = 14;
   String _exportType = 'Mp4'; // 'Mp4' or 'GIF'
   bool _enableStickers = false;
+  bool _isCreatingProject = false;
 
   @override
   void initState() {
@@ -234,42 +236,50 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   }
 
   Future<void> _createProject() async {
-    final title = _nameController.text.trim().isNotEmpty
-        ? _nameController.text.trim()
-        : 'My Animation';
+    if (_isCreatingProject) return;
+    _isCreatingProject = true;
 
-    if (widget.projectId != null) {
-      try {
-        final project = await widget.repository.loadProject(widget.projectId!);
-        if (project != null) {
-          final Map<String, dynamic> newState = Map<String, dynamic>.from(project.state);
-          newState['globalBackground'] = {
-            'color': _backgroundColor.value,
-            'imagePath': _backgroundImagePath,
-            'imageOpacity': 1.0,
-            'pattern': _backgroundPattern,
-          };
-          newState['fps'] = _fps;
-          newState['exportType'] = _exportType;
-          newState['enableStickers'] = _enableStickers;
+    try {
+      final title = _nameController.text.trim().isNotEmpty
+          ? _nameController.text.trim()
+          : 'My Animation';
 
-          await widget.repository.saveProject(
-            projectId: widget.projectId,
-            title: title,
-            state: newState,
-            thumbnailBytes: null, // Keep existing thumbnail
-          );
+      if (widget.projectId != null) {
+        try {
+          final project = await widget.repository.loadProject(widget.projectId!);
+          if (project != null) {
+            final Map<String, dynamic> newState =
+                Map<String, dynamic>.from(project.state);
+            newState['globalBackground'] = {
+              'color': _backgroundColor.value,
+              'imagePath': _backgroundImagePath,
+              'imageOpacity': 1.0,
+              'pattern': _backgroundPattern,
+            };
+            newState['fps'] = _fps;
+            newState['exportType'] = _exportType;
+            newState['enableStickers'] = _enableStickers;
 
-          if (mounted) {
-            Navigator.pop(context, true);
+            await widget.repository.saveProject(
+              projectId: widget.projectId,
+              title: title,
+              state: newState,
+              thumbnailBytes: null, // Keep existing thumbnail
+            );
+
+            if (mounted) {
+              Navigator.pop(context, true);
+            }
+            return;
           }
-          return;
+        } catch (e) {
+          debugPrint('Failed to save project settings: $e');
         }
-      } catch (e) {
-        debugPrint('Failed to save project settings: $e');
+        return;
       }
-      return;
-    }
+
+      await AdManager.showCreateProjectInterstitialIfEnabled();
+      if (!mounted) return;
 
     if (widget.template != null && mounted) {
       AppDialogs.showProgressDialog(
@@ -454,6 +464,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         Navigator.of(context, rootNavigator: true).pop();
       }
       debugPrint('Failed to create template project: $e');
+    }
+    } finally {
+      _isCreatingProject = false;
     }
   }
 

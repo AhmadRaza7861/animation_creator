@@ -7,6 +7,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/rating_strategy_service.dart';
+import '../../../../services/addHelper/ad_maniget.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../data/project_repository.dart';
 import '../../domain/project_model.dart';
@@ -38,6 +39,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
   // Projects search state
   String _projectSearchQuery = '';
   final TextEditingController _projectSearchController = TextEditingController();
+  bool _isOpeningProject = false;
 
   @override
   void initState() {
@@ -149,26 +151,36 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
   }
 
   Future<void> _openProject(ProjectMeta project) async {
-    AnalyticsService.instance.logProjectOpened(
-      projectId: project.id,
-      frameCount: project.frameCount,
-    );
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditorScreen(
-          projectId: project.id,
+    if (_isOpeningProject) return;
+    _isOpeningProject = true;
+    try {
+      AnalyticsService.instance.logProjectOpened(
+        projectId: project.id,
+        frameCount: project.frameCount,
+      );
+      await AdManager.showHistoryInterstitialIfEnabled();
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditorScreen(
+            projectId: project.id,
+          ),
         ),
-      ),
-    );
-    if (mounted) {
-      await RatingStrategyService.recordReturnedFromEditor(context);
-      await _loadProjects();
+      );
+      if (mounted) {
+        await RatingStrategyService.recordReturnedFromEditor(context);
+        await _loadProjects();
+      }
+    } finally {
+      _isOpeningProject = false;
     }
   }
 
   Future<void> _openTutorial(TemplateModel template) async {
     AnalyticsService.instance.logTutorialViewed(tutorialTitle: template.name);
+    await AdManager.showTutorialInterstitialIfEnabled();
+    if (!mounted) return;
     final projectId = await Navigator.push<String>(
       context,
       MaterialPageRoute(
@@ -196,7 +208,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
     }
   }
 
-  Future<void> _openTemplatesLibrary() async {
+  Future<void> _openTemplatesLibrary({bool showAd = true}) async {
+    if (showAd) {
+      await AdManager.showTutorialInterstitialIfEnabled();
+      if (!mounted) return;
+    }
     final projectId = await Navigator.push<String>(
       context,
       MaterialPageRoute(
@@ -684,7 +700,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
             ),
             const Spacer(),
             GestureDetector(
-              onTap: _openTemplatesLibrary,
+              onTap: () => _openTemplatesLibrary(showAd: false),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(

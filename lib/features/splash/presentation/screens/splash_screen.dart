@@ -1,9 +1,10 @@
-import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/remote_config_service.dart';
+import '../../../../services/addHelper/ad_maniget.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../../projects/domain/project_model.dart';
 import '../../../projects/presentation/screens/projects_screen.dart';
@@ -45,8 +46,13 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _progressAnimation;
   late Animation<double> _bottomFade;
 
-  Timer? _navTimer;
   bool _hasNavigated = false;
+  bool _isWaitingForAd = true;
+  bool _adLoaded = false;
+  bool? _isOnboarded;
+
+  static const int _splashWithAdDurationMs = 15000;
+  static const int _splashWithoutAdDurationMs = 10000;
 
   static const List<String> _letters = ['c', 'l', 'i', 'p', 'a', 'x'];
 
@@ -55,10 +61,21 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     AnalyticsService.instance.logScreenView(screenName: 'SplashScreen');
 
-    // 1. Master timeline orchestration (3200ms)
+    bool initialShouldShowAd = false;
+    if (RemoteConfigService.instance.isShowAds) {
+      if (RemoteConfigService.instance.isShowOpenAppAd) {
+        initialShouldShowAd = true;
+      }
+    }
+
+    // 1. Master timeline orchestration (15s when showing open ad, 10s otherwise)
     _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3200),
+      duration: Duration(
+        milliseconds: initialShouldShowAd
+            ? _splashWithAdDurationMs
+            : _splashWithoutAdDurationMs,
+      ),
     );
 
     // 2. Orbiting stardust sparks loop
@@ -79,11 +96,11 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 3200),
     )..repeat();
 
-    // Stage 1: Film strip stroke drawing (0.0s -> 2.2s)
+    // Stage 1: Film strip stroke drawing (0.2s -> 2.2s)
     _logoStrokeProgress = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.04, 0.35, curve: Curves.easeInOutCubic),
+        curve: const Interval(0.02, 0.22, curve: Curves.easeInOutCubic),
       ),
     );
 
@@ -91,32 +108,32 @@ class _SplashScreenState extends State<SplashScreen>
     _logoScale = Tween<double>(begin: 0.45, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.04, 0.38, curve: Curves.easeOutBack),
+        curve: const Interval(0.02, 0.24, curve: Curves.easeOutBack),
       ),
     );
 
-    // Stage 3: Play button neon pop-in (2.0s -> 3.0s)
+    // Stage 3: Play button neon pop-in (1.8s -> 3.0s)
     _logoPlayProgress = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.28, 0.46, curve: Curves.elasticOut),
+        curve: const Interval(0.18, 0.30, curve: Curves.elasticOut),
       ),
     );
 
     _logoGlow = Tween<double>(begin: 0.2, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.08, 0.48, curve: Curves.easeInOut),
+        curve: const Interval(0.04, 0.32, curve: Curves.easeInOut),
       ),
     );
 
-    // Stage 4: Staggered letter-by-letter reveal (2.8s -> 4.5s)
+    // Stage 4: Staggered letter-by-letter reveal (2.4s -> 4.6s)
     _letterFades = [];
     _letterSlides = [];
     _letterScales = [];
     for (int i = 0; i < _letters.length; i++) {
-      final double start = 0.38 + (i * 0.038);
-      final double end = (start + 0.12).clamp(0.0, 1.0);
+      final double start = 0.24 + (i * 0.026);
+      final double end = (start + 0.09).clamp(0.0, 1.0);
 
       _letterFades.add(
         Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -146,53 +163,147 @@ class _SplashScreenState extends State<SplashScreen>
       );
     }
 
-    // Stage 5: Tagline reveal (4.2s -> 5.4s)
+    // Stage 5: Tagline reveal (4.2s -> 5.6s)
     _taglineFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.60, 0.78, curve: Curves.easeIn),
+        curve: const Interval(0.42, 0.54, curve: Curves.easeIn),
       ),
     );
 
     _taglineSpacing = Tween<double>(begin: 1.0, end: 4.5).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.60, 0.85, curve: Curves.easeOutCubic),
+        curve: const Interval(0.42, 0.58, curve: Curves.easeOutCubic),
       ),
     );
 
-    // Progress animation across full 7.5s duration
+    // Linear progress animation across full 15s duration
     _progressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.06, 0.98, curve: Curves.easeInOutCubic),
+        curve: Curves.linear,
       ),
     );
 
     _bottomFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
-        curve: const Interval(0.18, 0.42, curve: Curves.easeIn),
+        curve: const Interval(0.08, 0.22, curve: Curves.easeIn),
       ),
     );
 
+    _mainController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (!_adLoaded) {
+          _isWaitingForAd = false;
+          _navigateToHome();
+        }
+      }
+    });
+
     _mainController.forward();
 
-    // Pre-warm project cache during splash animation
+    // Pre-warm project cache and onboarding status during splash animation
     widget.repository.listProjects().catchError((_) => <ProjectMeta>[]);
+    OnboardingService.isOnboardingCompleted()
+        .then((value) => _isOnboarded = value)
+        .catchError((_) => _isOnboarded = false);
 
-    // 3.6s Total Delay before smooth transition
-    _navTimer = Timer(const Duration(milliseconds: 3600), () {
-      _navigateToHome();
-    });
+    _startSplashAdFlow();
   }
 
-  void _navigateToHome() async {
+  Future<void> _startSplashAdFlow() async {
+    await RemoteConfigService.instance.ensureFetched(
+      timeout: const Duration(milliseconds: 1500),
+    );
+    if (!mounted || _hasNavigated) return;
+
+    final bool isShowAds = RemoteConfigService.instance.isShowAds;
+    final bool isShowOpenAppAd = RemoteConfigService.instance.isShowOpenAppAd;
+    debugPrint(
+      '[SplashAd] Is_show_ads=$isShowAds | is_show_open_app_ad=$isShowOpenAppAd',
+    );
+
+    // 1st check if Is_show_ads is true, then check if is_show_open_app_ad is true
+    if (isShowAds) {
+      if (isShowOpenAppAd) {
+        const targetDuration = Duration(milliseconds: _splashWithAdDurationMs);
+        if (_mainController.duration != targetDuration) {
+          _mainController.duration = targetDuration;
+          if (_mainController.isAnimating) {
+            _mainController.forward(from: _mainController.value);
+          }
+        }
+      } else {
+        _isWaitingForAd = false;
+        const targetDuration =
+            Duration(milliseconds: _splashWithoutAdDurationMs);
+        if (_mainController.duration != targetDuration) {
+          _mainController.duration = targetDuration;
+          if (_mainController.isAnimating) {
+            _mainController.forward(from: _mainController.value);
+          }
+        }
+      }
+
+      await AdManager.initialize();
+      if (!mounted || _hasNavigated) return;
+
+      AdManager.checkConsentAndLoadAd(() {
+        if (!mounted || _hasNavigated) return;
+
+        // Preload interstitial ad when Is_show_ads is true
+        AdManager.createInterstitialAd();
+
+        if (isShowOpenAppAd) {
+          AdManager.loadOpenAppAd(
+            onAdLoaded: () {
+              _adLoaded = true;
+              if (mounted && !_mainController.isCompleted) {
+                _mainController.stop();
+              }
+            },
+            onAdFailedToLoad: (_) {
+              _isWaitingForAd = false;
+              if (_mainController.isCompleted) {
+                _navigateToHome();
+              }
+            },
+            onAdDismissed: () {
+              _isWaitingForAd = false;
+              _navigateToHome();
+            },
+          );
+        }
+      });
+
+      if (!isShowOpenAppAd && _mainController.isCompleted) {
+        _navigateToHome();
+      }
+      return;
+    }
+
+    // Otherwise do not show open app ad (10s splash duration)
+    _isWaitingForAd = false;
+    const targetDuration = Duration(milliseconds: _splashWithoutAdDurationMs);
+    if (_mainController.duration != targetDuration) {
+      _mainController.duration = targetDuration;
+      if (_mainController.isAnimating) {
+        _mainController.forward(from: _mainController.value);
+      }
+    }
+    if (_mainController.isCompleted) {
+      _navigateToHome();
+    }
+  }
+
+  Future<void> _navigateToHome() async {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
-    _navTimer?.cancel();
 
-    final isOnboarded = await OnboardingService.isOnboardingCompleted();
+    final isOnboarded =
+        _isOnboarded ?? await OnboardingService.isOnboardingCompleted();
     if (!mounted) return;
 
     final Widget targetScreen = isOnboarded
@@ -218,14 +329,13 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           );
         },
-        transitionDuration: const Duration(milliseconds: 800),
+        transitionDuration: const Duration(milliseconds: 450),
       ),
     );
   }
 
   @override
   void dispose() {
-    _navTimer?.cancel();
     _mainController.dispose();
     _orbitController.dispose();
     _pulseController.dispose();
@@ -239,7 +349,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: _navigateToHome,
+      onTap: () {
+        if (!_isWaitingForAd) {
+          _navigateToHome();
+        }
+      },
       child: Scaffold(
         backgroundColor: const Color(0xFF0D0B14),
         body: Stack(

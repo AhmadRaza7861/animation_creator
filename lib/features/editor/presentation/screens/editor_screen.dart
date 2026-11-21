@@ -32,6 +32,7 @@ import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/app_dialogs.dart';
 import '../../../../utils/theme/customThems/app_bar_theme.dart';
 import '../../../projects/presentation/screens/create_project_screen.dart';
+import '../../../../services/addHelper/ad_maniget.dart';
 import '../../../settings/presentation/dialogs/contact_us_dialog.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
@@ -140,13 +141,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   }
 
   void _showSettingsSheet(BuildContext context, EditorController controller) {
+    final parentNavigator = Navigator.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return Consumer(
           builder: (context, ref, child) {
             final currentController = ref.watch(
@@ -212,9 +214,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                           color: Colors.black45,
                         ),
                         onTap: () async {
-                          Navigator.pop(context);
-                          final result = await Navigator.push(
-                            context,
+                          Navigator.pop(sheetContext);
+                          await AdManager
+                              .showProjectSettingInterstitialIfEnabled();
+                          if (!mounted) return;
+                          final result = await parentNavigator.push(
                             MaterialPageRoute(
                               builder: (context) => CreateProjectScreen(
                                 repository: currentController.repository,

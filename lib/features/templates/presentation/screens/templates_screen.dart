@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../services/addHelper/ad_maniget.dart';
 import '../../../projects/data/project_repository.dart';
 import '../../data/tutorials_data.dart';
 import '../../data/tutorial_project_builder.dart';
@@ -105,6 +106,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
 
 
   void _openDetail(TemplateModel template) async {
+    await AdManager.showTutorialInterstitialIfEnabled();
+    if (!mounted) return;
     final projectId = await Navigator.push<String>(
       context,
       MaterialPageRoute(
