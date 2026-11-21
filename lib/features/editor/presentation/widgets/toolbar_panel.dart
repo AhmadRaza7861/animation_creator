@@ -329,6 +329,18 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       controller.activeCategory = 'Paint';
                     },
                   ),
+                  _bottomToolbarCategoryItem(
+                    label: context.tr('autoBetween'),
+                    icon: Icons.auto_awesome_motion_rounded,
+                    isSelected: false,
+                    onTap: () {
+                      AutoBetweenSheet.show(
+                        context,
+                        controller,
+                        initialFrameIndex: controller.currentIndex,
+                      );
+                    },
+                  ),
 
                   _bottomToolbarCategoryItem(
                     label: context.tr('select'),
@@ -448,18 +460,6 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       controller.activeCategory = 'Smudge';
                       controller.currentSubMenu = 'none';
                       controller.drawingController.prepareSnapshot();
-                    },
-                  ),
-                  _bottomToolbarCategoryItem(
-                    label: context.tr('autoBetween'),
-                    icon: Icons.auto_awesome_motion_rounded,
-                    isSelected: false,
-                    onTap: () {
-                      AutoBetweenSheet.show(
-                        context,
-                        controller,
-                        initialFrameIndex: controller.currentIndex,
-                      );
                     },
                   ),
                   const SizedBox(width: 16),

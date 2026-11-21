@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dummy/core/widgets/app_back_button.dart';
 import 'package:dummy/features/editor/presentation/controllers/editor_controller.dart';
 import 'package:dummy/features/editor/presentation/widgets/auto_between_sheet.dart';
+import 'package:dummy/features/editor/presentation/widgets/toolbar_panel.dart';
 import 'package:dummy/features/editor/services/auto_between_service.dart';
 import 'package:dummy/features/projects/data/project_repository.dart';
 import 'package:dummy/features/projects/data/project_thumbnail_helper.dart';
@@ -650,6 +652,42 @@ void main() {
       final bytes = await ProjectThumbnailHelper.renderFromState(frame2DrawnState);
       expect(bytes, isNotNull);
       expect(bytes!.length, greaterThan(100));
+    });
+
+    testWidgets('ToolbarPanel displays Auto Between immediately after Fill tool', (
+      WidgetTester tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(900, 300));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.bottomCenter,
+                child: ToolbarPanel(projectId: null),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final Finder fillFinder = find.text('Fill');
+      final Finder autoBetweenFinder = find.text('Auto Between');
+      final Finder selectFinder = find.text('Select');
+
+      expect(fillFinder, findsOneWidget);
+      expect(autoBetweenFinder, findsOneWidget);
+      expect(selectFinder, findsOneWidget);
+
+      final double fillX = tester.getCenter(fillFinder).dx;
+      final double autoBetweenX = tester.getCenter(autoBetweenFinder).dx;
+      final double selectX = tester.getCenter(selectFinder).dx;
+
+      expect(autoBetweenX, greaterThan(fillX));
+      expect(selectX, greaterThan(autoBetweenX));
     });
   });
 }
