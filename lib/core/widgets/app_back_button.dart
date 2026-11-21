@@ -27,8 +27,6 @@ class AppBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-
     return Container(
       margin: margin,
       width: size,
@@ -42,12 +40,9 @@ class AppBackButton extends StatelessWidget {
           onTap: onPressed ?? () => Navigator.of(context).maybePop(),
           child: Center(
             child: Padding(
-              padding: EdgeInsets.only(
-                right: isRtl ? 0 : 2.0,
-                left: isRtl ? 2.0 : 0,
-              ),
+              padding: const EdgeInsetsDirectional.only(end: 2.0),
               child: Icon(
-                isRtl ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new_rounded,
+                Icons.arrow_back_ios_new_rounded,
                 color: iconColor ?? ColorConstants.darkText,
                 size: iconSize,
               ),

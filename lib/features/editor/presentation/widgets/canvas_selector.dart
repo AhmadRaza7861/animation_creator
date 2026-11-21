@@ -1296,6 +1296,99 @@ class _CanvasSelectorState extends State<CanvasSelector> with SingleTickerProvid
                     ],
                   ),
 
+                  const SizedBox(height: 10),
+
+                  // Auto Between (In-Between Generator) Action Tile
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: isOnlyFrame
+                          ? null
+                          : () {
+                              Navigator.pop(sheetContext);
+                              widget.onFrameAction('autoBetween', index);
+                            },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isOnlyFrame
+                              ? const Color(0xFFF8FAFC)
+                              : const Color(0xFFFFF7ED),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isOnlyFrame
+                                ? const Color(0xFFE2E8F0)
+                                : ColorConstants.primary.withValues(alpha: 0.3),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: isOnlyFrame
+                                    ? const Color(0xFFF1F5F9)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isOnlyFrame
+                                      ? Colors.transparent
+                                      : ColorConstants.primary.withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.auto_awesome_motion_rounded,
+                                  size: 19,
+                                  color: isOnlyFrame
+                                      ? const Color(0xFF94A3B8)
+                                      : ColorConstants.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    context.tr('autoBetween'),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: isOnlyFrame
+                                          ? const Color(0xFF94A3B8)
+                                          : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    isOnlyFrame
+                                        ? context.tr('autoBetweenNeedTwoFrames')
+                                        : context.tr('autoBetweenSubtitle'),
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: isOnlyFrame
+                                  ? const Color(0xFFCBD5E1)
+                                  : ColorConstants.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 14),
 
                   // Delete Frame Button

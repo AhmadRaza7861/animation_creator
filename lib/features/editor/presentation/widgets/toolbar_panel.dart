@@ -21,6 +21,7 @@ import '../../services/video_import_helper.dart';
 import '../screens/font_selection_screen.dart';
 import 'sticker_widgets/text_sticker_widget.dart';
 import 'sticker_widgets/shape_sticker_widget.dart';
+import 'auto_between_sheet.dart';
 
 class ToolbarPanel extends ConsumerStatefulWidget {
   final String? projectId;
@@ -457,6 +458,18 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                       controller.activeCategory = 'Smudge';
                       controller.currentSubMenu = 'none';
                       controller.drawingController.prepareSnapshot();
+                    },
+                  ),
+                  _bottomToolbarCategoryItem(
+                    label: context.tr('autoBetween'),
+                    icon: Icons.auto_awesome_motion_rounded,
+                    isSelected: false,
+                    onTap: () {
+                      AutoBetweenSheet.show(
+                        context,
+                        controller,
+                        initialFrameIndex: controller.currentIndex,
+                      );
                     },
                   ),
                   const SizedBox(width: 16),

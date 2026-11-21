@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
+import 'brush_cache.dart';
 import 'freehand_line.dart';
 
 /// 笔尖形状 / Brush tip shapes (Photoshop-style)
@@ -45,38 +46,62 @@ abstract class ShapeBrushLine extends FreehandLine {
   BrushTip get tip => BrushTip.round;
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(Canvas canvas, Size size, int startSample, int endSample) {
+    _drawRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(Canvas canvas, Size size, int startSample) {
+    _drawRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (points.isEmpty) {
       return;
     }
 
-    final double width = paint.strokeWidth;
-    final double radius = width / 2;
-    // 每个笔尖使用的画笔（子类可重写以实现柔边、半透明等效果）
-    final Paint stampPaint = stampPaintOf(paint);
-
-    // 单点：直接盖一个笔尖
     if (points.length == 1) {
-      paintStamp(canvas, points.first, 0, radius, stampPaint, 0);
+      final double radius = paint.strokeWidth / 2;
+      paintStamp(canvas, points.first, 0, radius, stampPaintOf(paint), 0);
       return;
     }
 
-    // 间距随画笔粗细缩放，并保证为正防止死循环
-    final double step = (width * spacingRatio).clamp(2.5, double.infinity);
-    final Path path = buildSmoothPath();
+    _drawRange(canvas, size, 0, null, includeTail: true);
+  }
 
-    int index = 0;
-    for (final PathMetric metric in path.computeMetrics()) {
-      double distance = 0.0;
-      while (distance <= metric.length) {
-        final Tangent? tangent = metric.getTangentForOffset(distance);
-        if (tangent != null) {
-          paintStamp(canvas, tangent.position, tangent.angle, radius, stampPaint, index);
-        }
-        index++;
-        distance += step;
-      }
+  void _drawRange(
+    Canvas canvas,
+    Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      if (includeTail) draw(canvas, size, false);
+      return;
     }
+    final double width = paint.strokeWidth;
+    final double radius = width / 2;
+    final Paint stampPaint = stampPaintOf(paint);
+    final double step = (width * spacingRatio).clamp(2.5, double.infinity);
+    final int sig = Object.hash(baseStyleSignature, spacingRatio, _seed);
+    sampleSmooth(step);
+
+    drawSampleSlice(canvas, size, startSample, endSample, includeTail, sig,
+        (Canvas target, int startIdx, int endIdx, bool isTail) {
+      for (int i = startIdx; i < endIdx; i++) {
+        final double x = strokeCache.getX(i, isTail);
+        final double y = strokeCache.getY(i, isTail);
+        final double ang = strokeCache.getAngle(i, isTail);
+        final int globalIdx = strokeCache.globalIndex(i, isTail);
+        paintStamp(target, Offset(x, y), ang, radius, stampPaint, globalIdx);
+      }
+    });
   }
 
   /// 每个笔尖使用的画笔，默认填充；柔边/喷枪等子类可重写添加模糊或透明度
@@ -410,6 +435,127 @@ class SoftRoundBrush extends ShapeBrushLine {
 
   @override
   String get contentType => 'SoftRoundBrush';
+
+  @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(Canvas canvas, Size size, int startSample, int endSample) {
+    _drawSoftRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(Canvas canvas, Size size, int startSample) {
+    _drawSoftRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
+  void draw(Canvas canvas, Size size, bool deeper) {
+    if (points.isEmpty) {
+      return;
+    }
+
+    final double width = paint.strokeWidth;
+    final double radius = width / 2;
+    if (softness <= 0.05) {
+      super.draw(canvas, size, deeper);
+      return;
+    }
+
+    final ui.Image? softStamp = ProceduralStampCaches.getSoftCircleStamp(softness);
+    if (softStamp == null) {
+      super.draw(canvas, size, deeper);
+      return;
+    }
+
+    if (points.length == 1) {
+      final Paint p = Paint()
+        ..isAntiAlias = true
+        ..filterQuality = FilterQuality.low
+        ..colorFilter = ColorFilter.mode(paint.color, BlendMode.modulate);
+      final double drawHalf =
+          radius * (ProceduralStampCaches.softTileSize * 0.5) / ProceduralStampCaches.softDrawRadius;
+      canvas.drawImageRect(
+        softStamp,
+        const Rect.fromLTWH(
+          0,
+          0,
+          ProceduralStampCaches.softTileSize,
+          ProceduralStampCaches.softTileSize,
+        ),
+        Rect.fromCenter(
+          center: points.first,
+          width: drawHalf * 2,
+          height: drawHalf * 2,
+        ),
+        p,
+      );
+      return;
+    }
+
+    _drawSoftRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawSoftRange(
+    Canvas canvas,
+    Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      if (includeTail) draw(canvas, size, false);
+      return;
+    }
+    if (softness <= 0.05) {
+      super._drawRange(canvas, size, startSample, endSample, includeTail: includeTail);
+      return;
+    }
+    final ui.Image? softStamp = ProceduralStampCaches.getSoftCircleStamp(softness);
+    if (softStamp == null) {
+      super._drawRange(canvas, size, startSample, endSample, includeTail: includeTail);
+      return;
+    }
+
+    final double width = paint.strokeWidth;
+    final double radius = width / 2;
+    final double step = (width * spacingRatio).clamp(2.5, double.infinity);
+    final ChunkedStrokeCache cache = sampleSmooth(step);
+    final double refR = ProceduralStampCaches.softDrawRadius;
+    const double tileS = ProceduralStampCaches.softTileSize;
+
+    final int safeStart = startSample.clamp(0, cache.frozenCount);
+    final int safeEnd = (endSample ?? cache.frozenCount).clamp(safeStart, cache.frozenCount);
+    if (safeStart < safeEnd) {
+      AtlasStampDrawer.drawBatch(
+        canvas: canvas,
+        stamp: softStamp,
+        srcSize: tileS,
+        targetRadius: radius,
+        stampRefRadius: refR,
+        xs: cache.xs,
+        ys: cache.ys,
+        angles: List<double>.filled(cache.frozenCount, 0.0, growable: false),
+        start: safeStart,
+        end: safeEnd,
+        tint: paint.color,
+      );
+    }
+    if (includeTail && cache.tailCount > 0) {
+      AtlasStampDrawer.drawBatch(
+        canvas: canvas,
+        stamp: softStamp,
+        srcSize: tileS,
+        targetRadius: radius,
+        stampRefRadius: refR,
+        xs: cache.tailXs,
+        ys: cache.tailYs,
+        angles: List<double>.filled(cache.tailCount, 0.0, growable: false),
+        tint: paint.color,
+      );
+    }
+  }
 
   @override
   Paint stampPaintOf(Paint source) => source.copyWith(style: PaintingStyle.fill);

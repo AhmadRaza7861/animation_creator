@@ -48,36 +48,62 @@ class DottedLine extends FreehandLine {
   String get contentType => 'DottedLine';
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(Canvas canvas, Size size, int startSample, int endSample) {
+    _drawRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(Canvas canvas, Size size, int startSample) {
+    _drawRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (points.isEmpty) {
       return;
     }
-
-    final double width = paint.strokeWidth;
-    final double radius = width / 2;
-    // 圆点用填充绘制，避免描边模式下出现空心圆
-    final Paint dotPaint = paint.copyWith(style: PaintingStyle.fill);
-
     if (points.length == 1) {
-      canvas.drawCircle(points.first, radius, dotPaint);
+      final Paint dotPaint = paint.copyWith(style: PaintingStyle.fill);
+      canvas.drawCircle(points.first, paint.strokeWidth / 2, dotPaint);
       return;
     }
 
-    // 间距随画笔粗细缩放，并保证至少不小于圆点直径以防重叠/死循环
+    _drawRange(canvas, size, 0, null, includeTail: true);
+  }
+
+  void _drawRange(
+    Canvas canvas,
+    Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      if (includeTail) draw(canvas, size, false);
+      return;
+    }
+    final double width = paint.strokeWidth;
+    final double radius = width / 2;
+    final Paint dotPaint = paint.copyWith(style: PaintingStyle.fill);
     final double diameter = width > 0 ? width : 1.0;
     final double step = (width * spacingRatio).clamp(diameter, double.infinity);
+    final int sig = Object.hash(baseStyleSignature, spacingRatio);
+    sampleSmooth(step);
 
-    final Path source = buildSmoothPath();
-    for (final PathMetric metric in source.computeMetrics()) {
-      double distance = 0.0;
-      while (distance <= metric.length) {
-        final Tangent? tangent = metric.getTangentForOffset(distance);
-        if (tangent != null) {
-          canvas.drawCircle(tangent.position, radius, dotPaint);
-        }
-        distance += step;
+    drawSampleSlice(canvas, size, startSample, endSample, includeTail, sig,
+        (Canvas target, int startIdx, int endIdx, bool isTail) {
+      for (int i = startIdx; i < endIdx; i++) {
+        target.drawCircle(
+          Offset(strokeCache.getX(i, isTail), strokeCache.getY(i, isTail)),
+          radius,
+          dotPaint,
+        );
       }
-    }
+    });
   }
 
   @override

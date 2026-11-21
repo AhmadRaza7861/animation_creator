@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/painting.dart';
 
 import '../paint_extension/ex_offset.dart';
@@ -85,16 +83,27 @@ class ImageTipBrush extends FreehandLine {
   String get contentType => 'ImageTipBrush';
 
   @override
+  bool get supportsActiveRangeBaking => true;
+
+  @override
+  void drawCommittedRange(Canvas canvas, Size size, int startSample, int endSample) {
+    _drawRange(canvas, size, startSample, endSample, includeTail: false);
+  }
+
+  @override
+  void drawLiveFromSample(Canvas canvas, Size size, int startSample) {
+    _drawRange(canvas, size, startSample, null, includeTail: true);
+  }
+
+  @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (points.isEmpty) {
       return;
     }
 
-    final double width = paint.strokeWidth;
-    final double radius = width / 2;
-    final double angleRad = angle * 3.1415926535897932 / 180;
-
     if (points.length == 1) {
+      final double radius = paint.strokeWidth / 2;
+      final double angleRad = angle * 3.1415926535897932 / 180;
       BrushStampLibrary.instance.paintDirect(
         canvas,
         stampKey,
@@ -109,31 +118,68 @@ class ImageTipBrush extends FreehandLine {
       return;
     }
 
+    final double width = paint.strokeWidth;
     final double frac = spacing > 0 ? spacing : 0.08;
     final double step = (width * frac).clamp(2.5, double.infinity);
-    final Path path = buildSmoothPath();
+    final cache = sampleSmooth(step);
+    _drawRange(canvas, size, 0, cache.frozenCount, includeTail: true);
+  }
 
-    int index = 0;
-    for (final ui.PathMetric metric in path.computeMetrics()) {
-      double distance = 0.0;
-      while (distance <= metric.length) {
-        final ui.Tangent? tangent = metric.getTangentForOffset(distance);
-        if (tangent != null) {
-          BrushStampLibrary.instance.paintDirect(
-            canvas,
-            stampKey,
-            tangent.position,
-            radius,
-            paint.color,
-            angle: (followPath ? tangent.angle : 0) + angleRad,
-            flipX: flipX,
-            flipY: flipY,
-            hardness: hardness,
-          );
-        }
-        index++;
-        distance += step;
-      }
+  void _drawRange(
+    Canvas canvas,
+    Size size,
+    int startSample,
+    int? endSample, {
+    required bool includeTail,
+  }) {
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      if (includeTail) draw(canvas, size, false);
+      return;
+    }
+    final double width = paint.strokeWidth;
+    final double radius = width / 2;
+    final double angleRad = angle * 3.1415926535897932 / 180;
+    final double frac = spacing > 0 ? spacing : 0.08;
+    final double step = (width * frac).clamp(2.5, double.infinity);
+    final cache = sampleSmooth(step);
+
+    final int safeStart = startSample.clamp(0, cache.frozenCount);
+    final int safeEnd = (endSample ?? cache.frozenCount).clamp(safeStart, cache.frozenCount);
+    if (safeStart < safeEnd) {
+      BrushStampLibrary.instance.paintBatch(
+        canvas,
+        stampKey,
+        cache.xs,
+        cache.ys,
+        cache.angles,
+        radius,
+        paint.color,
+        start: safeStart,
+        end: safeEnd,
+        flipX: flipX,
+        flipY: flipY,
+        hardness: hardness,
+        fixedAngle: angleRad,
+        addSampleAngle: followPath,
+      );
+    }
+
+    if (includeTail && cache.tailCount > 0) {
+      BrushStampLibrary.instance.paintBatch(
+        canvas,
+        stampKey,
+        cache.tailXs,
+        cache.tailYs,
+        cache.tailAngles,
+        radius,
+        paint.color,
+        flipX: flipX,
+        flipY: flipY,
+        hardness: hardness,
+        fixedAngle: angleRad,
+        addSampleAngle: followPath,
+      );
     }
   }
 

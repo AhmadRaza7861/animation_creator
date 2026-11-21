@@ -47,8 +47,23 @@ class DashedLine extends FreehandLine {
   /// 划线间隔相对画笔粗细的倍数 / Gap length as a multiple of the stroke width
   final double gapRatio;
 
+  Path? _cachedDashPath;
+  int _cachedLen = 0;
+  Offset? _cachedFirst;
+  Offset? _cachedLast;
+  double _cachedWidth = 0;
+
   @override
   String get contentType => 'DashedLine';
+
+  @override
+  void clearRenderCache() {
+    super.clearRenderCache();
+    _cachedDashPath = null;
+    _cachedLen = 0;
+    _cachedFirst = null;
+    _cachedLast = null;
+  }
 
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
@@ -64,6 +79,15 @@ class DashedLine extends FreehandLine {
 
     // 划线与间隔随画笔粗细缩放，保证任意粗细下都清晰可见
     final double width = paint.strokeWidth;
+    if (_cachedDashPath != null &&
+        _cachedLen == points.length &&
+        _cachedFirst == points.first &&
+        _cachedLast == points.last &&
+        _cachedWidth == width) {
+      canvas.drawPath(_cachedDashPath!, paint);
+      return;
+    }
+
     final double dash = (width * dashRatio).clamp(1.0, double.infinity);
     final double gap = (width * gapRatio).clamp(1.0, double.infinity);
 
@@ -79,6 +103,12 @@ class DashedLine extends FreehandLine {
         distance = end + gap;
       }
     }
+
+    _cachedDashPath = dashed;
+    _cachedLen = points.length;
+    _cachedFirst = points.first;
+    _cachedLast = points.last;
+    _cachedWidth = width;
 
     canvas.drawPath(dashed, paint);
   }

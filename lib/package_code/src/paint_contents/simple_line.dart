@@ -119,11 +119,36 @@ class FreehandLine extends PaintContent {
   List<Offset>? points;
   Offset? _lastPoint;
 
+  Path? _committedPath;
+  int _committedSegEnd = 1;
+  Path? _cachedFullPath;
+  int _cachedPtLen = 0;
+  bool _cachedBezier = true;
+  Offset? _cachedFirst;
+  Offset? _cachedSecond;
+  Offset? _cachedLast;
+
   @override
   String get contentType => 'FreehandLine';
 
+  void _resetPathCache() {
+    _committedPath = null;
+    _committedSegEnd = 1;
+    _cachedFullPath = null;
+    _cachedPtLen = 0;
+    _cachedFirst = null;
+    _cachedSecond = null;
+    _cachedLast = null;
+  }
+
+  @override
+  void clearRenderCache() {
+    _resetPathCache();
+  }
+
   @override
   void startDraw(Offset startPoint) {
+    _resetPathCache();
     _lastPoint = startPoint;
     points = <Offset>[startPoint];
     path = DrawPath();
@@ -145,50 +170,93 @@ class FreehandLine extends PaintContent {
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
     if (points != null && points!.isNotEmpty) {
-      if (useBezierCurve) {
-        _drawWithBezierCurve(canvas);
-      } else {
-        _drawWithStraightLines(canvas);
+      if (points!.length == 1) {
+        canvas.drawCircle(points![0], paint.strokeWidth / 8, paint);
+        return;
       }
+      canvas.drawPath(_getOrBuildPointPath(), paint);
     } else {
       canvas.drawPath(path.path, paint);
     }
   }
 
-  void _drawWithStraightLines(Canvas canvas) {
-    if (points == null || points!.isEmpty) return;
-    final Path p = Path();
-    p.moveTo(points![0].dx, points![0].dy);
-    for (int i = 1; i < points!.length; i++) {
-      p.lineTo(points![i].dx, points![i].dy);
-    }
-    canvas.drawPath(p, paint);
-  }
-
-  void _drawWithBezierCurve(Canvas canvas) {
-    if (points == null || points!.isEmpty) return;
-    if (points!.length == 1) {
-      canvas.drawCircle(points![0], paint.strokeWidth / 8, paint);
-      return;
-    }
-
-    final Path bezierPath = Path();
-    bezierPath.moveTo(points![0].dx, points![0].dy);
-
-    if (points!.length == 2) {
-      bezierPath.lineTo(points![1].dx, points![1].dy);
-    } else {
-      for (int i = 1; i < points!.length - 1; i++) {
-        final Offset p0 = points![i];
-        final Offset p1 = points![i + 1];
-        final Offset midPoint = Offset((p0.dx + p1.dx) / 2, (p0.dy + p1.dy) / 2);
-        bezierPath.quadraticBezierTo(p0.dx, p0.dy, midPoint.dx, midPoint.dy);
+  Path _getOrBuildPointPath() {
+    final List<Offset> pts = points!;
+    final int n = pts.length;
+    if (!useBezierCurve || n < 3) {
+      if (_cachedFullPath != null &&
+          _cachedBezier == useBezierCurve &&
+          _cachedPtLen == n &&
+          _cachedFirst == pts.first &&
+          _cachedLast == pts.last &&
+          (n < 2 || _cachedSecond == pts[1])) {
+        return _cachedFullPath!;
       }
-      final Offset lastPoint = points!.last;
-      final Offset secondLastPoint = points![points!.length - 2];
-      bezierPath.quadraticBezierTo(secondLastPoint.dx, secondLastPoint.dy, lastPoint.dx, lastPoint.dy);
+      final Path p = Path()..moveTo(pts[0].dx, pts[0].dy);
+      for (int i = 1; i < n; i++) {
+        p.lineTo(pts[i].dx, pts[i].dy);
+      }
+      _cachedFullPath = p;
+      _cachedPtLen = n;
+      _cachedBezier = useBezierCurve;
+      _cachedFirst = pts.first;
+      _cachedSecond = n > 1 ? pts[1] : null;
+      _cachedLast = pts.last;
+      return p;
     }
-    canvas.drawPath(bezierPath, paint);
+
+    if (_cachedFullPath != null &&
+        _cachedBezier &&
+        _cachedPtLen == n &&
+        _cachedFirst == pts.first &&
+        _cachedSecond == pts[1] &&
+        _cachedLast == pts.last) {
+      return _cachedFullPath!;
+    }
+
+    final bool canExtend =
+        _cachedBezier &&
+        _committedPath != null &&
+        _cachedPtLen >= 3 &&
+        n >= _cachedPtLen &&
+        _cachedFirst == pts.first &&
+        _cachedSecond == pts[1];
+
+    if (!canExtend) {
+      _committedPath = Path()..moveTo(pts[0].dx, pts[0].dy);
+      _committedSegEnd = 1;
+    }
+
+    while (_committedSegEnd <= n - 2) {
+      final int i = _committedSegEnd;
+      final Offset p0 = pts[i];
+      final Offset p1 = pts[i + 1];
+      _committedPath!.quadraticBezierTo(
+        p0.dx,
+        p0.dy,
+        (p0.dx + p1.dx) * 0.5,
+        (p0.dy + p1.dy) * 0.5,
+      );
+      _committedSegEnd++;
+    }
+
+    final Path full = Path.from(_committedPath!);
+    final Offset lastPoint = pts.last;
+    final Offset secondLastPoint = pts[n - 2];
+    full.quadraticBezierTo(
+      secondLastPoint.dx,
+      secondLastPoint.dy,
+      lastPoint.dx,
+      lastPoint.dy,
+    );
+
+    _cachedFullPath = full;
+    _cachedBezier = true;
+    _cachedPtLen = n;
+    _cachedFirst = pts.first;
+    _cachedSecond = pts[1];
+    _cachedLast = lastPoint;
+    return full;
   }
 
   @override
@@ -203,31 +271,11 @@ class FreehandLine extends PaintContent {
   @override
   Path getPath() {
     if (points != null && points!.isNotEmpty) {
-      final Path p = Path();
-      p.moveTo(points![0].dx, points![0].dy);
-      
-      if (useBezierCurve) {
-        if (points!.length == 1) {
-          p.addOval(Rect.fromCircle(center: points![0], radius: paint.strokeWidth / 8));
-        } else if (points!.length == 2) {
-          p.lineTo(points![1].dx, points![1].dy);
-        } else {
-          for (int i = 1; i < points!.length - 1; i++) {
-            final Offset p0 = points![i];
-            final Offset p1 = points![i + 1];
-            final Offset midPoint = Offset((p0.dx + p1.dx) / 2, (p0.dy + p1.dy) / 2);
-            p.quadraticBezierTo(p0.dx, p0.dy, midPoint.dx, midPoint.dy);
-          }
-          final Offset lastPoint = points!.last;
-          final Offset secondLastPoint = points![points!.length - 2];
-          p.quadraticBezierTo(secondLastPoint.dx, secondLastPoint.dy, lastPoint.dx, lastPoint.dy);
-        }
-      } else {
-        for (int i = 1; i < points!.length; i++) {
-          p.lineTo(points![i].dx, points![i].dy);
-        }
+      if (useBezierCurve && points!.length == 1) {
+        return Path()
+          ..addOval(Rect.fromCircle(center: points![0], radius: paint.strokeWidth / 8));
       }
-      return p;
+      return _getOrBuildPointPath();
     } else {
       return path.path;
     }

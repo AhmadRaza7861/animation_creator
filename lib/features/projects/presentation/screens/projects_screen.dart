@@ -40,6 +40,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
   String _projectSearchQuery = '';
   final TextEditingController _projectSearchController = TextEditingController();
   bool _isOpeningProject = false;
+  bool _isBackfillingThumbnails = false;
+  final Set<String> _checkedMissingThumbKeys = <String>{};
 
   @override
   void initState() {
@@ -85,6 +87,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
     final projects = await widget.repository.listProjects();
     if (mounted) {
       _projects = projects;
+      unawaited(_backfillMissingThumbnails(projects));
     }
   }
 
@@ -94,6 +97,44 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
       setState(() {
         _projects = projects;
       });
+      unawaited(_backfillMissingThumbnails(projects));
+    }
+  }
+
+  Future<void> _backfillMissingThumbnails(List<ProjectMeta> projects) async {
+    if (_isBackfillingThumbnails) return;
+    _isBackfillingThumbnails = true;
+    try {
+      for (final meta in List<ProjectMeta>.from(projects)) {
+        if (!mounted) return;
+        final bool hasThumb =
+            meta.thumbnailPath != null &&
+            meta.thumbnailPath!.isNotEmpty &&
+            File(meta.thumbnailPath!).existsSync();
+        if (hasThumb) continue;
+
+        final String checkKey =
+            '${meta.id}_${meta.lastModified.millisecondsSinceEpoch}';
+        if (_checkedMissingThumbKeys.contains(checkKey)) continue;
+        _checkedMissingThumbKeys.add(checkKey);
+
+        // Yield between projects so list scrolling & touch input stay unblocked.
+        await Future<void>.delayed(const Duration(milliseconds: 24));
+        if (!mounted) return;
+
+        final ProjectMeta? updated =
+            await widget.repository.ensureThumbnailFromSavedState(meta.id);
+        if (!mounted || updated == null) continue;
+
+        final int idx = _projects.indexWhere((p) => p.id == updated.id);
+        if (idx != -1) {
+          setState(() {
+            _projects[idx] = updated;
+          });
+        }
+      }
+    } finally {
+      _isBackfillingThumbnails = false;
     }
   }
 
@@ -375,6 +416,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
           children: [
             Row(
               mainAxisSize: MainAxisSize.min,
+              textDirection: TextDirection.ltr,
               children: [
                 const Text(
                   'clip',
@@ -743,7 +785,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
         // Horizontal Carousel
         if (_featuredTemplates.isNotEmpty)
           SizedBox(
-            height: 195,
+            height: 212,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _featuredTemplates.length,
@@ -756,7 +798,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
           )
         else
           SizedBox(
-            height: 195,
+            height: 212,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: 3,
@@ -823,9 +865,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                   ),
 
                   // Frame count pill
-                  Positioned(
+                  PositionedDirectional(
                     top: 8,
-                    left: 8,
+                    start: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -844,9 +886,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
                   ),
 
                   // Difficulty pill
-                  Positioned(
+                  PositionedDirectional(
                     top: 8,
-                    right: 8,
+                    end: 8,
                     child: _buildDifficultyBadge(template.difficulty),
                   ),
                 ],
@@ -854,56 +896,70 @@ class _ProjectsScreenState extends State<ProjectsScreen> with RouteAware {
             ),
 
             // Bottom Info
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    template.getLocalizedName(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w800,
-                      color: ColorConstants.darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    template.getLocalizedDescription(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: ColorConstants.mediumText,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.timer_outlined, size: 12, color: ColorConstants.primary),
-                      const SizedBox(width: 3),
-                      Text(
-                        context.tr('minutesApprox', {'min': '${template.estimatedMinutes}'}),
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: ColorConstants.primary,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          template.getLocalizedName(context),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: ColorConstants.darkText,
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${context.tr('practice')} →',
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          color: ColorConstants.primary,
+                        const SizedBox(height: 2),
+                        Text(
+                          template.getLocalizedDescription(context),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: ColorConstants.mediumText,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.timer_outlined, size: 12, color: ColorConstants.primary),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            context.tr('minutesApprox', {'min': '${template.estimatedMinutes}'}),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: ColorConstants.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          context.tr('practice'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            color: ColorConstants.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

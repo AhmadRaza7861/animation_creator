@@ -59,11 +59,36 @@ class SmoothLine extends PaintContent {
   /// 点之间的绘制线条权重列表
   List<double> strokeWidthList = <double>[];
 
+  // Cached coalesced width-bucketed paths + baked completed Picture.
+  final List<({Path path, double width})> _cachedRuns =
+      <({Path path, double width})>[];
+  Picture? _cachedPicture;
+  int _cachedPtLen = 0;
+  Offset? _cachedFirst;
+  Offset? _cachedSecond;
+  Offset? _cachedLast;
+  double _cachedBaseWidth = 0;
+  int _cachedColor = 0;
+  int _cachedBlend = 0;
+
   @override
   String get contentType => 'SmoothLine';
 
   @override
+  void clearRenderCache() {
+    try {
+      _cachedPicture?.dispose();
+    } catch (_) {}
+    _cachedPicture = null;
+    _cachedRuns.clear();
+    _cachedPtLen = 0;
+    _cachedFirst = null;
+    _cachedLast = null;
+  }
+
+  @override
   void startDraw(Offset startPoint) {
+    clearRenderCache();
     points = <Offset>[startPoint];
     strokeWidthList = <double>[paint.strokeWidth];
   }
@@ -118,136 +143,134 @@ class SmoothLine extends PaintContent {
 
   @override
   void draw(Canvas canvas, Size size, bool deeper) {
-    if (points.isEmpty) {
+    final int n = points.length;
+    if (n == 0) {
       return;
     }
 
-    if (points.length == 1) {
-      // 单点绘制
+    if (n == 1) {
       canvas.drawCircle(points[0], strokeWidthList[0] / 8, paint);
       return;
     }
 
-    if (useBezierCurve && points.length > 2) {
-      // 使用贝塞尔曲线绘制平滑线条
-      _drawWithBezierCurve(canvas);
-    } else {
-      // 使用原始的直线绘制
-      _drawWithStraightLines(canvas);
-    }
-  }
+    final int curColor = paint.color.toARGB32();
+    final int curBlend = paint.blendMode.index;
+    final bool validCache =
+        _cachedPtLen == n &&
+        _cachedFirst == points.first &&
+        _cachedSecond == points[1] &&
+        _cachedLast == points.last &&
+        _cachedBaseWidth == paint.strokeWidth &&
+        _cachedColor == curColor &&
+        _cachedBlend == curBlend;
 
-  /// 使用贝塞尔曲线绘制平滑线条
-  void _drawWithBezierCurve(Canvas canvas) {
-    if (smoothLevel >= 2) {
-      // 高级平滑：使用插值点和改进的贝塞尔曲线
-      _drawWithAdvancedSmoothing(canvas);
-    } else {
-      // 基础平滑：使用标准二次贝塞尔曲线
-      _drawWithStandardBezier(canvas);
-    }
-  }
-
-  /// 标准贝塞尔曲线绘制
-  void _drawWithStandardBezier(Canvas canvas) {
-    // 分段绘制，每段使用对应的笔触宽度
-    Offset currentPoint = points[0];
-
-    for (int i = 1; i < points.length - 1; i++) {
-      final Offset p0 = points[i];
-      final Offset p1 = points[i + 1];
-
-      // 计算中点作为终点
-      final Offset midPoint = Offset(
-        (p0.dx + p1.dx) / 2,
-        (p0.dy + p1.dy) / 2,
-      );
-
-      // 创建这一段的路径
-      final Path segmentPath = Path();
-      segmentPath.moveTo(currentPoint.dx, currentPoint.dy);
-      segmentPath.quadraticBezierTo(p0.dx, p0.dy, midPoint.dx, midPoint.dy);
-
-      // 使用对应的笔触宽度绘制
-      final double width = strokeWidthList[i];
-      canvas.drawPath(segmentPath, paint.copyWith(strokeWidth: width));
-
-      currentPoint = midPoint;
-    }
-
-    // 绘制最后一段 - 使用贝塞尔曲线而不是直线
-    if (points.length > 1) {
-      final Offset lastPoint = points.last;
-      final Offset secondLastPoint = points[points.length - 2];
-
-      final Path lastSegment = Path();
-      lastSegment.moveTo(currentPoint.dx, currentPoint.dy);
-      lastSegment.quadraticBezierTo(
-        secondLastPoint.dx,
-        secondLastPoint.dy,
-        lastPoint.dx,
-        lastPoint.dy,
-      );
-
-      // 使用最后一段的宽度
-      final double lastWidth = strokeWidthList.last;
-      canvas.drawPath(lastSegment, paint.copyWith(strokeWidth: lastWidth));
-    }
-  }
-
-  /// 高级平滑绘制 - 解决快速绘制折线感
-  void _drawWithAdvancedSmoothing(Canvas canvas) {
-    if (points.length < 3) {
-      _drawWithStandardBezier(canvas);
+    if (validCache && _cachedPicture != null) {
+      canvas.drawPicture(_cachedPicture!);
       return;
     }
 
-    // 使用 Catmull-Rom 样条插值生成更多中间点
-    final List<Offset> interpolatedPoints = _interpolatePoints();
-    final List<double> interpolatedWidths = _interpolateWidths();
+    if (!validCache) {
+      try {
+        _cachedPicture?.dispose();
+      } catch (_) {}
+      _cachedPicture = null;
+      _rebuildBucketRuns();
+      _cachedPtLen = n;
+      _cachedFirst = points.first;
+      _cachedSecond = points[1];
+      _cachedLast = points.last;
+      _cachedBaseWidth = paint.strokeWidth;
+      _cachedColor = curColor;
+      _cachedBlend = curBlend;
+    }
 
-    // 分段绘制，每段使用对应的笔触宽度
-    Offset currentPoint = interpolatedPoints[0];
+    final Paint workPaint = Paint()
+      ..color = paint.color
+      ..style = paint.style
+      ..strokeCap = paint.strokeCap
+      ..strokeJoin = paint.strokeJoin
+      ..isAntiAlias = paint.isAntiAlias
+      ..blendMode = !useBezierCurve || n <= 2 ? BlendMode.src : paint.blendMode
+      ..maskFilter = paint.maskFilter
+      ..colorFilter = paint.colorFilter;
 
-    for (int i = 1; i < interpolatedPoints.length - 1; i++) {
-      final Offset p0 = interpolatedPoints[i];
-      final Offset p1 = interpolatedPoints[i + 1];
+    if (deeper || n > 12) {
+      final PictureRecorder rec = PictureRecorder();
+      final Canvas recCanvas =
+          Canvas(rec, size.isEmpty ? null : Offset.zero & size);
+      for (final run in _cachedRuns) {
+        workPaint.strokeWidth = run.width;
+        recCanvas.drawPath(run.path, workPaint);
+      }
+      _cachedPicture = rec.endRecording();
+      canvas.drawPicture(_cachedPicture!);
+      return;
+    }
 
-      // 计算中点作为终点
-      final Offset midPoint = Offset(
-        (p0.dx + p1.dx) / 2,
-        (p0.dy + p1.dy) / 2,
-      );
+    for (final run in _cachedRuns) {
+      workPaint.strokeWidth = run.width;
+      canvas.drawPath(run.path, workPaint);
+    }
+  }
 
-      // 创建这一段的路径
-      final Path segmentPath = Path();
-      segmentPath.moveTo(currentPoint.dx, currentPoint.dy);
-      segmentPath.quadraticBezierTo(p0.dx, p0.dy, midPoint.dx, midPoint.dy);
+  void _rebuildBucketRuns() {
+    _cachedRuns.clear();
+    final int n = points.length;
+    if (n < 2) return;
 
-      // 使用对应的笔触宽度绘制
-      final double width = interpolatedWidths[i];
-      canvas.drawPath(segmentPath, paint.copyWith(strokeWidth: width));
+    void appendRun(Path segBuilder, Offset start, Offset ctrl, Offset? end, double rawWidth, bool isQuad) {
+      // Quantize width to 0.35px buckets so adjacent similar segments share 1 Path & 1 draw call.
+      final double qWidth = (rawWidth * 3.0).round() / 3.0;
+      if (_cachedRuns.isNotEmpty && _cachedRuns.last.width == qWidth) {
+        final Path p = _cachedRuns.last.path;
+        if (isQuad && end != null) {
+          p.quadraticBezierTo(ctrl.dx, ctrl.dy, end.dx, end.dy);
+        } else {
+          p.lineTo(ctrl.dx, ctrl.dy);
+        }
+      } else {
+        final Path p = Path()..moveTo(start.dx, start.dy);
+        if (isQuad && end != null) {
+          p.quadraticBezierTo(ctrl.dx, ctrl.dy, end.dx, end.dy);
+        } else {
+          p.lineTo(ctrl.dx, ctrl.dy);
+        }
+        _cachedRuns.add((path: p, width: qWidth));
+      }
+    }
 
+    if (!useBezierCurve || n <= 2) {
+      for (int i = 1; i < n; i++) {
+        appendRun(
+          Path(),
+          points[i - 1],
+          points[i],
+          null,
+          strokeWidthList[i],
+          false,
+        );
+      }
+      return;
+    }
+
+    final List<Offset> pts =
+        smoothLevel >= 2 && n >= 3 ? _interpolatePoints() : points;
+    final List<double> widths =
+        smoothLevel >= 2 && n >= 3 ? _interpolateWidths() : strokeWidthList;
+
+    Offset currentPoint = pts[0];
+    for (int i = 1; i < pts.length - 1; i++) {
+      final Offset p0 = pts[i];
+      final Offset p1 = pts[i + 1];
+      final Offset midPoint = Offset((p0.dx + p1.dx) * 0.5, (p0.dy + p1.dy) * 0.5);
+      appendRun(Path(), currentPoint, p0, midPoint, widths[i], true);
       currentPoint = midPoint;
     }
 
-    // 绘制最后一段
-    if (interpolatedPoints.length > 1) {
-      final Offset lastPoint = interpolatedPoints.last;
-      final Offset secondLastPoint = interpolatedPoints[interpolatedPoints.length - 2];
-
-      final Path lastSegment = Path();
-      lastSegment.moveTo(currentPoint.dx, currentPoint.dy);
-      lastSegment.quadraticBezierTo(
-        secondLastPoint.dx,
-        secondLastPoint.dy,
-        lastPoint.dx,
-        lastPoint.dy,
-      );
-
-      // 使用最后一段的宽度
-      final double lastWidth = interpolatedWidths.last;
-      canvas.drawPath(lastSegment, paint.copyWith(strokeWidth: lastWidth));
+    if (pts.length > 1) {
+      final Offset lastPoint = pts.last;
+      final Offset secondLastPoint = pts[pts.length - 2];
+      appendRun(Path(), currentPoint, secondLastPoint, lastPoint, widths.last, true);
     }
   }
 
@@ -328,18 +351,6 @@ class SmoothLine extends PaintContent {
             (-p0.dy + 3 * p1.dy - 3 * p2.dy + p3.dy) * t3);
 
     return Offset(x, y);
-  }
-
-  /// 使用直线绘制（原始方法）
-  void _drawWithStraightLines(Canvas canvas) {
-    for (int i = 1; i < points.length; i++) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(points[i - 1].dx, points[i - 1].dy)
-          ..lineTo(points[i].dx, points[i].dy),
-        paint.copyWith(strokeWidth: strokeWidthList[i], blendMode: BlendMode.src),
-      );
-    }
   }
 
   @override

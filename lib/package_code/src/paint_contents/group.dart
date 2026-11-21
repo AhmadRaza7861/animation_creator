@@ -1,6 +1,7 @@
 import 'paint_content_decoder.dart';
 
 import 'package:flutter/painting.dart';
+import '../paint_extension/ex_offset.dart';
 import '../paint_extension/ex_paint.dart';
 import 'paint_content.dart';
 
@@ -24,7 +25,10 @@ class GroupContent extends PaintContent {
           .toList(),
       paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
       boundsOffset: data['boundsOffset'] != null
-          ? Offset(data['boundsOffset']['dx'] as double, data['boundsOffset']['dy'] as double)
+          ? Offset(
+              (data['boundsOffset']['dx'] as num).toDouble(),
+              (data['boundsOffset']['dy'] as num).toDouble(),
+            )
           : Offset.zero,
     );
   }
@@ -72,6 +76,7 @@ class GroupContent extends PaintContent {
     return <String, dynamic>{
       'children': children.map((e) => e.toJson()).toList(),
       'paint': paint.toJson(),
+      if (boundsOffset != Offset.zero) 'boundsOffset': boundsOffset.toJson(),
     };
   }
 

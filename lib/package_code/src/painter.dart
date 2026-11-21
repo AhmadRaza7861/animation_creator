@@ -259,20 +259,20 @@ class _UpPainter extends CustomPainter {
       );
 
       if (isSmudgeActive) {
-        final SmudgeContent smudge = activeDrawing as SmudgeContent;
+        final SmudgeContent smudge = activeDrawing;
         if (smudge.liveImage != null || smudge.image != null) {
           smudge.draw(canvas, size, false);
         } else {
           // Fallback: draw history until live image is ready
-          activeLayer.drawHistory(canvas, size, false);
+          controller.drawLayerCached(canvas, size, activeLayer, false);
         }
       } else if (isBlurActive) {
-        final BlurContent blur = activeDrawing as BlurContent;
+        final BlurContent blur = activeDrawing;
         if (blur.liveImage != null || blur.image != null) {
           blur.draw(canvas, size, false);
         } else {
           // Fallback: draw history until live image is ready
-          activeLayer.drawHistory(canvas, size, false);
+          controller.drawLayerCached(canvas, size, activeLayer, false);
         }
       }
 
@@ -289,7 +289,7 @@ class _UpPainter extends CustomPainter {
           ..color = Colors.white.withValues(alpha: activeLayer.opacity),
       );
 
-      activeLayer.drawHistory(canvas, size, false);
+      controller.drawLayerCached(canvas, size, activeLayer, false);
 
       if (controller.eraserContent != null) {
         controller.eraserContent?.draw(canvas, size, false);
@@ -300,6 +300,7 @@ class _UpPainter extends CustomPainter {
       canvas.restore();
     } else {
       final activeLayer = controller.activeLayer.value;
+      final PaintContent activePaintContent = controller.drawingContent!;
       if (activeLayer != null &&
           (activeLayer.opacity < 1.0 ||
               activeLayer.blendMode != BlendMode.srcOver)) {
@@ -309,10 +310,10 @@ class _UpPainter extends CustomPainter {
             ..blendMode = activeLayer.blendMode
             ..color = Colors.white.withValues(alpha: activeLayer.opacity),
         );
-        controller.drawingContent?.draw(canvas, size, false);
+        controller.drawActiveContentCached(canvas, size, activePaintContent);
         canvas.restore();
       } else {
-        controller.drawingContent?.draw(canvas, size, false);
+        controller.drawActiveContentCached(canvas, size, activePaintContent);
       }
     }
   }
@@ -469,9 +470,19 @@ class _DeepPainter extends CustomPainter {
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas recCanvas = Canvas(recorder, Offset.zero & size);
 
-    // To properly support BlendMode.clear (Erasers) in the history, we need an isolated layer
-    // otherwise it clears the canvas to black on certain Flutter backends.
-    recCanvas.saveLayer(Offset.zero & size, Paint());
+    bool needsRootSaveLayer = false;
+    for (final layer in controller.layers) {
+      if (!layer.isVisible) continue;
+      if (isModifierActive && layer == activeLayer) continue;
+      if (!controller.canDrawLayerWithoutSaveLayer(layer, size)) {
+        needsRootSaveLayer = true;
+        break;
+      }
+    }
+
+    if (needsRootSaveLayer) {
+      recCanvas.saveLayer(Offset.zero & size, Paint());
+    }
 
     for (int i = controller.layers.length - 1; i >= 0; i--) {
       final layer = controller.layers[i];
@@ -479,19 +490,30 @@ class _DeepPainter extends CustomPainter {
       // 如果当前是修改器激活状态，活跃图层由 _UpPainter 独立渲染，避免与底层重复或造成透明镂空穿透
       if (isModifierActive && layer == activeLayer) continue;
 
-      recCanvas.saveLayer(
-        Offset.zero & size,
-        Paint()
-          ..blendMode = layer.blendMode
-          ..color = Colors.white.withValues(alpha: layer.opacity),
-      );
+      final bool needsLayerSave =
+          layer.opacity < 1.0 ||
+          layer.blendMode != BlendMode.srcOver ||
+          !controller.canDrawLayerWithoutSaveLayer(layer, size);
 
-      layer.drawHistory(recCanvas, size, true);
+      if (needsLayerSave) {
+        recCanvas.saveLayer(
+          Offset.zero & size,
+          Paint()
+            ..blendMode = layer.blendMode
+            ..color = Colors.white.withValues(alpha: layer.opacity),
+        );
+      }
 
-      recCanvas.restore();
+      controller.drawLayerCached(recCanvas, size, layer, true);
+
+      if (needsLayerSave) {
+        recCanvas.restore();
+      }
     }
 
-    recCanvas.restore();
+    if (needsRootSaveLayer) {
+      recCanvas.restore();
+    }
 
     final ui.Picture picture = recorder.endRecording();
 

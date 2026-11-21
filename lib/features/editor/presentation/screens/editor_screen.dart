@@ -1092,6 +1092,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     VoidCallback? dismissLoader;
     try {
       final bool needsSave = controller.isDirty ||
+          controller.needsThumbnailUpdate ||
           controller.activeSticker != null ||
           controller.projectId == null ||
           controller.isSaving;
@@ -1212,7 +1213,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                         child: Container(
                           width: 30,
                           height: 30,
-                          margin: const EdgeInsets.only(left: 4),
+                          margin: const EdgeInsetsDirectional.only(start: 4),
                           alignment: Alignment.center,
                           child: Stack(
                             alignment: Alignment.center,
@@ -2557,125 +2558,118 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                 _isRulerMenuExpanded && rulerConfig.type != RulerType.none;
 
             if (_isBrushPanelCollapsed) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onPanStart: (details) {
-                      _isBrushPanelDragging = false;
-                      _brushPanelDragStart = details.globalPosition;
-                    },
-                    onPanUpdate: (details) {
-                      if (_brushPanelDragStart != null &&
-                          (details.globalPosition - _brushPanelDragStart!)
-                                  .distance >
-                              4.0) {
-                        _isBrushPanelDragging = true;
-                      }
-                      _onBrushPanelPanUpdate(details);
-                    },
-                    onPanEnd: (details) {
-                      if (!_isBrushPanelDragging) {
-                        setState(() {
-                          _isBrushPanelCollapsed = false;
-                        });
-                      }
-                    },
-                    onTap: () {
+              return RepaintBoundary(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanStart: (details) {
+                    _isBrushPanelDragging = false;
+                    _brushPanelDragStart = details.globalPosition;
+                  },
+                  onPanUpdate: (details) {
+                    if (_brushPanelDragStart != null &&
+                        (details.globalPosition - _brushPanelDragStart!)
+                                .distance >
+                            4.0) {
+                      _isBrushPanelDragging = true;
+                    }
+                    _onBrushPanelPanUpdate(details);
+                  },
+                  onPanEnd: (details) {
+                    if (!_isBrushPanelDragging) {
                       setState(() {
                         _isBrushPanelCollapsed = false;
                       });
-                    },
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.95),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: ColorConstants.accent.withValues(alpha: 0.4),
-                          width: 1.5,
+                    }
+                  },
+                  onTap: () {
+                    setState(() {
+                      _isBrushPanelCollapsed = false;
+                    });
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.96),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: ColorConstants.accent.withValues(alpha: 0.4),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.14),
+                          blurRadius: 10,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 3),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 12,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Stack(
                       alignment: Alignment.center,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SvgPicture.asset(
-                            isBrushTipsActive
-                                ? AssetConstants.brush_tips
-                                : isRulerActive
-                                ? AssetConstants.ruler_icon
-                                : AssetConstants.brush_icon,
-                            width: 20,
-                            height: 20,
-                            colorFilter: const ColorFilter.mode(
-                              ColorConstants.accent,
-                              BlendMode.srcIn,
+                      children: [
+                        SvgPicture.asset(
+                          isBrushTipsActive
+                              ? AssetConstants.brush_tips
+                              : isRulerActive
+                              ? AssetConstants.ruler_icon
+                              : AssetConstants.brush_icon,
+                          width: 20,
+                          height: 20,
+                          colorFilter: const ColorFilter.mode(
+                            ColorConstants.accent,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                              color: ColorConstants.accent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.add,
+                              size: 8,
+                              color: Colors.white,
                             ),
                           ),
-                          Positioned(
-                            bottom: 2,
-                            right: 2,
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: const BoxDecoration(
-                                color: ColorConstants.accent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.add,
-                                size: 8,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               );
             }
 
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
-                  width: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      width: 1.2,
+            return RepaintBoundary(
+              child: Container(
+                width: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.96),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: const Color(0xFFE5E7EB),
+                    width: 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 14,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 4),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 18,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 6,
-                    horizontal: 4,
-                  ),
-                  child: Column(
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 6,
+                  horizontal: 4,
+                ),
+                child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Top Drag Handle & Tap to Collapse
@@ -2847,8 +2841,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
                     ],
                   ),
                 ),
-              ),
-            );
+              );
           },
         );
       },
