@@ -393,7 +393,7 @@ List<BrushPreset> get kDefaultBrushPresets => <BrushPreset>[
     name: 'Graphite Pencil',
     description: 'Standard natural pencil grain',
     icon: Icons.edit_outlined,
-    create: () => PencilLine(density: 12, opacity: 0.75, spread: 1.0, speck: 0.09),
+    create: () => PencilLine(density: 14, opacity: 0.85, spread: 1.05, speck: 0.10, core: 0.45),
   ),
   BrushPreset(
     id: 'pencilH',
@@ -421,7 +421,7 @@ List<BrushPreset> get kDefaultBrushPresets => <BrushPreset>[
     name: 'Speckled Grain',
     description: 'Fine speckled noise shading',
     icon: Icons.grain,
-    create: () => PencilLine(density: 18, opacity: 0.6, spread: 1.3, speck: 0.08),
+    create: () => PencilLine(density: 18, opacity: 0.6, spread: 1.3, speck: 0.08, core: 0),
   ),
   BrushPreset(
     id: 'sand',
