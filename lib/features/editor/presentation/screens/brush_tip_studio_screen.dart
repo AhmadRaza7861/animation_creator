@@ -3,6 +3,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../package_code/paint_contents.dart';
+import '../../../../package_code/src/drawing_bar/brush_tip_catalog.dart';
 import '../../../../package_code/src/drawing_controller.dart';
 import '../../../../package_code/src/helper/ex_value_builder.dart';
 import '../../../../package_code/src/paint_contents/brush_cache.dart';
@@ -28,12 +29,16 @@ class TipItem {
 
   bool get isStamp => stampKey != null;
 
+  /// Unique identity. Labels are NOT unique: e.g. image stamp "Fur" and
+  /// vector tip "Fur" share a name, so selection must never match by label.
+  String get id => stampKey != null ? 'stamp:$stampKey' : 'tip:${kind.name}:$label';
+
   String localizedLabel(BuildContext context) {
     if (stampKey != null) {
       final tr = context.tr('stamp_${stampKey}_label');
       if (tr != 'stamp_${stampKey}_label') return tr;
     }
-    final key = kTipLabelToKey[label];
+    final key = kTipLabelToKey[label] ?? _extraTipLabelKey(label);
     if (key != null) {
       final tr = context.tr(key);
       if (tr != key) return tr;
@@ -42,10 +47,17 @@ class TipItem {
   }
 
   @override
-  bool operator ==(Object other) => other is TipItem && other.label == label;
+  bool operator ==(Object other) => other is TipItem && other.id == id;
 
   @override
-  int get hashCode => label.hashCode;
+  int get hashCode => id.hashCode;
+}
+
+String? _extraTipLabelKey(String label) {
+  for (final BrushTipDef d in kExtraBrushTips) {
+    if (d.label == label) return d.labelKey;
+  }
+  return null;
 }
 
 const Map<String, String> kTipLabelToKey = <String, String>{
@@ -253,6 +265,20 @@ const Set<BrushTipKind> _kGlyphKinds = <BrushTipKind>{
 
 TipCategory _categoryOf(TipItem item) {
   if (item.isStamp) return TipCategory.textures;
+  switch (extraTipGroupOf(item.kind)) {
+    case BrushTipGroup.shapes:
+      return TipCategory.shapes;
+    case BrushTipGroup.stars:
+      return TipCategory.stars;
+    case BrushTipGroup.symbols:
+      return TipCategory.symbols;
+    case BrushTipGroup.nature:
+      return TipCategory.nature;
+    case BrushTipGroup.textures:
+      return TipCategory.textures;
+    case null:
+      break;
+  }
   if (_kBasicKinds.contains(item.kind)) return TipCategory.basic;
   if (_kShapeKinds.contains(item.kind)) return TipCategory.shapes;
   if (_kStarKinds.contains(item.kind)) return TipCategory.stars;
@@ -358,6 +384,7 @@ List<TipItem> get kAllTipItems => <TipItem>[
   const TipItem(BrushTipKind.splash, 'Splash', 45),
   const TipItem(BrushTipKind.grassClump, 'Grass Clump', 46),
   const TipItem(BrushTipKind.leafScatter, 'Leaf Scatter', 48),
+  for (final BrushTipDef d in kExtraBrushTips) TipItem(d.kind, d.label, d.size),
   for (final BrushStamp stamp in kBrushStamps)
     TipItem.stamp(stamp.key, stamp.label, stamp.defaultSize),
 ];
@@ -465,21 +492,9 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
       _spacing = 0.25;
     }
 
-    final String? tipLabel = widget.drawingController.activeTipLabel;
-    if (tipLabel != null) {
-      _selectedItem = kAllTipItems.cast<TipItem?>().firstWhere(
-            (t) => t?.label == tipLabel,
-            orElse: () => kAllTipItems.first,
-          );
-      if (_selectedItem != null) {
-        _stampKey = _selectedItem!.stampKey;
-        _kind = _selectedItem!.kind;
-        _hardness = _selectedItem!.hardness;
-        _roundness = _selectedItem!.roundness;
-      }
-    } else {
-      _selectedItem = _matchItem();
-    }
+    // The brush actually in use is the source of truth; the remembered id
+    // only picks between variants of the same tip (e.g. Hard vs Soft Round).
+    _selectedItem = _resolveSelectedItem(widget.drawingController.activeTipLabel);
 
     _category = _lastCategory;
 
@@ -555,6 +570,22 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
     super.dispose();
   }
 
+  bool _matchesCurrentBrush(TipItem t) =>
+      _stampKey != null ? t.stampKey == _stampKey : (!t.isStamp && t.kind == _kind);
+
+  TipItem? _resolveSelectedItem(String? savedId) {
+    if (savedId != null) {
+      for (final TipItem t in kAllTipItems) {
+        if (t.id == savedId && _matchesCurrentBrush(t)) return t;
+      }
+      // Older app versions remembered the label instead of the id.
+      for (final TipItem t in kAllTipItems) {
+        if (t.label == savedId && _matchesCurrentBrush(t)) return t;
+      }
+    }
+    return _matchItem();
+  }
+
   TipItem? _matchItem() {
     for (final TipItem t in kAllTipItems) {
       if (_stampKey != null) {
@@ -616,7 +647,7 @@ class _BrushTipStudioScreenState extends State<BrushTipStudioScreen> {
     }
 
     widget.drawingController.setStyle(strokeWidth: _size);
-    widget.drawingController.activeTipLabel = _selectedItem?.label;
+    widget.drawingController.activeTipLabel = _selectedItem?.id;
     widget.drawingController.activeBrushPresetId = 'custom_tip';
 
     if (widget.editorController != null) {

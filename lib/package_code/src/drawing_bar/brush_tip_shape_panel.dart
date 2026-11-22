@@ -7,6 +7,7 @@ import '../paint_contents/brush_stamps.dart';
 import '../paint_contents/freehand_line.dart';
 import '../paint_contents/image_tip_brush.dart';
 import '../paint_contents/tip_brush.dart';
+import 'brush_tip_catalog.dart';
 
 /// 笔尖形状网格项 / A brush tip thumbnail entry
 ///
@@ -32,13 +33,16 @@ class _TipItem {
 
   bool get isStamp => stampKey != null;
 
-  @override
-  bool operator ==(Object other) =>
-      other is _TipItem &&
-      other.label == label;
+  /// Unique identity. Labels are NOT unique: e.g. image stamp "Fur" and
+  /// vector tip "Fur" share a name, so selection must never match by label.
+  String get id => stampKey != null ? 'stamp:$stampKey' : 'tip:${kind.name}:$label';
 
   @override
-  int get hashCode => label.hashCode;
+  bool operator ==(Object other) =>
+      other is _TipItem && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 /// 笔尖分类（顶部标签用）/ Tip categories (for the top tabs)
@@ -155,6 +159,20 @@ const Set<BrushTipKind> _kNatureKinds = <BrushTipKind>{
 _TipCategory _categoryOf(_TipItem item) {
   if (item.isStamp) {
     return _TipCategory.textures;
+  }
+  switch (extraTipGroupOf(item.kind)) {
+    case BrushTipGroup.shapes:
+      return _TipCategory.shapes;
+    case BrushTipGroup.stars:
+      return _TipCategory.stars;
+    case BrushTipGroup.symbols:
+      return _TipCategory.symbols;
+    case BrushTipGroup.nature:
+      return _TipCategory.nature;
+    case BrushTipGroup.textures:
+      return _TipCategory.textures;
+    case null:
+      break;
   }
   if (_kBasicKinds.contains(item.kind)) {
     return _TipCategory.basic;
@@ -297,6 +315,8 @@ List<_TipItem> get _kTipItems => <_TipItem>[
   _TipItem(BrushTipKind.grassClump, 'Grass Clump', 63),
   _TipItem(BrushTipKind.leafScatter, 'Leaf Scatter', 48),
   _TipItem(BrushTipKind.leafScatter, 'Leaf Scatter', 66),
+  // 新增笔尖 / Extra tips (shared catalog)
+  for (final BrushTipDef d in kExtraBrushTips) _TipItem(d.kind, d.label, d.size),
   // 图像纹理笔尖（真实位图质感）/ Image texture tips (real bitmap feel)
   for (final BrushStamp stamp in kBrushStamps) _TipItem.stamp(stamp.key, stamp.label, stamp.defaultSize),
 ];
@@ -397,21 +417,25 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
       _spacing = 0.25;
     }
     
-    final String? tipLabel = widget.controller.activeTipLabel;
-    if (tipLabel != null) {
-      _selected = _kTipItems.firstWhere(
-        (t) => t.label == tipLabel,
-        orElse: () => _kTipItems.first,
-      );
-      if (_selected != null) {
-        _stampKey = _selected!.stampKey;
-        _kind = _selected!.kind;
-        _hardness = _selected!.hardness;
-        _roundness = _selected!.roundness;
+    // The brush actually in use is the source of truth; the remembered id
+    // only picks between variants of the same tip (e.g. Hard vs Soft Round).
+    _selected = _resolveSelectedItem(widget.controller.activeTipLabel);
+  }
+
+  bool _matchesCurrentBrush(_TipItem t) =>
+      _stampKey != null ? t.stampKey == _stampKey : (!t.isStamp && t.kind == _kind);
+
+  _TipItem? _resolveSelectedItem(String? savedId) {
+    if (savedId != null) {
+      for (final _TipItem t in _kTipItems) {
+        if (t.id == savedId && _matchesCurrentBrush(t)) return t;
       }
-    } else {
-      _selected = _matchItem();
+      // Older app versions remembered the label instead of the id.
+      for (final _TipItem t in _kTipItems) {
+        if (t.label == savedId && _matchesCurrentBrush(t)) return t;
+      }
     }
+    return _matchItem();
   }
 
   _TipItem? _matchItem() {
@@ -463,7 +487,7 @@ class _BrushTipShapePanelState extends State<BrushTipShapePanel> {
       _roundness = item.roundness;
       _size = item.size.toDouble();
     });
-    widget.controller.activeTipLabel = item.label;
+    widget.controller.activeTipLabel = item.id;
     _apply();
   }
 

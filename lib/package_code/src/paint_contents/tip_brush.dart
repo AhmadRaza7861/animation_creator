@@ -102,6 +102,50 @@ enum BrushTipKind {
   glyphHeart,
   glyphNote,
   glyphClover,
+
+  // ⚠️ Saved strokes store `kind.index`: ALWAYS append new kinds at the end,
+  // never insert or reorder, or existing drawings change tips.
+  // ---- v2 tips ----
+  // Shapes
+  roundedSquare,
+  semicircle,
+  capsule,
+  parallelogram,
+  trapezoid,
+  // Stars
+  sparkle,
+  compassStar,
+  // Symbols
+  smiley,
+  speechBubble,
+  eye,
+  house,
+  mapPin,
+  chevron,
+  // Nature
+  bird,
+  mountain,
+  roundTree,
+  tulip,
+  apple,
+  bone,
+  // Pattern textures (static)
+  hatch,
+  crossHatch,
+  halftone,
+  scales,
+  bricks,
+  zigzag,
+  stitch,
+  // Scatter textures (randomized per dab)
+  rain,
+  bubbles,
+  glitter,
+  fur,
+  starfield,
+  snowfall,
+  petals,
+  heartScatter,
 }
 
 /// 可配置笔尖笔刷（对应 Photoshop 的 “Brush Tip Shape”）
@@ -147,7 +191,7 @@ class TipBrush extends FreehandLine {
 
   factory TipBrush.fromJson(Map<String, dynamic> data) => TipBrush.data(
         minPointDistance: (data['minPointDistance'] ?? 2.0) as double,
-        kind: BrushTipKind.values[(data['kind'] ?? 0) as int],
+        kind: _kindFromIndex(data['kind']),
         angle: (data['angle'] ?? 0.0) as double,
         roundness: (data['roundness'] ?? 1.0) as double,
         hardness: (data['hardness'] ?? 1.0) as double,
@@ -160,6 +204,16 @@ class TipBrush extends FreehandLine {
             .toList(),
         paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
       );
+
+  /// Saved index → kind. Unknown/invalid values (e.g. a project saved by a
+  /// newer app version with more tips) fall back to round instead of crashing.
+  static BrushTipKind _kindFromIndex(Object? raw) {
+    final int? i = raw is num ? raw.toInt() : null;
+    if (i == null || i < 0 || i >= BrushTipKind.values.length) {
+      return BrushTipKind.round;
+    }
+    return BrushTipKind.values[i];
+  }
 
   /// 笔尖形状 / Tip shape
   final BrushTipKind kind;
@@ -214,7 +268,15 @@ class TipBrush extends FreehandLine {
         BrushTipKind.splash ||
         BrushTipKind.spatter ||
         BrushTipKind.chalk ||
-        BrushTipKind.scatter => true,
+        BrushTipKind.scatter ||
+        BrushTipKind.rain ||
+        BrushTipKind.bubbles ||
+        BrushTipKind.glitter ||
+        BrushTipKind.fur ||
+        BrushTipKind.starfield ||
+        BrushTipKind.snowfall ||
+        BrushTipKind.petals ||
+        BrushTipKind.heartScatter => true,
         _ => false,
       };
 
@@ -1436,7 +1498,462 @@ class TipBrush extends FreehandLine {
           final double r = radius * 0.3 * (0.5 + (_jitter(seed, index, 200 + i) + 1) / 2 * 0.5);
           canvas.drawCircle(Offset(dx, dy), r, paint);
         }
+
+      default:
+        _drawShapeV2(canvas, kind, radius, paint, seed, index);
     }
+  }
+
+  /// v2 tips. Kept separate so the original switch stays untouched.
+  static void _drawShapeV2(
+    Canvas canvas,
+    BrushTipKind kind,
+    double r,
+    Paint paint,
+    int seed,
+    int index,
+  ) {
+    // Well-mixed randoms for scatter tips. `_jitter` correlates adjacent
+    // channels, which bunches x/y pairs into a narrow diagonal band.
+    double rnd(int ch) => _mixedRand01(seed, index, ch);
+    double jit(int ch) => rnd(ch) * 2 - 1;
+
+    switch (kind) {
+      // ---- Shapes ----
+      case BrushTipKind.roundedSquare:
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset.zero, width: r * 2, height: r * 2),
+            Radius.circular(r * 0.45),
+          ),
+          paint,
+        );
+      case BrushTipKind.semicircle:
+        canvas.drawArc(
+          Rect.fromCircle(center: Offset(0, r * 0.4), radius: r),
+          pi,
+          pi,
+          true,
+          paint,
+        );
+      case BrushTipKind.capsule:
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset.zero, width: r * 2, height: r * 0.9),
+            Radius.circular(r * 0.45),
+          ),
+          paint,
+        );
+      case BrushTipKind.parallelogram:
+        canvas.drawPath(
+          _poly(<Offset>[
+            Offset(-r, r * 0.6),
+            Offset(-r * 0.4, -r * 0.6),
+            Offset(r, -r * 0.6),
+            Offset(r * 0.4, r * 0.6),
+          ]),
+          paint,
+        );
+      case BrushTipKind.trapezoid:
+        canvas.drawPath(
+          _poly(<Offset>[
+            Offset(-r, r * 0.6),
+            Offset(-r * 0.5, -r * 0.6),
+            Offset(r * 0.5, -r * 0.6),
+            Offset(r, r * 0.6),
+          ]),
+          paint,
+        );
+
+      // ---- Stars ----
+      case BrushTipKind.sparkle:
+        canvas.drawPath(_sparklePath(Offset.zero, r), paint);
+        canvas.drawPath(_sparklePath(Offset(r * 0.68, -r * 0.68), r * 0.3), paint);
+      case BrushTipKind.compassStar:
+        final Path p = Path();
+        for (int i = 0; i < 16; i++) {
+          final double rad = i.isOdd ? r * 0.16 : (i % 4 == 0 ? r : r * 0.58);
+          final double a = -pi / 2 + i * pi / 8;
+          final Offset o = Offset(cos(a) * rad, sin(a) * rad);
+          i == 0 ? p.moveTo(o.dx, o.dy) : p.lineTo(o.dx, o.dy);
+        }
+        canvas.drawPath(p..close(), paint);
+
+      // ---- Symbols ----
+      case BrushTipKind.smiley:
+        canvas.drawPath(
+          Path()
+            ..fillType = PathFillType.evenOdd
+            ..addOval(Rect.fromCircle(center: Offset.zero, radius: r))
+            ..addOval(Rect.fromCircle(center: Offset(-r * 0.34, -r * 0.25), radius: r * 0.13))
+            ..addOval(Rect.fromCircle(center: Offset(r * 0.34, -r * 0.25), radius: r * 0.13))
+            ..moveTo(-r * 0.5, r * 0.12)
+            ..quadraticBezierTo(0, r * 0.78, r * 0.5, r * 0.12)
+            ..quadraticBezierTo(0, r * 0.5, -r * 0.5, r * 0.12)
+            ..close(),
+          paint,
+        );
+      case BrushTipKind.speechBubble:
+        canvas.drawPath(
+          Path.combine(
+            PathOperation.union,
+            Path()
+              ..addRRect(RRect.fromRectAndRadius(
+                Rect.fromLTRB(-r, -r * 0.8, r, r * 0.4),
+                Radius.circular(r * 0.38),
+              )),
+            _poly(<Offset>[
+              Offset(-r * 0.45, r * 0.3),
+              Offset(-r * 0.6, r),
+              Offset(0, r * 0.3),
+            ]),
+          ),
+          paint,
+        );
+      case BrushTipKind.eye:
+        canvas.drawPath(
+          Path()
+            ..fillType = PathFillType.evenOdd
+            ..moveTo(-r, 0)
+            ..quadraticBezierTo(0, -r * 0.9, r, 0)
+            ..quadraticBezierTo(0, r * 0.9, -r, 0)
+            ..close()
+            ..addOval(Rect.fromCircle(center: Offset.zero, radius: r * 0.38))
+            ..addOval(Rect.fromCircle(center: Offset.zero, radius: r * 0.18)),
+          paint,
+        );
+      case BrushTipKind.house:
+        canvas.drawPath(
+          Path()
+            ..fillType = PathFillType.evenOdd
+            ..addPath(
+              _poly(<Offset>[
+                Offset(-r * 0.8, r),
+                Offset(-r * 0.8, -r * 0.1),
+                Offset(0, -r),
+                Offset(r * 0.8, -r * 0.1),
+                Offset(r * 0.8, r),
+              ]),
+              Offset.zero,
+            )
+            ..addRect(Rect.fromLTRB(-r * 0.2, r * 0.35, r * 0.2, r)),
+          paint,
+        );
+      case BrushTipKind.mapPin:
+        canvas.drawPath(
+          Path.combine(
+            PathOperation.difference,
+            Path.combine(
+              PathOperation.union,
+              Path()..addOval(Rect.fromCircle(center: Offset(0, -r * 0.3), radius: r * 0.65)),
+              _poly(<Offset>[Offset(-r * 0.56, -r * 0.05), Offset(0, r), Offset(r * 0.56, -r * 0.05)]),
+            ),
+            Path()..addOval(Rect.fromCircle(center: Offset(0, -r * 0.3), radius: r * 0.26)),
+          ),
+          paint,
+        );
+      case BrushTipKind.chevron:
+        canvas.drawPath(
+          _poly(<Offset>[
+            Offset(-r * 0.6, -r),
+            Offset(0, -r),
+            Offset(r * 0.6, 0),
+            Offset(0, r),
+            Offset(-r * 0.6, r),
+            Offset(0, 0),
+          ]),
+          paint,
+        );
+
+      // ---- Nature ----
+      case BrushTipKind.bird:
+        canvas.drawPath(
+          // Wing tips at ±0.9r so the round line caps stay inside the tile.
+          Path()
+            ..moveTo(-r * 0.9, -r * 0.1)
+            ..quadraticBezierTo(-r * 0.45, -r * 0.65, 0, r * 0.15)
+            ..quadraticBezierTo(r * 0.45, -r * 0.65, r * 0.9, -r * 0.1),
+          _strokePaint(paint, r * 0.17),
+        );
+      case BrushTipKind.mountain:
+        canvas.drawPath(
+          _poly(<Offset>[
+            Offset(-r, r * 0.7),
+            Offset(-r * 0.45, -r * 0.3),
+            Offset(-r * 0.15, r * 0.1),
+            Offset(r * 0.3, -r * 0.85),
+            Offset(r, r * 0.7),
+          ]),
+          paint,
+        );
+      case BrushTipKind.roundTree:
+        canvas.drawCircle(Offset(0, -r * 0.3), r * 0.65, paint);
+        canvas.drawRect(Rect.fromLTRB(-r * 0.12, r * 0.2, r * 0.12, r), paint);
+      case BrushTipKind.tulip:
+        canvas.drawPath(
+          Path()
+            ..moveTo(-r * 0.5, -r * 0.75)
+            ..lineTo(-r * 0.25, -r * 0.42)
+            ..lineTo(0, -r * 0.85)
+            ..lineTo(r * 0.25, -r * 0.42)
+            ..lineTo(r * 0.5, -r * 0.75)
+            ..quadraticBezierTo(r * 0.55, r * 0.05, 0, r * 0.1)
+            ..quadraticBezierTo(-r * 0.55, r * 0.05, -r * 0.5, -r * 0.75)
+            ..close(),
+          paint,
+        );
+        canvas.drawLine(Offset(0, r * 0.05), Offset(0, r * 0.94), _strokePaint(paint, r * 0.1));
+        canvas.drawPath(
+          Path()
+            ..moveTo(0, r * 0.85)
+            ..quadraticBezierTo(r * 0.5, r * 0.75, r * 0.5, r * 0.3)
+            ..quadraticBezierTo(r * 0.1, r * 0.42, 0, r * 0.85)
+            ..close(),
+          paint,
+        );
+      case BrushTipKind.apple:
+        canvas.drawPath(
+          Path()
+            ..moveTo(0, -r * 0.45)
+            ..cubicTo(r * 0.9, -r * 0.85, r * 1.0, r * 0.55, r * 0.2, r * 0.85)
+            ..quadraticBezierTo(0, r * 0.75, -r * 0.2, r * 0.85)
+            ..cubicTo(-r * 1.0, r * 0.55, -r * 0.9, -r * 0.85, 0, -r * 0.45)
+            ..close(),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(0, -r * 0.45),
+          Offset(r * 0.08, -r * 0.85),
+          _strokePaint(paint, r * 0.1),
+        );
+        canvas.drawPath(
+          Path()
+            ..moveTo(r * 0.1, -r * 0.62)
+            ..quadraticBezierTo(r * 0.35, -r * 0.98, r * 0.6, -r * 0.78)
+            ..quadraticBezierTo(r * 0.32, -r * 0.55, r * 0.1, -r * 0.62)
+            ..close(),
+          paint,
+        );
+      case BrushTipKind.bone:
+        canvas.drawRect(Rect.fromLTRB(-r * 0.65, -r * 0.18, r * 0.65, r * 0.18), paint);
+        for (final Offset o in <Offset>[
+          Offset(-r * 0.7, -r * 0.2),
+          Offset(-r * 0.7, r * 0.2),
+          Offset(r * 0.7, -r * 0.2),
+          Offset(r * 0.7, r * 0.2),
+        ]) {
+          canvas.drawCircle(o, r * 0.26, paint);
+        }
+
+      // ---- Pattern textures (clipped to the tip circle) ----
+      case BrushTipKind.hatch:
+      case BrushTipKind.crossHatch:
+        final Paint stroke = _strokePaint(paint, r * 0.09);
+        canvas.save();
+        canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: r)));
+        final int passes = kind == BrushTipKind.crossHatch ? 2 : 1;
+        for (int pass = 0; pass < passes; pass++) {
+          canvas.save();
+          canvas.rotate(pass == 0 ? -pi / 4 : pi / 4);
+          for (int i = -4; i <= 4; i++) {
+            final double x = i * r * 0.26;
+            canvas.drawLine(Offset(x, -r), Offset(x, r), stroke);
+          }
+          canvas.restore();
+        }
+        canvas.restore();
+      case BrushTipKind.halftone:
+        const int n = 3;
+        final double cell = r / n;
+        for (int gx = -n; gx <= n; gx++) {
+          for (int gy = -n; gy <= n; gy++) {
+            final Offset o = Offset(gx * cell, gy * cell);
+            final double d = o.distance / r;
+            if (d < 1.0) {
+              canvas.drawCircle(o, cell * 0.48 * (1 - d * 0.75), paint);
+            }
+          }
+        }
+      case BrushTipKind.scales:
+        final Paint stroke = _strokePaint(paint, r * 0.08);
+        canvas.save();
+        canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: r)));
+        final double s = r * 0.34;
+        for (int row = -3; row <= 3; row++) {
+          final double shift = row.isOdd ? s : 0;
+          for (int col = -3; col <= 3; col++) {
+            canvas.drawArc(
+              Rect.fromCircle(center: Offset(col * s * 2 + shift, row * s), radius: s),
+              0,
+              pi,
+              false,
+              stroke,
+            );
+          }
+        }
+        canvas.restore();
+      case BrushTipKind.bricks:
+        canvas.save();
+        canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: r)));
+        final double bh = r * 0.4;
+        final double bw = r * 0.8;
+        final double gap = r * 0.08;
+        for (int row = -3; row <= 2; row++) {
+          final double y = row * bh;
+          final double shift = row.isOdd ? bw / 2 : 0;
+          for (int col = -3; col <= 2; col++) {
+            final double x = col * bw + shift;
+            canvas.drawRect(Rect.fromLTWH(x + gap / 2, y + gap / 2, bw - gap, bh - gap), paint);
+          }
+        }
+        canvas.restore();
+      case BrushTipKind.zigzag:
+        // Span ±0.88r so the round caps (half of 0.16r) stay inside the tile.
+        final Path p = Path()..moveTo(-r * 0.88, r * 0.35);
+        for (int i = 1; i <= 5; i++) {
+          p.lineTo(-r * 0.88 + i * r * 0.352, i.isOdd ? -r * 0.35 : r * 0.35);
+        }
+        canvas.drawPath(p, _strokePaint(paint, r * 0.16));
+      case BrushTipKind.stitch:
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset.zero, width: r * 1.4, height: r * 0.26),
+            Radius.circular(r * 0.13),
+          ),
+          paint,
+        );
+
+      // ---- Scatter textures (random per dab) ----
+      case BrushTipKind.rain:
+        final Paint stroke = _strokePaint(paint, r * 0.07);
+        for (int i = 0; i < 7; i++) {
+          final double x = jit(i * 2) * r * 0.85;
+          final double y = jit(i * 2 + 1) * r * 0.6;
+          final double len = r * (0.3 + rnd(40 + i) * 0.35);
+          canvas.drawLine(Offset(x, y - len / 2), Offset(x - len * 0.3, y + len / 2), stroke);
+        }
+      case BrushTipKind.bubbles:
+        final Paint stroke = _strokePaint(paint, r * 0.06);
+        for (int i = 0; i < 6; i++) {
+          final double br = r * (0.1 + rnd(60 + i) * 0.25);
+          final double reach = r - br - r * 0.04; // + half the outline width
+          final Offset o = Offset(jit(i * 2) * reach, jit(i * 2 + 1) * reach);
+          canvas.drawCircle(o, br, stroke);
+          canvas.drawCircle(o + Offset(-br * 0.35, -br * 0.35), br * 0.15, paint);
+        }
+      case BrushTipKind.glitter:
+        for (int i = 0; i < 8; i++) {
+          final double s = r * (0.1 + rnd(80 + i) * 0.22);
+          // Keep each sparkle fully inside the tip circle.
+          final Offset o = Offset(
+            jit(i * 2) * (r - s),
+            jit(i * 2 + 1) * (r - s),
+          );
+          canvas.drawPath(_sparklePath(o, s), paint);
+        }
+      case BrushTipKind.fur:
+        final Paint stroke = _strokePaint(paint, r * 0.05);
+        for (int i = 0; i < 12; i++) {
+          // Base + lean stay within ~0.85r so strands don't clip the tile.
+          final double bx = jit(i) * r * 0.6;
+          final double tipX = bx + jit(30 + i) * r * 0.25;
+          final double tipY = -r * (0.4 + rnd(60 + i) * 0.55);
+          canvas.drawPath(
+            Path()
+              ..moveTo(bx, r * 0.7)
+              ..quadraticBezierTo(bx, (r * 0.7 + tipY) / 2, tipX, tipY),
+            stroke,
+          );
+        }
+      case BrushTipKind.starfield:
+        for (int i = 0; i < 7; i++) {
+          final double s = r * (0.1 + rnd(90 + i) * 0.2);
+          canvas.save();
+          canvas.translate(
+            jit(i * 2) * (r - s),
+            jit(i * 2 + 1) * (r - s),
+          );
+          canvas.rotate(jit(120 + i) * pi / 5);
+          canvas.drawPath(_star(5, s, s * 0.45), paint);
+          canvas.restore();
+        }
+      case BrushTipKind.snowfall:
+        for (int i = 0; i < 10; i++) {
+          final double dr = r * (0.05 + rnd(70 + i) * 0.11);
+          canvas.drawCircle(
+            Offset(
+              jit(i * 2) * (r - dr),
+              jit(i * 2 + 1) * (r - dr),
+            ),
+            dr,
+            paint,
+          );
+        }
+      case BrushTipKind.petals:
+        for (int i = 0; i < 6; i++) {
+          canvas.save();
+          canvas.translate(
+            jit(i * 2) * r * 0.75,
+            jit(i * 2 + 1) * r * 0.75,
+          );
+          canvas.rotate(jit(150 + i) * pi);
+          final double s = r * (0.16 + rnd(170 + i) * 0.1);
+          canvas.drawPath(
+            Path()
+              ..moveTo(0, -s)
+              ..quadraticBezierTo(s * 0.9, -s * 0.2, 0, s)
+              ..quadraticBezierTo(-s * 0.9, -s * 0.2, 0, -s)
+              ..close(),
+            paint,
+          );
+          canvas.restore();
+        }
+      case BrushTipKind.heartScatter:
+        for (int i = 0; i < 5; i++) {
+          final double s = r * (0.15 + rnd(190 + i) * 0.15);
+          canvas.save();
+          canvas.translate(
+            jit(i * 2) * (r - s),
+            jit(i * 2 + 1) * (r - s),
+          );
+          canvas.rotate(jit(210 + i) * 0.5);
+          canvas.drawPath(_heart(s), paint);
+          canvas.restore();
+        }
+      default:
+        canvas.drawCircle(Offset.zero, r, paint);
+    }
+  }
+
+  /// Stable well-mixed random in [0, 1] (murmur3 finaliser).
+  static double _mixedRand01(int seed, int index, int channel) {
+    int h = (seed ^ (index * 0x9E3779B1) ^ (channel * 0x85EBCA77)) & 0xffffffff;
+    h ^= h >> 16;
+    h = (h * 0x85ebca6b) & 0xffffffff;
+    h ^= h >> 13;
+    h = (h * 0xc2b2ae35) & 0xffffffff;
+    h ^= h >> 16;
+    return h / 0xffffffff;
+  }
+
+  static Path _poly(List<Offset> pts) {
+    final Path p = Path()..moveTo(pts.first.dx, pts.first.dy);
+    for (int i = 1; i < pts.length; i++) {
+      p.lineTo(pts[i].dx, pts[i].dy);
+    }
+    return p..close();
+  }
+
+  /// Four-point curved "twinkle" star.
+  static Path _sparklePath(Offset c, double r) {
+    final double k = r * 0.12;
+    return Path()
+      ..moveTo(c.dx, c.dy - r)
+      ..quadraticBezierTo(c.dx + k, c.dy - k, c.dx + r, c.dy)
+      ..quadraticBezierTo(c.dx + k, c.dy + k, c.dx, c.dy + r)
+      ..quadraticBezierTo(c.dx - k, c.dy + k, c.dx - r, c.dy)
+      ..quadraticBezierTo(c.dx - k, c.dy - k, c.dx, c.dy - r)
+      ..close();
   }
 
   /// 以原点为中心绘制一个字符笔尖
