@@ -2796,15 +2796,20 @@ class DrawingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 修剪历史记录，保持在最大步数限制内
+  /// 限制可撤销步数（不删除画面内容）
   ///
-  /// Trim history to keep it within the maximum step limit
+  /// Caps how far back undo can go, WITHOUT deleting anything.
+  ///
+  /// A layer's `history` is not just an undo log — it IS the drawing:
+  /// rendering replays `history[0..currentIndex)`. Removing old entries used
+  /// to erase the user's earliest strokes from the canvas (and from the saved
+  /// project) once a layer passed [maxHistorySteps] strokes. Instead, raise
+  /// the undo floor (`sessionStartIndex`) so only the last [maxHistorySteps]
+  /// actions are undoable while every stroke stays on the canvas.
   void _trimHistoryIfNeeded(LayerData layer) {
-    if (layer.history.length > maxHistorySteps) {
-      final int removeCount = layer.history.length - maxHistorySteps;
-      _discardHistoryRange(layer, 0, removeCount);
-      layer.currentIndex = layer.history.length;
-      _invalidateRasterCache();
+    final int floor = layer.currentIndex - maxHistorySteps;
+    if (floor > layer.sessionStartIndex) {
+      layer.sessionStartIndex = floor;
     }
   }
 
