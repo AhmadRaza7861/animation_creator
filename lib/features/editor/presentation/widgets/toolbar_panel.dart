@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../package_code/paint_contents.dart';
 import '../../../../../package_code/src/drawing_bar/brush_preset_panel.dart';
+import '../../../../../package_code/src/drawing_bar/brush_presets.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_assets.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -617,7 +618,11 @@ class _ToolbarPanelState extends ConsumerState<ToolbarPanel> {
                           onTap: () {
                             controller.selectedSubTool = 'pencil';
                             controller.drawingController.setPaintContent(
-                              FreehandLine(),
+                              kDefaultBrushPresets
+                                  .firstWhere(
+                                    (BrushPreset p) => p.id == 'pencil',
+                                  )
+                                  .create(),
                             );
                             controller.drawingController.setStyle(
                               strokeWidth: controller.globalStrokeWidth,

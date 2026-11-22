@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,21 @@ double _rand(int seed, int i, int ch) {
 
 /// 稳定伪随机 [0,1] / Stable pseudo-random in [0, 1]
 double _rand01(int seed, int i, int ch) => (_rand(seed, i, ch) + 1) / 2;
+
+/// Well-mixed stable random in [0, 1] (murmur3 finaliser). [_rand] is cheap
+/// but adjacent channels correlate, which shows up as diagonal/diamond
+/// patterns when thousands of tiny grains are scattered.
+double _grainRand01(int seed, int i, int ch) {
+  int h = (seed ^ (i * 0x9E3779B1) ^ (ch * 0x85EBCA77)) & 0xffffffff;
+  h ^= h >> 16;
+  h = (h * 0x85ebca6b) & 0xffffffff;
+  h ^= h >> 13;
+  h = (h * 0xc2b2ae35) & 0xffffffff;
+  h ^= h >> 16;
+  return h / 0xffffffff;
+}
+
+double _grainRand(int seed, int i, int ch) => _grainRand01(seed, i, ch) * 2 - 1;
 
 Color _lighten(Color c, double amt) {
   final HSLColor h = HSLColor.fromColor(c);
@@ -341,6 +357,7 @@ class PencilLine extends PresetStroke {
     this.opacity = 0.55,
     this.spread = 1.0,
     this.speck = 0.09,
+    this.core = 0.4,
   });
 
   PencilLine.data({
@@ -349,6 +366,7 @@ class PencilLine extends PresetStroke {
     this.opacity = 0.55,
     this.spread = 1.0,
     this.speck = 0.09,
+    this.core = 0.4,
     required super.points,
     required super.paint,
   }) : super.data();
@@ -359,9 +377,23 @@ class PencilLine extends PresetStroke {
         opacity: (d['opacity'] ?? 0.55) as double,
         spread: (d['spread'] ?? 1.0) as double,
         speck: (d['speck'] ?? 0.09) as double,
+        core: d['core'] != null
+            ? (d['core'] as num).toDouble()
+            : _legacyCoreFor(d),
         points: _pointsFromJson(d['points']),
         paint: jsonToPaint(d['paint'] as Map<String, dynamic>),
       );
+
+  /// Strokes saved before `core` existed: the "Speckled Grain" preset
+  /// (density 18, spread 1.3) is pure speckle, every other pencil gets a core.
+  static double _legacyCoreFor(Map<String, dynamic> d) {
+    final num? density = d['density'] as num?;
+    final num? spread = d['spread'] as num?;
+    if (density == 18 && spread != null && (spread - 1.3).abs() < 1e-6) {
+      return 0;
+    }
+    return 0.4;
+  }
 
   /// 每步撒下的颗粒数 / Specks per step
   final int density;
@@ -375,6 +407,10 @@ class PencilLine extends PresetStroke {
   /// 颗粒大小（相对粗细）/ Speck size relative to width
   final double speck;
 
+  /// 实心笔芯浓度（0 = 纯颗粒）/ Strength of the continuous graphite core
+  /// relative to [opacity]. 0 disables the core (pure speckle brushes).
+  final double core;
+
   @override
   String get contentType => 'PencilLine';
 
@@ -383,12 +419,28 @@ class PencilLine extends PresetStroke {
 
   @override
   void drawCommittedRange(ui.Canvas canvas, ui.Size size, int startSample, int endSample) {
-    _drawPencilRange(canvas, size, startSample, endSample, includeTail: false);
+    // Baked prefix holds grain only; the continuous core is redrawn whole by
+    // [drawLiveFromSample] so it never gets split at bake boundaries.
+    _drawPencilRange(
+      canvas,
+      size,
+      startSample,
+      endSample,
+      includeTail: false,
+      drawCore: false,
+    );
   }
 
   @override
   void drawLiveFromSample(ui.Canvas canvas, ui.Size size, int startSample) {
-    _drawPencilRange(canvas, size, startSample, null, includeTail: true);
+    _drawPencilRange(
+      canvas,
+      size,
+      startSample,
+      null,
+      includeTail: true,
+      drawCore: true,
+    );
   }
 
   @override
@@ -396,11 +448,7 @@ class PencilLine extends PresetStroke {
     if (points.isEmpty) {
       return;
     }
-    if (points.length < 2) {
-      _drawPencilRange(canvas, size, 0, 0, includeTail: true);
-      return;
-    }
-    _drawPencilRange(canvas, size, 0, null, includeTail: true);
+    _drawPencilRange(canvas, size, 0, null, includeTail: true, drawCore: true);
   }
 
   void _drawPencilRange(
@@ -409,57 +457,133 @@ class PencilLine extends PresetStroke {
     int startSample,
     int? endSample, {
     required bool includeTail,
+    required bool drawCore,
   }) {
     if (points.isEmpty) return;
     final double w = paint.strokeWidth;
-    final double baseAlpha = paint.color.a * opacity;
-    final Paint speckPaint = paint.copyWith(style: PaintingStyle.fill);
-    final double speckRadius = (w * speck).clamp(0.35, double.infinity);
-    final int safeDensity = density.clamp(1, 15);
-    final int curSeed = seed;
+    if (w <= 0) return;
+
+    // A real pencil stroke is a soft continuous graphite core with fine grain
+    // on top. Grains stay tiny (≈1–2 px) at every brush size and their count
+    // scales with the covered area, so wide strokes get *more* grain instead
+    // of bigger, sparser dots.
+    final double step = (w * 0.3).clamp(2.0, double.infinity);
+    final double baseAlpha = (paint.color.a * opacity).clamp(0.0, 1.0);
     final Color baseCol = paint.color;
+    final int curSeed = seed;
+    final double grainR = (0.35 + w * speck * 0.3).clamp(0.4, 1.1);
+    final double halfSpread = w * spread * 0.5;
+    final double coverage = (density / 24.0).clamp(0.25, 0.8);
+    final int grainsPerSample =
+        (coverage * (2 * halfSpread * step) / (pi * grainR * grainR))
+            .ceil()
+            .clamp(1, 200);
+    final double coreAlpha = (baseAlpha * core).clamp(0.0, 1.0);
+
+    // Copy the user's paint so shaders, mask/colour/image filters survive.
+    // The core is ONE continuous path (round joins, no self-overlap), so
+    // curves get neither outer gaps nor darker inner overlap stripes.
+    if (drawCore && coreAlpha > 0) {
+      final Paint corePaint = paint.copyWith(
+        style: PaintingStyle.stroke,
+        strokeWidth: w * 0.55,
+        strokeCap: StrokeCap.round,
+        strokeJoin: StrokeJoin.round,
+        color: baseCol.withValues(alpha: coreAlpha),
+      );
+      if (points.length < 2) {
+        if (includeTail) {
+          canvas.drawCircle(
+            points.first,
+            w * 0.275,
+            paint.copyWith(
+              style: PaintingStyle.fill,
+              color: corePaint.color,
+            ),
+          );
+        }
+      } else {
+        canvas.drawPath(buildSmoothPath(), corePaint);
+      }
+    }
+
+    final Paint grainPaint = paint.copyWith(
+      style: PaintingStyle.stroke,
+      strokeCap: StrokeCap.round,
+      strokeWidth: grainR * 2,
+    );
+
+    // Grains are batched into a few alpha buckets → 3 draw calls per range
+    // instead of one drawCircle per speck.
+    const List<double> bucketAlpha = <double>[0.35, 0.65, 1.0];
+    final List<List<double>> buckets =
+        <List<double>>[<double>[], <double>[], <double>[]];
+
+    void emitGrains(double x, double y, double angle, int i) {
+      // Flutter's `Tangent.angle` is `-atan2(dy, dx)` (y flipped), so the
+      // direction vector is (cos, -sin). Using +sin mirrors the normal and
+      // makes grain spread *along* diagonal strokes instead of across them.
+      final double dx = cos(angle);
+      final double dy = -sin(angle);
+      for (int k = 0; k < grainsPerSample; k++) {
+        final int ch = k * 4;
+        // Triangular distribution: denser graphite toward the stroke centre.
+        final double off =
+            (_grainRand(curSeed, i, ch) + _grainRand(curSeed, i, ch + 1)) *
+                0.5 *
+                halfSpread;
+        final double along = _grainRand(curSeed, i, ch + 2) * step * 0.5;
+        final int b = (_grainRand01(curSeed, i, ch + 3) * 2.999).floor();
+        buckets[b]
+          ..add(x - dy * off + dx * along)
+          ..add(y + dx * off + dy * along);
+      }
+    }
+
+    void flushGrains(ui.Canvas target) {
+      for (int b = 0; b < buckets.length; b++) {
+        if (buckets[b].isEmpty) continue;
+        grainPaint.color = baseCol.withValues(alpha: baseAlpha * bucketAlpha[b]);
+        target.drawRawPoints(
+          ui.PointMode.points,
+          Float32List.fromList(buckets[b]),
+          grainPaint,
+        );
+        buckets[b].clear();
+      }
+    }
 
     if (points.length < 2) {
       if (!includeTail) return;
       final Offset p0 = points.first;
-      for (int k = 0; k < safeDensity; k++) {
-        final double off = _rand(curSeed, 0, k * 2) * w * spread * 0.5;
-        final double along = _rand(curSeed, 0, k * 2 + 1) * w * 0.25;
-        final double a =
-            (baseAlpha * (0.25 + _rand01(curSeed, 0, 200 + k) * 0.75))
-                .clamp(0.0, 1.0);
-        speckPaint.color = baseCol.withValues(alpha: a);
-        canvas.drawCircle(p0 + Offset(along, off), speckRadius, speckPaint);
-      }
+      emitGrains(p0.dx, p0.dy, 0, 0);
+      flushGrains(canvas);
       return;
     }
 
-    final int sig = Object.hash(density, opacity, spread, speck);
-    walkChunkedRange(canvas, size, w * 0.3, sig, startSample, endSample, includeTail, (
+    sampleSmooth(step);
+    final ChunkedStrokeCache c = strokeCache;
+    final int sig = Object.hash(
+      baseStyleSignature,
+      step,
+      curSeed,
+      Object.hash(density, opacity, spread, speck, 'pencil-v5'),
+    );
+    drawSampleSlice(canvas, size, startSample, endSample, includeTail, sig, (
       ui.Canvas target,
-      double x,
-      double y,
-      double angle,
-      double d,
-      int i,
+      int startIdx,
+      int endIdx,
+      bool isTail,
     ) {
-      final double dx = cos(angle);
-      final double dy = sin(angle);
-      final double nx = -dy;
-      final double ny = dx;
-      for (int k = 0; k < safeDensity; k++) {
-        final double off = _rand(curSeed, i, k * 2) * w * spread * 0.5;
-        final double along = _rand(curSeed, i, k * 2 + 1) * w * 0.25;
-        final double a =
-            (baseAlpha * (0.25 + _rand01(curSeed, i, 200 + k) * 0.75))
-                .clamp(0.0, 1.0);
-        speckPaint.color = baseCol.withValues(alpha: a);
-        target.drawCircle(
-          Offset(x + nx * off + dx * along, y + ny * off + dy * along),
-          speckRadius,
-          speckPaint,
+      for (int j = startIdx; j < endIdx; j++) {
+        emitGrains(
+          c.getX(j, isTail),
+          c.getY(j, isTail),
+          c.getAngle(j, isTail),
+          c.globalIndex(j, isTail),
         );
       }
+      flushGrains(target);
     });
   }
 
@@ -470,6 +594,7 @@ class PencilLine extends PresetStroke {
         opacity: opacity,
         spread: spread,
         speck: speck,
+        core: core,
         points: List<Offset>.from(points),
         paint: paint.copyWith(),
       );
@@ -481,6 +606,7 @@ class PencilLine extends PresetStroke {
         'opacity': opacity,
         'spread': spread,
         'speck': speck,
+        'core': core,
       };
 }
 
