@@ -18,9 +18,9 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 
 # For ios version
-version: 1.0.4+29
+#version: 1.0.5+30
 
-#version: 1.0.4+29
+version: 1.0.5+33
 
 environment:
   sdk: ^3.10.8
