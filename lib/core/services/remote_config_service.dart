@@ -19,6 +19,9 @@ class RemoteConfigService {
   static const String keyIsShowAdOnImport = 'is_show_ad_on_import';
   static const String keyIsShowAplyBrushAd = 'is_show_aply_brush_ad';
 
+  /// When true, Yandex ads are shown instead of AdMob (Russian users).
+  static const String keyIsRussian = 'is_russian';
+
   FirebaseRemoteConfig? _remoteConfig;
   Future<void>? _initFuture;
   bool _defaultsApplied = false;
@@ -31,6 +34,7 @@ class RemoteConfigService {
   bool? _testProjectSttingAd;
   bool? _testIsShowAdOnImport;
   bool? _testIsShowAplyBrushAd;
+  bool? _testIsRussian;
 
   @visibleForTesting
   void setTestValues({
@@ -43,6 +47,7 @@ class RemoteConfigService {
     bool? projectSttingAd,
     bool? isShowAdOnImport,
     bool? isShowAplyBrushAd,
+    bool? isRussian,
   }) {
     _testIsShowAds = isShowAds;
     _testIsShowOpenAppAd = isShowOpenAppAd;
@@ -53,6 +58,7 @@ class RemoteConfigService {
     _testProjectSttingAd = projectSttingAd;
     _testIsShowAdOnImport = isShowAdOnImport;
     _testIsShowAplyBrushAd = isShowAplyBrushAd;
+    _testIsRussian = isRussian;
   }
 
   @visibleForTesting
@@ -66,6 +72,7 @@ class RemoteConfigService {
     _testProjectSttingAd = null;
     _testIsShowAdOnImport = null;
     _testIsShowAplyBrushAd = null;
+    _testIsRussian = null;
   }
 
   FirebaseRemoteConfig? get _rc {
@@ -113,6 +120,8 @@ class RemoteConfigService {
           keyProjectSttingAd: true,
           keyIsShowAdOnImport: true,
           keyIsShowAplyBrushAd: true,
+          // Default to AdMob if Remote Config can't be fetched.
+          keyIsRussian: false,
         });
         _defaultsApplied = true;
       }
@@ -134,7 +143,8 @@ class RemoteConfigService {
         '$keyIsShowExportAd=$isShowExportAd | '
         '$keyProjectSttingAd=$isShowProjectSettingAd | '
         '$keyIsShowAdOnImport=$isShowAdOnImport | '
-        '$keyIsShowAplyBrushAd=$isShowApplyBrushAd',
+        '$keyIsShowAplyBrushAd=$isShowApplyBrushAd | '
+        '$keyIsRussian=$isRussian',
       );
     } catch (e) {
       debugPrint('[RemoteConfig] fetchAndActivate error: $e');
@@ -213,6 +223,15 @@ class RemoteConfigService {
     final rc = _rc;
     if (rc == null) return false;
     return rc.getBool(keyIsShowAplyBrushAd);
+  }
+
+  /// `is_russian`: when true, ads are served by Yandex instead of AdMob.
+  /// All other ad flags (`Is_show_ads`, per-screen flags) apply to both.
+  bool get isRussian {
+    if (_testIsRussian != null) return _testIsRussian!;
+    final rc = _rc;
+    if (rc == null) return false;
+    return rc.getBool(keyIsRussian);
   }
 
   /// 1st checks if `Is_show_ads` is true, then checks if `is_show_open_app_ad` is true.

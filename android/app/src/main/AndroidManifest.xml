@@ -4,6 +4,15 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+
+    <!-- MainActivity is locked to sensorPortrait, which makes Android treat a
+         portrait screen as REQUIRED. Google Play then hides the app from
+         devices that can't report portrait (desktop, Android XR, some
+         tablets). Mark it optional: the app still runs portrait-only. -->
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
+
     <application
         android:label="Clipax Draw Animation"
         android:name="${applicationName}"
@@ -40,6 +49,10 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3545449595730823~6464156281" />
+        <meta-data
+            android:name="com.yandex.mobile.ads.APP_ID"
+            android:value="20328915" />
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

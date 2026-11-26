@@ -7,15 +7,28 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../core/services/analytics_service.dart';
 import '../../core/services/remote_config_service.dart';
 import 'ad_helper.dart';
+import 'yandex_ad_manager.dart';
 
+/// Single entry point for all ads.
+///
+/// Order of checks (same as the other projects):
+///   1. `Is_show_ads` and the per-screen flag decide WHETHER to show an ad.
+///   2. `is_russian` decides WHICH network: true → Yandex, false → AdMob.
 class AdManager {
   static AnalyticsService? analyticsService;
   static Future<void>? _initFuture;
 
-  /// Initializes the Google Mobile Ads SDK once when `Is_show_ads` is true.
+  /// True when ads should come from Yandex instead of AdMob.
+  static bool get _useYandex => RemoteConfigService.instance.isRussian;
+
+  /// Initializes the ad SDK once when `Is_show_ads` is true:
+  /// Yandex when `is_russian` is true, otherwise Google Mobile Ads.
   static Future<void> initialize() {
     if (!RemoteConfigService.instance.isShowAds) {
       return Future.value();
+    }
+    if (_useYandex) {
+      return YandexAdManager.initialize();
     }
     return _initFuture ??= MobileAds.instance
         .initialize()
@@ -41,6 +54,10 @@ class AdManager {
 
   static void createInterstitialAd() {
     if (!RemoteConfigService.instance.isShowAds) return;
+    if (_useYandex) {
+      unawaited(YandexAdManager.createInterstitialAd());
+      return;
+    }
     _checkConsentAndLoadAd(() {
       if (interstitialAd == null) {
         InterstitialAd.load(
@@ -78,6 +95,21 @@ class AdManager {
   {
     if (!RemoteConfigService.instance.isShowAds) {
       onAdDismissed?.call();
+      return;
+    }
+    if (_useYandex) {
+      unawaited(YandexAdManager.showInterstitialAd(
+        onAdShowed: onAdShowed,
+        onAdDismissed: onAdDismissed,
+        onAdFailed: (String message) {
+          if (onAdFailed != null) {
+            onAdFailed(AdError(0, 'yandex', message));
+          } else {
+            // Callers only waiting for "closed" must still continue.
+            onAdDismissed?.call();
+          }
+        },
+      ));
       return;
     }
     _onAdShowedCallback = onAdShowed;
@@ -230,6 +262,16 @@ class AdManager {
     }
     if (!RemoteConfigService.instance.isShowOpenAppAd) {
       onAdDismissed?.call();
+      return;
+    }
+    if (_useYandex) {
+      // Yandex has no separate "resume" open ad unit; [isResume] is ignored.
+      await YandexAdManager.loadOpenAppAd(
+        onAdLoaded: onAdLoaded,
+        onAdFailedToLoad: (String message) =>
+            onAdFailedToLoad?.call(LoadAdError(0, 'yandex', message, null)),
+        onAdDismissed: onAdDismissed,
+      );
       return;
     }
     await initialize();
@@ -472,6 +514,12 @@ class AdManager {
 
   static void checkConsentAndLoadAd(Function loadAdCallback) {
     if (!RemoteConfigService.instance.isShowAds) return;
+    // Yandex path: Google's consent form (UMP) is for AdMob only; skip it,
+    // as in the other projects.
+    if (_useYandex) {
+      loadAdCallback();
+      return;
+    }
     if (_consentCompleted) {
       loadAdCallback();
       return;

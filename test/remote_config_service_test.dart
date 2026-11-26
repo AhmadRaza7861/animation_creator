@@ -336,4 +336,50 @@ void main() {
       }
     });
   });
+
+  group('is_russian (Yandex vs AdMob)', () {
+    test('uses the exact Firebase parameter name', () {
+      expect(RemoteConfigService.keyIsRussian, 'is_russian');
+    });
+
+    test('defaults to false (AdMob) when Remote Config is unavailable', () {
+      expect(RemoteConfigService.instance.isRussian, isFalse);
+    });
+
+    test('can be switched on', () {
+      RemoteConfigService.instance.setTestValues(isRussian: true);
+      expect(RemoteConfigService.instance.isRussian, isTrue);
+    });
+
+    test('Is_show_ads=false still blocks ads for Russian users', () {
+      RemoteConfigService.instance.setTestValues(
+        isShowAds: false,
+        isRussian: true,
+      );
+      bool continued = false;
+      AdManager.showInterstitialAd(onAdDismissed: () => continued = true);
+      expect(continued, isTrue, reason: 'app must continue without an ad');
+    });
+
+    test('is_show_open_app_ad=false skips the Yandex open ad too', () async {
+      RemoteConfigService.instance.setTestValues(
+        isShowAds: true,
+        isShowOpenAppAd: false,
+        isRussian: true,
+      );
+      bool continued = false;
+      AdManager.loadOpenAppAd(onAdDismissed: () => continued = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(continued, isTrue);
+    });
+
+    test('per-screen flag off skips the interstitial for Russian users', () async {
+      RemoteConfigService.instance.setTestValues(
+        isShowAds: true,
+        isShowExportAd: false,
+        isRussian: true,
+      );
+      await AdManager.showExportInterstitialIfEnabled(); // completes, no ad
+    });
+  });
 }
